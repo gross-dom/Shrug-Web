@@ -1,0 +1,64 @@
+/* The page under the desktop, and a clean slate for the desktop's own
+   elements. The kit rolls host element styles back to the browser's defaults
+   inside a stage; the desktop is the page here, so its controls start from
+   nothing instead and every rule below is a class. */
+
+:root {
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #1c3db0;
+  font-family: var(--font-ui);
+  -webkit-text-size-adjust: 100%;
+}
+
+.os :where(button, a, input, textarea, select, p, h1, h2, h3, h4, ul, ol, li, dl, dt, dd, figure, figcaption, label, time) {
+  all: unset;
+  box-sizing: border-box;
+}
+
+.os :where(p, h1, h2, h3, h4, ul, ol, li, dl, dt, dd, figure, figcaption) {
+  display: block;
+}
+
+.os :where(button, a) {
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.os :where(input, textarea) {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* The focus ring every control shares: the accent, soft, just outside it */
+.os :where(button, a, input, textarea, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ss-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.os :where(section[tabindex]):focus-visible {
+  outline: none;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}

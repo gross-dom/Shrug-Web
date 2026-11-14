@@ -1,0 +1,120 @@
+// The people in the Shrug group chat. Names, roles and relationship tags are
+// real (from the design canvas). Only the first quote has been supplied; the
+// rest are `null` and render as placeholder lines until the copy arrives.
+
+export type Relation = 'F' | 'L' | 'C'
+
+export interface Person {
+  name: string
+  role: string
+  /** F: backed by Shrug. L: backs Shrug. C: co-investor. */
+  relations: Relation[]
+  /** The testimonial. `null` until the real quote is supplied. */
+  quote: string | null
+}
+
+export const RELATION_LABEL: Record<Relation, string> = {
+  F: 'Backed by Shrug',
+  L: 'Backs Shrug',
+  C: 'Co-investor',
+}
+
+const p = (name: string, role: string, tags: string, quote: string | null = null): Person => ({
+  name,
+  role,
+  relations: tags.split('') as Relation[],
+  quote,
+})
+
+export const PEOPLE: Person[] = [
+  p('Kevin Olusola', '1/5 of Pentatonix', 'LC', '“They’re the best. Point blank. Their access is unparalleled.”'),
+  p('Reed Duchscher', 'Co-Founder of Night & Feastables', 'FC'),
+  p('Trae Stephens', 'Founders Fund & Anduril', 'C'),
+  p('Michael Kives', 'Co-Founder of K5 Global', 'LC'),
+  p('Ellen DaSilva', 'Founder of Summer Health', 'F'),
+  p('Maddie Hall', 'Co-Founder of Living Carbon', 'F'),
+  p('Jonathon Triest', 'Founder of Ludlow Ventures', 'C'),
+  p('Alex Pall', 'The Chainsmokers & Mantis', 'LC'),
+  p('Cyan Banister', 'Long Journey Ventures', 'LC'),
+  p('Steve Pagliuca', 'Co-Chair of Bain Capital and Co-Owner of the Boston Celtics', 'LC'),
+  p('Jim Breyer', 'Co-Founder of Breyer Capital', 'LC'),
+  p('B.J. Novak', 'Actor, Director, Author, Meme, Founder of Chain', 'LC'),
+  p('Sarah Tavel', 'GP at Benchmark', 'C'),
+  p('Andrew Gazdecki', 'Founder of Acquire.com', 'F'),
+  p('Scott Belsky', 'Chief Product Officer of Adobe', 'LC'),
+  p('Ashton Kutcher', 'Co-Founder of Sound Ventures', 'LC'),
+  p('Delian Asparouhov', 'Co-Founder of Varda & Partner at Founders Fund', 'FC'),
+  p('Ashley Mayer', 'GP at Coalition Operators', 'LC'),
+  p('David Grutman', 'Groot Hospitality', 'C'),
+  p('Kevin Hartz', 'Co-Founder of Eventbrite & A*', 'LC'),
+  p('Walid Halty', 'Founder of Mona Lee Solar', 'F'),
+  p('Nicole Quinn', 'GP at Lightspeed Ventures', 'C'),
+  p('Steven Vasilev', 'Co-Founder of RTFKT', 'F'),
+  p('Akash Nigam', 'Co-Founder of Genies', 'FC'),
+  p('Ryan Hoover', 'Weekend Fund & Product Hunt', 'C'),
+  p('Karen Gillan', 'Actress, daughter of Thanos', 'C'),
+  p('David Sacks', 'Founder of Craft Ventures & Bestie at All-In Pod', 'LC'),
+  p('Boris Wertz', 'Founder of Version One Ventures', 'LC'),
+  p('Leore Avidar', 'Founder of Alt & Lob', 'FL'),
+  p('Tony Hawk', 'Skateboarder', 'LC'),
+  p('Magdalena Kala', 'GP at Double-Down & Pags Group', 'LC'),
+  p('Packy McCormick', 'Founder of Not Boring', 'C'),
+  p('Lenny Rachitsky', 'Founder of LennysNewsletter.com', 'C'),
+  p('Siqi Chen', 'Founder of Runway', 'FC'),
+  p('Elizabeth Weil', 'Founder of Scribble Ventures', 'LC'),
+  p('Veeraj Chugh', 'Co-founder of Opal', 'F'),
+  p('Sam Corcos', 'Co-Founder and CEO of Levels', 'F'),
+  p('Ryan Delk', 'Co-founder of Primer', 'F'),
+  p('Matteo Franceschetti', 'Co-Founder of Eight Sleep', 'FC'),
+  p('Paul Budnitz', 'Founder of Superplastic', 'F'),
+  p('Roger Ehrenberg', 'Eberg Capital', 'LC'),
+  p('Sophia Amoruso', 'Girlboss, Nasty Gal, Trust Fund', 'LC'),
+  p('Brice Gumpel', 'Co-Founder of Seated', 'FC'),
+  p('Katie Jacobs Stanton', 'Founder of Moxxie Ventures', 'C'),
+  p('Brian Murray', 'Partner & COO at Craft Ventures, Co-Founder of Cabal', 'F'),
+  p('Joshua Steinman', 'Founder of Galvanick', 'F'),
+  p('Sung Ho Choi', 'Co-Founder of fuboTV', 'LC'),
+  p('Liya Shuster-Bier', 'Founder of Alula', 'F'),
+  p('Walker Williams', 'Co-Founder of Fourthwall and Teespring', 'FC'),
+  p('Matt Smolin', 'Founder of Hang.xyz', 'F'),
+  p('Kevin Tan', 'Co-Founder of Snackpass', 'F'),
+  p('Spencer Rascoff', 'Founder of Zillow', 'LC'),
+  p('Doug Ludlow', 'Co-Founder of MainStreet', 'F'),
+  p('Josh Elman', 'Early PM at most social networks', 'LC'),
+  p('Courtne Smith & Filip Diarra', 'Co-Founders of NewNew', 'F'),
+  p('Harry Hurst', 'Co-Founder of Pipe', 'FC'),
+  p('Alex Ma', 'Co-Founder of Poparazzi', 'F'),
+  p('Michael Guirguis', 'Co-Founder of Seso', 'F'),
+  p('Bryant Chou', 'Co-Founder of Webflow', 'LC'),
+  p('Michael Vega-Sanz', 'Co-Founder of Lula', 'F'),
+  p('Matthew Vega-Sanz', 'Co-Founder of Lula', 'F'),
+  p('Kris Hartvigsen', 'Founder of Dooly', 'F'),
+  p('Julia Enthoven', 'Co-Founder of Kapwing', 'F'),
+  p('Akshar Bonu', 'Founder of The Custom Movement', 'F'),
+  p('Tyler Faux', 'Co-Founder of Supergreat', 'F'),
+  p('Daniel Mishin', 'Founder of June Homes', 'F'),
+  p('Helena Price Hambrecht', 'Co-Founder of Haus', 'F'),
+  p('Jake Cahan', 'Founder of Debtsy', 'F'),
+  p('Michael Dubin', 'Founder of Dollar Shave Club', 'LC'),
+  p('JD Maresco', 'Co-Founder of Batch & Citizen', 'F'),
+  p('Matthew Dellavedova', 'NBA Champion', 'LC'),
+  p('Dom Santry', 'Co-Founder of Daisie', 'F'),
+  p('Galileo Russell', 'HyperChange', 'C'),
+  p('Andres Ugarte', 'Co-Founder of Copilot', 'F'),
+  p('Braden Ream', 'Co-Founder of VoiceFlow', 'F'),
+  p('Sean Rose', 'Angel Investor', 'LC'),
+  p('Linda Xie', 'Founder of Scalar Capital', 'LC'),
+  p('Bilal Abidi', 'Co-Founder of Wise', 'F'),
+  p('Shara Senderoff', 'President of Raised In Space', 'C'),
+  p('Dennis Xu & Kevin Moody', 'Co-Founders of Mem.ai', 'F'),
+  p('Jenny Lefcourt', 'GP at Freestyle Capital', 'LC'),
+  p('Rahul Sengottuvelu', 'Co-Founder of Cohere', 'F'),
+  p('Tetsuro Miyatake', 'Co-Founder of Off Topic and Advisor at Harizury', 'LC'),
+  p('Alana Anderson', 'Founder of base case capital', 'C'),
+  p('Kelvin Beachum', 'Arizona Cardinals', 'LC'),
+  p('Rus Yusupov', 'Co-Founder of HQ Trivia and Vine', 'FC'),
+  p('Danielle Li', 'Founder of Popshop Live', 'F'),
+  p('Arthur Leopold', 'Co-Founder of Cameo', 'FC'),
+  p('Maggie Norris', 'Founder of Aidaly', 'F'),
+  p('Janky', 'Virtual Influencer', ''),
+]

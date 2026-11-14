@@ -1,0 +1,1024 @@
+/* The desktop: wallpaper, menu bar, the things on the desk, window frames and
+   their traffic lights, the Dock and the screen saver. The kit's styles sit in
+   @layer stageshow, so everything here wins over them without !important. */
+
+/* ---- The root: the kit's stage, sized to the screen, with the look ---- */
+
+.os {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  cursor: default;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ss-text-strong);
+  isolation: isolate;
+
+  /* The look: one cool gray family, the system blue, the system's type */
+  --ss-font: var(--font-ui);
+  --ss-mono: var(--font-mono);
+  --ss-accent: #0a6de6;
+  --ss-accent-2: #0a6de6;
+  --ss-accent-soft: color-mix(in srgb, #0a6de6 13%, transparent);
+  --ss-text-strong: #1d1d1f;
+  --ss-text: #63646b;
+  --ss-text-faint: #8a8b92;
+  --ss-icon: #46474e;
+  --ss-icon-faint: #b3b4bb;
+  --ss-radius-window: 16px;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.85, 0.3);
+  --glass: rgba(255, 255, 255, 0.86);
+  --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.09), inset 0 0.5px 0 rgba(255, 255, 255, 1), 0 1px 2px rgba(20, 30, 60, 0.06), 0 5px 16px rgba(20, 30, 60, 0.09);
+}
+
+/* ---- Wallpaper: a sky that deepens toward the top, over three slow hills
+   of blue, each lit along its crest. Drawn, so it is sharp at any size ---- */
+
+.os__wallpaper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 46% at 22% 46%, rgba(255, 244, 226, 0.5) 0%, rgba(255, 244, 226, 0) 70%),
+    linear-gradient(180deg, #2459d3 0%, #3c7bea 16%, #74b3fb 36%, #b9defd 52%, #d9eeff 60%);
+}
+
+.os__ribbon {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* The far hill */
+.os__ribbon--a {
+  left: -46vw;
+  top: 41vh;
+  width: 150vw;
+  height: 130vh;
+  transform: rotate(-7deg);
+  background: linear-gradient(180deg, #86bdfb 0%, #4f8cf0 9%, #2f68de 30%, #2553c8 100%);
+  filter: blur(22px);
+}
+
+/* The middle hill, catching a little of the dawn on its crest */
+.os__ribbon--b {
+  left: -6vw;
+  top: 54vh;
+  width: 170vw;
+  height: 130vh;
+  transform: rotate(8deg);
+  background: linear-gradient(180deg, #a9a4ff 0%, #5a6fee 7%, #2f4bcb 26%, #1f33a2 100%);
+  filter: blur(26px);
+}
+
+/* The near hill */
+.os__ribbon--c {
+  left: -60vw;
+  top: 71vh;
+  width: 190vw;
+  height: 120vh;
+  transform: rotate(-5deg);
+  background: linear-gradient(180deg, #5b63e6 0%, #2a33a8 8%, #151f74 30%, #0c1350 100%);
+  filter: blur(30px);
+}
+
+/* A little grain, so the long gradients never band */
+.os__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- Arriving: the desk fades up, the bar and Dock slide in ---- */
+
+.os .menubar,
+.os .dock,
+.os .desk {
+  transition: opacity 0.5s ease, transform 0.6s var(--ease-out);
+}
+
+.os:not([data-booted]) .menubar {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+.os:not([data-booted]) .dock {
+  opacity: 0;
+  transform: translateY(110%);
+}
+
+.os:not([data-booted]) .desk {
+  opacity: 0;
+}
+
+/* ---- Menu bar ---- */
+
+.menubar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 28px;
+  padding: 0 12px 0 6px;
+  background: linear-gradient(rgba(6, 14, 64, 0.26), rgba(6, 14, 64, 0.04));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 10, 60, 0.4);
+  white-space: nowrap;
+}
+
+.menubar__menus {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+}
+
+.menubar__menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.menubar__title {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 5px;
+  transition: background-color 0.1s ease;
+}
+
+.menubar__menu[data-strong] .menubar__title {
+  font-weight: 700;
+}
+
+.menubar__title[data-open] {
+  background: rgba(255, 255, 255, 0.26);
+  outline: none;
+}
+
+.menubar__mark {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.menubar__status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.menubar__extra,
+.menubar__clock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.menubar__clock {
+  gap: 9px;
+}
+
+.menubar__extra:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.menubar__extra svg {
+  flex: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 10, 60, 0.3));
+}
+
+/* The rolling count keeps the bar's type */
+.menubar .ss-count {
+  font: inherit;
+}
+
+/* ---- Menus: a light frosted sheet under its title ---- */
+
+.menu {
+  top: 100%;
+  left: 0;
+  min-width: 210px;
+  margin-top: 2px;
+  padding: 5px;
+  border-radius: 11px;
+  color: var(--ss-text-strong);
+  font-size: 13px;
+  font-weight: 400;
+  text-shadow: none;
+  --ss-popover-bg: rgba(246, 247, 250, 0.82);
+  --ss-popover-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.7), 0 18px 46px -6px rgba(6, 14, 60, 0.4), 0 4px 12px rgba(6, 14, 60, 0.14);
+}
+
+.menu::before {
+  -webkit-backdrop-filter: blur(34px) saturate(1.8);
+  backdrop-filter: blur(34px) saturate(1.8);
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 24px;
+  padding: 0 10px 0 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.menu__tick {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+}
+
+.menu__label {
+  flex: 1;
+}
+
+.menu__out {
+  flex: none;
+  margin-left: 14px;
+  opacity: 0.55;
+}
+
+.menu__item:hover,
+.menu__item:focus-visible {
+  background: var(--ss-accent);
+  color: #fff;
+  outline: none;
+}
+
+.menu__item[aria-disabled='true'] {
+  background: none;
+  color: rgba(60, 60, 67, 0.36);
+}
+
+.menu__rule {
+  height: 1px;
+  margin: 5px 9px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* ---- On the desk ---- */
+
+.desk {
+  position: absolute;
+  top: 42px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.desk__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 92px;
+  padding: 2px 0 4px;
+  border-radius: 8px;
+}
+
+.desk__icon {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 64px;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.desk__icon svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 3px 6px rgba(4, 10, 50, 0.32));
+}
+
+.desk__name {
+  max-width: 100%;
+  padding: 1px 6px 2px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 6, 40, 0.7), 0 0 1px rgba(0, 6, 40, 0.5);
+}
+
+.desk__item[data-picked] .desk__icon {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.3);
+}
+
+.desk__item[data-picked] .desk__name {
+  background: var(--ss-accent);
+  text-shadow: none;
+}
+
+.desk__item:focus-visible {
+  outline-color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---- Window frames ---- */
+
+.os__windows {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.wf {
+  position: absolute;
+  display: none;
+  pointer-events: auto;
+  /* Its Dock icon, from the window's own center: where it opens from and
+     minimises to */
+  --ox: 0px;
+  --oy: 50vh;
+  transform-origin: 50% 50%;
+  transition: transform 0.44s var(--ease-out), opacity 0.22s ease, visibility 0s;
+}
+
+.wf[data-open] {
+  display: block;
+}
+
+.wf__content {
+  position: absolute;
+  inset: 0;
+}
+
+.wf__content > .ss-window {
+  width: 100%;
+  height: 100%;
+  /* The window in front: a wide soft fall, deep enough for a blue ground */
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.2),
+    0 38px 80px -12px rgba(6, 14, 70, 0.55),
+    0 14px 30px -14px rgba(6, 14, 70, 0.4);
+  transition: box-shadow 0.25s ease;
+}
+
+.wf:not([data-active]) .wf__content > .ss-window {
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.16),
+    0 18px 44px -14px rgba(6, 14, 70, 0.36),
+    0 6px 14px -8px rgba(6, 14, 70, 0.22);
+}
+
+/* The kit's bars are where a window is picked up */
+.wf .ss-window__bar,
+.wf .ss-window__side-top,
+.wf [data-drag] {
+  touch-action: none;
+}
+
+/* Opening: out of its Dock icon. Closing: gone in a blink. */
+.wf[data-phase='opening'] {
+  animation: wf-open 0.42s var(--ease-out) both;
+}
+
+.wf[data-phase='closing'] {
+  animation: wf-close 0.18s ease-in both;
+  pointer-events: none;
+}
+
+@keyframes wf-open {
+  from {
+    opacity: 0;
+    transform: translate(calc(var(--ox) * 0.72), calc(var(--oy) * 0.72)) scale(0.22);
+  }
+  45% {
+    opacity: 1;
+  }
+}
+
+@keyframes wf-close {
+  to {
+    opacity: 0;
+    transform: scale(0.965);
+  }
+}
+
+/* Minimised: scaled down into its Dock icon, then out of the way */
+.wf[data-min] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(var(--ox), var(--oy)) scale(0.06);
+  transition: transform 0.46s var(--ease-in), opacity 0.2s ease 0.26s, visibility 0s 0.46s;
+}
+
+/* Zoom and tile: the frame eases to its new place */
+.wf[data-glide] {
+  transition:
+    left 0.38s var(--ease-out),
+    top 0.38s var(--ease-out),
+    width 0.38s var(--ease-out),
+    height 0.38s var(--ease-out),
+    transform 0.44s var(--ease-out),
+    opacity 0.22s ease;
+}
+
+.wf[data-moving] {
+  transition: none;
+}
+
+/* ---- Traffic lights: over the spot the kit keeps for them ---- */
+
+.wf .ss-window__lights {
+  visibility: hidden;
+}
+
+.wf__lights {
+  position: absolute;
+  top: calc(var(--lights-y) - 6px);
+  left: calc(var(--lights-y) - 6px);
+  z-index: 4;
+  display: flex;
+  gap: 8px;
+}
+
+.wf__light {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.16);
+  transition: background-color 0.15s ease;
+}
+
+/* A little more to hit than the eye sees */
+.wf__light::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.wf__light[data-kind='close'] {
+  background: #ff5f57;
+}
+
+.wf__light[data-kind='min'] {
+  background: #febc2e;
+}
+
+.wf__light[data-kind='zoom'] {
+  background: #28c840;
+}
+
+.wf__light svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.58);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+
+.wf__light-fill {
+  fill: rgba(0, 0, 0, 0.58);
+  stroke: none;
+}
+
+.wf__lights:hover .wf__light:not(:disabled) svg,
+.wf__light:focus-visible svg {
+  opacity: 1;
+}
+
+/* A window that isn't in front has quiet lights until they're reached for */
+.wf:not([data-active]) .wf__lights:not(:hover) .wf__light,
+.wf__light:disabled {
+  background: #d0d1d6;
+}
+
+.wf[data-app='terminal']:not([data-active]) .wf__lights:not(:hover) .wf__light,
+.wf[data-app='terminal'] .wf__light:disabled {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+/* ---- Resizing: thin grips along every edge and corner ---- */
+
+.wf__grip {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+}
+
+.wf[data-min] .wf__grip {
+  display: none;
+}
+
+.wf__grip[data-edge='n'] {
+  inset: -4px 14px auto;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.wf__grip[data-edge='s'] {
+  inset: auto 14px -4px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.wf__grip[data-edge='e'] {
+  inset: 14px -4px 14px auto;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.wf__grip[data-edge='w'] {
+  inset: 14px auto 14px -4px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.wf__grip[data-edge='ne'],
+.wf__grip[data-edge='nw'],
+.wf__grip[data-edge='se'],
+.wf__grip[data-edge='sw'] {
+  width: 18px;
+  height: 18px;
+}
+
+.wf__grip[data-edge='ne'] {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+
+.wf__grip[data-edge='nw'] {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+
+.wf__grip[data-edge='se'] {
+  right: -5px;
+  bottom: -5px;
+  cursor: nwse-resize;
+}
+
+.wf__grip[data-edge='sw'] {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+
+/* While a window is being moved or sized, the pointer keeps its shape
+   wherever it strays, and nothing under it reacts */
+html[data-wm-busy] * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+html[data-wm-busy] .wf__content {
+  pointer-events: none;
+}
+
+html[data-wm-busy='n'] *,
+html[data-wm-busy='s'] * {
+  cursor: ns-resize !important;
+}
+
+html[data-wm-busy='e'] *,
+html[data-wm-busy='w'] * {
+  cursor: ew-resize !important;
+}
+
+html[data-wm-busy='ne'] *,
+html[data-wm-busy='sw'] * {
+  cursor: nesw-resize !important;
+}
+
+html[data-wm-busy='nw'] *,
+html[data-wm-busy='se'] * {
+  cursor: nwse-resize !important;
+}
+
+/* ---- The outline a dragged window will tile into ---- */
+
+.tile-preview {
+  position: absolute;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.66), 0 10px 40px rgba(6, 14, 70, 0.2);
+  -webkit-backdrop-filter: blur(5px) saturate(1.3);
+  backdrop-filter: blur(5px) saturate(1.3);
+  opacity: 0;
+  transform: scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.24s var(--ease-out), left 0.24s var(--ease-out), top 0.24s var(--ease-out), width 0.24s var(--ease-out), height 0.24s var(--ease-out);
+}
+
+.tile-preview[data-show] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- The Dock ---- */
+
+.dock {
+  --dock-size: 52px;
+  position: absolute;
+  inset: auto 0 6px;
+  z-index: 700;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dock__shelf {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: calc(var(--dock-size) + 16px);
+  padding: 0 5px 10px;
+  border-radius: 21px;
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 0 0.5px rgba(4, 10, 50, 0.3),
+    0 14px 36px -8px rgba(4, 10, 50, 0.45);
+  -webkit-backdrop-filter: blur(30px) saturate(1.7);
+  backdrop-filter: blur(30px) saturate(1.7);
+  pointer-events: auto;
+}
+
+.dock__item {
+  --swell: 1;
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  justify-content: center;
+  width: calc(var(--dock-size) * var(--swell) + 6px);
+  height: calc(var(--dock-size) * var(--swell));
+  border-radius: 14px;
+}
+
+.dock__shelf[data-settling] .dock__item {
+  transition: width 0.3s var(--ease-out), height 0.3s var(--ease-out);
+}
+
+.dock__icon {
+  display: block;
+  width: calc(100% - 6px);
+  height: 100%;
+  transform-origin: 50% 100%;
+}
+
+.app-icon,
+.folder-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.dock__icon .app-icon {
+  filter: drop-shadow(0 2px 3px rgba(4, 10, 50, 0.28));
+}
+
+.dock__icon--doc {
+  transform: scale(0.88);
+}
+
+.dock__item:active .dock__icon .app-icon {
+  filter: drop-shadow(0 2px 3px rgba(4, 10, 50, 0.28)) brightness(0.72);
+}
+
+.dock__item[data-hop] .dock__icon {
+  animation: dock-hop 0.76s cubic-bezier(0.3, 0, 0.5, 1);
+}
+
+@keyframes dock-hop {
+  0%,
+  100% {
+    transform: none;
+  }
+  22% {
+    transform: translateY(-24px);
+  }
+  46% {
+    transform: none;
+  }
+  66% {
+    transform: translateY(-10px);
+  }
+  84% {
+    transform: none;
+  }
+}
+
+.dock__dot {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: rgba(12, 16, 40, 0.72);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.dock__item[data-open] .dock__dot {
+  opacity: 1;
+}
+
+.dock__label {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  padding: 4px 11px 5px;
+  border-radius: 8px;
+  background: rgba(244, 245, 249, 0.86);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 6px 18px rgba(4, 10, 50, 0.28);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  color: var(--ss-text-strong);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+
+.dock__item:hover .dock__label,
+.dock__item:focus-visible .dock__label {
+  opacity: 1;
+}
+
+.dock__item:focus-visible {
+  outline-color: rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+}
+
+.dock__rule {
+  flex: none;
+  align-self: flex-end;
+  width: 1px;
+  height: calc(var(--dock-size) - 10px);
+  margin: 0 7px 5px;
+  background: rgba(12, 16, 40, 0.22);
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.18);
+}
+
+/* ---- Screen saver ---- */
+
+.saver {
+  position: absolute;
+  inset: 0;
+  z-index: 2000;
+  overflow: hidden;
+  background: #04061c;
+  color: #fff;
+  cursor: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0s 0.5s;
+}
+
+.saver[data-on] {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 1.2s ease;
+}
+
+.saver__sky {
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(40% 36% at 30% 34%, rgba(64, 120, 255, 0.5), rgba(64, 120, 255, 0) 70%),
+    radial-gradient(36% 34% at 72% 62%, rgba(128, 84, 255, 0.42), rgba(128, 84, 255, 0) 70%),
+    radial-gradient(30% 30% at 58% 20%, rgba(30, 190, 220, 0.24), rgba(30, 190, 220, 0) 70%);
+  animation: saver-drift 46s ease-in-out infinite alternate;
+}
+
+.saver:not([data-on]) .saver__sky {
+  animation-play-state: paused;
+}
+
+@keyframes saver-drift {
+  from {
+    transform: translate(-4%, -3%) rotate(-4deg) scale(1);
+  }
+  to {
+    transform: translate(5%, 4%) rotate(5deg) scale(1.12);
+  }
+}
+
+.saver__clock {
+  position: absolute;
+  inset: 8vh 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.saver__date {
+  font-size: clamp(16px, 1.7vw, 25px);
+  font-weight: 600;
+  opacity: 0.86;
+}
+
+.saver__time {
+  font-size: clamp(76px, 11.5vw, 176px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.94;
+}
+
+.saver__mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.3em 0.4em;
+  font-size: clamp(34px, 5.2vw, 78px);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  will-change: transform;
+  transition: color 1.4s ease;
+}
+
+.saver__foot {
+  position: absolute;
+  inset: auto 0 6.5vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.saver__who {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: saver-who 4.2s ease both;
+}
+
+.saver__name {
+  font-size: clamp(15px, 1.5vw, 20px);
+  font-weight: 600;
+}
+
+.saver__role {
+  font-size: clamp(13px, 1.15vw, 15px);
+  opacity: 0.62;
+}
+
+.saver__hint {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.44;
+}
+
+@keyframes saver-who {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  14%,
+  84% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* ---- A phone-sized screen: windows fill it, the bar and Dock stay ---- */
+
+.menubar[data-compact] {
+  height: 36px;
+  padding: 0 10px 0 4px;
+  font-size: 14px;
+}
+
+.menubar[data-compact] .menubar__title {
+  height: 28px;
+  padding: 0 8px;
+}
+
+.menubar[data-compact] .menubar__extra,
+.menubar[data-compact] .menubar__clock {
+  height: 28px;
+}
+
+.menubar[data-compact] .menu__item {
+  height: 34px;
+  font-size: 15px;
+}
+
+.os[data-compact] .menubar__wide,
+.os[data-compact] .desk {
+  display: none;
+}
+
+/* View, Window and Help fold away: each window's own toolbar does their work */
+.os[data-compact] .menubar__menu[data-menu='view'],
+.os[data-compact] .menubar__menu[data-menu='window'],
+.os[data-compact] .menubar__menu[data-menu='help'] {
+  display: none;
+}
+
+/* Bigger lights need more of the bar */
+.os[data-compact] .app > .ss-window__main > .ss-window__bar {
+  padding-left: 106px;
+}
+
+.dock[data-compact] {
+  --dock-size: 46px;
+  bottom: max(6px, env(safe-area-inset-bottom));
+}
+
+.dock[data-compact] .dock__label {
+  display: none;
+}
+
+.os[data-compact] .wf__lights {
+  gap: 12px;
+}
+
+.os[data-compact] .wf__light {
+  width: 14px;
+  height: 14px;
+}
+
+.os[data-compact] .wf__light svg {
+  width: 14px;
+  height: 14px;
+  opacity: 1;
+}
+
+.os[data-compact] .wf__light::after {
+  inset: -9px -6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf,
+  .wf[data-min],
+  .wf[data-glide],
+  .tile-preview,
+  .dock__shelf[data-settling] .dock__item,
+  .os .menubar,
+  .os .dock,
+  .os .desk {
+    transition-duration: 0.01s;
+  }
+
+  .wf[data-phase='opening'],
+  .wf[data-phase='closing'],
+  .dock__item[data-hop] .dock__icon,
+  .saver__sky,
+  .saver__who {
+    animation: none;
+  }
+
+  /* Still, the shrug sits in the middle of the screen */
+  .saver__mark {
+    top: 56%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}

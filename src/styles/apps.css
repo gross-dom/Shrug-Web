@@ -1,0 +1,1335 @@
+/* The app windows. Each is the kit's Window with the app's own contents; the
+   rules here are what those contents add. Everything reads the kit's tokens. */
+
+/* ---- Shared ---- */
+
+/* A window lays itself out by its own width, not the screen's: it can be
+   dragged to any size */
+.wf__content {
+  container: win / inline-size;
+}
+
+.app {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--ss-text-strong);
+}
+
+/* Columns scroll like the system's: a thin bar that stays out of the way */
+.scrolls {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.scrolls:focus-visible {
+  outline-offset: -3px;
+}
+
+/* The glass toolbar buttons of the kit's tall bar: a capsule, its label under it */
+.tools {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tool {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tool__cap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 16px;
+  background: var(--glass);
+  box-shadow: var(--glass-edge);
+  color: var(--ss-icon);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.tool__label {
+  font-size: 10.5px;
+  line-height: 13px;
+  color: var(--ss-text);
+  white-space: nowrap;
+}
+
+.tool:hover .tool__cap:not(.tool__cap--set) {
+  background: #fff;
+}
+
+.tool:active .tool__cap:not(.tool__cap--set) {
+  background: #e9eaef;
+}
+
+.tool:focus-visible {
+  outline: none;
+}
+
+.tool:focus-visible .tool__cap {
+  outline: 3px solid color-mix(in srgb, var(--ss-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.tool[aria-disabled='true'] .tool__cap {
+  color: var(--ss-icon-faint);
+}
+
+.tool[aria-disabled='true'] .tool__label {
+  color: var(--ss-text-faint);
+}
+
+.tool__cap--set {
+  gap: 1px;
+  padding: 0 3px;
+}
+
+.tool__part {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 26px;
+  border-radius: 13px;
+  color: var(--ss-icon);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.tool__part:hover {
+  background: rgba(0, 0, 0, 0.055);
+}
+
+.tool__part[aria-pressed='true'] {
+  background: rgba(0, 0, 0, 0.085);
+  color: var(--ss-text-strong);
+}
+
+.tool__part[aria-disabled='true'] {
+  background: none;
+  color: var(--ss-icon-faint);
+}
+
+/* A search field that filters what's under it */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 7px 0 9px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.055);
+  color: var(--ss-text);
+  cursor: text;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search:focus-within {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--ss-accent), 0 0 0 3px color-mix(in srgb, var(--ss-accent) 28%, transparent);
+}
+
+.search__glass {
+  flex: none;
+}
+
+.search__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  font-size: 13px;
+  color: var(--ss-text-strong);
+}
+
+.search__input::placeholder {
+  color: var(--ss-text-faint);
+}
+
+.search__input:focus-visible {
+  outline: none;
+}
+
+.search__clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+}
+
+.side-label {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 14px 12px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  color: var(--ss-text);
+}
+
+.side-label__count {
+  font-weight: 500;
+  color: var(--ss-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.side-empty {
+  padding: 10px 8px;
+  font-size: 12px;
+  color: var(--ss-text-faint);
+}
+
+.shrug-avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: #1d1d1f;
+  color: #fff;
+}
+
+/* ---- Group chat ---- */
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.chat-head__text {
+  min-width: 0;
+}
+
+.chat-head__title {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 17px;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-head__sub {
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 15px;
+  color: var(--ss-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-head .ss-count,
+.chat-conv .ss-count {
+  font: inherit;
+}
+
+.chat__body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat__pane {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.chat__scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  /* Older replies fade out under the bar instead of being cut by it */
+  mask-image: linear-gradient(to bottom, transparent, #000 22px);
+}
+
+.chat__scroll:focus-visible {
+  outline: none;
+}
+
+/* Short conversations sit at the foot of the pane, as a chat does. The
+   thread measures its rows against this box, which scrolls with them */
+.chat__flow {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100%;
+  padding: 20px 20px 8px;
+}
+
+.chat__thread {
+  flex: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Who is speaking, over their bubble, as a group chat shows it. It rides
+   the thread's glide like the kit's stamps do */
+.chat-who {
+  position: relative;
+  top: 0;
+  flex: none;
+  margin: 9px 0 1px 47px;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 15px;
+  color: var(--ss-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: top var(--ss-scroll);
+}
+
+.chat-who b {
+  font-weight: 600;
+  color: var(--ss-text-strong);
+}
+
+.chat-gap {
+  display: block;
+  width: 28px;
+}
+
+/* Shrug speaks in black, as on the canvas */
+.chat-shrug .ss-bubble {
+  --b: #1d1d1f;
+  --t: #fff;
+}
+
+.chat-shrug .ss-bubble__dots i {
+  background: #a8a8ae;
+}
+
+/* A quote still to come: lines where its words will go */
+.quote-lines {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.52em;
+  max-width: 100%;
+  padding: 0.36em 0;
+}
+
+.quote-lines i {
+  display: block;
+  max-width: 100%;
+  height: 0.42em;
+  border-radius: 0.21em;
+  background: currentColor;
+  opacity: 0.17;
+}
+
+/* Found from the sidebar: the bubble is ringed for a moment */
+.chat .ss-bubble[data-flash]::before {
+  animation: chat-flash 1.6s ease;
+}
+
+@keyframes chat-flash {
+  0%,
+  60% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ss-accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+
+.chat__new {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px 0 9px;
+  border-radius: 14px;
+  background: var(--glass);
+  box-shadow: var(--glass-edge), 0 8px 22px rgba(20, 30, 60, 0.16);
+  color: var(--ss-accent-text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.24s var(--ease-out);
+}
+
+.chat__new[data-show] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.composer {
+  flex: none;
+  padding: 8px 14px 14px;
+}
+
+.composer__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 4px 0 14px;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.2s ease;
+}
+
+.composer__field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--ss-accent), 0 0 0 3px color-mix(in srgb, var(--ss-accent) 26%, transparent);
+}
+
+/* Everyone has replied: the field is where the conversation goes next */
+.composer[data-done] .composer__field:not(:focus-within) {
+  box-shadow: inset 0 0 0 1.5px var(--ss-accent);
+}
+
+.composer__origin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 14px;
+  width: 0;
+  color: var(--ss-text-strong);
+}
+
+.composer__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  font-size: 14px;
+  color: var(--ss-text-strong);
+}
+
+.composer__input::placeholder {
+  color: var(--ss-text-faint);
+}
+
+.composer__input:focus-visible {
+  outline: none;
+}
+
+.composer__send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #d6d7dc;
+  color: #fff;
+  transition: background-color 0.18s ease, transform 0.18s var(--ease-out);
+}
+
+.composer__send[data-ready] {
+  background: #0a84ff;
+}
+
+.composer__send[data-ready]:active {
+  transform: scale(0.92);
+}
+
+/* The sidebar: a search, the conversation, then everyone in it */
+.chat-side {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat-side__top {
+  flex: none;
+  padding: 2px 10px 10px;
+}
+
+.chat-conv {
+  flex: none;
+  margin: 0 8px;
+  --ss-row-title: 13px;
+  --ss-row-subtitle: 12px;
+  --ss-row-line: 17px;
+  border-radius: 11px;
+}
+
+.chat-conv[data-selected] {
+  background: var(--ss-accent);
+  --ss-text-strong: #fff;
+  --ss-text: rgba(255, 255, 255, 0.84);
+}
+
+.chat-side__list {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+
+.chat-person {
+  --ss-row-title: 12.5px;
+  column-gap: 8px;
+  border-radius: 8px;
+}
+
+.chat-person .ss-row__title {
+  font-weight: 500;
+}
+
+.chat-person .ss-avatar,
+.chat-person .ss-row__title {
+  transition: opacity 0.4s ease, color 0.4s ease;
+}
+
+.chat-person[data-state='waiting'] {
+  --ss-text-strong: var(--ss-text-faint);
+}
+
+.chat-person[data-state='waiting'] .ss-avatar {
+  opacity: 0.42;
+}
+
+/* No ring for someone who hasn't started typing: the list stays quiet
+   until there is something to mark */
+.chat-person[data-state='waiting'] .ss-check__ring {
+  opacity: 0;
+}
+
+.chat-person[data-state='replied']:hover {
+  background: var(--ss-ink-2);
+}
+
+.chat-person:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ---- Sidebars and headings the windows share ---- */
+
+.app > .ss-window__main > .ss-window__bar {
+  gap: 12px;
+  padding-inline: 14px;
+}
+
+.app .ss-window__heading,
+.heading {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+  color: var(--ss-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lead {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.side {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 8px 10px;
+}
+
+.side > .side-label:first-child {
+  margin-top: 4px;
+}
+
+.side--notes {
+  padding: 0;
+}
+
+.side__top {
+  flex: none;
+  padding: 2px 10px 0;
+}
+
+.side__list {
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 10px;
+}
+
+.side-item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--ss-text-strong);
+  transition: background-color 0.12s ease;
+}
+
+.side-item__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  color: var(--ss-accent);
+}
+
+.side-item__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-item__count {
+  flex: none;
+  font-size: 12px;
+  color: var(--ss-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.side-item:hover {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+/* The current place: a soft gray capsule, as a sidebar marks it */
+.side-item[aria-current] {
+  background: rgba(0, 0, 0, 0.075);
+}
+
+.side-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.chip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.055);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--ss-text-strong);
+  color: #fff;
+}
+
+/* ---- Portfolio ---- */
+
+.pf__body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pf__chips {
+  display: none;
+  flex: none;
+  gap: 6px;
+  padding: 2px 14px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pf .tool--search .search {
+  width: 168px;
+  height: 32px;
+  border-radius: 16px;
+  background: var(--glass);
+  box-shadow: var(--glass-edge);
+}
+
+.pf .tool--search .search:focus-within {
+  box-shadow: inset 0 0 0 1px var(--ss-accent), 0 0 0 3px color-mix(in srgb, var(--ss-accent) 28%, transparent);
+}
+
+.pf__icons {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  align-content: start;
+  gap: 4px;
+  min-height: 0;
+  padding: 10px 14px 16px;
+  border-top: 1px solid var(--ss-line);
+}
+
+.pf-file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 2px 8px;
+  border-radius: 10px;
+}
+
+.pf-file__icon {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 58px;
+  padding: 4px 6px;
+  border-radius: 9px;
+}
+
+.pf-file__icon .folder-icon {
+  filter: drop-shadow(0 1px 1.5px rgba(20, 60, 130, 0.22));
+}
+
+.pf-file__name {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 6px 2px;
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 15px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.pf-file[aria-pressed='true'] .pf-file__icon {
+  background: rgba(0, 0, 0, 0.075);
+}
+
+.pf-file[aria-pressed='true'] .pf-file__name {
+  background: var(--ss-accent);
+  color: #fff;
+}
+
+.pf-file:focus-visible {
+  outline-offset: -2px;
+}
+
+.pf__list {
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 10px;
+  border-top: 1px solid var(--ss-line);
+  font-size: 12.5px;
+}
+
+.pf-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 92px;
+  align-items: center;
+  width: 100%;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
+.pf-row > span {
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-row > span:not(:first-child) {
+  color: var(--ss-text);
+}
+
+/* Stripes belong to positions, as in a real list */
+.pf-row:nth-child(odd):not(.pf-row--head) {
+  background: #f5f6f8;
+}
+
+.pf-row--head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 28px;
+  border-radius: 0;
+  background: var(--ss-surface);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.pf-row--head > span {
+  color: var(--ss-text);
+}
+
+.pf-row--head > span + span {
+  padding-left: 10px;
+  border-left: 1px solid var(--ss-line);
+  line-height: 14px;
+}
+
+.pf-row:not(.pf-row--head) > span + span {
+  padding-left: 10px;
+}
+
+.pf-row__name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pf-row__icon {
+  flex: none;
+  width: 18px;
+  height: 15px;
+}
+
+.pf-row[aria-pressed='true'],
+.pf-row[aria-pressed='true']:nth-child(odd) {
+  background: var(--ss-accent);
+  color: #fff;
+}
+
+.pf-row[aria-pressed='true'] > span:not(:first-child) {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.pf-row:focus-visible {
+  outline-offset: -2px;
+}
+
+.pf__none,
+.vip__none {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--ss-text-faint);
+  font-size: 13px;
+  text-align: center;
+}
+
+.pf__body:has(.pf__none) .pf__icons,
+.pf__body:has(.pf__none) .pf__list {
+  display: none;
+}
+
+.pf__foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  height: 28px;
+  padding: 0 14px;
+  border-top: 1px solid var(--ss-line);
+  font-size: 11.5px;
+  color: var(--ss-text);
+  white-space: nowrap;
+}
+
+.pf__path {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pf__path b {
+  font-weight: 500;
+  color: var(--ss-text-strong);
+}
+
+.pf__path-icon {
+  flex: none;
+  width: 16px;
+  height: 13px;
+}
+
+.pf__count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- FAQs ---- */
+
+.faq-row {
+  --ss-row-title: 13px;
+  --ss-row-line: 18px;
+  margin-bottom: 2px;
+  border-radius: 11px;
+}
+
+.faq-row .ss-row__title {
+  white-space: normal;
+}
+
+.faq-row:hover {
+  background: var(--ss-ink-1);
+}
+
+/* The note that's open is marked in a notebook's yellow */
+.faq-row[data-selected],
+.faq-row[data-selected]:hover {
+  background: #ffdb63;
+  --ss-ink-2: rgba(80, 50, 0, 0.16);
+}
+
+.faq-row:focus-visible {
+  outline-offset: -2px;
+}
+
+.faq__note {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2px 36px 44px;
+  user-select: text;
+  -webkit-user-select: text;
+  animation: faq-in 0.26s ease both;
+}
+
+@keyframes faq-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.faq__meta {
+  margin-bottom: 22px;
+  font-size: 11.5px;
+  color: var(--ss-text-faint);
+  text-align: center;
+}
+
+.faq__title {
+  margin-bottom: 18px;
+  font-size: 29px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.faq__answer {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* An answer still to be written: the slot it goes in, as on the canvas */
+.faq__todo {
+  padding: 14px 16px;
+  border: 1px dashed #a4a5ad;
+  border-radius: 14px;
+  color: var(--ss-text);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+/* ---- Case studies ---- */
+
+.term .ss-term {
+  padding: 0;
+  font-size: 13px;
+}
+
+.term__body {
+  display: flex;
+  min-height: 0;
+}
+
+.term__screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  padding: 4px 18px 16px;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+}
+
+.term__log {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.term__log > div,
+.term .ss-term__line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.term__log > * + .ss-term__prompt {
+  margin-top: 8px;
+}
+
+.term .ask {
+  color: #7db6ff;
+}
+
+.term .said {
+  color: #f1f1f3;
+}
+
+.term__entry {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #7db6ff;
+  cursor: text;
+}
+
+.term__input {
+  flex: 1;
+  min-width: 0;
+  height: 1.65em;
+  color: #f1f1f3;
+  caret-color: #6ee7a8;
+}
+
+.term__input:focus-visible {
+  outline: none;
+}
+
+/* ---- VIP ---- */
+
+.vip__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.vip__head {
+  flex: none;
+  padding: 4px 22px 18px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.vip__title {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.vip__sub {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--ss-text);
+}
+
+.vip__grid {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 96px;
+  grid-auto-flow: dense;
+  gap: 10px;
+  padding: 0 22px 24px;
+}
+
+.vip-tile {
+  position: relative;
+  grid-row: span 2;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f0f1f4;
+}
+
+.vip-tile[data-span='big'] {
+  grid-column: span 2;
+  grid-row: span 3;
+}
+
+.vip-tile[data-span='tall'] {
+  grid-row: span 3;
+}
+
+.vip-tile[data-span='wide'] {
+  grid-column: span 2;
+}
+
+.vip-tile__slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding-bottom: 38px;
+  background-image: repeating-linear-gradient(135deg, transparent 0, transparent 10px, rgba(0, 0, 0, 0.026) 10px, rgba(0, 0, 0, 0.026) 12px);
+  color: var(--ss-text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.vip-tile[data-kind='video'][data-empty] {
+  background: #1d1d1f;
+}
+
+.vip-tile[data-kind='video'] .vip-tile__slot {
+  background-image: none;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.vip-tile__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vip-tile__cap {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 16px);
+  padding: 6px 10px 7px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ss-text);
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.vip-tile__cap b {
+  font-weight: 600;
+  color: var(--ss-text-strong);
+}
+
+.vip-tile__cap span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The kit's segmented control, at the tall bar's size and shape */
+.seg {
+  flex: none;
+  border-radius: 16px;
+}
+
+.seg .ss-seg {
+  --ss-row: 28px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.seg .ss-seg__thumb {
+  border-radius: 14px;
+}
+
+.seg .ss-seg__option {
+  padding: 0 13px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.seg__count {
+  margin-left: 2px;
+  color: var(--ss-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- About ---- */
+
+.about > .ss-window__bar {
+  background: none;
+  border-bottom: 0;
+}
+
+.about__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px 16px;
+  text-align: center;
+}
+
+.about__icon {
+  width: 84px;
+  height: 84px;
+  filter: drop-shadow(0 6px 12px rgba(10, 16, 50, 0.28));
+}
+
+.about__name {
+  margin-top: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.about__kind {
+  margin-top: 1px;
+  font-size: 12.5px;
+  color: var(--ss-text);
+}
+
+.about__facts {
+  width: 100%;
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.about__fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  transition: background-color 0.12s ease;
+}
+
+.about__fact + .about__fact {
+  border-top: 1px solid var(--ss-line);
+}
+
+.about__fact:hover {
+  background: var(--ss-ink-1);
+}
+
+.about__fact:focus-visible {
+  outline-offset: -3px;
+}
+
+.about__value {
+  color: var(--ss-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.about__link {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin-top: 14px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--ss-accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.about__link:hover {
+  background: color-mix(in srgb, var(--ss-accent) 88%, #000);
+}
+
+.about__mark {
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 13px;
+  color: var(--ss-text-faint);
+}
+
+/* ---- Narrow windows: sidebars are folded away, so content takes over ---- */
+
+@container win (max-width: 640px) {
+  /* The lights are left on the content's bar: make room for them there */
+  .app > .ss-window__side {
+    display: none;
+  }
+
+  .app > .ss-window__main > .ss-window__bar {
+    padding-left: 90px;
+  }
+
+  .pf__chips {
+    display: flex;
+  }
+
+  .pf .tool--search .search {
+    width: 120px;
+  }
+
+  .vip__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-inline: 14px;
+  }
+
+  .vip__head {
+    padding-inline: 14px;
+  }
+
+  .faq__note {
+    padding-inline: 20px;
+  }
+
+  .chat__flow {
+    padding-inline: 12px;
+  }
+}
+
+@container win (max-width: 460px) {
+  .tool__label,
+  .chat-head .shrug-avatar {
+    display: none;
+  }
+
+  .pf .tool--search {
+    display: none;
+  }
+
+  .vip__title,
+  .faq__title {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat__new {
+    transition-duration: 0.01s;
+  }
+
+  .faq__note {
+    animation: none;
+  }
+}

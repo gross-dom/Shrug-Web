@@ -1,0 +1,280 @@
+import { APPS, APP_IDS, type AppId, type Size } from './apps'
+import { createStore } from './store'
+
+// The window manager: which windows are open, where they are, which is in
+// front. Everything a window can do (open from the Dock, close, minimise into
+// its icon, zoom, tile to half the screen, be dragged and resized) ends up as
+// one of the functions below.
+
+export interface Rect {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+export interface Point {
+  x: number
+  y: number
+}
+
+/** fill: the whole desktop. left and right: half of it. */
+export type Tile = 'fill' | 'left' | 'right'
+
+export interface Win {
+  id: AppId
+  /** Opened at least once. Its contents stay mounted from then on, so a
+   * closed window comes back as it was left. */
+  mounted: boolean
+  open: boolean
+  minimized: boolean
+  /** Its free position and size. */
+  rect: Rect
+  /** Tiled or zoomed: the rect is kept to go back to. */
+  tile: Tile | null
+  /** opening and closing play once and clear themselves. */
+  phase: 'opening' | 'closing' | null
+  /** Its geometry is easing to a new place (zoom, tile), not being dragged. */
+  glide: boolean
+  /** Where it opens from and minimises to: its Dock icon. */
+  origin: Point | null
+}
+
+export interface WM {
+  wins: Record<AppId, Win>
+  /** Back to front. */
+  order: AppId[]
+  viewport: Size
+  /** A phone-sized screen: windows fill it, nothing drags. */
+  compact: boolean
+  /** The outline shown while a dragged window is held against an edge. */
+  preview: Tile | null
+}
+
+/** Space between tiled windows and the screen's edges, as macOS leaves it. */
+export const GAP = 8
+
+export const metrics = (compact: boolean) => ({
+  /** The menu bar's height. */
+  bar: compact ? 36 : 28,
+  /** Room kept clear for the Dock under a zoomed or tiled window. */
+  dock: compact ? 74 : 82,
+})
+
+const isCompact = (v: Size) => v.w < 760 || v.h < 480
+
+const viewportNow = (): Size => (typeof window === 'undefined' ? { w: 1440, h: 900 } : { w: window.innerWidth, h: window.innerHeight })
+
+const blank = (id: AppId): Win => ({
+  id,
+  mounted: false,
+  open: false,
+  minimized: false,
+  rect: { x: 0, y: 0, w: 0, h: 0 },
+  tile: null,
+  phase: null,
+  glide: false,
+  origin: null,
+})
+
+const initialViewport = viewportNow()
+
+export const wm = createStore<WM>({
+  wins: Object.fromEntries(APP_IDS.map((id) => [id, blank(id)])) as Record<AppId, Win>,
+  order: [],
+  viewport: initialViewport,
+  compact: isCompact(initialViewport),
+  preview: null,
+})
+
+// ---- Geometry ----
+
+/** The part of the screen windows live in: under the menu bar, above the Dock. */
+export function desk(viewport: Size, compact: boolean): Rect {
+  const m = metrics(compact)
+  return { x: 0, y: m.bar, w: viewport.w, h: Math.max(160, viewport.h - m.bar - m.dock) }
+}
+
+export function tileRect(tile: Tile, viewport: Size, compact: boolean): Rect {
+  const d = desk(viewport, compact)
+  if (compact) return d
+  const y = d.y + GAP
+  const h = d.h - GAP * 2
+  if (tile === 'fill') return { x: GAP, y, w: d.w - GAP * 2, h }
+  const half = Math.floor((d.w - GAP * 3) / 2)
+  return tile === 'left' ? { x: GAP, y, w: half, h } : { x: d.w - GAP - half, y, w: half, h }
+}
+
+/** Where a window is drawn right now. */
+export function geometry(win: Win, viewport: Size, compact: boolean): Rect {
+  if (compact) return APPS[win.id].resizable ? tileRect('fill', viewport, true) : centered(win.id, viewport, true)
+  return win.tile ? tileRect(win.tile, viewport, false) : win.rect
+}
+
+function centered(id: AppId, viewport: Size, compact: boolean): Rect {
+  const spec = APPS[id]
+  const d = desk(viewport, compact)
+  const size = spec.size({ w: d.w, h: d.h })
+  const w = Math.min(size.w, d.w - (compact ? 24 : 0))
+  const h = Math.min(size.h, d.h - (compact ? 16 : 0))
+  return clampRect(
+    {
+      x: Math.round(d.x + (d.w - w) / 2 + (compact ? 0 : spec.nudge.x)),
+      y: Math.round(d.y + (d.h - h) / 2 + (compact ? 0 : spec.nudge.y)),
+      w,
+      h,
+    },
+    viewport,
+    compact,
+  )
+}
+
+/** Keeps a window reachable: its bar under the menu bar and on screen. */
+export function clampRect(r: Rect, viewport: Size, compact: boolean): Rect {
+  const m = metrics(compact)
+  const keep = 96
+  const x = Math.min(viewport.w - keep, Math.max(keep - r.w, r.x))
+  const y = Math.min(viewport.h - 56, Math.max(m.bar, r.y))
+  return { x: Math.round(x), y: Math.round(y), w: Math.round(r.w), h: Math.round(r.h) }
+}
+
+/** Fits a window back inside a screen that got smaller. */
+function refit(win: Win, viewport: Size, compact: boolean): Win {
+  if (!win.mounted) return win
+  const spec = APPS[win.id]
+  const d = desk(viewport, compact)
+  const w = spec.resizable ? Math.max(spec.min.w, Math.min(win.rect.w, d.w)) : win.rect.w
+  const h = spec.resizable ? Math.max(spec.min.h, Math.min(win.rect.h, viewport.h - d.y - 24)) : win.rect.h
+  const rect = clampRect({ ...win.rect, w, h }, viewport, compact)
+  const same = rect.x === win.rect.x && rect.y === win.rect.y && rect.w === win.rect.w && rect.h === win.rect.h
+  return same ? win : { ...win, rect }
+}
+
+// ---- Reading ----
+
+export const isShowing = (win: Win) => win.open && !win.minimized && win.phase !== 'closing'
+
+/** The window in front, the one the menu bar speaks for. */
+export function activeApp(state: WM): AppId | null {
+  for (let i = state.order.length - 1; i >= 0; i--) {
+    const id = state.order[i]!
+    if (isShowing(state.wins[id])) return id
+  }
+  return null
+}
+
+// ---- Changing ----
+
+const patch = (id: AppId, change: Partial<Win> | ((win: Win) => Partial<Win>)) =>
+  wm.set((s) => {
+    const win = s.wins[id]
+    const next = typeof change === 'function' ? change(win) : change
+    return { ...s, wins: { ...s.wins, [id]: { ...win, ...next } } }
+  })
+
+const raise = (order: AppId[], id: AppId) => (order[order.length - 1] === id ? order : [...order.filter((x) => x !== id), id])
+
+const timers = new Map<string, ReturnType<typeof setTimeout>>()
+function later(key: string, ms: number, fn: () => void) {
+  clearTimeout(timers.get(key))
+  timers.set(
+    key,
+    setTimeout(() => {
+      timers.delete(key)
+      fn()
+    }, ms),
+  )
+}
+
+/** Opens an app's window, or brings it back and to the front. */
+export function openApp(id: AppId, origin: Point | null = null) {
+  const s = wm.get()
+  const win = s.wins[id]
+  if (win.open && !win.minimized && win.phase !== 'closing') return focusApp(id)
+  clearTimeout(timers.get(`close:${id}`))
+  const fresh = !win.mounted
+  const restoring = win.open && win.minimized
+  wm.set({
+    ...s,
+    order: raise(s.order, id),
+    wins: {
+      ...s.wins,
+      [id]: {
+        ...win,
+        mounted: true,
+        open: true,
+        minimized: false,
+        rect: fresh ? centered(id, s.viewport, s.compact) : refit(win, s.viewport, s.compact).rect,
+        // A minimised window glides back out of its icon; a closed one opens
+        phase: restoring ? null : 'opening',
+        origin: origin ?? win.origin,
+      },
+    },
+  })
+  if (!restoring) later(`phase:${id}`, 460, () => patch(id, (w) => (w.phase === 'opening' ? { phase: null } : {})))
+}
+
+export function closeApp(id: AppId) {
+  const win = wm.get().wins[id]
+  if (!win.open || win.phase === 'closing') return
+  patch(id, { phase: 'closing' })
+  later(`close:${id}`, 190, () => patch(id, { open: false, minimized: false, phase: null }))
+}
+
+export function minimizeApp(id: AppId, origin: Point | null = null) {
+  const win = wm.get().wins[id]
+  if (!win.open || win.minimized) return
+  patch(id, { minimized: true, origin: origin ?? win.origin })
+}
+
+export function focusApp(id: AppId) {
+  wm.set((s) => {
+    const order = raise(s.order, id)
+    return order === s.order ? s : { ...s, order }
+  })
+}
+
+function glide(id: AppId, change: Partial<Win>) {
+  patch(id, { ...change, glide: true })
+  later(`glide:${id}`, 420, () => patch(id, { glide: false }))
+}
+
+/** The green light: fills the desktop, or goes back to the size it was. */
+export function toggleZoom(id: AppId) {
+  const win = wm.get().wins[id]
+  if (!APPS[id].resizable || wm.get().compact) return
+  glide(id, { tile: win.tile ? null : 'fill' })
+  focusApp(id)
+}
+
+export function tileApp(id: AppId, tile: Tile | null) {
+  if (!APPS[id].resizable || wm.get().compact) return
+  glide(id, { tile })
+  focusApp(id)
+}
+
+/** A drag or resize has ended: this is where the window is now. */
+export function placeApp(id: AppId, rect: Rect) {
+  const s = wm.get()
+  patch(id, { rect: clampRect(rect, s.viewport, s.compact), tile: null, glide: false })
+}
+
+export function setPreview(preview: Tile | null) {
+  wm.set((s) => (s.preview === preview ? s : { ...s, preview }))
+}
+
+export function bringAllToFront() {
+  wm.set((s) => ({
+    ...s,
+    wins: Object.fromEntries(APP_IDS.map((id) => [id, s.wins[id].open ? { ...s.wins[id], minimized: false } : s.wins[id]])) as Record<AppId, Win>,
+  }))
+}
+
+export function setViewport(viewport: Size) {
+  wm.set((s) => {
+    if (s.viewport.w === viewport.w && s.viewport.h === viewport.h) return s
+    const compact = isCompact(viewport)
+    const wins = Object.fromEntries(APP_IDS.map((id) => [id, refit(s.wins[id], viewport, compact)])) as Record<AppId, Win>
+    return { ...s, viewport, compact, wins, preview: null }
+  })
+}
