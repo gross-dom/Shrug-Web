@@ -315,11 +315,11 @@
   color: var(--ss-text-strong);
 }
 
-/* A reply's name and face arrive with its bubble: a beat after the older
-   rows have started up out of the way, so nothing is seen overlapping */
+/* A reply's name and face arrive with its bubble, on the bubble's own
+   timing, so the three read as one thing landing */
 .chat-who:has(+ .ss-bubble-row > .ss-bubble[data-arrived]),
 .ss-bubble-row:has(> .ss-bubble[data-arrived]) > .ss-bubble__avatar {
-  animation: chat-arrive 0.36s ease 0.14s both;
+  animation: chat-arrive 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes chat-arrive {
@@ -1380,6 +1380,34 @@
   .vip__title,
   .faq__title {
     font-size: 24px;
+  }
+}
+
+/* A phone zooms the page when a field's type is under 16px: keep it at 16 */
+@media (pointer: coarse) {
+  .composer__input,
+  .search__input,
+  .term__input {
+    font-size: 16px;
+  }
+
+  .composer__field {
+    height: 40px;
+    border-radius: 20px;
+  }
+
+  .composer__send {
+    width: 32px;
+    height: 32px;
+  }
+
+  .search {
+    height: 34px;
+    border-radius: 17px;
+  }
+
+  .side-item {
+    height: 36px;
   }
 }
 

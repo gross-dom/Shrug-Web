@@ -152,9 +152,15 @@ function ChatThread() {
       el.scrollTop = end
       return
     }
+    // Not yet begun: it will read the newest end when it does
+    if (run.current && !run.current.t0) return
     const step = (now: number) => {
       const state = run.current
       if (!state) return
+      // A fresh run starts its clock on its first frame, the same frame the
+      // arriving bubble starts fading in on, so the two can't drift apart
+      // when the page is busy
+      if (!state.t0) state.t0 = now
       const target = el.scrollHeight - el.clientHeight
       const k = Math.min(1, (now - state.t0) / FOLLOW_MS)
       el.scrollTop = state.from + (target - state.from) * settle(k)
@@ -167,8 +173,9 @@ function ChatThread() {
         })
       }
     }
+    const carrying = run.current !== null
     stop()
-    const state = { frame: 0, from: el.scrollTop, t0: performance.now() }
+    const state = { frame: 0, from: el.scrollTop, t0: carrying ? performance.now() : 0 }
     run.current = state
     state.frame = requestAnimationFrame(step)
   }
