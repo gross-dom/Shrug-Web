@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { PEOPLE } from '../data/people'
+import { PhoneLock } from '../phone/Lock'
 import { SITE } from '../data/site'
 import { prefersReducedMotion } from './dom'
 import { idleSeconds, saver, startSaver, wakeSaver } from './saver'
 import { useStore } from './store'
+import { wm } from './wm'
 
 // The screen saver. The shrug drifts across a dark screen and turns at the
 // edges, the clock sits where a lock screen keeps it, and the people from the
 // group chat pass by one at a time. Any key, click or movement wakes the desk.
+// On a phone it is the phone's lock screen instead.
 
 const DATE = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 const TIME = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -17,6 +20,7 @@ const TINTS = ['#ffffff', '#9fd0ff', '#ffd66b', '#ff9d8a', '#b9a4ff', '#8ee6b8']
 
 export function ScreenSaver() {
   const on = useStore(saver, (s) => s.on)
+  const compact = useStore(wm, (s) => s.compact)
   const [now, setNow] = useState(() => new Date())
   const [who, setWho] = useState(0)
   const mark = useRef<HTMLDivElement>(null)
@@ -38,11 +42,20 @@ export function ScreenSaver() {
       if (saver.get().on) wakeSaver()
       arm()
     }
+    // The key that wakes it is swallowed: it must not also type into, or
+    // press, whatever had the keyboard underneath
+    const key = (e: KeyboardEvent) => {
+      if (!saver.get().on) return
+      e.preventDefault()
+      e.stopPropagation()
+    }
     const events = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const
+    window.addEventListener('keydown', key, true)
     events.forEach((name) => window.addEventListener(name, stir, { passive: true }))
     arm()
     return () => {
       clearTimeout(timer)
+      window.removeEventListener('keydown', key, true)
       events.forEach((name) => window.removeEventListener(name, stir))
     }
   }, [])
@@ -103,7 +116,9 @@ export function ScreenSaver() {
       clearInterval(turn)
       cancelAnimationFrame(frame)
     }
-  }, [on])
+  }, [on, compact])
+
+  if (compact) return <PhoneLock on={on} now={now} />
 
   const person = PEOPLE[who]!
 

@@ -45,7 +45,7 @@ export interface WM {
   /** Back to front. */
   order: AppId[]
   viewport: Size
-  /** A phone-sized screen: windows fill it, nothing drags. */
+  /** A phone-sized screen: the desktop gives way to the phone layout (src/phone). */
   compact: boolean
   /** The outline shown while a dragged window is held against an edge. */
   preview: Tile | null
@@ -117,35 +117,43 @@ function centered(id: AppId, viewport: Size, compact: boolean): Rect {
   const size = spec.size({ w: d.w, h: d.h })
   const w = Math.min(size.w, d.w - (compact ? 24 : 0))
   const h = Math.min(size.h, d.h - (compact ? 16 : 0))
-  return clampRect(
+  return inside(
     {
       x: Math.round(d.x + (d.w - w) / 2 + (compact ? 0 : spec.nudge.x)),
       y: Math.round(d.y + (d.h - h) / 2 + (compact ? 0 : spec.nudge.y)),
       w,
       h,
     },
-    viewport,
-    compact,
+    d,
   )
 }
 
-/** Keeps a window reachable: its bar under the menu bar and on screen. */
-export function clampRect(r: Rect, viewport: Size, compact: boolean): Rect {
-  const m = metrics(compact)
-  const keep = 96
-  const x = Math.min(viewport.w - keep, Math.max(keep - r.w, r.x))
-  const y = Math.min(viewport.h - 56, Math.max(m.bar, r.y))
+/** Moves a rect wholly inside a box when it fits, and to the box's top left when it doesn't. */
+function inside(r: Rect, box: Rect): Rect {
+  const x = Math.max(box.x, Math.min(r.x, box.x + box.w - r.w))
+  const y = Math.max(box.y, Math.min(r.y, box.y + box.h - r.h))
   return { x: Math.round(x), y: Math.round(y), w: Math.round(r.w), h: Math.round(r.h) }
 }
 
-/** Fits a window back inside a screen that got smaller. */
-function refit(win: Win, viewport: Size, compact: boolean): Win {
+/** Keeps a dragged window reachable: its bar under the menu bar, above the
+ * Dock, and with enough of it on screen to take hold of. */
+export function clampRect(r: Rect, viewport: Size, compact: boolean): Rect {
+  const d = desk(viewport, compact)
+  const keep = 96
+  const x = Math.min(viewport.w - keep, Math.max(keep - r.w, r.x))
+  const y = Math.min(d.y + d.h - 44, Math.max(d.y, r.y))
+  return { x: Math.round(x), y: Math.round(y), w: Math.round(r.w), h: Math.round(r.h) }
+}
+
+/** Brings a window back onto a desk that changed size: no bigger than the
+ * desk, and wholly on it. */
+function refit(win: Win, viewport: Size): Win {
   if (!win.mounted) return win
   const spec = APPS[win.id]
-  const d = desk(viewport, compact)
-  const w = spec.resizable ? Math.max(spec.min.w, Math.min(win.rect.w, d.w)) : win.rect.w
-  const h = spec.resizable ? Math.max(spec.min.h, Math.min(win.rect.h, viewport.h - d.y - 24)) : win.rect.h
-  const rect = clampRect({ ...win.rect, w, h }, viewport, compact)
+  const d = desk(viewport, false)
+  const w = spec.resizable ? Math.max(Math.min(spec.min.w, d.w), Math.min(win.rect.w, d.w)) : win.rect.w
+  const h = spec.resizable ? Math.max(Math.min(spec.min.h, d.h), Math.min(win.rect.h, d.h)) : Math.min(win.rect.h, d.h)
+  const rect = inside({ ...win.rect, w, h }, d)
   const same = rect.x === win.rect.x && rect.y === win.rect.y && rect.w === win.rect.w && rect.h === win.rect.h
   return same ? win : { ...win, rect }
 }
@@ -204,7 +212,7 @@ export function openApp(id: AppId, origin: Point | null = null) {
         mounted: true,
         open: true,
         minimized: false,
-        rect: fresh ? centered(id, s.viewport, s.compact) : refit(win, s.viewport, s.compact).rect,
+        rect: fresh ? centered(id, s.viewport, s.compact) : s.compact ? win.rect : refit(win, s.viewport).rect,
         // A minimised window glides back out of its icon; a closed one opens
         phase: restoring ? null : 'opening',
         origin: origin ?? win.origin,
@@ -274,7 +282,19 @@ export function setViewport(viewport: Size) {
   wm.set((s) => {
     if (s.viewport.w === viewport.w && s.viewport.h === viewport.h) return s
     const compact = isCompact(viewport)
-    const wins = Object.fromEntries(APP_IDS.map((id) => [id, refit(s.wins[id], viewport, compact)])) as Record<AppId, Win>
+    // A phone-sized screen draws its own layout and never reads these rects:
+    // leave them as they are, to come back to
+    const wins = compact ? s.wins : (Object.fromEntries(APP_IDS.map((id) => [id, refit(s.wins[id], viewport)])) as Record<AppId, Win>)
     return { ...s, viewport, compact, wins, preview: null }
+  })
+}
+
+/** Puts the keyboard in a window: on what it marks to take it, or on the window itself. */
+export function focusWindow(id: AppId) {
+  requestAnimationFrame(() => {
+    const el = document.querySelector<HTMLElement>(`.wf[data-app="${id}"]`)
+    if (!el || el.hasAttribute('inert')) return
+    if (el.contains(document.activeElement) && document.activeElement !== el) return
+    ;(el.querySelector<HTMLElement>('[data-autofocus]') ?? el).focus({ preventScroll: true })
   })
 }

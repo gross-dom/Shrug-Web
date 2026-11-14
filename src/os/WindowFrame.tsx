@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Popover } from '../kit/motion/Popover'
 import { APPS, type AppId, type Size } from './apps'
 import { dockPoint } from './dom'
@@ -73,15 +73,41 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
   }
   useEffect(() => () => clearTimeout(tileTimer.current), [])
 
-  // A window that opens (or comes back) in front takes the keyboard with it
+  // The window in front takes the keyboard, unless something still showing
+  // already has it: a window that opens, one that comes forward when another
+  // closes or minimises, one picked from a menu
   const shown = win.open && !win.minimized
   useEffect(() => {
-    if (!shown || activeApp(wm.get()) !== id) return
+    if (!shown || !active) return
     const el = ref.current
-    if (!el || el.contains(document.activeElement)) return
-    const first = el.querySelector<HTMLElement>('[data-autofocus]')
-    ;(first ?? el).focus({ preventScroll: true })
-  }, [shown, id])
+    const held = document.activeElement as HTMLElement | null
+    if (!el || el.contains(held)) return
+    const loose = !held || held === document.body || !!held.closest('[inert]') || !!held.closest('.wf')
+    if (!loose) return
+    ;(el.querySelector<HTMLElement>('[data-autofocus]') ?? el).focus({ preventScroll: true })
+  }, [shown, active])
+
+  // A drag writes the frame's place straight to the element. Once it ends,
+  // what's drawn is put back in step with what the window manager says:
+  // React only rewrites the values that changed since its last render
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || el.hasAttribute('data-moving')) return
+    el.style.left = `${geo.x}px`
+    el.style.top = `${geo.y}px`
+    el.style.width = `${geo.w}px`
+    el.style.height = `${geo.h}px`
+  })
+
+  // Escape puts the tiling choices away
+  useEffect(() => {
+    if (!tiles) return
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setTiles(false)
+    }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
+  }, [tiles])
 
   if (!win.mounted) return null
 
@@ -231,7 +257,6 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
       }}
       {...(hidden ? ({ inert: '' } as object) : null)}
     >
-      <div className="wf__content">{children}</div>
       <div className="wf__lights" data-nodrag>
         <button type="button" className="wf__light" data-kind="close" aria-label={`Close ${spec.name}`} onClick={() => closeApp(id)}>
           <svg viewBox="0 0 12 12" aria-hidden>
@@ -263,6 +288,7 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
           </svg>
         </button>
       </div>
+      <div className="wf__content">{children}</div>
       {!compact && spec.resizable && (
         <Popover show={tiles} origin="top left" className="tile-menu" role="group" aria-label="Move and resize" onPointerEnter={() => clearTimeout(tileTimer.current)} onPointerLeave={() => tilesSoon(false, 240)} {...(tiles ? null : ({ inert: '' } as object))}>
           <div className="tile-menu__label">Move &amp; Resize</div>

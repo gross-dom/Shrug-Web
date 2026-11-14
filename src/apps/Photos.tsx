@@ -68,55 +68,53 @@ function Sidebar() {
   )
 }
 
-export function PhotosApp() {
+/** What the filters leave showing, and how many of each kind the drop holds. */
+export function useMedia() {
   const { filter, drop } = useStore(photos, (s) => s)
   const inDrop = drop ? MEDIA.filter((m) => m.drop === drop) : MEDIA
   const shown = filter === 'all' ? inDrop : inDrop.filter((m) => m.kind === filter)
   const counts = { all: inDrop.length, photo: inDrop.filter((m) => m.kind === 'photo').length, video: inDrop.filter((m) => m.kind === 'video').length }
-  const at = FILTERS.findIndex((f) => f.id === filter)
+  return { filter, drop, shown, counts }
+}
 
+/** All, Photos or Videos: the kit's segmented control, made to really switch. */
+export function MediaFilterControl() {
+  const { filter, counts } = useMedia()
+  const at = FILTERS.findIndex((f) => f.id === filter)
   return (
-    <Window
-      className="app vip"
-      title={drop ?? 'All drops'}
-      sidebar={<Sidebar />}
-      sidebarWidth={212}
-      sidebarStyle="floating"
-      lightsSize="large"
-      barSize="tall"
-      toolbar={
-        <div
-          className="seg"
-          role="radiogroup"
-          aria-label="Show"
-          tabIndex={0}
-          onClick={(e) => {
-            const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-target]')
-            if (hit) setMediaFilter(hit.dataset.target as MediaFilter)
-          }}
-          onKeyDown={(e) => {
-            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
-            e.preventDefault()
-            setMediaFilter(FILTERS[(at + (e.key === 'ArrowRight' ? 1 : FILTERS.length - 1)) % FILTERS.length]!.id)
-          }}
-        >
-          <Segmented
-            value={at}
-            targets={FILTERS.map((f) => f.id)}
-            items={FILTERS.map((f) => (
-              <span key={f.id} role="radio" aria-checked={f.id === filter}>
-                {f.label} <span className="seg__count">{counts[f.id]}</span>
-              </span>
-            ))}
-          />
-        </div>
-      }
-      body={{ className: 'vip__body scrolls' }}
+    <div
+      className="seg"
+      role="radiogroup"
+      aria-label="Show"
+      tabIndex={0}
+      onClick={(e) => {
+        const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-target]')
+        if (hit) setMediaFilter(hit.dataset.target as MediaFilter)
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+        e.preventDefault()
+        setMediaFilter(FILTERS[(at + (e.key === 'ArrowRight' ? 1 : FILTERS.length - 1)) % FILTERS.length]!.id)
+      }}
     >
-      <header className="vip__head">
-        <h2 className="vip__title">When the drops landed.</h2>
-        <p className="vip__sub">Photos and videos from the people who got one.</p>
-      </header>
+      <Segmented
+        value={at}
+        targets={FILTERS.map((f) => f.id)}
+        items={FILTERS.map((f) => (
+          <span key={f.id} role="radio" aria-checked={f.id === filter}>
+            {f.label} <span className="seg__count">{counts[f.id]}</span>
+          </span>
+        ))}
+      />
+    </div>
+  )
+}
+
+/** The photos and videos showing, or a line saying there are none. */
+export function MediaGrid() {
+  const { filter, shown } = useMedia()
+  return (
+    <>
       <div className="vip__grid">
         {shown.map((slot, i) => (
           <Tile key={`${slot.drop}-${slot.kind}-${i}`} slot={slot} />
@@ -128,6 +126,30 @@ export function PhotosApp() {
           No {filter === 'video' ? 'videos' : 'photos'} from this drop yet
         </div>
       )}
+    </>
+  )
+}
+
+export function PhotosApp() {
+  const drop = useStore(photos, (s) => s.drop)
+  return (
+    <Window className="app vip" title={drop ?? 'All drops'} sidebar={<Sidebar />} sidebarWidth={212} sidebarStyle="floating" lightsSize="large" barSize="tall" toolbar={<MediaFilterControl />} body={{ className: 'vip__body scrolls' }}>
+      {/* With the sidebar folded away, the drops ride along the top */}
+      <div className="vip__chips" role="group" aria-label="Drops">
+        <button type="button" className="chip" aria-pressed={drop === null} onClick={() => setDrop(null)}>
+          All drops
+        </button>
+        {DROPS.map((name) => (
+          <button key={name} type="button" className="chip" aria-pressed={drop === name} onClick={() => setDrop(name)}>
+            {name}
+          </button>
+        ))}
+      </div>
+      <header className="vip__head">
+        <h2 className="vip__title">When the drops landed.</h2>
+        <p className="vip__sub">Photos and videos from the people who got one.</p>
+      </header>
+      <MediaGrid />
     </Window>
   )
 }

@@ -7,6 +7,8 @@ import { NotesApp } from '../apps/Notes'
 import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
 import { SITE } from '../data/site'
+import { openPhoneApp, watchHistory } from '../phone/nav'
+import { Phone } from '../phone/Phone'
 import { APP_IDS, type AppId } from './apps'
 import { Dock } from './Dock'
 import { dockPoint } from './dom'
@@ -21,6 +23,8 @@ import { WindowFrame } from './WindowFrame'
 // The desktop: wallpaper, the menu bar, a few things left out on the desk, the
 // windows, the Dock, and the screen saver over all of it. The root carries the
 // kit's stage class, so every kit part inside reads the same look.
+// On a phone-sized screen the same root holds a phone instead: a Home Screen
+// of the same apps, each full screen.
 
 const WINDOWS: Record<AppId, () => JSX.Element> = {
   finder: FinderApp,
@@ -116,6 +120,8 @@ export function Desktop() {
   const saving = useStore(saver, (s) => s.on)
   const compact = useStore(wm, (s) => s.compact)
   const [booted, setBooted] = useState(false)
+  /** The opening has played: the chat is open and under way. */
+  const started = useRef(false)
 
   useEffect(() => {
     const fit = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
@@ -124,7 +130,10 @@ export function Desktop() {
     return () => window.removeEventListener('resize', fit)
   }, [])
 
-  // The desk arrives, then the group chat opens out of the Dock and begins
+  // The phone's screens are steps in the browser's history
+  useEffect(() => watchHistory(), [])
+
+  // The desk arrives, then the group chat opens out of its icon and begins
   useEffect(() => {
     const query = new URLSearchParams(window.location.search)
     const extra = (query.get('open') ?? '')
@@ -135,8 +144,16 @@ export function Desktop() {
     const t1 = setTimeout(() => setBooted(true), 60)
     const t2 = setTimeout(
       () => {
-        if (!query.has('empty')) openApp('messages', dockPoint('messages'))
-        extra.forEach((id) => openApp(id, dockPoint(id)))
+        started.current = true
+        if (wm.get().compact) {
+          // A phone shows one app at a time: the last one asked for, or the chat
+          const last = extra[extra.length - 1]
+          if (last) openPhoneApp(last)
+          else if (!query.has('empty')) openPhoneApp('messages')
+        } else {
+          if (!query.has('empty')) openApp('messages', dockPoint('messages'))
+          extra.forEach((id) => openApp(id, dockPoint(id)))
+        }
         startChat()
         if (query.has('saver')) startSaver()
       },
@@ -148,6 +165,13 @@ export function Desktop() {
     }
   }, [])
 
+  // Widened from a phone to a desktop that has never had a window: the chat opens here too
+  useEffect(() => {
+    if (compact || !started.current) return
+    const { wins } = wm.get()
+    if (!APP_IDS.some((id) => wins[id].mounted)) openApp('messages', dockPoint('messages'))
+  }, [compact])
+
   return (
     <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={compact || undefined}>
       <div className="os__wallpaper" aria-hidden>
@@ -157,20 +181,26 @@ export function Desktop() {
         <div className="os__grain" />
       </div>
       <h1 className="sr-only">Shrug: what people say, the portfolio, FAQs and drops</h1>
-      <MenuBar />
-      <DeskIcons />
-      <main className="os__windows">
-        <TilePreview />
-        {APP_IDS.map((id) => {
-          const Body = WINDOWS[id]
-          return (
-            <WindowFrame key={id} id={id}>
-              <Body />
-            </WindowFrame>
-          )
-        })}
-      </main>
-      <Dock />
+      {compact ? (
+        <Phone />
+      ) : (
+        <>
+          <MenuBar />
+          <DeskIcons />
+          <main className="os__windows">
+            <TilePreview />
+            {APP_IDS.map((id) => {
+              const Body = WINDOWS[id]
+              return (
+                <WindowFrame key={id} id={id}>
+                  <Body />
+                </WindowFrame>
+              )
+            })}
+          </main>
+          <Dock />
+        </>
+      )}
       <ScreenSaver />
     </div>
   )

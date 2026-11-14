@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
+import { useUnread } from '../apps/state'
 import { SITE } from '../data/site'
 import { APPS, DOCK_APPS, type AppId } from './apps'
 import { dockPoint } from './dom'
 import { AppIcon, DocumentIcon } from './icons'
 import { useStore } from './store'
-import { activeApp, focusApp, openApp, wm } from './wm'
+import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 
 // The Dock: one icon per app, a dot under the ones that are open, a hop when
 // one launches, and icons that swell under the pointer. Minimised windows go
-// back into their app's icon.
+// back into their app's icon, and the group chat's icon counts the
+// conversations with a reply nobody has opened.
 
 /** How much the icon under the pointer grows, and how far the swell reaches. */
 const SWELL = 0.55
@@ -18,6 +20,7 @@ export function Dock() {
   const compact = useStore(wm, (s) => s.compact)
   const openApps = useStore(wm, (s) => DOCK_APPS.filter((id) => s.wins[id].open).join(' '))
   const active = useStore(wm, activeApp)
+  const unread = useUnread()
   const shelf = useRef<HTMLDivElement>(null)
   const [hopping, setHopping] = useState<AppId | null>(null)
   const frame = useRef(0)
@@ -42,12 +45,14 @@ export function Dock() {
 
   const launch = (id: AppId) => {
     const win = wm.get().wins[id]
-    if (win.open && !win.minimized) return focusApp(id)
     if (!win.open) {
       setHopping(id)
       setTimeout(() => setHopping((h) => (h === id ? null : h)), 760)
     }
-    openApp(id, dockPoint(id))
+    if (win.open && !win.minimized) focusApp(id)
+    else openApp(id, dockPoint(id))
+    // The window that was asked for takes the keyboard, wherever focus was
+    focusWindow(id)
   }
 
   const open = openApps.split(' ')
@@ -58,7 +63,7 @@ export function Dock() {
         ref={shelf}
         className="dock__shelf"
         onPointerMove={(e) => {
-          if (e.pointerType !== 'mouse' || compact) return
+          if (e.pointerType !== 'mouse' || compact || document.documentElement.hasAttribute('data-wm-busy')) return
           const x = e.clientX
           shelf.current?.removeAttribute('data-settling')
           cancelAnimationFrame(frame.current)
@@ -80,7 +85,7 @@ export function Dock() {
             data-open={open.includes(id) || undefined}
             aria-current={active === id || undefined}
             data-hop={hopping === id || undefined}
-            aria-label={`${APPS[id].name}: ${APPS[id].blurb}`}
+            aria-label={`${APPS[id].name}: ${APPS[id].blurb}${id === 'messages' && unread ? `, ${unread} unread` : ''}`}
             onClick={() => launch(id)}
           >
             <span className="dock__label" aria-hidden>
@@ -88,6 +93,11 @@ export function Dock() {
             </span>
             <span className="dock__icon">
               <AppIcon id={id} />
+              {id === 'messages' && unread > 0 && (
+                <span className="dock__badge" aria-hidden>
+                  {unread}
+                </span>
+              )}
             </span>
             <span className="dock__dot" aria-hidden />
           </button>

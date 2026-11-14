@@ -7,6 +7,7 @@ import './kit/stage.css'
 import './styles/base.css'
 import './styles/os.css'
 import './styles/apps.css'
+import './styles/phone.css'
 import { Desktop } from './os/Desktop'
 
 createRoot(document.getElementById('root')!).render(

@@ -3,45 +3,79 @@ import { SITE } from '../data/site'
 import { prefersReducedMotion } from '../os/dom'
 import { createStore } from '../os/store'
 
-// The group chat as it plays out: Shrug asks, then ninety people reply, slowly
-// at first so the opening line can be read, then piling in. It runs on its own
-// clock whether or not its window is showing, so the menu bar can count along.
+// The group chat as it plays out. This is Shrug's own Messages: Shrug types
+// the question into the field and sends it, then ninety people reply, slowly
+// at first so the opening line can be read, then piling in, and Shrug signs
+// off with a shrug. It runs on its own clock whether or not its window is
+// showing, so the menu bar and the Dock's badge can count along.
 
 export type ChatItem =
-  | { key: string; kind: 'stamp'; text: string }
-  | { key: string; kind: 'shrug'; text: string; typing: boolean }
+  /** A message from this Mac: Shrug's own, or one the visitor typed. */
+  | { key: string; kind: 'me'; text: string; by: 'shrug' | 'visitor' }
   | { key: string; kind: 'person'; index: number; typing: boolean }
-  | { key: string; kind: 'me'; text: string }
 
 export interface Chat {
+  /** The group conversation, in order. */
   items: ChatItem[]
   /** How many people have replied. */
   replied: number
   /** The person whose dots are showing, or -1. */
   typing: number
+  /** What the script is typing into the message field right now, or null. */
+  draft: string | null
+  /** Shrug's question has been sent. */
+  asked: boolean
   /** Everyone has replied and Shrug has shrugged. */
   done: boolean
   paused: boolean
   started: boolean
-  /** The visitor has sent something: show that nothing was really delivered. */
-  receipt: boolean
+  /** When the conversation began, and when each person replied (0 until they do). */
+  startedAt: number
+  repliedAt: number[]
+  /** What the visitor has typed to one person, by that person's index. */
+  direct: Record<number, { key: string; text: string }[]>
 }
 
 export const TOTAL = PEOPLE.length
+export const QUESTION = ['ok be honest.', `what’s it actually like working with us? ${SITE.mark}`]
 
-const opening = (): ChatItem[] => [
-  { key: 'stamp', kind: 'stamp', text: 'Shrug started the chat' },
-  { key: 'ask-1', kind: 'shrug', text: 'ok be honest.', typing: false },
-  { key: 'ask-2', kind: 'shrug', text: `what’s it actually like working with us? ${SITE.mark}`, typing: false },
-]
+const asMine = (text: string, key: string): ChatItem => ({ key, kind: 'me', text, by: 'shrug' })
 
-const everyone = (): ChatItem[] => [
-  ...opening(),
-  ...PEOPLE.map((_, index): ChatItem => ({ key: `p-${index}`, kind: 'person', index, typing: false })),
-  { key: 'end', kind: 'shrug', text: SITE.mark, typing: false },
-]
+const fresh = (): Chat => ({
+  items: [],
+  replied: 0,
+  typing: -1,
+  draft: null,
+  asked: false,
+  done: false,
+  paused: false,
+  started: false,
+  startedAt: Date.now(),
+  repliedAt: PEOPLE.map(() => 0),
+  direct: {},
+})
 
-const fresh = (): Chat => ({ items: opening(), replied: 0, typing: -1, done: false, paused: false, started: false, receipt: false })
+/** The whole conversation at once, keeping anything the visitor has sent where it was. */
+function everything(from: Chat): Chat {
+  const now = Date.now()
+  const have = new Set(from.items.map((i) => i.key))
+  const items = from.items.map((i) => (i.kind === 'person' && i.typing ? { ...i, typing: false } : i))
+  const opening = QUESTION.map((text, n) => asMine(text, `ask-${n}`)).filter((i) => !have.has(i.key))
+  const people = PEOPLE.map((_, index): ChatItem => ({ key: `p-${index}`, kind: 'person', index, typing: false })).filter((i) => !have.has(i.key))
+  const closing = have.has('end') ? [] : [asMine(SITE.mark, 'end')]
+  return {
+    ...from,
+    items: [...opening, ...items, ...people, ...closing],
+    replied: TOTAL,
+    typing: -1,
+    draft: null,
+    asked: true,
+    done: true,
+    paused: false,
+    started: true,
+    repliedAt: from.repliedAt.map((t) => t || now),
+  }
+}
 
 export const chat = createStore<Chat>(fresh())
 
@@ -53,6 +87,7 @@ let pending: { fn: () => void; due: number; left: number } | null = null
 
 function after(ms: number, fn: () => void) {
   clearTimeout(timer)
+  timer = undefined
   pending = { fn, due: performance.now() + ms, left: ms }
   if (chat.get().paused || document.hidden) return
   timer = setTimeout(run, ms)
@@ -61,6 +96,7 @@ function after(ms: number, fn: () => void) {
 function run() {
   const next = pending
   pending = null
+  timer = undefined
   next?.fn()
 }
 
@@ -78,12 +114,33 @@ function release() {
   timer = setTimeout(run, pending.left)
 }
 
+function reset() {
+  clearTimeout(timer)
+  timer = undefined
+  pending = null
+}
+
 if (typeof document !== 'undefined') {
   // Nobody misses the replies while the tab is in the background
   document.addEventListener('visibilitychange', () => (document.hidden ? hold() : release()))
 }
 
 // ---- The script ----
+
+/** Types `text` into the message field a character at a time, then sends it. */
+function typeAndSend(text: string, key: string, each: number, then: () => void) {
+  let at = 0
+  const step = () => {
+    at++
+    chat.set((s) => ({ ...s, draft: text.slice(0, at) }))
+    if (at < text.length) return after(each, step)
+    after(320, () => {
+      chat.set((s) => ({ ...s, draft: null, items: [...s.items, asMine(text, key)] }))
+      then()
+    })
+  }
+  after(each, step)
+}
 
 /** The first few people are seen typing; after that the replies just land. */
 const TYPED = 6
@@ -93,51 +150,57 @@ function pace(index: number) {
   if (index === 0) return 3400
   const t = Math.min(1, index / 26)
   const eased = 1 - Math.pow(1 - t, 2.2)
-  return Math.round(1500 - eased * 1230)
+  return Math.round(1600 - eased * 1230)
 }
 
-function replace(items: ChatItem[], key: string, change: Partial<ChatItem>): ChatItem[] {
-  return items.map((item) => (item.key === key ? ({ ...item, ...change } as ChatItem) : item))
-}
+const settle = (items: ChatItem[], key: string): ChatItem[] => items.map((item) => (item.key === key && item.kind === 'person' ? { ...item, typing: false } : item))
 
 function person(index: number) {
-  if (index >= TOTAL) return after(900, closing)
+  if (index >= TOTAL) return after(1100, closing)
   const key = `p-${index}`
   const land = () => {
-    chat.set((s) => ({
-      ...s,
-      typing: -1,
-      replied: index + 1,
-      items: s.items.some((i) => i.key === key) ? replace(s.items, key, { typing: false }) : [...s.items, { key, kind: 'person', index, typing: false }],
-    }))
+    chat.set((s) => {
+      const repliedAt = s.repliedAt.slice()
+      repliedAt[index] = Date.now()
+      return {
+        ...s,
+        typing: -1,
+        replied: index + 1,
+        repliedAt,
+        items: s.items.some((i) => i.key === key) ? settle(s.items, key) : [...s.items, { key, kind: 'person', index, typing: false }],
+      }
+    })
     after(pace(index), () => person(index + 1))
   }
   if (index < TYPED) {
     chat.set((s) => ({ ...s, typing: index, items: [...s.items, { key, kind: 'person', index, typing: true }] }))
-    after(index === 0 ? 1700 : 1100 - index * 110, land)
+    after(index === 0 ? 1800 : 1200 - index * 110, land)
   } else land()
 }
 
 function closing() {
-  chat.set((s) => ({ ...s, items: [...s.items, { key: 'end', kind: 'shrug', text: SITE.mark, typing: true }] }))
-  after(1300, () => chat.set((s) => ({ ...s, done: true, items: replace(s.items, 'end', { typing: false }) })))
+  typeAndSend(SITE.mark, 'end', 95, () => chat.set((s) => ({ ...s, done: true })))
+}
+
+function opening() {
+  typeAndSend(QUESTION[0]!, 'ask-0', 46, () =>
+    after(380, () =>
+      typeAndSend(QUESTION[1]!, 'ask-1', 30, () => {
+        chat.set((s) => ({ ...s, asked: true }))
+        after(1300, () => person(0))
+      }),
+    ),
+  )
 }
 
 // ---- Controls ----
 
-/** How many messages the visitor has sent, and Shrug's reply on its way to the last. */
-let sent = 0
-let answering: ReturnType<typeof setTimeout> | undefined
-
-/** Starts the replies, once. Under reduced motion everyone has already replied. */
+/** Starts the conversation, once. Under reduced motion it has all been said already. */
 export function startChat() {
   if (chat.get().started) return
-  if (prefersReducedMotion()) {
-    chat.set({ ...fresh(), items: everyone(), replied: TOTAL, done: true, started: true })
-    return
-  }
-  chat.set((s) => ({ ...s, started: true }))
-  after(1500, () => person(0))
+  if (prefersReducedMotion()) return chat.set(everything(fresh()))
+  chat.set((s) => ({ ...s, started: true, startedAt: Date.now() }))
+  after(900, opening)
 }
 
 export function pauseChat() {
@@ -153,36 +216,31 @@ export function resumeChat() {
 export const toggleChat = () => (chat.get().paused ? resumeChat() : pauseChat())
 
 export function replayChat() {
-  clearTimeout(timer)
-  clearTimeout(answering)
-  timer = undefined
-  pending = null
+  reset()
   chat.set({ ...fresh(), started: true })
-  after(900, () => person(0))
+  after(700, opening)
 }
 
 /** Everyone replies at once. */
 export function finishChat() {
-  clearTimeout(timer)
-  timer = undefined
-  pending = null
-  chat.set((s) => {
-    const mine = s.items.filter((i) => i.kind === 'me' || i.key.startsWith('re-'))
-    return { ...s, items: [...everyone(), ...mine], replied: TOTAL, typing: -1, done: true, paused: false, started: true }
-  })
+  reset()
+  chat.set((s) => everything(s))
 }
 
-/** The visitor's own message. Nothing leaves the page: Shrug shrugs back and
- * the receipt says so. */
-export function sendMessage(text: string) {
+// ---- The visitor's own messages ----
+
+let sent = 0
+
+/** Something the visitor typed, to the group or to one person. Nothing leaves
+ * the page: the bubble is marked Not Delivered, as Messages marks a message
+ * that didn't go. */
+export function sendMessage(text: string, to: 'group' | number = 'group') {
   const body = text.trim()
   if (!body) return
-  const n = ++sent
-  chat.set((s) => ({ ...s, receipt: true, items: [...s.items, { key: `me-${n}`, kind: 'me', text: body }] }))
-  clearTimeout(answering)
-  answering = setTimeout(() => {
-    const key = `re-${n}`
-    chat.set((s) => ({ ...s, items: [...s.items, { key, kind: 'shrug', text: SITE.mark, typing: true }] }))
-    answering = setTimeout(() => chat.set((s) => ({ ...s, items: replace(s.items, key, { typing: false }) })), 1400)
-  }, 700)
+  const key = `me-${++sent}`
+  chat.set((s) =>
+    to === 'group'
+      ? { ...s, items: [...s.items, { key, kind: 'me', text: body, by: 'visitor' }] }
+      : { ...s, direct: { ...s.direct, [to]: [...(s.direct[to] ?? []), { key, text: body }] } },
+  )
 }

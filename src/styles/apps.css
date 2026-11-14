@@ -25,6 +25,7 @@
 }
 
 .scrolls:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ss-accent) 55%, transparent);
   outline-offset: -3px;
 }
 
@@ -203,44 +204,75 @@
   color: #fff;
 }
 
-/* ---- Group chat ---- */
+/* ---- Group chat: Messages ---- */
 
-.chat-head {
+/* The bar: the conversation's face over its name, in the middle, the way
+   Messages heads a conversation; its details behind it and behind the button */
+.chat > .ss-window__main > .ss-window__bar {
+  position: relative;
+}
+
+.chat-id {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  max-width: calc(100% - 190px);
+  padding: 0 8px;
+  border-radius: 10px;
+  transform: translateX(-50%);
+}
+
+.chat-id .ss-avatar,
+.chat-id .shrug-avatar {
+  box-shadow: 0 1px 3px rgba(20, 30, 60, 0.18);
+}
+
+.chat-id__name {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.chat-head__text {
-  min-width: 0;
-}
-
-.chat-head__title {
-  overflow: hidden;
-  font-size: 13.5px;
-  font-weight: 700;
-  line-height: 17px;
-  letter-spacing: -0.01em;
-  text-overflow: ellipsis;
+  gap: 2px;
+  max-width: 100%;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+  color: var(--ss-text-strong);
   white-space: nowrap;
 }
 
-.chat-head__sub {
+.chat-id__name > span {
+  min-width: 0;
   overflow: hidden;
-  font-size: 11.5px;
-  line-height: 15px;
-  color: var(--ss-text);
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.chat-head .ss-count,
-.chat-conv .ss-count {
-  font: inherit;
+.chat-id__name > svg {
+  flex: none;
+  color: var(--ss-text-faint);
+}
+
+.chat-id:focus-visible {
+  outline-offset: 2px;
+}
+
+/* Only there when the sidebar isn't: see the narrow rules at the end */
+.chat-back {
+  display: none;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background: var(--glass);
+  box-shadow: var(--glass-edge);
+  color: var(--ss-icon);
 }
 
 .chat__body {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -261,7 +293,7 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-  /* Older replies fade out under the bar instead of being cut by it */
+  /* Older messages fade out under the bar instead of being cut by it */
   mask-image: linear-gradient(to bottom, transparent, #000 22px);
 }
 
@@ -269,21 +301,26 @@
   outline: none;
 }
 
-/* Short conversations sit at the foot of the pane, as a chat does. The
-   thread measures its rows against this box, which scrolls with them */
+/* A conversation starts at the top and grows down, as Messages lays one
+   out. The thread measures its rows against this box, which scrolls with them */
 .chat__flow {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   min-height: 100%;
-  padding: 20px 20px 8px;
+  padding: 14px 20px 8px 16px;
 }
 
 .chat__thread {
+  --ss-thread-size: 14px;
   flex: none;
+  justify-content: flex-start;
   user-select: text;
   -webkit-user-select: text;
+}
+
+.chat__thread .ss-bubble {
+  max-width: min(75%, 520px);
 }
 
 /* The kit keeps every row on a layer of its own so it glides cleanly. With
@@ -294,25 +331,41 @@
   will-change: auto;
 }
 
-/* Who is speaking, over their bubble, as a group chat shows it. It rides
-   the thread's glide like the kit's stamps do */
+/* "iMessage" over the day and the time, where a conversation begins */
+.chat-stamp.ss-stamp {
+  margin: 2px 0 8px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 14px;
+}
+
+.chat-stamp b {
+  font-weight: 600;
+}
+
+/* What Messages says when a group is named */
+.chat-note.ss-stamp {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 14px;
+}
+
+/* Who is speaking, over their bubble, as a group conversation shows it:
+   small and gray, in line with the bubble's words. It rides the thread's
+   glide like the kit's stamps do */
 .chat-who {
   position: relative;
   top: 0;
   flex: none;
-  margin: 9px 0 1px 47px;
+  margin: 7px 0 1px 47px;
   overflow: hidden;
-  font-size: 11.5px;
-  line-height: 15px;
-  color: var(--ss-text);
+  font-size: 11px;
+  line-height: 14px;
+  color: #8e8e93;
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: top var(--ss-scroll);
-}
-
-.chat-who b {
-  font-weight: 600;
-  color: var(--ss-text-strong);
 }
 
 /* A reply's name and face arrive with its bubble, on the bubble's own
@@ -328,19 +381,43 @@
   }
 }
 
-.chat-gap {
-  display: block;
-  width: 28px;
+.chat__thread .ss-receipt {
+  font-size: 11px;
+  line-height: 15px;
 }
 
-/* Shrug speaks in black, as on the canvas */
-.chat-shrug .ss-bubble {
-  --b: #1d1d1f;
-  --t: #fff;
+/* A message that didn't go: the red mark beside the bubble and the line
+   under it, as Messages shows one. Nothing typed here leaves the page. */
+.chat-failed::after {
+  content: '!';
+  display: grid;
+  flex: none;
+  align-self: center;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  animation: chat-arrive 0.3s ease 0.5s both;
 }
 
-.chat-shrug .ss-bubble__dots i {
-  background: #a8a8ae;
+.chat-undelivered {
+  position: relative;
+  top: 0;
+  flex: none;
+  margin: 1px 25px 4px 0;
+  color: #ff3b30;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 15px;
+  text-align: right;
+  transition: top var(--ss-scroll);
+  animation: chat-arrive 0.3s ease 0.5s both;
 }
 
 /* A quote still to come: lines where its words will go */
@@ -361,8 +438,8 @@
   opacity: 0.17;
 }
 
-/* Found from the sidebar: the bubble is ringed for a moment */
-.chat .ss-bubble[data-flash]::before {
+/* Shown from the details: the bubble is ringed for a moment */
+.chat__thread .ss-bubble[data-flash]::before {
   animation: chat-flash 1.6s ease;
 }
 
@@ -404,20 +481,85 @@
   pointer-events: auto;
 }
 
+/* The message field: a plus for everything else, then the field itself */
 .composer {
+  position: relative;
+  display: flex;
   flex: none;
-  padding: 8px 14px 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 12px 12px;
+}
+
+.composer__plus {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.065);
+  color: #7c7c83;
+  transition: background-color 0.15s ease, transform 0.25s var(--ease-out);
+}
+
+.composer__plus:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.composer__plus[aria-expanded='true'] {
+  transform: rotate(45deg);
+}
+
+.composer__more.ss-popover {
+  bottom: calc(100% - 2px);
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  min-width: 196px;
+  padding: 5px;
+  border-radius: 14px;
+}
+
+.composer__more[data-show] {
+  pointer-events: auto;
+}
+
+.composer__app {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 32px;
+  padding: 0 10px 0 6px;
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--ss-text-strong);
+}
+
+.composer__app:hover,
+.composer__app:focus-visible {
+  background: var(--ss-accent);
+  color: #fff;
+  outline: none;
+}
+
+.composer__app-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
 }
 
 .composer__field {
   position: relative;
   display: flex;
+  flex: 1;
   align-items: center;
-  height: 34px;
-  padding: 0 4px 0 14px;
-  border-radius: 17px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 3px 0 12px;
+  border-radius: 15px;
   background: #fff;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
   transition: box-shadow 0.2s ease;
 }
 
@@ -425,17 +567,19 @@
   box-shadow: inset 0 0 0 1px var(--ss-accent), 0 0 0 3px color-mix(in srgb, var(--ss-accent) 26%, transparent);
 }
 
-/* Everyone has replied: the field is where the conversation goes next */
-.composer[data-done] .composer__field:not(:focus-within) {
-  box-shadow: inset 0 0 0 1.5px var(--ss-accent);
-}
-
+/* Where the field's words begin: a sent bubble forms out of this spot */
 .composer__origin {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 14px;
+  left: 12px;
   width: 0;
+  color: var(--ss-text-strong);
+}
+
+.composer__input,
+.composer__ghost {
+  font-size: 13.5px;
   color: var(--ss-text-strong);
 }
 
@@ -443,39 +587,72 @@
   flex: 1;
   min-width: 0;
   height: 100%;
-  font-size: 14px;
-  color: var(--ss-text-strong);
 }
 
 .composer__input::placeholder {
-  color: var(--ss-text-faint);
+  color: #b4b4ba;
 }
 
 .composer__input:focus-visible {
   outline: none;
 }
 
+/* Shrug's own message, being typed into the field before it is sent */
+.composer__ghost {
+  position: absolute;
+  top: 50%;
+  right: 34px;
+  left: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.composer__caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1.15em;
+  margin-left: 1px;
+  border-radius: 1px;
+  background: var(--ss-accent);
+  vertical-align: -0.2em;
+  animation: composer-caret 1.06s steps(1) infinite;
+}
+
+@keyframes composer-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* The send arrow is only there once there is something to send */
 .composer__send {
   display: grid;
   flex: none;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #d6d7dc;
+  background: #0a84ff;
   color: #fff;
-  transition: background-color 0.18s ease, transform 0.18s var(--ease-out);
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.24s var(--ease-out);
 }
 
 .composer__send[data-ready] {
-  background: #0a84ff;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
 }
 
 .composer__send[data-ready]:active {
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
 
-/* The sidebar: a search, the conversation, then everyone in it */
+/* The sidebar: a search, then every conversation, newest first */
 .chat-side {
   display: flex;
   flex: 1;
@@ -485,71 +662,223 @@
 
 .chat-side__top {
   flex: none;
-  padding: 2px 10px 10px;
+  padding: 2px 10px 8px;
 }
 
-.chat-conv {
-  flex: none;
-  margin: 0 8px;
-  --ss-row-title: 13px;
-  --ss-row-subtitle: 12px;
-  --ss-row-line: 17px;
-  border-radius: 11px;
-}
-
-.chat-conv[data-selected] {
-  background: var(--ss-accent);
-  --ss-text-strong: #fff;
-  --ss-text: rgba(255, 255, 255, 0.84);
-}
-
-.chat-side__list {
-  position: relative;
+.conv-list {
   flex: 1;
   min-height: 0;
   padding: 0 8px 10px;
+}
+
+.conv-list:focus-visible {
+  outline: none;
+}
+
+.conv-list:focus-visible .conv[data-selected] {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ss-accent) 40%, transparent);
+}
+
+/* A conversation that has just arrived opens its row at the top of the list */
+.conv-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.conv-slot[data-new] {
+  animation: conv-in 0.45s var(--ease-out) both;
+}
+
+@keyframes conv-in {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+.conv.ss-row {
+  --ss-row-title: 13px;
+  --ss-row-subtitle: 12px;
+  --ss-row-meta: 11.5px;
+  --ss-row-line: 17px;
+  --ss-row-line-2: 15px;
+  --ss-row-gap: 1px;
+  --ss-row-dot: 8px;
+  min-height: 0;
+  /* Room on the left for the unread dot, inside the row's own fill */
+  padding-left: 22px;
+  overflow: hidden;
+  column-gap: 9px;
+  border-radius: 11px;
+  will-change: auto;
+}
+
+.conv .ss-row__dot {
+  background: #0a84ff;
+}
+
+.conv .ss-row__meta {
+  color: var(--ss-text);
+}
+
+/* The open conversation, in the system's blue with white type */
+.conv[data-selected] {
+  background: var(--ss-accent);
+  --ss-text-strong: #fff;
+  --ss-text: rgba(255, 255, 255, 0.84);
+  --ss-ink-2: rgba(255, 255, 255, 0.4);
+}
+
+.conv[data-selected] .ss-row__dot {
+  background: #fff;
+}
+
+.conv:not([data-selected]):hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Details: who is in the conversation, and the replies' own controls */
+.chat-details.ss-popover {
+  top: 2px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 14px);
+  padding: 0;
+  border-radius: 16px;
+}
+
+.chat-details[data-show] {
+  pointer-events: auto;
+}
+
+.details {
+  min-height: 0;
+  padding: 18px 12px 12px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
 }
 
-.chat-person {
-  --ss-row-title: 12.5px;
-  column-gap: 8px;
-  border-radius: 8px;
+.details__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.chat-person .ss-row__title {
+.details__name {
+  margin-top: 9px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 19px;
+  letter-spacing: -0.01em;
+}
+
+.details__sub {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ss-text);
+  text-wrap: balance;
+}
+
+.details__tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.details__group {
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.details__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.details__row + .details__row {
+  box-shadow: inset 0 0.5px 0 rgba(0, 0, 0, 0.12);
+}
+
+.details__row:hover {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+.details__row:focus-visible {
+  outline-offset: -3px;
+}
+
+.details__row--action {
+  color: var(--ss-accent);
+}
+
+.details__row[aria-disabled='true'] {
+  color: var(--ss-text-faint);
+}
+
+.details__row[aria-disabled='true'] .ss-toggle {
+  opacity: 0.5;
+}
+
+.details__label {
+  margin: 16px 12px 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  color: var(--ss-text);
+}
+
+.details__people {
+  margin-top: 6px;
+}
+
+.details__person {
+  justify-content: flex-start;
+  padding: 5px 10px;
+}
+
+.details__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.details__who-name,
+.details__who-role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details__who-name {
   font-weight: 500;
 }
 
-.chat-person .ss-avatar,
-.chat-person .ss-row__title {
-  transition: opacity 0.4s ease, color 0.4s ease;
+.details__who-role {
+  font-size: 11.5px;
+  line-height: 15px;
+  color: var(--ss-text);
 }
 
-.chat-person[data-state='waiting'] {
-  --ss-text-strong: var(--ss-text-faint);
-}
-
-.chat-person[data-state='waiting'] .ss-avatar {
-  opacity: 0.42;
-}
-
-/* No ring for someone who hasn't started typing: the list stays quiet
-   until there is something to mark */
-.chat-person[data-state='waiting'] .ss-check__ring {
-  opacity: 0;
-}
-
-.chat-person[data-state='replied']:hover {
-  background: var(--ss-ink-2);
-}
-
-.chat-person:focus-visible {
-  outline-offset: -2px;
+/* Someone who hasn't replied yet is in the list, but quietly */
+.details__person[data-state='waiting'] > * {
+  opacity: 0.45;
 }
 
 /* ---- Sidebars and headings the windows share ---- */
@@ -677,19 +1006,59 @@
 
 /* ---- Portfolio ---- */
 
+/* A company's logo, as an app icon: its own mark on a rounded tile. Where no
+   logo could be confirmed the tile carries the company's initial. */
+.logo {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 22.5%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 30, 60, 0.14), 0 3px 9px rgba(20, 30, 60, 0.08);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.logo > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A hairline round the tile, so a white logo keeps its edge on a white window */
+.logo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+}
+
+.logo[data-empty] {
+  background: linear-gradient(180deg, #f6f7fa, #e2e5ec);
+  color: #878b97;
+}
+
 .pf__body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.pf__chips {
+.pf__chips,
+.vip__chips {
   display: none;
   flex: none;
   gap: 6px;
   padding: 2px 14px 10px;
   overflow-x: auto;
   scrollbar-width: none;
+  /* More to the right: the row fades out instead of being cut */
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
 }
 
 .pf .tool--search .search {
@@ -704,22 +1073,30 @@
   box-shadow: inset 0 0 0 1px var(--ss-accent), 0 0 0 3px color-mix(in srgb, var(--ss-accent) 28%, transparent);
 }
 
+/* The companies, and beside them the preview of the one selected */
+.pf__main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--ss-line);
+}
+
 .pf__icons {
   display: grid;
   flex: 1;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(98px, 1fr));
   align-content: start;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
   min-height: 0;
-  padding: 10px 14px 16px;
-  border-top: 1px solid var(--ss-line);
+  padding: 10px 12px 16px;
 }
 
 .pf-file {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
   padding: 6px 2px 8px;
   border-radius: 10px;
@@ -728,14 +1105,8 @@
 .pf-file__icon {
   display: grid;
   place-items: center;
-  width: 70px;
-  height: 58px;
-  padding: 4px 6px;
-  border-radius: 9px;
-}
-
-.pf-file__icon .folder-icon {
-  filter: drop-shadow(0 1px 1.5px rgba(20, 60, 130, 0.22));
+  padding: 6px;
+  border-radius: 12px;
 }
 
 .pf-file__name {
@@ -752,11 +1123,11 @@
   -webkit-line-clamp: 2;
 }
 
-.pf-file[aria-pressed='true'] .pf-file__icon {
+.pf-file[aria-selected='true'] .pf-file__icon {
   background: rgba(0, 0, 0, 0.075);
 }
 
-.pf-file[aria-pressed='true'] .pf-file__name {
+.pf-file[aria-selected='true'] .pf-file__name {
   background: var(--ss-accent);
   color: #fff;
 }
@@ -767,20 +1138,21 @@
 
 .pf__list {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   padding: 0 8px 10px;
-  border-top: 1px solid var(--ss-line);
   font-size: 12.5px;
 }
 
 .pf-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 92px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.7fr);
   align-items: center;
   width: 100%;
-  height: 26px;
+  height: 28px;
   padding: 0 10px;
   border-radius: 6px;
+  text-align: left;
 }
 
 .pf-row > span {
@@ -828,27 +1200,108 @@
 .pf-row__name {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
-.pf-row__icon {
-  flex: none;
-  width: 18px;
-  height: 15px;
+.pf-row__name > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.pf-row[aria-pressed='true'],
-.pf-row[aria-pressed='true']:nth-child(odd) {
+.pf-row .logo,
+.pf__path .logo {
+  box-shadow: none;
+}
+
+.pf-row[aria-selected='true'],
+.pf-row[aria-selected='true']:nth-child(odd) {
   background: var(--ss-accent);
   color: #fff;
 }
 
-.pf-row[aria-pressed='true'] > span:not(:first-child) {
+.pf-row[aria-selected='true'] > span:not(:first-child) {
   color: rgba(255, 255, 255, 0.86);
 }
 
 .pf-row:focus-visible {
   outline-offset: -2px;
+}
+
+/* The preview: the selected company's icon, what it does, and the way in */
+.pf-preview {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 236px;
+  padding: 26px 18px 18px;
+  overflow-y: auto;
+  border-left: 1px solid var(--ss-line);
+  text-align: center;
+  scrollbar-width: thin;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.pf-preview__text {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pf-preview__name {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 21px;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.pf-preview__kind {
+  margin-top: 1px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ss-text);
+}
+
+.pf-preview__blurb {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ss-text-strong);
+  text-wrap: balance;
+}
+
+.pf-preview__visit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 11px 0 13px;
+  border-radius: 14px;
+  background: var(--ss-accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pf-preview__visit > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-preview__visit > svg {
+  flex: none;
+}
+
+.pf-preview__visit:hover {
+  background: color-mix(in srgb, var(--ss-accent) 88%, #000);
 }
 
 .pf__none,
@@ -863,11 +1316,6 @@
   color: var(--ss-text-faint);
   font-size: 13px;
   text-align: center;
-}
-
-.pf__body:has(.pf__none) .pf__icons,
-.pf__body:has(.pf__none) .pf__list {
-  display: none;
 }
 
 .pf__foot {
@@ -895,6 +1343,10 @@
 .pf__path b {
   font-weight: 500;
   color: var(--ss-text-strong);
+}
+
+.pf__path > svg {
+  flex: none;
 }
 
 .pf__path-icon {
@@ -1239,7 +1691,14 @@
   flex-direction: column;
   align-items: center;
   padding: 0 20px 16px;
+  /* On a short screen the window is cut short: what's in it scrolls */
+  overflow-y: auto;
+  scrollbar-width: thin;
   text-align: center;
+}
+
+.about__body > * {
+  flex: none;
 }
 
 .about__icon {
@@ -1331,12 +1790,8 @@
     padding-left: 90px;
   }
 
-  /* A phone's bigger lights need more of the bar */
-  .os[data-compact] .app > .ss-window__main > .ss-window__bar {
-    padding-left: 106px;
-  }
-
-  .pf__chips {
+  .pf__chips,
+  .vip__chips {
     display: flex;
   }
 
@@ -1344,9 +1799,67 @@
     width: 120px;
   }
 
+  /* The preview goes under the companies, as a strip */
+  .pf__main {
+    flex-direction: column;
+  }
+
+  .pf-preview {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    width: auto;
+    padding: 10px 14px;
+    overflow: visible;
+    border-top: 1px solid var(--ss-line);
+    border-left: 0;
+    text-align: left;
+  }
+
+  .pf-preview > .logo {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 18px !important;
+  }
+
+  .pf-preview__text {
+    flex: 1;
+  }
+
+  .pf-preview__name {
+    font-size: 14px;
+    line-height: 18px;
+  }
+
+  .pf-preview__kind {
+    display: none;
+  }
+
+  .pf-preview__blurb {
+    display: -webkit-box;
+    margin-top: 0;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--ss-text);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .pf-preview__visit {
+    flex: none;
+    max-width: 44%;
+  }
+
   .vip__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-inline: 14px;
+  }
+
+  /* Two columns have no room for a tile two wide beside another */
+  .vip-tile[data-span='big'],
+  .vip-tile[data-span='wide'] {
+    grid-column: span 1;
   }
 
   .vip__head {
@@ -1365,16 +1878,37 @@
   .chat__flow {
     padding-inline: 12px;
   }
+
+  /* No sidebar to pick the group from: a way back to it instead */
+  .chat-back {
+    display: grid;
+  }
+
+  .chat-id {
+    max-width: calc(100% - 250px);
+  }
 }
 
 @container win (max-width: 460px) {
-  .tool__label,
-  .chat-head .shrug-avatar {
+  .tool__label {
     display: none;
   }
 
-  .pf .tool--search {
+  /* The search stays, at the width there is */
+  .pf .tool--search .search {
+    width: 96px;
+  }
+
+  .pf .heading {
     display: none;
+  }
+
+  .pf-preview__visit > span {
+    display: none;
+  }
+
+  .pf-preview__visit {
+    padding: 0 8px;
   }
 
   .vip__title,
@@ -1386,19 +1920,25 @@
 /* A phone zooms the page when a field's type is under 16px: keep it at 16 */
 @media (pointer: coarse) {
   .composer__input,
+  .composer__ghost,
   .search__input,
   .term__input {
     font-size: 16px;
   }
 
   .composer__field {
-    height: 40px;
-    border-radius: 20px;
+    height: 36px;
+    border-radius: 18px;
+  }
+
+  .composer__plus {
+    width: 34px;
+    height: 34px;
   }
 
   .composer__send {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
 
   .search {
@@ -1417,8 +1957,15 @@
   }
 
   .chat-who,
+  .chat-failed::after,
+  .chat-undelivered,
+  .conv-slot,
   .ss-bubble-row > .ss-bubble__avatar {
     animation: none !important;
+  }
+
+  .composer__caret {
+    animation: none;
   }
 
   .faq__note {

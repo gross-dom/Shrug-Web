@@ -1,4 +1,5 @@
-import { createStore } from '../os/store'
+import { createStore, useStore } from '../os/store'
+import { chat } from './chat'
 
 // What each app is showing. Kept outside the windows so the menu bar's View
 // menu can change it, and so a closed window comes back the way it was left.
@@ -60,3 +61,54 @@ export const notes = createStore<{ note: number; query: string }>({ note: 0, que
 
 export const showNote = (note: number) => notes.set((s) => ({ ...s, note }))
 export const setNotesQuery = (query: string) => notes.set((s) => ({ ...s, query }))
+
+// ---- Group chat (the messages window) ----
+
+/** The group conversation, or one person's own, by their index. */
+export type Conversation = 'group' | number
+
+export interface Inbox {
+  /** The conversation that is showing. */
+  open: Conversation
+  /** People whose own conversation has been opened: their unread dot is gone. */
+  read: number[]
+  /** How many replies had landed when the group conversation was last on screen. */
+  groupSeen: number
+  query: string
+  /** A reply to bring into view in the group conversation. */
+  jump: number | null
+}
+
+export const inbox = createStore<Inbox>({ open: 'group', read: [], groupSeen: 0, query: '', jump: null })
+
+export function openConversation(open: Conversation) {
+  inbox.set((s) => {
+    const replied = chat.get().replied
+    return {
+      ...s,
+      open,
+      jump: null,
+      // Leaving the group: remember how far it had got, so later replies read as new
+      groupSeen: s.open === 'group' ? replied : s.groupSeen,
+      read: typeof open === 'number' && open < replied && !s.read.includes(open) ? [...s.read, open] : s.read,
+    }
+  })
+}
+
+/** Goes to the group conversation and brings one person's reply into view. */
+export function showInGroup(index: number) {
+  inbox.set((s) => ({ ...s, open: 'group', jump: index }))
+}
+
+export const clearJump = () => inbox.set((s) => (s.jump === null ? s : { ...s, jump: null }))
+export const setInboxQuery = (query: string) => inbox.set((s) => ({ ...s, query }))
+
+/** Conversations with a reply nobody has opened yet: what the Dock's badge counts. */
+export const unreadCount = (replied: number, read: number[]) => replied - read.filter((i) => i < replied).length
+
+/** The same count, kept up to date for whatever shows it. */
+export const useUnread = () =>
+  unreadCount(
+    useStore(chat, (s) => s.replied),
+    useStore(inbox, (s) => s.read),
+  )
