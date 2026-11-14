@@ -71,6 +71,7 @@ export function TerminalApp() {
     <Window className="term" chrome="terminal" lightsSize="large" title="shrug — case-studies" body={{ className: 'term__body' }}>
       <form
         className="term__screen scrolls"
+        noValidate
         onSubmit={submit}
         onPointerUp={() => {
           // A click anywhere in the terminal types into it, unless text was just selected

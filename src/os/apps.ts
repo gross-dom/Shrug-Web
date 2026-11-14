@@ -27,9 +27,10 @@ export interface AppSpec {
   dock: number | null
 }
 
-const fit = (w: number, h: number) => (room: Size) => ({
-  w: Math.round(Math.min(w, room.w - 48)),
-  h: Math.round(Math.min(h, room.h - 40)),
+/** A share of the desktop, kept between a smallest and a largest size. */
+const fit = (share: Size, least: Size, most: Size) => (room: Size) => ({
+  w: Math.round(Math.min(room.w - 48, most.w, Math.max(least.w, room.w * share.w))),
+  h: Math.round(Math.min(room.h - 40, most.h, Math.max(least.h, room.h * share.h))),
 })
 
 export const APPS: Record<AppId, AppSpec> = {
@@ -37,7 +38,7 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'finder',
     name: 'Portfolio',
     blurb: 'Every company, by vertical',
-    size: fit(900, 580),
+    size: fit({ w: 0.62, h: 0.74 }, { w: 760, h: 500 }, { w: 1060, h: 700 }),
     min: { w: 420, h: 320 },
     nudge: { x: -70, y: -6 },
     resizable: true,
@@ -48,7 +49,7 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'messages',
     name: 'Group chat',
     blurb: 'What people say',
-    size: fit(1000, 660),
+    size: fit({ w: 0.7, h: 0.84 }, { w: 820, h: 560 }, { w: 1180, h: 800 }),
     min: { w: 380, h: 360 },
     nudge: { x: 0, y: -4 },
     resizable: true,
@@ -59,7 +60,7 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'notes',
     name: 'FAQs',
     blurb: 'Questions, answered',
-    size: fit(780, 520),
+    size: fit({ w: 0.54, h: 0.66 }, { w: 700, h: 460 }, { w: 900, h: 620 }),
     min: { w: 400, h: 320 },
     nudge: { x: 90, y: 18 },
     resizable: true,
@@ -70,7 +71,7 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'terminal',
     name: 'Case Studies',
     blurb: 'Private. Ask nicely.',
-    size: fit(680, 430),
+    size: fit({ w: 0.47, h: 0.55 }, { w: 620, h: 400 }, { w: 800, h: 520 }),
     min: { w: 360, h: 240 },
     nudge: { x: -120, y: 40 },
     resizable: true,
@@ -81,7 +82,7 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'photos',
     name: 'VIP',
     blurb: 'When the drops landed',
-    size: fit(940, 620),
+    size: fit({ w: 0.65, h: 0.78 }, { w: 780, h: 540 }, { w: 1100, h: 740 }),
     min: { w: 420, h: 340 },
     nudge: { x: 50, y: -16 },
     resizable: true,

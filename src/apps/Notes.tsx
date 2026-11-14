@@ -86,6 +86,17 @@ export function NotesApp() {
         <h2 className="faq__title">{current.question}</h2>
         {current.answer ? <p className="faq__answer">{current.answer}</p> : <p className="faq__todo">{ANSWER_PLACEHOLDER}</p>}
       </article>
+      {/* With the sidebar folded away, the questions are listed under the note */}
+      <nav className="faq__more" aria-label="More questions">
+        <div className="faq__more-label">More questions</div>
+        {FAQS.map((faq, i) =>
+          i === note ? null : (
+            <button key={i} type="button" className="faq__more-item" onClick={() => showNote(i)}>
+              {faq.question}
+            </button>
+          ),
+        )}
+      </nav>
     </Window>
   )
 }

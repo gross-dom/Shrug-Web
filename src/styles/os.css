@@ -230,6 +230,12 @@
   backdrop-filter: blur(34px) saturate(1.8);
 }
 
+/* The kit's popover is drawn for a scripted cursor and takes no clicks;
+   these menus are real */
+.menu[data-show] {
+  pointer-events: auto;
+}
+
 .menu__item {
   display: flex;
   align-items: center;
@@ -962,10 +968,6 @@ html[data-wm-busy='se'] * {
   display: none;
 }
 
-/* Bigger lights need more of the bar */
-.os[data-compact] .app > .ss-window__main > .ss-window__bar {
-  padding-left: 106px;
-}
 
 .dock[data-compact] {
   --dock-size: 46px;

@@ -21,6 +21,8 @@ export function ScreenSaver() {
   const [who, setWho] = useState(0)
   const mark = useRef<HTMLDivElement>(null)
   const root = useRef<HTMLDivElement>(null)
+  const clock = useRef<HTMLDivElement>(null)
+  const foot = useRef<HTMLDivElement>(null)
 
   // Starts itself once the desk has been still long enough
   useEffect(() => {
@@ -56,17 +58,24 @@ export function ScreenSaver() {
     let frame = 0
     if (el && box && !prefersReducedMotion()) {
       const size = { w: el.offsetWidth, h: el.offsetHeight }
-      let x = Math.max(0, (box.clientWidth - size.w) * 0.32)
-      let y = Math.max(0, (box.clientHeight - size.h) * 0.58)
+      // Its room: under the clock, over the names, edge to edge
+      const band = () => {
+        const top = clock.current ? clock.current.offsetTop + clock.current.offsetHeight : 0
+        const bottom = foot.current ? foot.current.offsetTop : box.clientHeight
+        const minY = Math.min(top, Math.max(0, box.clientHeight - size.h))
+        return { maxX: Math.max(0, box.clientWidth - size.w), minY, maxY: Math.max(minY, bottom - size.h) }
+      }
+      const start = band()
+      let x = start.maxX * 0.3
+      let y = start.minY + (start.maxY - start.minY) * 0.5
       let vx = 46
-      let vy = 34
+      let vy = 30
       let tint = 0
       let last = performance.now()
       const loop = (t: number) => {
         const dt = Math.min(0.05, (t - last) / 1000)
         last = t
-        const maxX = Math.max(0, box.clientWidth - size.w)
-        const maxY = Math.max(0, box.clientHeight - size.h)
+        const { maxX, minY, maxY } = band()
         x += vx * dt
         y += vy * dt
         let turned = false
@@ -75,9 +84,9 @@ export function ScreenSaver() {
           x = Math.min(maxX, Math.max(0, x))
           turned = true
         }
-        if (y <= 0 || y >= maxY) {
-          vy = y <= 0 ? Math.abs(vy) : -Math.abs(vy)
-          y = Math.min(maxY, Math.max(0, y))
+        if (y <= minY || y >= maxY) {
+          vy = y <= minY ? Math.abs(vy) : -Math.abs(vy)
+          y = Math.min(maxY, Math.max(minY, y))
           turned = true
         }
         if (turned) {
@@ -101,14 +110,14 @@ export function ScreenSaver() {
   return (
     <div ref={root} className="saver" data-on={on || undefined} aria-hidden={!on} {...(on ? null : ({ inert: '' } as object))}>
       <div className="saver__sky" />
-      <div className="saver__clock">
+      <div ref={clock} className="saver__clock">
         <div className="saver__date">{DATE.format(now)}</div>
         <div className="saver__time">{TIME.format(now).replace(/\s?[AP]M$/i, '')}</div>
       </div>
       <div ref={mark} className="saver__mark">
         {SITE.mark}
       </div>
-      <div className="saver__foot">
+      <div ref={foot} className="saver__foot">
         <div className="saver__who" key={who}>
           <span className="saver__name">{person.name}</span>
           <span className="saver__role">{person.role}</span>
