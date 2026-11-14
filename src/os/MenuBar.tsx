@@ -242,6 +242,10 @@ export function MenuBar() {
                 onPointerEnter={(e) => {
                   if (open && !shown && e.pointerType === 'mouse') setOpen(menu.id)
                 }}
+                onClick={(e) => {
+                  // Assistive tech presses with a click that no pointer made
+                  if (e.detail === 0 && !shown) show(menu.id, 'first')
+                }}
                 onKeyDown={onTitleKey(menu.id)}
               >
                 {menu.title}

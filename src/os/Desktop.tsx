@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { startChat } from '../apps/chat'
 import { AboutApp } from '../apps/About'
 import { FinderApp } from '../apps/Finder'
@@ -56,6 +56,8 @@ const DESK: DeskItem[] = [
 
 function DeskIcons() {
   const [picked, setPicked] = useState<string | null>(null)
+  /** What last pressed an icon: a mouse picks first, a finger or a key opens. */
+  const pointer = useRef('')
   useEffect(() => {
     if (!picked) return
     const away = (e: PointerEvent) => {
@@ -74,14 +76,17 @@ function DeskIcons() {
             data-picked={picked === item.id || undefined}
             aria-label={`${item.name}. Double-click to open.`}
             onPointerDown={(e) => {
-              // A finger opens on the first tap; a mouse picks, then opens on the second
+              pointer.current = e.pointerType
               if (e.pointerType === 'mouse') setPicked(item.id)
             }}
             onClick={(e) => {
-              const mouse = (e.nativeEvent as PointerEvent).pointerType === 'mouse'
-              if (!mouse) item.open()
+              // A mouse picks on the first click and opens on the second; a
+              // finger or the keyboard (a click with no count) opens at once
+              if (pointer.current !== 'mouse' || e.detail === 0) item.open()
             }}
-            onDoubleClick={item.open}
+            onDoubleClick={() => {
+              if (pointer.current === 'mouse') item.open()
+            }}
           >
             <span className="desk__icon">{item.icon}</span>
             <span className="desk__name">{item.name}</span>
