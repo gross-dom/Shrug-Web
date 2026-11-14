@@ -1,294 +1,243 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { ArrowUpRight } from 'lucide-react'
 import { chat, QUESTION, TOTAL } from '../apps/chat'
 import { PersonAvatar } from '../apps/chat-ui'
+import { ALL, CompanyLogo } from '../apps/portfolio-ui'
+import { useUnseen } from '../apps/state'
+import { CASE_STUDIES } from '../data/caseStudies'
+import { DROPS } from '../data/drops'
+import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
+import { COMPANY_COUNT } from '../data/portfolio'
 import { SITE } from '../data/site'
 import { Count } from '../kit/motion/Count'
-import { Notification } from '../kit/phone'
-import { APPS, type AppId } from '../os/apps'
-import { AppIcon, DocumentIcon } from '../os/icons'
-import { saver } from '../os/saver'
+import { AppIcon } from '../os/icons'
 import { useStore } from '../os/store'
-import { wm } from '../os/wm'
-import { useUnread } from '../apps/state'
-import { viewOf } from './apps'
-import { openPhoneApp, phone, topScreen, type IconRect, type Screen } from './nav'
+import { AppScreen, SheetScreen } from './apps'
+import { goHome, openApp, phone, PHONE_APPS, type PhoneApp } from './nav'
 import { ViewContext } from './ui'
 
-// The site on a phone: a Home Screen of the same apps, each opening full
-// screen out of its icon the way an iPhone opens one. It is drawn edge to
-// edge and leaves the status bar and the home indicator to the real phone.
+// The site on a phone. A dashboard of what's here, a Dock that is always at
+// the foot of the screen, and one app at a time between them. The Dock is the
+// way around: every app is one tap away from every other, and Home closes
+// whichever is open. It is drawn edge to edge and leaves the status bar and
+// the home indicator to the real phone.
 
-const DOCKED: AppId[] = ['finder', 'messages', 'notes', 'photos']
-const ON_GRID: AppId[] = ['terminal', 'about']
+/** What each app is called under its icon: short enough for six across. */
+const LABEL: Record<PhoneApp, string> = { messages: 'Chat', finder: 'Portfolio', notes: 'FAQs', terminal: 'Cases', photos: 'VIP' }
 
-function HomeIcon({ id, badge }: { id: AppId; badge?: number }) {
+// ---- The Dock ----
+
+function Dock() {
+  const app = useStore(phone, (s) => s.app)
+  const unseen = useUnseen()
   return (
-    <button type="button" className="ph-icon" aria-label={`${APPS[id].name}${badge ? `, ${badge} unread` : ''}`} onClick={() => openPhoneApp(id)}>
-      <span className="ph-icon__tile" data-home-app={id}>
-        <AppIcon id={id} />
-        {badge ? <span className="ph-icon__badge">{badge}</span> : null}
-      </span>
-      <span className="ph-icon__name">{id === 'about' ? 'About' : APPS[id].name}</span>
-    </button>
+    <nav className="ph-dock" aria-label="Apps">
+      <button type="button" className="ph-dock__item" aria-label="Home" aria-current={app ? undefined : 'page'} onClick={goHome}>
+        <span className="ph-dock__icon">
+          <AppIcon id="about" />
+        </span>
+        <span className="ph-dock__name">Home</span>
+      </button>
+      <span className="ph-dock__rule" aria-hidden />
+      {PHONE_APPS.map((id) => {
+        const badge = id === 'messages' && app !== 'messages' ? unseen : 0
+        return (
+          <button
+            key={id}
+            type="button"
+            className="ph-dock__item"
+            data-dock-app={id}
+            aria-label={`${LABEL[id]}${badge ? `, ${badge} new` : ''}`}
+            aria-current={app === id ? 'page' : undefined}
+            onClick={() => {
+              // Its own icon again takes an app back to its top, as a tab bar does
+              if (app === id) document.querySelector(`.ph-app[data-app="${id}"] [data-scroller]`)?.scrollTo({ top: 0, behavior: 'smooth' })
+              else openApp(id)
+            }}
+          >
+            <span className="ph-dock__icon">
+              <AppIcon id={id} />
+              {badge > 0 && (
+                <span className="ph-dock__badge" aria-hidden>
+                  {badge}
+                </span>
+              )}
+            </span>
+            <span className="ph-dock__name">{LABEL[id]}</span>
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
-/** The group chat as a widget: how many have replied, and the newest of them. */
-function ChatWidget() {
+// ---- The dashboard ----
+
+/** The group chat, as it stands: how many have replied, and the newest of them. */
+function ChatCard() {
   const replied = useStore(chat, (s) => s.replied)
   const latest = replied > 0 ? PEOPLE[replied - 1]! : null
   return (
-    <button type="button" className="ph-widget" aria-label={`Group chat: ${replied} of ${TOTAL} have replied`} onClick={() => openPhoneApp('messages', ['list', 'thread:group'])}>
-      <span className="ph-widget__head">
-        <span className="ph-widget__icon">
+    <button type="button" className="ph-card ph-card--chat" aria-label={`Group chat: ${replied} of ${TOTAL} have replied. Open it.`} onClick={() => openApp('messages')}>
+      <span className="ph-card__head">
+        <span className="ph-card__icon">
           <AppIcon id="messages" />
         </span>
-        <span className="ph-widget__app">Group chat</span>
-        <span className="ph-widget__count">
-          <Count value={replied} /> of {TOTAL}
+        <span className="ph-card__app">Group chat</span>
+        <span className="ph-card__count">
+          <Count value={replied} /> of {TOTAL} replied
         </span>
       </span>
-      <span className="ph-widget__ask">{QUESTION[1]}</span>
+      <span className="ph-card__ask">{QUESTION[1]}</span>
       {latest ? (
-        <span className="ph-widget__reply" key={replied}>
+        <span className="ph-card__reply" key={replied}>
           <PersonAvatar index={replied - 1} size={30} />
-          <span className="ph-widget__text">
+          <span className="ph-card__text">
             <b>{latest.name}</b>
             <span>{latest.quote ?? latest.role}</span>
           </span>
         </span>
       ) : (
-        <span className="ph-widget__reply ph-widget__reply--waiting">Waiting on {TOTAL} people…</span>
+        <span className="ph-card__reply ph-card__reply--waiting">Waiting on {TOTAL} people…</span>
       )}
     </button>
   )
 }
 
-function Home({ covered }: { covered: boolean }) {
-  const unread = useUnread()
+/** One app, as a figure: what it is, how much of it there is. */
+function Tile({ app, name, value, unit, aside }: { app: PhoneApp; name: string; value: number; unit: string; aside?: ReactNode }) {
   return (
-    <div className="ph-home" data-covered={covered || undefined} {...(covered ? ({ inert: '' } as object) : null)}>
-      <div className="ph-home__top">
-        <div className="ph-home__mark" aria-hidden>
-          {SITE.mark}
-        </div>
-        <div className="ph-home__name">{SITE.legalName}</div>
-      </div>
-      <ChatWidget />
-      <div className="ph-grid">
-        {ON_GRID.map((id) => (
-          <HomeIcon key={id} id={id} />
-        ))}
-        <a className="ph-icon" href={SITE.onePager} target="_blank" rel="noreferrer" aria-label="One-pager (opens in a new tab)">
-          <span className="ph-icon__tile ph-icon__tile--doc">
-            <DocumentIcon />
-          </span>
-          <span className="ph-icon__name">One-pager</span>
-        </a>
-      </div>
-      <nav className="ph-dock" aria-label="Dock">
-        {DOCKED.map((id) => (
-          <HomeIcon key={id} id={id} badge={id === 'messages' ? unread : undefined} />
-        ))}
-      </nav>
-    </div>
-  )
-}
-
-interface Layer {
-  view: string
-  depth: number
-  exit: boolean
-}
-
-/** An app's views, one over another. The one that was just left stays for its way out. */
-function Views({ app, views }: { app: AppId; views: string[] }) {
-  const key = views.join('\n')
-  const [seen, setSeen] = useState({ key, views })
-  const [exiting, setExiting] = useState<Layer | null>(null)
-  /** Views there when the app opened arrive with it; later ones slide in. */
-  const arrived = useRef(new Map<string, boolean>())
-  const mounted = useRef(false)
-
-  if (seen.key !== key) {
-    const was = seen.views
-    setSeen({ key, views })
-    // Stepped back: what was on top leaves, over the view it uncovers
-    const popped = views.length < was.length && views.every((view, i) => view === was[i])
-    setExiting(popped ? { view: was[views.length]!, depth: views.length, exit: true } : null)
-  }
-
-  useEffect(() => {
-    mounted.current = true
-  }, [])
-
-  useEffect(() => {
-    if (!exiting) return
-    const timer = setTimeout(() => setExiting(null), 460)
-    return () => clearTimeout(timer)
-  }, [exiting])
-
-  // A view that has gone is forgotten: pushed again, it slides in again
-  useEffect(() => {
-    const here = new Set(views.map((view, depth) => `${depth}:${view}`))
-    if (exiting) here.add(`${exiting.depth}:${exiting.view}`)
-    for (const id of Array.from(arrived.current.keys())) if (!here.has(id)) arrived.current.delete(id)
-  })
-
-  const layers: Layer[] = views.map((view, depth) => ({ view, depth, exit: false }))
-  if (exiting && exiting.depth >= views.length) layers.push(exiting)
-  const live = layers.filter((l) => !l.exit)
-
-  return (
-    <>
-      {layers.map((layer, i) => {
-        const id = `${layer.depth}:${layer.view}`
-        if (!arrived.current.has(id)) arrived.current.set(id, mounted.current)
-        const { kind, node } = viewOf(app, layer.view)
-        const above = layer.exit ? null : live[i + 1]
-        const cover = above ? viewOf(app, above.view).kind : null
-        const top = !layer.exit && !above
-        return (
-          <div key={id} className="ph-view" data-kind={kind} data-enter={arrived.current.get(id) || undefined} data-exit={layer.exit || undefined} data-covered={cover ?? undefined} {...(top ? null : ({ inert: '' } as object))}>
-            <ViewContext.Provider value={{ depth: layer.depth, top }}>{node}</ViewContext.Provider>
-          </div>
-        )
-      })}
-    </>
-  )
-}
-
-/** An app, full screen: it grows out of its icon and shrinks back into it. */
-function AppHost({ app, views, state, origin }: { app: AppId; views: string[]; state: 'open' | 'closing' | 'under'; origin: IconRect | null }) {
-  const viewport = useStore(wm, (s) => s.viewport)
-  const from = origin ?? { x: viewport.w / 2 - 30, y: viewport.h / 2 - 30, w: 60, h: 60 }
-  // Shrunk to its icon's width about the point that puts its top left on the icon's
-  const k = Math.min(0.9, from.w / Math.max(1, viewport.w))
-  const style = {
-    '--il': `${from.x}px`,
-    '--it': `${from.y}px`,
-    '--ir': `${Math.max(0, viewport.w - from.x - from.w)}px`,
-    '--ib': `${Math.max(0, viewport.h - from.y - from.h)}px`,
-    '--ox': `${from.x / (1 - k)}px`,
-    '--oy': `${from.y / (1 - k)}px`,
-    '--scale': k.toFixed(4),
-  } as CSSProperties
-  return (
-    <section className="ph-app" data-app={app} data-state={state} style={style} aria-label={APPS[app].name} {...(state === 'open' ? null : ({ inert: '' } as object))}>
-      <div className="ph-app__zoom">
-        <Views app={app} views={views} />
-      </div>
-    </section>
-  )
-}
-
-/** How many banners a visit gets, how far apart, and how long each stays. */
-const BANNERS = { most: 3, apart: 20000, stay: 3800 }
-
-/** A reply landing while the conversation isn't on screen drops in as a
- * banner: a few of them, well apart, not one for each of ninety replies. A
- * tap opens the conversation; a flick up sends the banner away. */
-function Banners() {
-  const replied = useStore(chat, (s) => s.replied)
-  const inMessages = useStore(phone, (s) => topScreen(s)?.app === 'messages')
-  const locked = useStore(saver, (s) => s.on)
-  const [banner, setBanner] = useState<{ index: number; out: boolean } | null>(null)
-  const lastAt = useRef(-Infinity)
-  const shown = useRef(0)
-  const before = useRef(replied)
-  const pressedAt = useRef<number | null>(null)
-  const quiet = inMessages || locked
-  const hush = useRef(quiet)
-  hush.current = quiet
-
-  // Only a reply that lands now: not the ones that were already there
-  useEffect(() => {
-    const fresh = replied > before.current
-    before.current = replied
-    if (!fresh || hush.current || chat.get().done || shown.current >= BANNERS.most) return
-    const now = performance.now()
-    if (now - lastAt.current < BANNERS.apart) return
-    lastAt.current = now
-    shown.current++
-    setBanner({ index: replied - 1, out: false })
-  }, [replied])
-
-  // It stays a few seconds, then lifts away; opening the conversation clears it at once
-  useEffect(() => {
-    if (!banner) return
-    if (quiet) return setBanner(null)
-    const timer = setTimeout(() => setBanner((b) => (b && !b.out ? { ...b, out: true } : null)), banner.out ? 340 : BANNERS.stay)
-    return () => clearTimeout(timer)
-  }, [banner, quiet])
-
-  if (!banner) return null
-  const person = PEOPLE[banner.index]!
-  const dismiss = () => setBanner((b) => (b && !b.out ? { ...b, out: true } : b))
-  return (
-    <button
-      type="button"
-      className="ph-banner"
-      data-out={banner.out || undefined}
-      aria-label={`New reply from ${person.name}. Open the conversation.`}
-      onPointerDown={(e) => {
-        pressedAt.current = e.clientY
-      }}
-      onPointerMove={(e) => {
-        if (pressedAt.current !== null && e.clientY - pressedAt.current < -12) {
-          pressedAt.current = null
-          dismiss()
-        }
-      }}
-      onClick={() => {
-        // A flick has already sent it away: that isn't a tap
-        if (banner.out) return
-        setBanner(null)
-        openPhoneApp('messages', ['list', 'thread:group'])
-      }}
-    >
-      <Notification icon={<AppIcon id="messages" />} title={person.name} body={person.quote ?? person.role} />
+    <button type="button" className="ph-card ph-card--tile" aria-label={`${name}: ${value} ${unit}. Open it.`} onClick={() => openApp(app)}>
+      <span className="ph-card__head">
+        <span className="ph-card__icon">
+          <AppIcon id={app} />
+        </span>
+        <span className="ph-card__app">{name}</span>
+        {aside}
+      </span>
+      <span className="ph-card__figure">
+        <b>{value}</b> {unit}
+      </span>
     </button>
   )
 }
 
-export function Phone() {
-  const stack = useStore(phone, (s) => s.stack)
-  const leaving = useStore(phone, (s) => s.leaving)
-  const origin = useStore(phone, (s) => s.origin)
-  const root = useRef<HTMLDivElement>(null)
-  const app = stack[0]?.app ?? null
-  const leavingApp = leaving?.[0]?.app ?? null
+/** The first few logos, as a taste of the portfolio. */
+const SAMPLE = ALL.filter((c) => c.logo).slice(0, 3)
 
-  // The keyboard takes the bottom of the screen: the phone keeps to what is left
+function Dashboard({ covered }: { covered: boolean }) {
+  return (
+    <div className="ph-home" data-covered={covered || undefined} {...(covered ? ({ inert: '' } as object) : null)}>
+      <header className="ph-home__top">
+        <div className="ph-home__mark" aria-hidden>
+          {SITE.mark}
+        </div>
+        <div className="ph-home__name">{SITE.legalName}</div>
+      </header>
+      <ChatCard />
+      <div className="ph-tiles">
+        <Tile
+          app="finder"
+          name="Portfolio"
+          value={COMPANY_COUNT}
+          unit="companies"
+          aside={
+            <span className="ph-card__logos" aria-hidden>
+              {SAMPLE.map((c) => (
+                <CompanyLogo key={c.name} company={c} size={20} />
+              ))}
+            </span>
+          }
+        />
+        <Tile app="notes" name="FAQs" value={FAQS.length} unit="questions" />
+        <Tile app="terminal" name="Case Studies" value={CASE_STUDIES.length} unit="private" />
+        <Tile app="photos" name="VIP" value={DROPS.length} unit="drops" />
+      </div>
+      <a className="ph-home__link" href={SITE.onePager} target="_blank" rel="noreferrer">
+        One-pager
+        <ArrowUpRight size={16} strokeWidth={2.4} aria-hidden />
+      </a>
+    </div>
+  )
+}
+
+// ---- Apps and sheets ----
+
+/** An app, full screen: it grows out of its place in the Dock and shrinks back into it. */
+function AppHost({ app, state, still, active }: { app: PhoneApp; state: 'open' | 'closing' | 'under'; still: boolean; active: boolean }) {
+  const ref = useRef<HTMLElement>(null)
+  // Where its icon is from here: the move it makes on the way in and on the way out
+  useLayoutEffect(() => {
+    const el = ref.current
+    const box = el?.parentElement?.getBoundingClientRect()
+    const icon = document.querySelector<HTMLElement>(`[data-dock-app="${app}"] .ph-dock__icon`)?.getBoundingClientRect()
+    if (!el || !box || !icon || !box.width) return
+    el.style.setProperty('--dx', `${(icon.left + icon.width / 2 - (box.left + box.width / 2)).toFixed(1)}px`)
+    el.style.setProperty('--dy', `${(icon.top + icon.height / 2 - (box.top + box.height / 2)).toFixed(1)}px`)
+    el.style.setProperty('--k', (icon.width / box.width).toFixed(4))
+  }, [app, state])
+  return (
+    <section ref={ref} className="ph-app" data-app={app} data-state={state} data-still={still || undefined} aria-label={LABEL[app]} {...(active ? null : ({ inert: '' } as object))}>
+      <ViewContext.Provider value={{ active }}>
+        <AppScreen app={app} />
+      </ViewContext.Provider>
+    </section>
+  )
+}
+
+export function Phone() {
+  const { app, sheet, leaving, closing, motion } = useStore(phone, (s) => s)
+  const root = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    const vv = window.visualViewport
     const el = root.current
-    if (!vv || !el) return
+    const vv = window.visualViewport
+    if (!el) return
+    // Lets :active show under a finger in Safari, which otherwise waits for a listener
+    const touch = () => {}
+    document.addEventListener('touchstart', touch, { passive: true })
+    // The keyboard takes the bottom of the screen: the phone keeps to what is
+    // left above it, and the Dock steps aside. A pinch-zoom is not a keyboard.
     const fit = () => {
-      el.style.setProperty('--vv-h', `${vv.height}px`)
-      el.style.setProperty('--vv-top', `${vv.offsetTop}px`)
+      if (!vv || Math.abs(vv.scale - 1) > 0.01) return
+      const keyboard = window.innerHeight - vv.height > 120
+      el.toggleAttribute('data-keyboard', keyboard)
+      if (keyboard) {
+        el.style.setProperty('--vv-h', `${vv.height}px`)
+        el.style.setProperty('--vv-top', `${vv.offsetTop}px`)
+      } else {
+        el.style.removeProperty('--vv-h')
+        el.style.removeProperty('--vv-top')
+        // Safari can leave the page nudged up after the keyboard has gone
+        if (window.scrollY) window.scrollTo(0, 0)
+      }
     }
     fit()
-    vv.addEventListener('resize', fit)
-    vv.addEventListener('scroll', fit)
+    vv?.addEventListener('resize', fit)
+    vv?.addEventListener('scroll', fit)
     return () => {
-      vv.removeEventListener('resize', fit)
-      vv.removeEventListener('scroll', fit)
+      document.removeEventListener('touchstart', touch)
+      vv?.removeEventListener('resize', fit)
+      vv?.removeEventListener('scroll', fit)
     }
   }, [])
 
-  const hosts: { app: AppId; screens: Screen[]; state: 'open' | 'closing' | 'under' }[] = []
-  if (leaving && leavingApp && leavingApp !== app) hosts.push({ app: leavingApp, screens: leaving, state: app ? 'under' : 'closing' })
-  if (app) hosts.push({ app, screens: stack, state: 'open' })
+  // Going home, the app shrinks into the Dock. Going to another app, it stays
+  // where it is while the new one grows over it, then it is gone.
+  const hosts: { app: PhoneApp; state: 'open' | 'closing' | 'under' }[] = []
+  if (leaving && leaving !== app) hosts.push({ app: leaving, state: app ? 'under' : 'closing' })
+  if (app) hosts.push({ app, state: 'open' })
+  const over = sheet ?? closing
 
   return (
-    <div ref={root} className="ph" data-open={app ?? undefined}>
-      <Home covered={!!app} />
+    <div ref={root} className="ph" data-app={app ?? 'home'} data-sheet={sheet ? '' : undefined}>
+      <Dashboard covered={!!app} />
       {hosts.map((host) => (
-        <AppHost key={host.app} app={host.app} views={host.screens.map((s) => s.view)} state={host.state} origin={origin} />
+        <AppHost key={host.app} app={host.app} state={host.state} still={!motion} active={host.state === 'open' && !sheet} />
       ))}
-      <Banners />
+      <Dock />
+      {over && <SheetScreen key={over} sheet={over} closing={!sheet} />}
     </div>
   )
 }

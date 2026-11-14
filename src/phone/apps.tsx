@@ -1,91 +1,76 @@
-import { useEffect, useMemo, type ReactNode } from 'react'
-import { ArrowUpRight, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
-import { TOTAL } from '../apps/chat'
-import { ConversationAvatar, ConversationList, conversationName, ConversationPane, Details } from '../apps/chat-ui'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
+import { chat } from '../apps/chat'
+import { ConversationPane, Details, GROUP_NAME, GroupAvatar } from '../apps/chat-ui'
 import { MediaFilterControl, MediaGrid } from '../apps/Photos'
 import { companiesIn, companyNamed, CompanyLogo, visitLabel, type Listed } from '../apps/portfolio-ui'
-import { finder, inbox, notes, openConversation, photos, setDrop, setFinderQuery, setInboxQuery, setNotesQuery, showNote, showVertical, useUnread, type Conversation } from '../apps/state'
-import { TerminalScreen } from '../apps/Terminal'
+import { finder, notes, photos, seeGroup, setDrop, setFinderQuery, showNote, showVertical, type Conversation } from '../apps/state'
+import { answer, isEmail, term, TerminalLog } from '../apps/Terminal'
+import { CASE_STUDIES } from '../data/caseStudies'
 import { DROPS } from '../data/drops'
 import { ANSWER_PLACEHOLDER, FAQS } from '../data/faqs'
-import { PEOPLE } from '../data/people'
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
-import { SITE } from '../data/site'
-import type { AppId } from '../os/apps'
-import { AppIcon } from '../os/icons'
-import { startSaver } from '../os/saver'
 import { useStore } from '../os/store'
-import { openPhoneApp, popTo, pushView, replaceView } from './nav'
+import { closeSheet, openSheet, type PhoneApp } from './nav'
 import { Chips, Group, Page, PhoneSearch, Sheet, useView } from './ui'
 
-// Each app as it is on a phone: the same content and the same state as its
-// window on the desktop, in the screens iOS would give it.
+// Each part of the site as the app a phone would give it. They share their
+// content and state with the desktop's windows, but not their shape: a
+// conversation in Messages, a library of logos, a note of questions, a locked
+// folder with a way to ask for the key, and a photo library. Every app is one
+// screen; anything more comes up over it as a sheet.
 
-export interface View {
-  /** A page slides in from the right; a sheet comes up from the bottom over the page under it. */
-  kind: 'page' | 'sheet'
-  node: ReactNode
-}
+// ---- Group chat: Messages, one conversation ----
 
-// ---- Group chat: the list of conversations, one conversation, its details ----
-
-const conversationOf = (raw: string): Conversation => (raw === 'group' ? 'group' : Number(raw))
-
-function MessagesList() {
-  const query = useStore(inbox, (s) => s.query)
-  return (
-    <Page title="Messages" large className="ph-messages">
-      <PhoneSearch value={query} onChange={setInboxQuery} label="Search conversations" />
-      <ConversationList selectable={false} avatar={45} onPick={(c) => pushView(`thread:${c}`)} />
-    </Page>
-  )
-}
-
-function MessagesThread({ conversation }: { conversation: Conversation }) {
-  const { top } = useView()
-  const unread = useUnread()
-  const name = conversationName(conversation)
-  // On screen, this is the conversation that's open: its replies are read
+function ChatApp() {
+  const { active } = useView()
+  const replied = useStore(chat, (s) => s.replied)
+  // On screen, the replies are being read: the Dock has nothing to count
   useEffect(() => {
-    if (top) openConversation(conversation)
-  }, [top, conversation])
+    if (active) seeGroup()
+  }, [active, replied])
   return (
     <Page
       fixed
       className="ph-thread"
-      backLabel="Messages"
-      badge={unread > 0 ? unread : undefined}
       center={
-        <button type="button" className="ph-thread-id" aria-label={`${name}: details`} onClick={() => pushView(`details:${conversation}`)}>
-          <ConversationAvatar conversation={conversation} size={44} />
+        <button type="button" className="ph-thread-id" aria-label={`${GROUP_NAME}: details`} onClick={() => openSheet('details')}>
+          <GroupAvatar size={44} />
           <span className="ph-thread-id__name">
-            <span>{name}</span>
+            <span>{GROUP_NAME}</span>
             <ChevronRight size={11} strokeWidth={2.6} aria-hidden />
           </span>
         </button>
       }
     >
-      <ConversationPane conversation={conversation} active={top} />
+      <ConversationPane conversation="group" active={active} />
     </Page>
   )
 }
 
-function MessagesDetails({ conversation }: { conversation: Conversation }) {
+/** Who is in the conversation, and the replies' own controls. A person opens inside the same sheet. */
+function DetailsSheet({ closing }: { closing: boolean }) {
+  const [who, setWho] = useState<Conversation>('group')
   return (
-    <Page tone="grouped" className="ph-details">
-      <Details
-        conversation={conversation}
-        onPick={(next) => {
-          if (next !== 'group') return pushView(`thread:${next}`)
-          // Back to the group conversation if it is under this one, or on to it
-          if (!popTo((view) => view === 'thread:group')) pushView('thread:group')
-        }}
-      />
-    </Page>
+    <Sheet
+      label="Details"
+      closing={closing}
+      leading={
+        who !== 'group' && (
+          <button type="button" className="ph-sheet__back" aria-label="Everyone" onClick={() => setWho('group')}>
+            <ChevronLeft size={22} strokeWidth={2.4} aria-hidden />
+          </button>
+        )
+      }
+    >
+      <div className="ph-details" key={String(who)}>
+        <Details conversation={who} onPick={(next) => setWho(next)} onDone={() => closeSheet()} tap="details" />
+      </div>
+    </Sheet>
   )
 }
 
-// ---- Portfolio ----
+// ---- Portfolio: a library of logos ----
 
 const VERTICAL_OPTIONS = [{ value: -1, label: 'All' }, ...VERTICALS.map((v, i) => ({ value: i, label: v.name }))]
 
@@ -94,7 +79,7 @@ function LogoGrid({ companies }: { companies: Listed[] }) {
     <ul className="ph-logos">
       {companies.map((c) => (
         <li key={c.name}>
-          <button type="button" className="ph-logo" onClick={() => pushView(`company:${c.name}`)}>
+          <button type="button" className="ph-logo" onClick={() => openSheet(`company:${c.name}`)}>
             <CompanyLogo company={c} size={60} />
             <span className="ph-logo__name">{c.name}</span>
           </button>
@@ -104,13 +89,13 @@ function LogoGrid({ companies }: { companies: Listed[] }) {
   )
 }
 
-function Portfolio() {
+function PortfolioApp() {
   const vertical = useStore(finder, (s) => s.vertical)
   const query = useStore(finder, (s) => s.query)
   const shown = useMemo(() => companiesIn(vertical, query), [vertical, query])
   const sections = vertical === -1 && !query.trim()
   return (
-    <Page title="Portfolio" large className="ph-portfolio">
+    <Page title="Portfolio" className="ph-portfolio">
       <PhoneSearch value={query} onChange={setFinderQuery} label="Search the portfolio" placeholder={`Search ${COMPANY_COUNT} companies`} />
       <Chips label="Verticals" value={vertical} options={VERTICAL_OPTIONS} onChange={showVertical} />
       {shown.length === 0 ? (
@@ -131,12 +116,12 @@ function Portfolio() {
   )
 }
 
-function CompanySheet({ name }: { name: string }) {
+function CompanySheet({ name, closing }: { name: string; closing: boolean }) {
   const company = companyNamed(name)
   if (!company) return null
   const visit = visitLabel(company)
   return (
-    <Sheet label={company.name}>
+    <Sheet label={company.name} closing={closing}>
       <div className="ph-company">
         <CompanyLogo company={company} size={84} />
         <h3 className="ph-company__name">{company.name}</h3>
@@ -153,96 +138,166 @@ function CompanySheet({ name }: { name: string }) {
   )
 }
 
-// ---- FAQs ----
+// ---- FAQs: one note, each question opening where it is ----
 
-function FaqList() {
-  const query = useStore(notes, (s) => s.query)
-  const q = query.trim().toLowerCase()
-  const shown = FAQS.map((faq, i) => ({ faq, i })).filter(({ faq }) => !q || faq.question.toLowerCase().includes(q) || (faq.answer ?? '').toLowerCase().includes(q))
+function FaqsApp() {
+  const [open, setOpen] = useState<number | null>(() => notes.get().note)
   return (
-    <Page title="FAQs" large tone="grouped" className="ph-faqs">
-      <PhoneSearch value={query} onChange={setNotesQuery} label="Search the FAQs" />
-      {shown.length === 0 ? (
-        <p className="ph-empty">No question matches</p>
-      ) : (
-        <Group footer={`${FAQS.length} questions`}>
-          {shown.map(({ faq, i }) => (
-            <button
-              key={i}
-              type="button"
-              className="ph-row ph-row--note"
-              onClick={() => {
-                showNote(i)
-                pushView(`note:${i}`)
-              }}
-            >
-              <span className="ph-row__text">
-                <span className="ph-row__title">{faq.question}</span>
-                <span className="ph-row__sub">{faq.answer ?? 'Answer to come'}</span>
-              </span>
-              <ChevronRight className="ph-row__chevron" size={16} strokeWidth={2.6} aria-hidden />
-            </button>
-          ))}
-        </Group>
-      )}
-    </Page>
-  )
-}
-
-function FaqNote({ index }: { index: number }) {
-  const faq = FAQS[index]
-  if (!faq) return null
-  const step = (by: number) => {
-    const next = (index + by + FAQS.length) % FAQS.length
-    showNote(next)
-    replaceView(`note:${next}`)
-  }
-  return (
-    <Page
-      backLabel="FAQs"
-      className="ph-note"
-      trailing={
-        <span className="ph-bar-pair" role="group" aria-label="Question">
-          <button type="button" aria-label="Previous question" onClick={() => step(-1)}>
-            <ChevronUp size={21} strokeWidth={2.2} aria-hidden />
-          </button>
-          <button type="button" aria-label="Next question" onClick={() => step(1)}>
-            <ChevronDown size={21} strokeWidth={2.2} aria-hidden />
-          </button>
-        </span>
-      }
-    >
-      <article className="ph-note__body" key={index}>
-        <p className="ph-note__meta">
-          Question {index + 1} of {FAQS.length}
-        </p>
-        <h2 className="ph-note__title">{faq.question}</h2>
-        {faq.answer ? <p className="ph-note__answer">{faq.answer}</p> : <p className="faq__todo">{ANSWER_PLACEHOLDER}</p>}
-      </article>
-    </Page>
-  )
-}
-
-// ---- Case studies ----
-
-function CaseStudies() {
-  return (
-    <Page title="shrug — case-studies" tone="dark" fixed className="ph-term term">
-      <div className="ss-term ph-term__screen">
-        <TerminalScreen />
+    <Page title="FAQs" className="ph-faqs">
+      <p className="ph-lede">{FAQS.length} questions. Tap one for its answer.</p>
+      <div className="ph-faq-list">
+        {FAQS.map((faq, i) => {
+          const on = open === i
+          return (
+            <section key={i} className="ph-faq" data-open={on || undefined}>
+              <h3>
+                <button
+                  type="button"
+                  className="ph-faq__question"
+                  aria-expanded={on}
+                  aria-controls={`faq-${i}`}
+                  onClick={() => {
+                    setOpen(on ? null : i)
+                    if (!on) showNote(i)
+                  }}
+                >
+                  <span>{faq.question}</span>
+                  <ChevronDown className="ph-faq__chevron" size={20} strokeWidth={2.4} aria-hidden />
+                </button>
+              </h3>
+              <div className="ph-faq__answer" id={`faq-${i}`} role="region" aria-label={faq.question} {...(on ? null : ({ inert: '' } as object))}>
+                <div>{faq.answer ? <p>{faq.answer}</p> : <p className="faq__todo">{ANSWER_PLACEHOLDER}</p>}</div>
+              </div>
+            </section>
+          )
+        })}
       </div>
     </Page>
   )
 }
 
-// ---- VIP ----
+// ---- Case studies: locked, with a way to ask ----
+
+function CasesApp() {
+  const step = useStore(term, (t) => t.step)
+  const done = step === 'done'
+  return (
+    <Page title="Case Studies" tone="grouped" className="ph-cases">
+      <p className="ph-lede">They’re private. Ask nicely.</p>
+      {/* What the desktop's terminal has to say about it, as it said it */}
+      <div className="ph-term-card term ss-term">
+        <TerminalLog />
+      </div>
+      {done ? (
+        <p className="ph-cases__done" role="status">
+          <Check size={18} strokeWidth={2.8} aria-hidden />
+          Request noted
+        </p>
+      ) : (
+        <button type="button" className="ph-button" onClick={() => openSheet('request')}>
+          Request access
+        </button>
+      )}
+      <Group label={`${CASE_STUDIES.length} case studies`}>
+        {CASE_STUDIES.map((name) => {
+          const company = companyNamed(name)
+          return (
+            <button key={name} type="button" className="ph-row" aria-label={`${name}, locked. Request access.`} onClick={() => openSheet('request')}>
+              {company && (
+                <span className="ph-row__icon">
+                  <CompanyLogo company={company} size={30} />
+                </span>
+              )}
+              <span className="ph-row__title">{name}</span>
+              <Lock className="ph-row__chevron" size={16} strokeWidth={2.4} aria-hidden />
+            </button>
+          )
+        })}
+      </Group>
+    </Page>
+  )
+}
+
+function RequestSheet({ closing }: { closing: boolean }) {
+  const step = useStore(term, (t) => t.step)
+  const [email, setEmail] = useState('')
+  const [wrong, setWrong] = useState(false)
+  /** The address the request went in under, once it has. */
+  const [sent, setSent] = useState<string | null>(null)
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    if (!isEmail(email)) return setWrong(true)
+    // Said to the same terminal the desktop has, so the two tell one story
+    if (term.get().step === 'ask') answer('y')
+    answer(email)
+    setSent(email.trim())
+  }
+
+  return (
+    <Sheet label="Request access" closing={closing}>
+      {sent || step === 'done' ? (
+        <div className="ph-request">
+          <span className="ph-request__mark" data-done>
+            <Check size={30} strokeWidth={2.6} aria-hidden />
+          </span>
+          <h3 className="ph-request__title">Request noted</h3>
+          <p className="ph-request__text">
+            {sent ? <>For {sent}. </> : null}
+            This is a prototype: nothing has been sent.
+          </p>
+          <button type="button" className="ph-button" onClick={() => closeSheet()}>
+            Done
+          </button>
+        </div>
+      ) : (
+        <form className="ph-request" noValidate onSubmit={submit}>
+          <span className="ph-request__mark">
+            <Lock size={28} strokeWidth={2.2} aria-hidden />
+          </span>
+          <h3 className="ph-request__title">Request access</h3>
+          <p className="ph-request__text">Leave an email and Shrug will be in touch about the case studies.</p>
+          <input
+            className="ph-field"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="send"
+            placeholder="you@example.com"
+            aria-label="Your email"
+            aria-invalid={wrong || undefined}
+            aria-describedby={wrong ? 'request-wrong' : undefined}
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setWrong(false)
+            }}
+          />
+          {wrong && (
+            <p className="ph-request__wrong" id="request-wrong" role="alert">
+              That doesn’t look like an email.
+            </p>
+          )}
+          <button type="submit" className="ph-button">
+            Send request
+          </button>
+        </form>
+      )}
+    </Sheet>
+  )
+}
+
+// ---- VIP: a photo library ----
 
 const DROP_OPTIONS: { value: string | null; label: string }[] = [{ value: null, label: 'All drops' }, ...DROPS.map((name) => ({ value: name, label: name }))]
 
-function Vip() {
+function VipApp() {
   const drop = useStore(photos, (s) => s.drop)
   return (
-    <Page title="VIP" large className="ph-vip">
+    <Page title="VIP" className="ph-vip">
       <p className="ph-lede">When the drops landed. Photos and videos from the people who got one.</p>
       <Chips label="Drops" value={drop} options={DROP_OPTIONS} onChange={setDrop} />
       <div className="ph-vip__filter">
@@ -253,77 +308,25 @@ function Vip() {
   )
 }
 
-// ---- About ----
+// ---- Which screen an app is, and which sheet a name is ----
 
-const FACTS: { label: string; value: string; app: AppId }[] = [
-  { label: 'Group chat', value: `${TOTAL} people`, app: 'messages' },
-  { label: 'Portfolio', value: `${COMPANY_COUNT} companies`, app: 'finder' },
-  { label: 'FAQs', value: `${FAQS.length} questions`, app: 'notes' },
-  { label: 'VIP', value: `${DROPS.length} drops`, app: 'photos' },
-]
-
-function About() {
-  return (
-    <Page title="About" tone="grouped" className="ph-about">
-      <div className="ph-about__head">
-        <span className="ph-about__icon">
-          <AppIcon id="about" />
-        </span>
-        <h2 className="ph-about__name">{SITE.name}</h2>
-        <div className="ph-about__kind">{SITE.legalName}</div>
-      </div>
-      <Group>
-        {FACTS.map((fact) => (
-          <button key={fact.label} type="button" className="ph-row" onClick={() => openPhoneApp(fact.app)}>
-            <span className="ph-row__icon">
-              <AppIcon id={fact.app} />
-            </span>
-            <span className="ph-row__title">{fact.label}</span>
-            <span className="ph-row__value">{fact.value}</span>
-            <ChevronRight className="ph-row__chevron" size={16} strokeWidth={2.6} aria-hidden />
-          </button>
-        ))}
-      </Group>
-      <Group>
-        <a className="ph-row ph-row--link" href={SITE.onePager} target="_blank" rel="noreferrer">
-          <span className="ph-row__title">One-pager</span>
-          <ArrowUpRight className="ph-row__chevron" size={17} strokeWidth={2.4} aria-hidden />
-        </a>
-        <button type="button" className="ph-row ph-row--link" onClick={startSaver}>
-          <span className="ph-row__title">Lock Screen</span>
-        </button>
-      </Group>
-      <p className="ph-about__mark" aria-hidden>
-        {SITE.mark}
-      </p>
-    </Page>
-  )
+const SCREENS: Record<PhoneApp, () => ReactNode> = {
+  messages: ChatApp,
+  finder: PortfolioApp,
+  notes: FaqsApp,
+  terminal: CasesApp,
+  photos: VipApp,
 }
 
-// ---- Which screen a view is ----
-
-export function viewOf(app: AppId, view: string): View {
-  const [name, ...rest] = view.split(':')
-  const arg = rest.join(':')
-  switch (app) {
-    case 'messages':
-      if (name === 'thread') return { kind: 'page', node: <MessagesThread conversation={conversationOf(arg)} /> }
-      if (name === 'details') return { kind: 'page', node: <MessagesDetails conversation={conversationOf(arg)} /> }
-      return { kind: 'page', node: <MessagesList /> }
-    case 'finder':
-      if (name === 'company') return { kind: 'sheet', node: <CompanySheet name={arg} /> }
-      return { kind: 'page', node: <Portfolio /> }
-    case 'notes':
-      if (name === 'note') return { kind: 'page', node: <FaqNote index={Number(arg)} /> }
-      return { kind: 'page', node: <FaqList /> }
-    case 'terminal':
-      return { kind: 'page', node: <CaseStudies /> }
-    case 'photos':
-      return { kind: 'page', node: <Vip /> }
-    default:
-      return { kind: 'page', node: <About /> }
-  }
+export function AppScreen({ app }: { app: PhoneApp }) {
+  const Screen = SCREENS[app]
+  return <Screen />
 }
 
-/** The people whose replies a lock screen or a banner shows: the newest first. */
-export const latestReplies = (replied: number, count: number) => Array.from({ length: Math.min(count, replied) }, (_, n) => replied - 1 - n).filter((i) => PEOPLE[i])
+export function SheetScreen({ sheet, closing }: { sheet: string; closing: boolean }) {
+  const [name, ...rest] = sheet.split(':')
+  if (name === 'details') return <DetailsSheet closing={closing} />
+  if (name === 'company') return <CompanySheet name={rest.join(':')} closing={closing} />
+  if (name === 'request') return <RequestSheet closing={closing} />
+  return null
+}

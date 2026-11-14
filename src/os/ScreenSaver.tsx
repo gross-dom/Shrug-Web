@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { PEOPLE } from '../data/people'
-import { PhoneLock } from '../phone/Lock'
 import { SITE } from '../data/site'
 import { prefersReducedMotion } from './dom'
 import { idleSeconds, saver, startSaver, wakeSaver } from './saver'
@@ -10,7 +9,7 @@ import { wm } from './wm'
 // The screen saver. The shrug drifts across a dark screen and turns at the
 // edges, the clock sits where a lock screen keeps it, and the people from the
 // group chat pass by one at a time. Any key, click or movement wakes the desk.
-// On a phone it is the phone's lock screen instead.
+// A phone has none: nobody should be locked out of a page for reading it.
 
 const DATE = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 const TIME = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -35,7 +34,7 @@ export function ScreenSaver() {
     const arm = () => {
       clearTimeout(timer)
       timer = setTimeout(() => {
-        if (!document.hidden) startSaver()
+        if (!document.hidden && !wm.get().compact) startSaver()
       }, wait)
     }
     const stir = () => {
@@ -118,7 +117,7 @@ export function ScreenSaver() {
     }
   }, [on, compact])
 
-  if (compact) return <PhoneLock on={on} now={now} />
+  if (compact) return null
 
   const person = PEOPLE[who]!
 

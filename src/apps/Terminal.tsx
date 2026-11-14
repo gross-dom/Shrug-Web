@@ -21,9 +21,12 @@ const intro: Line[] = [
   { kind: 'ask', text: 'do you want to request access? (y/n)' },
 ]
 
-const term = createStore<{ step: 'ask' | 'email' | 'done'; log: Line[] }>({ step: 'ask', log: [] })
+/** Where the request has got to, and everything said so far. The phone's Case Studies screen reads and answers the same one. */
+export const term = createStore<{ step: 'ask' | 'email' | 'done'; log: Line[] }>({ step: 'ask', log: [] })
 
-function answer(raw: string) {
+export const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+
+export function answer(raw: string) {
   const value = raw.trim()
   const low = value.toLowerCase()
   term.set((t) => {
@@ -38,7 +41,7 @@ function answer(raw: string) {
         log.push({ kind: 'ask', text: 'changed your mind? (y/n)' })
       } else log.push({ kind: 'err', text: 'y or n.' })
     } else if (step === 'email') {
-      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      if (isEmail(value)) {
         step = 'done'
         log.push({ kind: 'ok', text: `request noted for ${value}.` })
         log.push({ kind: 'dim', text: 'prototype: nothing has been sent.' })
@@ -50,19 +53,39 @@ function answer(raw: string) {
 
 const CLASS: Record<Line['kind'], string | undefined> = { cmd: undefined, out: undefined, err: 'err', ask: 'ask', ok: 'ok', dim: 'dim', said: 'said' }
 
+/** Everything the terminal has printed, top to bottom. */
+export function TerminalLog() {
+  const log = useStore(term, (t) => t.log)
+  return (
+    <div className="term__log" role="log" aria-live="polite" aria-label="Case studies terminal">
+      {[...intro, ...log].map((line, i) =>
+        line.kind === 'cmd' ? (
+          <Prompt key={i} path={PATH}>
+            {line.text}
+          </Prompt>
+        ) : (
+          <div key={i} className={CLASS[line.kind]}>
+            {line.kind === 'said' ? `> ${line.text}` : line.text}
+          </div>
+        ),
+      )}
+    </div>
+  )
+}
+
 /** The terminal itself, without a window round it: the log and the line being typed. */
 export function TerminalScreen() {
-  const { step, log } = useStore(term, (t) => t)
+  const step = useStore(term, (t) => t.step)
+  const lines = useStore(term, (t) => t.log.length)
   const [typed, setTyped] = useState('')
   const input = useRef<HTMLInputElement>(null)
   const screen = useRef<HTMLFormElement>(null)
-  const lines = [...intro, ...log]
 
   // New output keeps the last line in view, as a terminal does
   useEffect(() => {
     const el = screen.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [log.length])
+  }, [lines])
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -81,19 +104,7 @@ export function TerminalScreen() {
         if (!window.getSelection()?.toString()) input.current?.focus({ preventScroll: true })
       }}
     >
-      <div className="term__log" role="log" aria-live="polite" aria-label="Case studies terminal">
-        {lines.map((line, i) =>
-          line.kind === 'cmd' ? (
-            <Prompt key={i} path={PATH}>
-              {line.text}
-            </Prompt>
-          ) : (
-            <div key={i} className={CLASS[line.kind]}>
-              {line.kind === 'said' ? `> ${line.text}` : line.text}
-            </div>
-          ),
-        )}
-      </div>
+      <TerminalLog />
       <label className="term__entry">
         <span aria-hidden>&gt;</span>
         <input

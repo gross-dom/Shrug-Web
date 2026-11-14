@@ -1,135 +1,135 @@
 import type { AppId } from '../os/apps'
 import { createStore } from '../os/store'
 
-// Where the phone is: the Home Screen, or an app, and how deep into it. The
-// stack is mirrored into the browser's history, so the phone's own back
-// gesture or button steps back through it instead of leaving the site.
+// Where the phone is: the dashboard, or one app, with at most one sheet over
+// it. Every move the visitor makes is a step in the browser's history, the way
+// pages are, so the phone's own back gesture or button undoes it. Moves made
+// here are drawn with motion; moves the browser makes (its back and forward)
+// are drawn at once, because Safari has already slid the page across itself.
 
-export interface Screen {
-  app: AppId
-  /** The app's own place: a list, one conversation, one note. Each app reads its own. */
-  view: string
+/** The apps a phone has. About is the dashboard itself there. */
+export type PhoneApp = Exclude<AppId, 'about'>
+
+export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'photos']
+
+export interface Place {
+  /** The app that is open, or null on the dashboard. */
+  app: PhoneApp | null
+  /** The sheet over it: `details`, `company:Anduril`, `request`. */
+  sheet: string | null
 }
 
-export interface IconRect {
-  x: number
-  y: number
-  w: number
-  h: number
+export interface PhoneNav extends Place {
+  /** The app on its way out, kept drawn until it has gone. */
+  leaving: PhoneApp | null
+  /** The sheet on its way out. */
+  closing: string | null
+  /** Whether the last move is drawn with motion. */
+  motion: boolean
 }
 
-export interface PhoneNav {
-  /** Empty on the Home Screen. */
-  stack: Screen[]
-  /** The app that is on its way out, kept drawn until it has gone. */
-  leaving: Screen[] | null
-  /** The icon the open app grew out of, and the leaving one shrinks back into. */
-  origin: IconRect | null
+export const phone = createStore<PhoneNav>({ app: null, sheet: null, leaving: null, closing: null, motion: false })
+
+interface Entry {
+  shrug: Place
+  /** How many steps into the site this entry is: 0 is the one it arrived on. */
+  n: number
 }
 
-export const phone = createStore<PhoneNav>({ stack: [], leaving: null, origin: null })
+const isApp = (value: unknown): value is PhoneApp => (PHONE_APPS as unknown[]).includes(value)
 
-/** Where each app opens when it has nowhere to resume from. */
-const START: Partial<Record<AppId, string[]>> = {
-  messages: ['list', 'thread:group'],
-  notes: ['list'],
+function read(state: unknown): Entry | null {
+  const entry = state as Partial<Entry> | null
+  const place = entry?.shrug as Partial<Place> | undefined
+  if (!place || typeof place !== 'object') return null
+  const app = isApp(place.app) ? place.app : null
+  return { shrug: { app, sheet: app && typeof place.sheet === 'string' ? place.sheet : null }, n: typeof entry?.n === 'number' ? entry.n : 0 }
 }
 
-/** The views an app was left on, to open it on again. Sheets aren't kept: an app comes back on a page. */
-const resume: Partial<Record<AppId, string[]>> = {}
+const here = () => read(history.state) ?? { shrug: { app: null, sheet: null }, n: 0 }
 
-let leavingTimer: ReturnType<typeof setTimeout> | undefined
+let appTimer: ReturnType<typeof setTimeout> | undefined
+let sheetTimer: ReturnType<typeof setTimeout> | undefined
 
-const iconOf = (app: AppId): IconRect | null => {
-  const el = document.querySelector<HTMLElement>(`[data-home-app="${app}"]`)
-  if (!el) return null
-  const r = el.getBoundingClientRect()
-  return r.width ? { x: r.left, y: r.top, w: r.width, h: r.height } : null
+function apply(place: Place, motion: boolean) {
+  const was = phone.get()
+  const leaving = motion && was.app && was.app !== place.app ? was.app : null
+  const closing = motion && was.sheet && was.sheet !== place.sheet && was.app === place.app ? was.sheet : null
+  phone.set({ app: place.app, sheet: place.sheet, leaving, closing, motion })
+  clearTimeout(appTimer)
+  clearTimeout(sheetTimer)
+  if (leaving) appTimer = setTimeout(() => phone.set((s) => (s.leaving ? { ...s, leaving: null } : s)), 460)
+  if (closing) sheetTimer = setTimeout(() => phone.set((s) => (s.closing ? { ...s, closing: null } : s)), 420)
 }
 
-function apply(next: Screen[], origin?: IconRect | null) {
-  phone.set((s) => {
-    const was = s.stack[0]?.app
-    const now = next[0]?.app
-    // Remember where an app was left, so its icon opens it there again
-    if (was) resume[was] = s.stack.map((x) => x.view).filter((view) => !view.startsWith('company:'))
-    const changed = was !== undefined && was !== now
-    return {
-      stack: next,
-      leaving: changed ? s.stack : s.leaving,
-      // Going home, the app shrinks into its own icon, wherever that is now
-      origin: origin !== undefined ? origin : changed && !now ? (iconOf(was) ?? s.origin) : s.origin,
-    }
-  })
-  if (phone.get().leaving) {
-    clearTimeout(leavingTimer)
-    leavingTimer = setTimeout(() => phone.set((s) => ({ ...s, leaving: null })), 520)
+/** A move the visitor made: a new step in history. */
+function go(place: Place) {
+  const now = phone.get()
+  if (now.app === place.app && now.sheet === place.sheet) return
+  history.pushState({ shrug: place, n: here().n + 1 } satisfies Entry, '')
+  apply(place, true)
+}
+
+/** Opens an app, from the dashboard or straight from another app. */
+export const openApp = (app: PhoneApp) => go({ app, sheet: null })
+
+/** Closes whatever is open: back to the dashboard. */
+export const goHome = () => go({ app: null, sheet: null })
+
+/** Brings a sheet up over the app that is open. */
+export function openSheet(sheet: string) {
+  const { app } = phone.get()
+  if (app) go({ app, sheet })
+}
+
+/** Whether the next move the browser reports is one asked for here, and so drawn with motion. */
+let expected: boolean | null = null
+
+/** Closes the sheet: a step back, since opening it was a step forward. `motion`
+ * is false when the sheet has already been dragged away by hand. */
+export function closeSheet(motion = true) {
+  const now = phone.get()
+  if (!now.sheet) return
+  const entry = here()
+  if (entry.n > 0 && entry.shrug.sheet) {
+    expected = motion
+    history.back()
+    return
   }
+  // Arrived straight onto a sheet (a restored tab): there is nothing to step back to
+  history.replaceState({ shrug: { app: now.app, sheet: null }, n: entry.n } satisfies Entry, '')
+  apply({ app: now.app, sheet: null }, motion)
 }
 
-/** Opens an app from the Home Screen (or from inside another app), where it was left. */
-export function openPhoneApp(app: AppId, views?: string[]) {
-  const steps = views ?? resume[app] ?? START[app] ?? ['root']
-  const stack: Screen[] = []
-  steps.forEach((view) => {
-    stack.push({ app, view })
-    history.pushState({ shrug: stack.slice() }, '')
-  })
-  apply(stack, iconOf(app))
+let resumed: boolean | null = null
+
+/** Sets the phone up when the page loads: where a reload left it, or where the
+ * visit starts. Returns true if it picked up from a reload. */
+export function startNav(): boolean {
+  // Once a page load, however many times it is asked
+  if (resumed !== null) return resumed
+  const entry = read(history.state)
+  resumed = !!entry
+  if (entry) apply(entry.shrug, false)
+  else history.replaceState({ shrug: { app: null, sheet: null }, n: 0 } satisfies Entry, '')
+  return resumed
 }
 
-/** Goes one step deeper into the app that is open. */
-export function pushView(view: string) {
-  const s = phone.get()
-  const top = s.stack[s.stack.length - 1]
-  if (!top) return
-  const stack = [...s.stack, { app: top.app, view }]
-  history.pushState({ shrug: stack }, '')
-  apply(stack)
+/** The first app opens by itself, as the page arrives. Nobody asked for it,
+ * so it takes the place of the entry the visit began on instead of adding one:
+ * a browser's back button skips steps a page adds on its own. */
+export function arriveIn(app: PhoneApp) {
+  history.replaceState({ shrug: { app, sheet: null }, n: here().n } satisfies Entry, '')
+  apply({ app, sheet: null }, true)
 }
 
-/** Swaps the view on top for another at the same depth: the next note, not a step deeper. */
-export function replaceView(view: string) {
-  const s = phone.get()
-  const top = s.stack[s.stack.length - 1]
-  if (!top) return
-  const stack = [...s.stack.slice(0, -1), { app: top.app, view }]
-  history.replaceState({ shrug: stack }, '')
-  apply(stack)
-}
-
-/** One step back: out of a pushed view, or out of the app to the Home Screen. */
-export function goBack() {
-  if (phone.get().stack.length) history.back()
-}
-
-/** Back to the nearest view under the top one that matches. False if there is none. */
-export function popTo(match: (view: string) => boolean) {
-  const { stack } = phone.get()
-  for (let i = stack.length - 2; i >= 0; i--) {
-    if (!match(stack[i]!.view)) continue
-    history.go(i - (stack.length - 1))
-    return true
-  }
-  return false
-}
-
-/** Straight to the Home Screen. */
-export function goHome() {
-  const depth = phone.get().stack.length
-  if (depth) history.go(-depth)
-}
-
-/** Follows the browser's history: call once, when the phone layout first shows. */
+/** Follows the browser's history. */
 export function watchHistory() {
-  if (!(history.state && 'shrug' in history.state)) history.replaceState({ shrug: [] }, '')
   const onPop = (e: PopStateEvent) => {
-    const stack = (e.state && Array.isArray(e.state.shrug) ? e.state.shrug : []) as Screen[]
-    apply(stack)
+    const motion = expected ?? false
+    expected = null
+    apply(read(e.state)?.shrug ?? { app: null, sheet: null }, motion)
   }
   window.addEventListener('popstate', onPop)
   return () => window.removeEventListener('popstate', onPop)
 }
-
-/** The app on screen and its place in it, or null on the Home Screen. */
-export const topScreen = (s: PhoneNav): Screen | null => s.stack[s.stack.length - 1] ?? null

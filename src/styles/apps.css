@@ -315,6 +315,10 @@
   --ss-thread-size: 14px;
   flex: none;
   justify-content: flex-start;
+  /* The kit clips its thread so a demo's messages leave under a header. This
+     one scrolls instead, and can grow very tall: the scroller does the
+     clipping, so a phone never has to hold one clipped layer that size */
+  clip-path: none;
   user-select: text;
   -webkit-user-select: text;
 }

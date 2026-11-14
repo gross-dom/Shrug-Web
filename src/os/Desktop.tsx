@@ -7,7 +7,7 @@ import { NotesApp } from '../apps/Notes'
 import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
 import { SITE } from '../data/site'
-import { openPhoneApp, watchHistory } from '../phone/nav'
+import { arriveIn, PHONE_APPS, startNav, watchHistory, type PhoneApp } from '../phone/nav'
 import { Phone } from '../phone/Phone'
 import { APP_IDS, type AppId } from './apps'
 import { Dock } from './Dock'
@@ -141,21 +141,25 @@ export function Desktop() {
       .map((name) => ALIASES[name.trim().toLowerCase()] ?? name)
       .filter((id): id is AppId => (APP_IDS as string[]).includes(id))
     const quiet = query.has('still')
+    const resumed = startNav()
     const t1 = setTimeout(() => setBooted(true), 60)
     const t2 = setTimeout(
       () => {
         started.current = true
         if (wm.get().compact) {
-          // A phone shows one app at a time: the last one asked for, or the chat
-          const last = extra[extra.length - 1]
-          if (last) openPhoneApp(last)
-          else if (!query.has('empty')) openPhoneApp('messages')
+          // A phone shows one app at a time: the last one asked for, or the chat.
+          // After a reload it is already where it was left.
+          const asked = extra.filter((id): id is PhoneApp => (PHONE_APPS as string[]).includes(id)).pop()
+          if (!resumed) {
+            if (asked) arriveIn(asked)
+            else if (!query.has('empty')) arriveIn('messages')
+          }
         } else {
           if (!query.has('empty')) openApp('messages', dockPoint('messages'))
           extra.forEach((id) => openApp(id, dockPoint(id)))
         }
         startChat()
-        if (query.has('saver')) startSaver()
+        if (query.has('saver') && !wm.get().compact) startSaver()
       },
       quiet ? 0 : 520,
     )

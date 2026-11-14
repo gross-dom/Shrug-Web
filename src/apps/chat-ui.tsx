@@ -241,7 +241,12 @@ export function Transcript({ conversation, source, active = true }: { conversati
     next.frame = requestAnimationFrame(step)
   }
 
-  const follow = (instant = false) => glide(null, instant)
+  /** A finger is on the thread: it is the reader's to scroll, and nothing moves it for them. */
+  const held = useRef(false)
+
+  const follow = (instant = false) => {
+    if (!held.current || instant) glide(null, instant)
+  }
 
   // A message has landed: pinned, the thread follows it
   useLayoutEffect(() => {
@@ -305,7 +310,24 @@ export function Transcript({ conversation, source, active = true }: { conversati
   return (
     <div className="chat__pane">
       {/* Any scroll the reader starts takes over from ours */}
-      <div ref={scroller} className="chat__scroll" onScroll={onScroll} onWheel={stop} onTouchStart={stop} onPointerDown={stop} onKeyDown={stop} tabIndex={0} role="log" aria-label={conversationName(conversation)} aria-live="off">
+      <div
+        ref={scroller}
+        className="chat__scroll"
+        onScroll={onScroll}
+        onWheel={stop}
+        onPointerDown={stop}
+        onKeyDown={stop}
+        onTouchStart={() => {
+          held.current = true
+          stop()
+        }}
+        onTouchEnd={() => (held.current = false)}
+        onTouchCancel={() => (held.current = false)}
+        tabIndex={0}
+        role="log"
+        aria-label={conversationName(conversation)}
+        aria-live="off"
+      >
         <div ref={flow} className="chat__flow">
           <Thread app="imessage" className="chat__thread">
             {nodes}
@@ -521,8 +543,10 @@ export function ConversationPane({ conversation, active = true }: { conversation
 // ---- Details ----
 
 /** What the info button opens: who is in the conversation, and the controls
- * for the replies as they play out. */
-export function Details({ conversation, onPick, onDone }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void }) {
+ * for the replies as they play out. `tap` says what picking a person does: on
+ * the desktop it opens their own conversation; on a phone, where there is only
+ * the group, it shows their card (with what they said) in the same place. */
+export function Details({ conversation, onPick, onDone, tap = 'conversation' }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void; tap?: 'conversation' | 'details' }) {
   const replied = useStore(chat, (s) => s.replied)
   const typing = useStore(chat, (s) => s.typing)
   const paused = useStore(chat, (s) => s.paused)
@@ -544,6 +568,7 @@ export function Details({ conversation, onPick, onDone }: { conversation: Conver
             </div>
           )}
         </div>
+        {tap === 'details' && conversation < replied && person.quote && <blockquote className="details__quote">{person.quote}</blockquote>}
         {conversation < replied && (
           <div className="details__group">
             <button
@@ -593,6 +618,7 @@ export function Details({ conversation, onPick, onDone }: { conversation: Conver
               className="details__row details__person"
               data-state={here ? 'replied' : i === typing ? 'typing' : 'waiting'}
               onClick={() => {
+                if (tap === 'details') return onPick?.(i)
                 openConversation(i)
                 onPick?.(i)
                 onDone?.()

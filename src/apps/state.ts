@@ -112,3 +112,18 @@ export const useUnread = () =>
     useStore(chat, (s) => s.replied),
     useStore(inbox, (s) => s.read),
   )
+
+/** The group conversation is on screen: every reply so far has been seen. */
+export function seeGroup() {
+  inbox.set((s) => {
+    const replied = chat.get().replied
+    return s.open === 'group' && s.groupSeen === replied ? s : { ...s, open: 'group', groupSeen: replied }
+  })
+}
+
+/** Replies that have landed in the group since it was last on screen: what the phone's Dock counts. */
+export const useUnseen = () =>
+  Math.max(
+    0,
+    useStore(chat, (s) => s.replied) - useStore(inbox, (s) => s.groupSeen),
+  )
