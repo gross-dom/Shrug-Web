@@ -19,7 +19,7 @@ body,
 body {
   overflow: hidden;
   overscroll-behavior: none;
-  background: #1c3db0;
+  background: #2459d3;
   font-family: var(--font-ui);
   -webkit-text-size-adjust: 100%;
 }

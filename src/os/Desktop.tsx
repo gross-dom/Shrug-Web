@@ -31,6 +31,17 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   about: AboutApp,
 }
 
+/** The names a link can ask for: `?open=portfolio,faqs` opens those windows too. */
+const ALIASES: Record<string, AppId> = {
+  chat: 'messages',
+  'group-chat': 'messages',
+  portfolio: 'finder',
+  faqs: 'notes',
+  faq: 'notes',
+  'case-studies': 'terminal',
+  vip: 'photos',
+}
+
 interface DeskItem {
   id: string
   name: string
@@ -111,7 +122,10 @@ export function Desktop() {
   // The desk arrives, then the group chat opens out of the Dock and begins
   useEffect(() => {
     const query = new URLSearchParams(window.location.search)
-    const extra = (query.get('open') ?? '').split(',').filter((id): id is AppId => (APP_IDS as string[]).includes(id))
+    const extra = (query.get('open') ?? '')
+      .split(',')
+      .map((name) => ALIASES[name.trim().toLowerCase()] ?? name)
+      .filter((id): id is AppId => (APP_IDS as string[]).includes(id))
     const quiet = query.has('still')
     const t1 = setTimeout(() => setBooted(true), 60)
     const t2 = setTimeout(

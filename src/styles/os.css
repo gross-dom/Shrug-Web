@@ -84,6 +84,15 @@
   filter: blur(30px);
 }
 
+/* A photograph instead: put it in public/ and set --wallpaper on .os, e.g.
+   --wallpaper: url('/wallpaper.jpg'). It covers the drawn hills. */
+.os__wallpaper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--wallpaper, none) center / cover no-repeat;
+}
+
 /* A little grain, so the long gradients never band */
 .os__grain {
   position: absolute;
@@ -527,6 +536,78 @@
 .wf[data-app='terminal'] .wf__light:disabled {
   background: rgba(255, 255, 255, 0.2);
   box-shadow: none;
+}
+
+/* ---- Resting on the green light: the ways to tile ---- */
+
+.tile-menu {
+  top: calc(var(--lights-y) + 12px);
+  left: calc(var(--lights-y) + 22px);
+  z-index: 8;
+  padding: 9px 10px 10px;
+  border-radius: 13px;
+  color: var(--ss-text-strong);
+  --ss-popover-bg: rgba(246, 247, 250, 0.86);
+  --ss-popover-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.7), 0 16px 40px -6px rgba(6, 14, 60, 0.38), 0 4px 12px rgba(6, 14, 60, 0.14);
+}
+
+.tile-menu::before {
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+}
+
+.tile-menu[data-show] {
+  pointer-events: auto;
+}
+
+.tile-menu__label {
+  margin: 0 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ss-text);
+}
+
+.tile-menu__row {
+  display: flex;
+  gap: 4px;
+}
+
+.tile-menu__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 50px;
+  padding: 7px 0 5px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  color: var(--ss-text);
+  transition: background-color 0.12s ease;
+}
+
+.tile-menu__screen {
+  fill: none;
+  stroke: #9a9ba3;
+  stroke-width: 1.2;
+}
+
+.tile-menu__part {
+  fill: #9a9ba3;
+}
+
+.tile-menu__option:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ss-text-strong);
+}
+
+.tile-menu__option:hover .tile-menu__part,
+.tile-menu__option[aria-pressed='true'] .tile-menu__part {
+  fill: var(--ss-accent);
+}
+
+.tile-menu__option:hover .tile-menu__screen,
+.tile-menu__option[aria-pressed='true'] .tile-menu__screen {
+  stroke: var(--ss-accent);
 }
 
 /* ---- Resizing: thin grips along every edge and corner ---- */
@@ -995,6 +1076,27 @@ html[data-wm-busy='se'] * {
 
 .os[data-compact] .wf__light::after {
   inset: -9px -6px;
+}
+
+@media (pointer: coarse) {
+  .wf__lights {
+    gap: 12px;
+  }
+
+  .wf__light {
+    width: 14px;
+    height: 14px;
+  }
+
+  .wf__light svg {
+    width: 14px;
+    height: 14px;
+    opacity: 1;
+  }
+
+  .wf__light::after {
+    inset: -9px -6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

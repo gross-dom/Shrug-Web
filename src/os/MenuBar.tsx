@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { chat, finishChat, replayChat, toggleChat, TOTAL } from '../apps/chat'
 import { finder, photos, setFinderView, setMediaFilter, showNote, notes } from '../apps/state'
@@ -142,6 +142,17 @@ export function MenuBar() {
       window.removeEventListener('blur', blur)
     }
   }, [open])
+
+  // A menu that would run off the right of a narrow screen slides back onto it
+  const width = useStore(wm, (s) => s.viewport.w)
+  useLayoutEffect(() => {
+    if (!open) return
+    const menu = bar.current?.querySelector<HTMLElement>(`[data-menu="${open}"] .menu`)
+    if (!menu) return
+    menu.style.left = '0px'
+    const over = menu.getBoundingClientRect().right - (width - 8)
+    if (over > 0) menu.style.left = `${-Math.ceil(over)}px`
+  }, [open, width])
 
   const title = (id: string) => bar.current?.querySelector<HTMLElement>(`[data-menu-title="${id}"]`)
   const entries = (id: string) => Array.from(bar.current?.querySelectorAll<HTMLElement>(`[data-menu="${id}"] [data-menu-item]:not([aria-disabled="true"])`) ?? [])

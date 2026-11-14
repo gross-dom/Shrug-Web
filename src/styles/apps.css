@@ -286,6 +286,14 @@
   -webkit-user-select: text;
 }
 
+/* The kit keeps every row on a layer of its own so it glides cleanly. With
+   ninety replies that is a lot of layers to hold: only the newest few rows
+   still move, so the older ones let theirs go */
+.chat__thread > :not(:nth-last-child(-n + 14)),
+.chat__thread > :not(:nth-last-child(-n + 14)) .ss-avatar {
+  will-change: auto;
+}
+
 /* Who is speaking, over their bubble, as a group chat shows it. It rides
    the thread's glide like the kit's stamps do */
 .chat-who {

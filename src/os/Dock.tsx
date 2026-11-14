@@ -78,7 +78,7 @@ export function Dock() {
             data-dock-item
             data-dock-app={id}
             data-open={open.includes(id) || undefined}
-            data-front={active === id || undefined}
+            aria-current={active === id || undefined}
             data-hop={hopping === id || undefined}
             aria-label={`${APPS[id].name}: ${APPS[id].blurb}`}
             onClick={() => launch(id)}

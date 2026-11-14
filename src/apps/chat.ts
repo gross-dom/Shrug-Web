@@ -125,6 +125,10 @@ function closing() {
 
 // ---- Controls ----
 
+/** How many messages the visitor has sent, and Shrug's reply on its way to the last. */
+let sent = 0
+let answering: ReturnType<typeof setTimeout> | undefined
+
 /** Starts the replies, once. Under reduced motion everyone has already replied. */
 export function startChat() {
   if (chat.get().started) return
@@ -150,6 +154,7 @@ export const toggleChat = () => (chat.get().paused ? resumeChat() : pauseChat())
 
 export function replayChat() {
   clearTimeout(timer)
+  clearTimeout(answering)
   timer = undefined
   pending = null
   chat.set({ ...fresh(), started: true })
@@ -166,9 +171,6 @@ export function finishChat() {
     return { ...s, items: [...everyone(), ...mine], replied: TOTAL, typing: -1, done: true, paused: false, started: true }
   })
 }
-
-let sent = 0
-let answering: ReturnType<typeof setTimeout> | undefined
 
 /** The visitor's own message. Nothing leaves the page: Shrug shrugs back and
  * the receipt says so. */

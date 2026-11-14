@@ -1,4 +1,5 @@
-import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { Popover } from '../kit/motion/Popover'
 import { APPS, type AppId, type Size } from './apps'
 import { dockPoint } from './dom'
 import { useStore } from './store'
@@ -13,6 +14,13 @@ import { activeApp, clampRect, closeApp, focusApp, geometry, metrics, minimizeAp
 const DRAG = '.ss-window__bar, .ss-window__side-top, .ss-window__tabs, [data-drag]'
 /** ...unless it lands on a control. */
 const NO_DRAG = 'button, a, input, textarea, select, label, [role="button"], [role="option"], [role="radio"], [role="tab"], [data-nodrag]'
+
+/** The tiles the green light offers, each with where its half sits in the little screen. */
+const TILES: { tile: Tile; label: string; x: number; w: number }[] = [
+  { tile: 'left', label: 'Left', x: 3, w: 9.5 },
+  { tile: 'right', label: 'Right', x: 13.5, w: 9.5 },
+  { tile: 'fill', label: 'Fill', x: 3, w: 20 },
+]
 
 type Edge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 const EDGES: Edge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']
@@ -55,15 +63,25 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
   const live = useRef({ geo, win, viewport, compact })
   live.current = { geo, win, viewport, compact }
 
-  // A window that opens (or comes back) takes the keyboard with it
+  // Resting the pointer on the green light offers the ways to tile, as the
+  // system does; a click still just zooms
+  const [tiles, setTiles] = useState(false)
+  const tileTimer = useRef<ReturnType<typeof setTimeout>>()
+  const tilesSoon = (show: boolean, ms: number) => {
+    clearTimeout(tileTimer.current)
+    tileTimer.current = setTimeout(() => setTiles(show), ms)
+  }
+  useEffect(() => () => clearTimeout(tileTimer.current), [])
+
+  // A window that opens (or comes back) in front takes the keyboard with it
   const shown = win.open && !win.minimized
   useEffect(() => {
-    if (!shown) return
+    if (!shown || activeApp(wm.get()) !== id) return
     const el = ref.current
     if (!el || el.contains(document.activeElement)) return
     const first = el.querySelector<HTMLElement>('[data-autofocus]')
     ;(first ?? el).focus({ preventScroll: true })
-  }, [shown])
+  }, [shown, id])
 
   if (!win.mounted) return null
 
@@ -231,13 +249,46 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
           data-kind="zoom"
           aria-label={win.tile ? `Restore ${spec.name}` : `Zoom ${spec.name}`}
           disabled={!spec.resizable || compact}
-          onClick={() => toggleZoom(id)}
+          onPointerEnter={(e) => {
+            if (e.pointerType === 'mouse') tilesSoon(true, 520)
+          }}
+          onPointerLeave={() => tilesSoon(false, 240)}
+          onClick={() => {
+            tilesSoon(false, 0)
+            toggleZoom(id)
+          }}
         >
           <svg viewBox="0 0 12 12" aria-hidden>
             {win.tile ? <path className="wf__light-fill" d="M6.6 2.9v2.5h2.5zM5.4 9.1V6.6H2.9z" /> : <path className="wf__light-fill" d="M3.4 3.4h3.3L3.4 6.7zM8.6 8.6H5.3l3.3-3.3z" />}
           </svg>
         </button>
       </div>
+      {!compact && spec.resizable && (
+        <Popover show={tiles} origin="top left" className="tile-menu" role="group" aria-label="Move and resize" onPointerEnter={() => clearTimeout(tileTimer.current)} onPointerLeave={() => tilesSoon(false, 240)} {...(tiles ? null : ({ inert: '' } as object))}>
+          <div className="tile-menu__label">Move &amp; Resize</div>
+          <div className="tile-menu__row">
+            {TILES.map((option) => (
+              <button
+                key={option.tile}
+                type="button"
+                className="tile-menu__option"
+                aria-label={option.label}
+                aria-pressed={win.tile === option.tile}
+                onClick={() => {
+                  setTiles(false)
+                  tileApp(id, win.tile === option.tile ? null : option.tile)
+                }}
+              >
+                <svg viewBox="0 0 26 18" width="26" height="18" aria-hidden>
+                  <rect x="1" y="1" width="24" height="16" rx="3.5" className="tile-menu__screen" />
+                  <rect x={option.x} y="3" width={option.w} height="12" rx="1.8" className="tile-menu__part" />
+                </svg>
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </Popover>
+      )}
       {!compact && spec.resizable && EDGES.map((edge) => <span key={edge} className="wf__grip" data-edge={edge} onPointerDown={startResize(edge)} aria-hidden />)}
     </section>
   )
