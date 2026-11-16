@@ -17,16 +17,6 @@
   caret-color: var(--blue);
 }
 
-/* A search field that has the keyboard shows it with its caret, as iOS does, not with a ring */
-.notes-screen .ios-search__input:focus-visible {
-  outline: none;
-}
-
-/* The kit's popover is drawn for show and takes no touches; a menu that is open has to */
-.notes-screen .ios-menu__list[data-show] {
-  pointer-events: auto;
-}
-
 /* ---- The folder ---- */
 
 /* A note's row: its title on one line, and under it the date and the start of its text */

@@ -8,11 +8,12 @@ import { SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
 import { APPS, type AppId } from '../../os/apps'
+import { prefersReducedMotion } from '../../os/dom'
 import { AppIcon } from '../../os/icons'
 import { createStore, useStore } from '../../os/store'
 import { OnePagerIcon } from '../icons'
 import { closeSheet, launch, launchAt, openSheet, pop, push, sys, topOf } from '../system'
-import { Cell, Empty, GlassButton, List, Menu, NavStack, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
+import { Cell, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 import { conversationView, GROUP_VIEW } from './routes'
 import '../../styles/phone/messages.css'
 
@@ -89,7 +90,7 @@ interface ListRow {
 }
 
 const ConversationRow = memo(
-  function ConversationRow({ row }: { row: ListRow }) {
+  function ConversationRow({ row, picked }: { row: ListRow; picked: boolean }) {
     const open = () => push(conversationView(row.conversation))
     return (
       <Row
@@ -98,6 +99,8 @@ const ConversationRow = memo(
         tabIndex={0}
         aria-label={`${row.name}${row.unread ? ', unread' : ''}`}
         data-conversation={row.conversation}
+        // The row that was tapped stays lit while its conversation is open, and fades on the way back
+        data-picked={picked || undefined}
         unread={row.unread}
         lead={<ConversationAvatar conversation={row.conversation} size={46} />}
         title={row.name}
@@ -117,7 +120,7 @@ const ConversationRow = memo(
       />
     )
   },
-  (a, b) => a.row.conversation === b.row.conversation && a.row.unread === b.row.unread && a.row.when === b.row.when && a.row.preview === b.row.preview,
+  (a, b) => a.picked === b.picked && a.row.conversation === b.row.conversation && a.row.unread === b.row.unread && a.row.when === b.row.when && a.row.preview === b.row.preview,
 )
 
 type Filter = 'all' | 'unread'
@@ -130,6 +133,8 @@ function ListScreen() {
   const repliedAt = useStore(chat, (s) => s.repliedAt)
   const startedAt = useStore(chat, (s) => s.startedAt)
   const groupSeen = useStore(seen, (s) => s.group)
+  /** The conversation that is open over the list, if one is. */
+  const picked = useStore(sys, (s) => s.stacks.messages[0] ?? null)
   // The newest thing said in the group: its row's preview
   const last = useStore(chat, (s) => {
     for (let i = s.items.length - 1; i >= 0; i--) {
@@ -189,7 +194,7 @@ function ListScreen() {
     >
       <div className="msg-rows">
         {rows.map((row) => (
-          <ConversationRow key={row.conversation} row={row} />
+          <ConversationRow key={row.conversation} row={row} picked={picked === conversationView(row.conversation)} />
         ))}
       </div>
       {rows.length === 0 && (q ? <Empty title="No Results">for “{query.trim()}”</Empty> : <Empty title="No Unread Messages" />)}
@@ -319,6 +324,52 @@ function Field({ conversation, target, showing }: { conversation: Conversation; 
   )
 }
 
+/** The conversation's thread, with a reply that is shown from its details brought down clear of the header. */
+function Thread({ children }: { children: ReactNode }) {
+  const root = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = root.current
+    if (!el) return
+    // A reply brought into view from its details is rung (`data-flash`). The
+    // thread puts it where the desktop wants it, which on a phone can be up
+    // under the header: once it has arrived, it is brought down clear of it.
+    let nudge: ReturnType<typeof setTimeout> | undefined
+    const clearOfHeader = (bubble: HTMLElement) => {
+      clearTimeout(nudge)
+      nudge = setTimeout(() => {
+        const scroller = el.querySelector<HTMLElement>('.chat__scroll')
+        const flow = scroller?.querySelector<HTMLElement>('.chat__flow')
+        if (!scroller || !flow || !bubble.isConnected) return
+        const k = scaleOf(scroller)
+        // The header covers as much of the thread as the thread leaves clear above its first message
+        const clear = parseFloat(getComputedStyle(flow).paddingTop) || 0
+        const who = bubble.closest('.ss-bubble-row')?.previousElementSibling
+        const first = who?.classList.contains('chat-who') ? who : bubble
+        const top = (first.getBoundingClientRect().top - scroller.getBoundingClientRect().top) / k
+        if (top < clear) scroller.scrollBy({ top: top - clear, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+      }, 650)
+    }
+    const rung = new MutationObserver((records) => {
+      const bubble = records.map((r) => r.target as HTMLElement).find((b) => b.hasAttribute('data-flash'))
+      if (bubble) clearOfHeader(bubble)
+    })
+    rung.observe(el, { subtree: true, attributes: true, attributeFilter: ['data-flash'] })
+    // A conversation that arrives already on a rung reply rang it before this was listening
+    const already = el.querySelector<HTMLElement>('.ss-bubble[data-flash]')
+    if (already) clearOfHeader(already)
+
+    return () => {
+      rung.disconnect()
+      clearTimeout(nudge)
+    }
+  }, [])
+  return (
+    <div ref={root} className="msg-thread">
+      {children}
+    </div>
+  )
+}
+
 function ConversationScreen({ conversation }: { conversation: Conversation }) {
   const { active } = useApp()
   const view = conversationView(conversation)
@@ -361,7 +412,9 @@ function ConversationScreen({ conversation }: { conversation: Conversation }) {
     >
       {/* Older messages blur and fade as they pass up under the header */}
       <div className="msg-edge" aria-hidden />
-      <Transcript conversation={conversation} source={target} active={showing} />
+      <Thread>
+        <Transcript conversation={conversation} source={target} active={showing} />
+      </Thread>
     </Screen>
   )
 }
@@ -425,7 +478,7 @@ function DetailsSheet() {
       </div>
       <List>
         <Section footer={done ? 'Everyone has replied.' : `${replied} of ${TOTAL} have replied so far.`}>
-          <Cell title="Pause Replies" disabled={done} trailing={<Switch on={paused} label="Pause Replies" onChange={() => !done && toggleChat()} />} />
+          <Cell title="Pause Replies" className={done ? 'msg-off' : undefined} trailing={<Switch on={paused} label="Pause Replies" onChange={() => !done && toggleChat()} />} />
           <Cell
             title="Show Every Reply"
             tint

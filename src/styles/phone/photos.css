@@ -185,9 +185,11 @@
   padding-bottom: calc(var(--foot-gap) + 62px + 10px + 44px + 14px);
 }
 
-/* The picture grid shows through under the glass; only its very foot is let down */
-:is(.photos-library, .photos-album-screen) > .ios-foot > .ios-foot__edge {
-  opacity: 0.55;
+/* The grid shows through around the kind switch, as pictures do under Photos'
+   glass; from the gap between the two bars down it is let right down, so no
+   stray line of the page shows between them */
+.ios-screen.photos-library > .ios-foot > .ios-foot__edge {
+  background: linear-gradient(transparent, color-mix(in srgb, var(--surface) 42%, transparent) 30%, color-mix(in srgb, var(--surface) 95%, transparent) 54%);
 }
 
 /* ---- Collections ---- */
@@ -294,13 +296,15 @@
   display: none;
 }
 
+/* A page is the whole screen, and the picture is fitted to it and centred on
+   it, as Photos does: the bars float over a tall one's ends */
 .photos-page {
+  --clear: calc(var(--status) + var(--bar) + 6px + var(--foot-gap) + 48px + 16px);
   display: grid;
   flex: 0 0 100%;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   min-width: 0;
-  /* The picture is centred on the whole screen; a tall one stops short of the bars */
-  padding: calc(var(--status) + var(--bar) + 6px) 0 calc(var(--foot-gap) + 48px + 16px);
   scroll-snap-align: center;
   scroll-snap-stop: always;
 }
@@ -308,8 +312,14 @@
 .photos-page__media {
   display: block;
   width: 100%;
-  max-height: 100%;
+  height: 100%;
   object-fit: contain;
+}
+
+/* A video is as tall as it is and no taller than the room between the bars: its own controls stay in reach */
+video.photos-page__media {
+  height: auto;
+  max-height: calc(100% - var(--clear));
 }
 
 /* A slot, full width: a photo's stands as a phone takes one, a video's lies as one is shot */
@@ -356,6 +366,11 @@
 .photos-big > .photos-pic__play {
   right: 12px;
   bottom: 12px;
+}
+
+/* A tall picture runs up under the bar: the bar's shade is always there, so its words read over anything */
+.photos-viewer > .ios-bar > .ios-bar__edge {
+  opacity: 1;
 }
 
 /* The top of the viewer: what it is, in two small lines */
@@ -434,24 +449,6 @@
   transition:
     opacity 0.25s ease,
     visibility 0s 0.25s;
-}
-
-/* A menu over a dark screen is dark glass */
-.photos-viewer .ios-menu__list {
-  --ss-popover-bg: rgb(44 44 46 / 0.86);
-  --ss-popover-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 14px 44px rgb(0 0 0 / 0.5);
-  min-width: 250px;
-  color: #fff;
-  white-space: nowrap;
-}
-
-/* Open, it takes touches (the kit's popover lets them through until told otherwise) */
-.photos-viewer .ios-menu__list[data-show] {
-  pointer-events: auto;
-}
-
-.photos-viewer .ios-menu__item:active {
-  background: rgb(255 255 255 / 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {

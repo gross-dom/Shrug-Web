@@ -3,6 +3,7 @@ import { Phone as Device } from '../kit/phone'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
 import { COLOR, WALLPAPER_TOP, carried, chrome } from './chrome'
+import { SoftKeyboard } from './Keyboard'
 import { Springboard } from './Springboard'
 import { sys } from './system'
 import { clockOf, useNow } from './time'
@@ -95,6 +96,7 @@ export function Phone() {
         <div ref={root} className="ph ph--framed" data-dark={dark || undefined}>
           <Springboard framed />
         </div>
+        <SoftKeyboard screen={root} />
       </Device>
     </div>
   )

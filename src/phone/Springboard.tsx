@@ -20,7 +20,7 @@ import { COLOR, carried, chrome } from './chrome'
 import { OnePagerIcon } from './icons'
 import { haptic } from './native'
 import { Spotlight } from './Spotlight'
-import { goHome, launch, launchAt, lock, quit, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp } from './system'
+import { goHome, launch, launchAt, lock, pop, quit, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp } from './system'
 import { clockOf, dateOf, useNow } from './time'
 import { AppContext, scaleOf } from './ui'
 
@@ -107,7 +107,7 @@ function Lock() {
   const replied = useStore(chat, (s) => s.replied)
   const now = useNow()
   const root = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ y: number; t: number; dy: number; v: number; k: number } | null>(null)
+  const drag = useRef<{ y: number; t: number; dy: number; v: number; k: number; moving: boolean } | null>(null)
   // It stays drawn while it slides away
   const [shown, setShown] = useState(locked)
   const [hint, setHint] = useState(false)
@@ -147,15 +147,22 @@ function Lock() {
   }
 
   const down = (e: ReactPointerEvent) => {
-    if (!locked || (e.target as HTMLElement).closest('.sb-note, .sb-lock__hint')) return
-    drag.current = { y: e.clientY, t: e.timeStamp, dy: 0, v: 0, k: scaleOf(root.current) }
-    e.currentTarget.setPointerCapture(e.pointerId)
+    if (!locked) return
+    drag.current = { y: e.clientY, t: e.timeStamp, dy: 0, v: 0, k: scaleOf(root.current), moving: false }
   }
 
   const move = (e: ReactPointerEvent) => {
     const d = drag.current
     if (!d) return
     const dy = Math.min(0, (e.clientY - d.y) / d.k)
+    // The swipe can start anywhere, a notification included. Until the finger
+    // has moved it may still be a tap on one; once it has, the screen has it,
+    // and letting go won't press what it started on
+    if (!d.moving) {
+      if (dy > -8) return
+      d.moving = true
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
     const dt = Math.max(1, e.timeStamp - d.t)
     d.v = d.v * 0.6 + ((dy - d.dy) / dt) * 0.4
     d.dy = dy
@@ -166,7 +173,7 @@ function Lock() {
   const up = (e: ReactPointerEvent) => {
     const d = drag.current
     drag.current = null
-    if (!d) return
+    if (!d || !d.moving) return
     const speed = e.timeStamp - d.t > 90 ? 0 : d.v
     place(0, false)
     if (d.dy < -110 || (d.dy < -20 && speed < -0.45)) {
@@ -372,6 +379,8 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const [zoom, setZoom] = useState<{ open: boolean; from: Rect; still: boolean }>({ open: false, from: EMPTY, still: true })
   // Cards stay drawn for a moment after the switcher closes, while they clear the screen
   const [lingering, setLingering] = useState(false)
+  // One app opened from inside another slides in over it, as iOS takes you from app to app
+  const [slide, setSlide] = useState<'in' | 'under' | null>(null)
   const wasSwitcher = useRef(switcher)
   const Root = PHONE[id].Root
 
@@ -386,13 +395,28 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
       const t = setTimeout(() => setLingering(false), SETTLE)
       return () => clearTimeout(t)
     }
+    const now = sys.get()
     if (!front) {
+      if (now.app && motion && now.prev === id) {
+        // Another app has come in over this one: it stays where it is until that one has slid across
+        setZoom((z) => ({ ...z, open: false, still: true }))
+        setSlide('under')
+        const t = setTimeout(() => setSlide(null), SETTLE + 80)
+        return () => clearTimeout(t)
+      }
       // Home: back into its icon
       const from = originRect(iconOrigin(id))
       setZoom((z) => ({ open: false, from: from ?? z.from, still: !motion || !from }))
       return
     }
     const from = originRect(origin ?? iconOrigin(id)) ?? originRect(iconOrigin(id))
+    if (motion && now.prev && now.prev !== id && !origin) {
+      // Opened from inside another app: there is no icon in sight to grow out of
+      setZoom((z) => ({ open: true, from: from ?? z.from, still: true }))
+      setSlide('in')
+      const t = setTimeout(() => setSlide(null), SETTLE + 80)
+      return () => clearTimeout(t)
+    }
     if (!motion || !from) return setZoom((z) => ({ open: true, from: from ?? z.from, still: true }))
     // Opening: placed on what it opens out of first, then let go
     setZoom({ open: false, from, still: true })
@@ -406,12 +430,13 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
     }
   }, [front, switcher]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const open = switcher || lingering ? true : zoom.open
-  const still = switcher || lingering ? true : zoom.still
+  const open = switcher || lingering || slide === 'under' ? true : zoom.open
+  const still = switcher || lingering || slide ? true : zoom.still
   const active = front && !locked && !switcher
-  const card = origin !== null && !origin.startsWith('icon:') && !origin.startsWith('widget:')
+  // Out of anything but its icon (a widget, a notification), it grows from a plain card the shape of that thing
+  const card = origin !== null && !origin.startsWith('icon:')
   return (
-    <div className="sb-slot" data-app={id} data-front={front || undefined} data-lingering={lingering || undefined} style={{ '--i': order } as CSSProperties}>
+    <div className="sb-slot" data-app={id} data-front={front || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order } as CSSProperties}>
       <div className="sb-slot__label" aria-hidden>
         <span className="sb-slot__icon">
           <AppIcon id={id} />
@@ -422,13 +447,13 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
         <Expand
           open={open}
           from={zoom.from}
-          radius={zoom.from.width * (card ? 0.07 : 0.225)}
+          radius={card ? 24 : zoom.from.width * 0.225}
           duration={still ? 0 : undefined}
           face={card ? <span className="sb-face sb-face--card" /> : <AppIcon id={id} />}
           className="sb-app"
           data-app={id}
           data-shut={!open || undefined}
-          data-still={still || undefined}
+          data-snap={still || undefined}
           style={{ '--ss-expand-bg': COLOR[tone] } as CSSProperties}
           {...(active ? null : ({ inert: '' } as object))}
         >
@@ -543,7 +568,7 @@ function Apps() {
 /** How long a banner stays, and the least time between two. */
 const BANNER = { stay: 4600, apart: 20_000 }
 
-/** A reply landing while something other than the conversation is showing drops in at the top of the screen. */
+/** A reply landing while something other than Messages is showing drops in at the top of the screen. */
 function Banners() {
   const replied = useStore(chat, (s) => s.replied)
   const [shown, setShown] = useState<{ index: number; leaving: boolean } | null>(null)
@@ -555,8 +580,8 @@ function Banners() {
     last.current.replied = replied
     if (replied <= before) return
     const s = sys.get()
-    const reading = s.app === 'messages' && topOf(s, 'messages') === GROUP_VIEW
-    if (s.locked || s.switcher || reading || performance.now() - last.current.at < BANNER.apart) return
+    // Messages itself is showing: the reply is there to see, in the conversation or in the list
+    if (s.locked || s.switcher || s.app === 'messages' || performance.now() - last.current.at < BANNER.apart) return
     last.current.at = performance.now()
     setShown({ index: replied - 1, leaving: false })
   }, [replied])
@@ -719,14 +744,16 @@ export function Springboard({ framed }: { framed: boolean }) {
       events.forEach((name) => window.removeEventListener(name, arm, { capture: true }))
     }
   }, [])
-  // Escape steps back out: a sheet, then a screen, then the app (sheets and screens see to their own)
+  // Escape steps back out: a sheet (which sees to itself), then a screen, then the app
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       const s = sys.get()
       if (s.locked || s.sheet) return
       if (s.switcher || s.spotlight) return goHome()
-      if (s.app && !s.stacks[s.app].length && !(e.target as HTMLElement).closest?.('input, textarea')) goHome()
+      if (!s.app || (e.target as HTMLElement).closest?.('input, textarea')) return
+      if (s.stacks[s.app].length) pop()
+      else goHome()
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)

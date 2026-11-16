@@ -41,14 +41,14 @@ export function AboutApp() {
           </div>
           <List>
             <Section>
-              <Cell title="Name" value={SITE.name} />
+              <Cell title="Name" value={SITE.name} label={`Name, ${SITE.name}`} />
               {FACTS.map((fact) => (
-                <Cell key={fact.label} title={fact.label} value={fact.value} chevron onClick={() => launch(fact.app)} />
+                <Cell key={fact.label} title={fact.label} value={fact.value} chevron label={`${fact.label}, ${fact.value}`} onClick={() => launch(fact.app)} />
               ))}
             </Section>
             <Section footer="Every figure here is counted from what is on the site.">
-              <Cell title="One-pager" href={SITE.onePager} trailing={out} />
-              <Cell title="Website" value={hostOf(SITE.url)} href={SITE.url} trailing={out} />
+              <Cell title="One-pager" label="One-pager, in the browser" href={SITE.onePager} trailing={out} />
+              <Cell title="Website" value={hostOf(SITE.url)} label={`Website, ${hostOf(SITE.url)}, in the browser`} href={SITE.url} trailing={out} />
             </Section>
           </List>
         </Screen>

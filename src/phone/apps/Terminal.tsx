@@ -66,9 +66,22 @@ function Session() {
     return () => ro.disconnect()
   }, [])
 
-  // With a real keyboard to hand, typing goes straight into it
+  // With a real keyboard to hand, typing goes straight into the line: the first
+  // key pressed while nothing else has the keyboard puts the cursor there, and
+  // lands in it
   useEffect(() => {
-    if (active && matchMedia('(hover: hover) and (pointer: fine)').matches) input.current?.focus({ preventScroll: true })
+    if (!active) return
+    const key = (e: KeyboardEvent) => {
+      if (e.key.length !== 1 || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return
+      const at = document.activeElement
+      if (at instanceof HTMLInputElement || at instanceof HTMLTextAreaElement) return
+      // Space presses a button that has the keyboard
+      if (e.key === ' ' && at instanceof HTMLButtonElement) return
+      if (screen.current?.closest('.ios-screen')?.querySelector('.ios-menu > [aria-expanded="true"]')) return
+      input.current?.focus({ preventScroll: true })
+    }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
   }, [active])
 
   // A key from the row has landed in the line: the cursor goes after it
@@ -78,25 +91,16 @@ function Session() {
     caret.current = null
   }, [typed])
 
-  // Escape closes the menu and nothing more: without this it would also be
-  // taken as leaving the app, which is what Escape means on an app's first screen
-  useEffect(() => {
-    if (!active) return
-    const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && screen.current?.closest('.term-ios')?.querySelector('.ios-menu > [aria-expanded="true"]')) e.preventDefault()
-    }
-    window.addEventListener('keydown', key, true)
-    return () => window.removeEventListener('keydown', key, true)
-  }, [active])
-
   /** Puts the cursor in the line, with the keyboard for an email. Called from
    * inside a tap, which is the only time a phone will bring its keyboard up. */
   const takeKeyboard = () => {
     const el = input.current
     if (!el) return
-    if (term.get().step === 'email') {
+    if (term.get().step === 'email' && el.inputMode !== 'email') {
       el.inputMode = 'email'
       el.autocomplete = 'email'
+      // A keyboard that is already up only changes its keys when the cursor comes back to the field
+      if (document.activeElement === el) el.blur()
     }
     el.focus({ preventScroll: true })
   }
@@ -209,8 +213,9 @@ function Session() {
       >
         <TerminalLog />
         <label className="term__entry term-ios-entry">
-          <span aria-hidden>&gt;</span>
+          {/* The mark and the field are set out at a field's size and drawn at the log's, on one baseline */}
           <span className="term-ios-line">
+            <span aria-hidden>&gt;</span>
             <input
               ref={input}
               className="term__input term-ios-input"

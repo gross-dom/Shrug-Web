@@ -6,7 +6,7 @@
 .spot {
   /* The Home Screen's own measures, to sit the field where its Search pill is: just above the Dock */
   --icon: clamp(54px, 15.3cqw, 68px);
-  --foot: calc(3.3cqw + var(--icon) + 34px + 10px);
+  --foot: calc(3.3cqw + var(--icon) + 34px + 10px + var(--below, 0px));
   position: absolute;
   inset: 0;
   /* Over the apps, under the Lock Screen and the status bar */
@@ -14,8 +14,10 @@
   color: #fff;
 }
 
-/* The keyboard is up: the screen is the space above it, and the field sits on its top edge */
-.ph--bleed[data-keyboard] .spot {
+/* The keyboard is up (a phone's own, or the one drawn in a frame): the screen
+   is the space above it, and the field sits on its top edge */
+.ph--bleed[data-keyboard] .spot,
+.ph--framed[data-softkb] .spot {
   --foot: 8px;
 }
 
@@ -213,8 +215,9 @@
 }
 
 .spot-row:active,
-.spot-app:active {
-  background: rgb(255 255 255 / 0.14);
+.spot-app:active,
+.spot [data-spot-item][data-active] {
+  background: rgb(255 255 255 / 0.16);
 }
 
 .spot-row__lead {
@@ -318,8 +321,10 @@
   filter: drop-shadow(0 2px 5px rgb(0 0 0 / 0.18));
 }
 
+/* A name may run a little past its column, as it does under an icon on the Home Screen */
 .spot-app__name {
-  max-width: 100%;
+  max-width: calc(100% + 12px);
+  margin: 0 -6px;
   overflow: hidden;
   font-size: 12px;
   font-weight: 500;

@@ -62,8 +62,10 @@ const hueOf = (drop: string) => HUES[Math.max(0, DROPS.indexOf(drop)) % HUES.len
 
 /** One photo or video as a square: the picture, or the slot it will go in. A
  * video carries a play mark in its corner, as Photos marks one; a favorite, a
- * heart. An album's `cover` leaves the drop's name off: it is written under it. */
-function Picture({ index, loved, cover }: { index: number; loved?: boolean; cover?: boolean }) {
+ * heart. A slot is named for its drop, except where that is already said: an
+ * album's `cover` has the name under it, and `within` an album every slot is
+ * from the one drop, so each says what kind of slot it is instead. */
+function Picture({ index, loved, cover, within }: { index: number; loved?: boolean; cover?: boolean; within?: boolean }) {
   const slot = MEDIA[index]!
   const video = slot.kind === 'video'
   return (
@@ -77,7 +79,7 @@ function Picture({ index, loved, cover }: { index: number; loved?: boolean; cove
       ) : (
         <span className="photos-pic__slot">
           {video ? <Video size={22} strokeWidth={1.7} aria-hidden /> : <ImageIcon size={22} strokeWidth={1.7} aria-hidden />}
-          {!cover && <span className="photos-pic__name">{slot.drop}</span>}
+          {!cover && <span className="photos-pic__name">{within ? (video ? 'Video slot' : 'Photo slot') : slot.drop}</span>}
         </span>
       )}
       {video && <Play className="photos-pic__play" size={13} strokeWidth={0} fill="currentColor" aria-hidden />}
@@ -93,14 +95,14 @@ const describe = (index: number) => {
 }
 
 /** Photos' grid: equal squares, three across, edge to edge. */
-function Grid({ indices }: { indices: number[] }) {
+function Grid({ indices, album }: { indices: number[]; album?: boolean }) {
   const loved = useStore(mine, (s) => s.loved)
   return (
     <div className="photos-grid" role="list">
       {indices.map((i) => (
         <div key={i} role="listitem">
           <button type="button" className="photos-tile" aria-label={describe(i)} onClick={() => push(mediaView(i))}>
-            <Picture index={i} loved={loved.includes(i)} />
+            <Picture index={i} loved={loved.includes(i)} within={album} />
           </button>
         </div>
       ))}
@@ -248,7 +250,7 @@ function Album({ drop, depth }: { drop: string; depth: number }) {
     >
       {items.length ? (
         <>
-          <Grid indices={items} />
+          <Grid indices={items} album />
           <p className="photos-note">{tally(items)}</p>
         </>
       ) : (
@@ -264,6 +266,9 @@ function Album({ drop, depth }: { drop: string; depth: number }) {
 
 /** How far apart two neighbours sit while one is swiped to the next. */
 const GAP = 16
+
+/** A menu is open in the app: the keys are the menu's until it closes. */
+const menuOpen = () => !!document.querySelector('.sb-app[data-app="photos"] .ios-menu > [aria-expanded="true"]')
 
 /** What a swipe goes through: the album the item was opened from, or the library as it was filtered. */
 function setFor(index: number, under: string | null, filter: MediaFilter) {
@@ -369,18 +374,13 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
     glideTo(Math.abs(dx) > el.clientWidth * 0.16 ? from + (dx < 0 ? 1 : -1) : from)
   }
 
-  // The arrow keys turn to the next one; Escape goes back
+  // The arrow keys turn to the next one
   useEffect(() => {
     if (!active) return
     const key = (e: KeyboardEvent) => {
-      if (!onTop() || (e.target as HTMLElement).closest?.('input, textarea, [role="menu"]')) return
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-        e.preventDefault()
-        step(e.key === 'ArrowRight' ? 1 : -1)
-      } else if (e.key === 'Escape' && !e.defaultPrevented) {
-        e.preventDefault()
-        pop()
-      }
+      if ((e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') || !onTop() || menuOpen() || (e.target as HTMLElement).closest?.('input, textarea')) return
+      e.preventDefault()
+      step(e.key === 'ArrowRight' ? 1 : -1)
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
@@ -473,7 +473,8 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
           const item = MEDIA[i]!
           const film = item.kind === 'video'
           return (
-            <div key={i} className="photos-page" aria-hidden={i === index ? undefined : true}>
+            // The neighbours are there to be swiped to, and for nothing else until they are the one showing
+            <div key={i} className="photos-page" aria-hidden={i === index ? undefined : true} {...(i === index ? null : ({ inert: '' } as object))}>
               {item.src ? (
                 film ? (
                   <video className="photos-page__media" src={item.src} controls playsInline preload="metadata" />
@@ -520,13 +521,34 @@ function InfoSheet() {
 // ---- The app ----
 
 export function PhotosApp() {
+  const { active } = useApp()
   const stack = useStore(sys, (s) => s.stacks.photos)
   const viewing = stack[stack.length - 1]?.startsWith('m:') ?? false
 
-  // Out of the viewer, its buttons are back for next time
+  // Escape goes back a screen: out of the viewer, out of an album. A sheet or a menu that is open takes it first.
   useEffect(() => {
-    if (!viewing) mine.set((s) => (s.bare ? { ...s, bare: false } : s))
+    if (!active) return
+    const key = (e: KeyboardEvent) => {
+      const s = sys.get()
+      if (e.key !== 'Escape' || e.defaultPrevented || s.app !== 'photos' || s.sheet || !s.stacks.photos.length || menuOpen()) return
+      e.preventDefault()
+      pop()
+    }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
+  }, [active])
+
+  // Out of the viewer, its buttons are back for next time (once it has slid away)
+  useEffect(() => {
+    if (viewing) return
+    const t = setTimeout(() => mine.set((s) => (s.bare ? { ...s, bare: false } : s)), 600)
+    return () => clearTimeout(t)
   }, [viewing])
+
+  // Come back to (a reload) inside an album: that album is under Collections, so that is the tab Back leads to
+  useEffect(() => {
+    if (sys.get().stacks.photos[0]?.startsWith('a:')) mine.set((s) => (s.tab === 'collections' ? s : { ...s, tab: 'collections' }))
+  }, [])
 
   return (
     <>

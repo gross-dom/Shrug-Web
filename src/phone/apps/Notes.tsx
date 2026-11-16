@@ -103,7 +103,7 @@ function Folder() {
       ) : gallery ? (
         <div className="notes-gallery">
           {shown.map(({ faq, index }) => (
-            <button key={index} type="button" className="notes-tile" onClick={() => open(index)}>
+            <button key={index} type="button" className="notes-tile" aria-label={faq.question} onClick={() => open(index)}>
               <span className="notes-tile__page" aria-hidden>
                 <b>{faq.question}</b>
                 <span>{textOf(index)}</span>
@@ -131,6 +131,7 @@ function Folder() {
               <Cell
                 key={index}
                 className="notes-row"
+                label={faq.question}
                 title={<Marked text={faq.question} q={q} />}
                 subtitle={
                   <>
@@ -275,16 +276,19 @@ function Note({ index }: { index: number }) {
     return () => clearTimeout(t)
   }, [index])
 
-  // Left and right go from note to note, for a keyboard
+  // For a keyboard: left and right go from note to note, and Escape goes back to the folder
   useEffect(() => {
     if (!active) return
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Escape') return
       if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest?.('input, textarea, [role="menu"]')) return
       const s = sys.get()
       if (s.sheet || s.stacks.notes[s.stacks.notes.length - 1] !== noteView(index)) return
+      // An open menu takes Escape for itself
+      if (e.key === 'Escape' && page.current?.closest('.ios-screen')?.querySelector('.ios-menu__list[data-show]')) return
       e.preventDefault()
-      step(index, e.key === 'ArrowLeft' ? -1 : 1, 'keys')
+      if (e.key === 'Escape') pop()
+      else step(index, e.key === 'ArrowLeft' ? -1 : 1, 'keys')
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)

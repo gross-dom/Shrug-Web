@@ -226,11 +226,14 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
     )
   }
 
+  // One list, so a screen that is leaving is the same screen it was (its place on the page, what it had scrolled to), not a new one
   return (
-    <div className="ios-nav" data-still={!motion || undefined}>
-      {page(null, 0, top === 0 ? 'top' : 'under')}
-      {stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under'))}
-      {seen.gone.filter((g) => g.depth > top).map((g) => page(g.view, g.depth, 'gone'))}
+    <div className="ios-nav" data-snap={!motion || undefined}>
+      {[
+        page(null, 0, top === 0 ? 'top' : 'under'),
+        ...stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under')),
+        ...seen.gone.filter((g) => g.depth > top).map((g) => page(g.view, g.depth, 'gone')),
+      ]}
     </div>
   )
 }
@@ -393,16 +396,28 @@ export function Menu({ label, items, children, tint, wide }: { label: string; it
   useEffect(() => {
     if (!open) return
     const away = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false)
+      if (root.current?.contains(e.target as Node)) return
+      setOpen(false)
+      // The press that puts the menu away does only that: it doesn't also press what was under it
+      const swallow = (click: MouseEvent) => {
+        click.stopPropagation()
+        click.preventDefault()
+      }
+      document.addEventListener('click', swallow, { capture: true, once: true })
+      setTimeout(() => document.removeEventListener('click', swallow, true), 500)
     }
+    // Escape puts the menu away and does nothing else: it is heard first, and goes no further
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      setOpen(false)
     }
     document.addEventListener('pointerdown', away, true)
-    window.addEventListener('keydown', key)
+    window.addEventListener('keydown', key, true)
     return () => {
       document.removeEventListener('pointerdown', away, true)
-      window.removeEventListener('keydown', key)
+      window.removeEventListener('keydown', key, true)
     }
   }, [open])
   return (
@@ -555,7 +570,7 @@ export function Sheet({ label, title, detent = 'large', leading, trailing, tone 
   }, [])
 
   return (
-    <div className={`ios-sheet${className ? ` ${className}` : ''}`} data-detent={detent} data-tone={tone} data-closing={closing || undefined} data-still={!motion || undefined} role="dialog" aria-modal="true" aria-label={label} {...(closing ? ({ inert: '' } as object) : null)}>
+    <div className={`ios-sheet${className ? ` ${className}` : ''}`} data-detent={detent} data-tone={tone} data-closing={closing || undefined} data-snap={!motion || undefined} role="dialog" aria-modal="true" aria-label={label} {...(closing ? ({ inert: '' } as object) : null)}>
       <button ref={shade} type="button" className="ios-sheet__shade" aria-label="Close" tabIndex={-1} onClick={() => closeSheet()} />
       <div ref={panel} className="ios-sheet__panel" tabIndex={-1}>
         <div className="ios-sheet__bar" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>

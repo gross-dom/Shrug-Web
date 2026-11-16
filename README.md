@@ -56,7 +56,7 @@ Below 760px wide (or 480px tall) the site is an iPhone, in the look of the curre
 | A reply landing while another window is in front | **A banner** at the top of the screen. Tap it to open the conversation. |
 
 - **On a real phone the phone is the frame.** The screen is drawn edge to edge under the phone's own status bar, and the browser's bars are painted to match what is showing. The home indicator at the foot is the site's own: the phone's is below the browser, and leaves it.
-- **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions.
+- **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed.
 - **Every move is a step in the browser's history.** Safari's swipe from the left edge (or an Android back button) is the phone's Back: it goes back a screen inside an app, closes a sheet, and leaves an app for the Home Screen. A reload comes back to where it was, unlocked.
 - **Apps stay as they were left**, as they do on an iPhone, until they are flicked out of the App Switcher.
 - **Search** (the pill above the Dock, or a pull down on the Home Screen) looks through the people, the companies, the questions and the drops, and opens the app at what was found.

@@ -53,9 +53,57 @@
   display: none;
 }
 
-/* Drawn in the kit's iPhone: its status bar is 62 points tall */
+/* Drawn in the kit's iPhone: its status bar is 62 points tall. The frame
+   rounds the screen's corners itself, so an open app's are left square (they
+   would show when the keyboard lifts the screen's foot clear of the frame's) */
 .ph--framed {
   --status: 62px;
+  --ss-screen-r: 0px;
+  transition: bottom 0.38s var(--glide);
+}
+
+/* The iOS keyboard, in a frame, while a field has the computer's keyboard: the
+   screen keeps to the space above it, as a real phone's does */
+.ph--framed[data-softkb] {
+  bottom: var(--kb, 330px);
+  --home: 0px;
+  --foot-gap: 8px;
+}
+
+.ph--framed[data-softkb] .sb-homebar {
+  display: none;
+}
+
+.ph-kb {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+  transform: translateY(104%);
+  transition:
+    transform 0.38s var(--glide),
+    background-color 0.3s ease;
+}
+
+.ph-kb[data-up] {
+  transform: none;
+}
+
+.ph-kb .ss-kb__suggest span {
+  overflow: hidden;
+  padding: 0 6px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Behind a framed phone the desktop's wallpaper falls out of focus, so the phone's own doesn't run into it */
+.os:has(.ph-desk) .os__wallpaper {
+  filter: blur(28px) brightness(0.5) saturate(1.15);
+  transform: scale(1.1);
 }
 
 /* The window around a framed phone */
@@ -79,8 +127,8 @@
     opacity 0.3s ease;
 }
 
-/* The Home Screen has no home indicator */
-.ph-device:has(.sb-homebar[data-at='home']) .ss-phone__home {
+/* The Home Screen and the App Switcher have no home indicator */
+.ph-device:has(.sb-homebar:is([data-at='home'], [data-at='switcher'])) .ss-phone__home {
   opacity: 0;
 }
 
@@ -266,6 +314,8 @@
   position: absolute;
   inset: 0;
   color: #fff;
+  /* Nothing here scrolls: a drag on it is the pull that brings up search, not the browser's to pan */
+  touch-action: none;
   transition:
     transform 0.5s var(--glide),
     opacity 0.3s ease,
@@ -668,7 +718,7 @@
 }
 
 /* Shut without having flown there, it isn't drawn at all */
-.sb-app[data-shut][data-still] {
+.sb-app[data-shut][data-snap] {
   visibility: hidden;
   animation: none;
 }
@@ -676,6 +726,28 @@
 @keyframes sb-rest {
   to {
     visibility: hidden;
+  }
+}
+
+/* From one app straight into another: the new one slides in from the right, over the one it came from */
+.sb-slot[data-slide='in'] > .sb-card {
+  box-shadow: -12px 0 32px rgb(0 0 0 / 0.16);
+  animation: sb-slide-in 0.5s var(--glide);
+}
+
+@keyframes sb-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.sb-slot[data-slide='under'] > .sb-card {
+  animation: sb-slide-under 0.5s var(--glide) forwards;
+}
+
+@keyframes sb-slide-under {
+  to {
+    transform: translateX(-28%);
   }
 }
 
@@ -837,7 +909,7 @@
     opacity 0.3s ease;
 }
 
-.sb-homebar[data-at='home'] .sb-homebar__pill {
+.sb-homebar:is([data-at='home'], [data-at='switcher']) .sb-homebar__pill {
   opacity: 0;
 }
 
@@ -855,7 +927,8 @@
   .sb-lock__hint,
   .sb-banner .ss-notification,
   .sb-stack > .sb-note,
-  .sb-chat__reply {
+  .sb-chat__reply,
+  .sb-slot[data-slide] > .sb-card {
     animation: none;
     transition: none;
   }

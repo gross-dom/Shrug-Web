@@ -35,6 +35,8 @@ export interface Sys extends Place {
   spotlight: boolean
   /** Whether the last move is drawn with motion. */
   motion: boolean
+  /** The app that was in front before the last move, or null if it was the Home Screen. */
+  prev: PhoneApp | null
   /** What the app in front opened out of: the name of an element marked
    * `data-origin`, so that it grows out of that and goes back into it. With
    * none, an app opens out of its own icon. */
@@ -43,7 +45,7 @@ export interface Sys extends Place {
 
 const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [], terminal: [], photos: [], about: [] })
 
-export const sys = createStore<Sys>({ app: null, stacks: noStacks(), sheet: null, locked: true, recents: [], switcher: false, spotlight: false, motion: false, origin: null })
+export const sys = createStore<Sys>({ app: null, stacks: noStacks(), sheet: null, locked: true, recents: [], switcher: false, spotlight: false, motion: false, prev: null, origin: null })
 
 // ---- History ----
 
@@ -85,6 +87,7 @@ function apply(place: Place, motion: boolean, origin: string | null = null) {
     ...s,
     ...place,
     motion,
+    prev: s.app,
     // What an app opened out of matters while it is opening; one already in front keeps its own
     origin: !place.app ? null : place.app === s.app ? s.origin : origin,
     recents: place.app ? [place.app, ...s.recents.filter((id) => id !== place.app)] : s.recents,

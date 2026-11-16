@@ -52,17 +52,6 @@
   }
 }
 
-/* A field being typed in shows its caret, not a ring. (ios.css's search field should say this itself.) */
-.files-app .ios-search__input:focus-visible {
-  outline: none;
-}
-
-/* An open menu takes touches. (The kit's popover is a picture of one and takes none; until
-   ios.css says this for every menu, Files says it for its own.) */
-.files-app .ios-menu__list[data-show] {
-  pointer-events: auto;
-}
-
 /* ---- A folder's contents ---- */
 
 /* A folder opened from Browse has no large title to sit under: its first row keeps clear of the bar */

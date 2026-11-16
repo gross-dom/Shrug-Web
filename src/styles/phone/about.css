@@ -29,6 +29,11 @@
   line-height: 20px;
 }
 
+/* Room under the last group, as Settings leaves it: enough that scrolling to the end folds the title away whole */
+.about-screen > .ios-screen__scroll {
+  padding-bottom: calc(var(--home) + 52px);
+}
+
 /* Rows of figures line their numbers up */
 .about-screen .ios-cell__value {
   font-variant-numeric: tabular-nums;

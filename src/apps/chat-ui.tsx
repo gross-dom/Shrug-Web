@@ -180,6 +180,8 @@ function personNodes(index: number, at: number, direct: { key: string; text: str
 /** The thread's own scrolling curve: quick off the mark, a long settle. */
 const settle = (k: number) => 1 - Math.pow(1 - k, 4)
 const FOLLOW_MS = 550
+/** How long after a touch, a wheel or a key a scroll is still the reader's: a flick carries on after the finger lifts. */
+const HAND_MS = 3000
 const NO_MESSAGES: { key: string; text: string }[] = []
 
 /** A conversation's messages: they scroll, and the view stays on the newest
@@ -250,6 +252,12 @@ export function Scroller({ label, nodes, jump, onJumped, active = true, foot, on
 
   /** A finger is on the thread: it is the reader's to scroll, and nothing moves it for them. */
   const held = useRef(false)
+  /** When the reader last had a hand on the thread. */
+  const touched = useRef(-Infinity)
+  const hand = () => {
+    touched.current = performance.now()
+    stop()
+  }
 
   const follow = (instant = false) => {
     if (!held.current || instant) glide(null, instant)
@@ -309,6 +317,10 @@ export function Scroller({ label, nodes, jump, onJumped, active = true, foot, on
     const el = scroller.current
     if (!el || run.current) return
     const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 56
+    // Only the reader lets go of the end. A browser can move the scroll
+    // itself, by a few pixels, as a bubble changes size (Safari's does), and
+    // say so before the thread has started to follow: that is nobody's hand
+    if (!atEnd && !held.current && performance.now() - touched.current > HAND_MS) return
     pinned.current = atEnd
     setAway(!atEnd)
     if (atEnd) setSeen(latest.current)
@@ -324,14 +336,18 @@ export function Scroller({ label, nodes, jump, onJumped, active = true, foot, on
         className="chat__scroll"
         onClick={onTap}
         onScroll={onScroll}
-        onWheel={stop}
-        onPointerDown={stop}
-        onKeyDown={stop}
+        onWheel={hand}
+        onPointerDown={hand}
+        onKeyDown={hand}
         onTouchStart={() => {
           held.current = true
-          stop()
+          hand()
         }}
-        onTouchEnd={() => (held.current = false)}
+        onTouchMove={() => (touched.current = performance.now())}
+        onTouchEnd={() => {
+          held.current = false
+          touched.current = performance.now()
+        }}
         onTouchCancel={() => (held.current = false)}
         tabIndex={0}
         role="log"

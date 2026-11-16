@@ -142,15 +142,19 @@ function find(raw: string): Found {
     })
   })
 
+  // Asking for a kind of thing by its name ("faqs", "drops") finds all of that kind
+  const kindOf = (...names: string[]) => q.length >= 3 && names.some((name) => name.startsWith(q))
+
   const faqs: Hit[] = []
+  const anyFaq = kindOf('faqs', 'questions', 'notes')
   FAQS.forEach((faq, i) => {
     const asked = rank(faq.question, q)
     const answered = asked < 0 && !!faq.answer && faq.answer.toLowerCase().includes(q)
-    if (asked < 0 && !answered) return
+    if (asked < 0 && !answered && !anyFaq) return
     faqs.push({
       key: `faq:${i}`,
       kind: 'faq',
-      score: asked >= 0 ? asked : 9,
+      score: asked >= 0 ? asked : answered ? 9 : 10,
       lead: tile('notes'),
       title: <Marked text={faq.question} q={q} />,
       subtitle: answered ? <Marked text={around(faq.answer!, q)} q={q} /> : 'Note',
@@ -160,10 +164,11 @@ function find(raw: string): Found {
   })
 
   const drops: Hit[] = []
+  const anyDrop = kindOf('drops', 'albums')
   DROPS.forEach((drop) => {
     const named = rank(drop, q)
-    if (named < 0) return
-    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), label: `${drop}, a drop`, open: () => launchAt('photos', [albumView(drop)]) })
+    if (named < 0 && !anyDrop) return
+    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), label: `${drop}, a drop`, open: () => launchAt('photos', [albumView(drop)]) })
   })
 
   const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore), drop: drops.sort(byScore) }
@@ -225,6 +230,8 @@ export function Spotlight() {
   // It stays drawn while it leaves
   const [shown, setShown] = useState(on)
   const [query, setQuery] = useState('')
+  /** The result the arrow keys are on, counted down the list, or -1 for none. The keyboard itself stays in the field. */
+  const [at, setAt] = useState(-1)
   const root = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   if (on && !shown) setShown(true)
@@ -239,8 +246,14 @@ export function Spotlight() {
   useLayoutEffect(() => {
     if (on) {
       setQuery('')
+      setAt(-1)
       input.current?.focus({ preventScroll: true })
-    } else if (root.current?.contains(document.activeElement)) (document.activeElement as HTMLElement).blur()
+    } else if (root.current?.contains(document.activeElement)) {
+      // Back on the Home Screen, the keyboard goes back to the pill search was opened from
+      const pill = sys.get().app ? null : document.querySelector<HTMLElement>('.sb-search')
+      if (pill) pill.focus({ preventScroll: true })
+      else (document.activeElement as HTMLElement).blur()
+    }
   }, [on])
 
   const found = useMemo(() => find(query), [query])
@@ -248,29 +261,48 @@ export function Spotlight() {
   const first = found.top ?? found.groups[0]?.hits[0] ?? null
   const close = () => showSpotlight(false)
 
-  /** The arrow keys walk the results, from the field down and back up to it. */
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
+  const items = () => [...(root.current?.querySelectorAll<HTMLElement>('[data-spot-item]') ?? [])]
+
+  // The result the arrow keys are on is marked, named to assistive tech, and kept in view
+  useLayoutEffect(() => {
+    const list = items()
+    list.forEach((el, i) => {
+      el.id = `spot-item-${i}`
+      el.toggleAttribute('data-active', i === at)
+    })
+    if (at >= 0 && list[at]) {
+      input.current?.setAttribute('aria-activedescendant', list[at]!.id)
+      list[at]!.scrollIntoView({ block: 'nearest' })
+    } else input.current?.removeAttribute('aria-activedescendant')
+  }) // every draw: what is listed changes with what is typed
+
+  /** In the field, the arrow keys walk the results and Return opens the one they are on, or the best. */
+  const onFieldKey = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const count = items().length
+      if (!count) return
       e.preventDefault()
-      return close()
+      setAt((now) => Math.max(-1, Math.min(count - 1, now + (e.key === 'ArrowDown' ? 1 : -1))))
+    } else if (e.key === 'Enter') {
+      const picked = at >= 0 ? items()[at] : null
+      if (!picked && !(typed && first)) return
+      e.preventDefault()
+      if (picked) picked.click()
+      else first!.open()
     }
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-    const items = [...(root.current?.querySelectorAll<HTMLElement>('[data-spot-item]') ?? [])]
-    const at = items.indexOf(document.activeElement as HTMLElement)
-    const next = e.key === 'ArrowDown' ? at + 1 : at - 1
-    if (!items.length || next >= items.length) return
+  }
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return
     e.preventDefault()
-    if (next < 0) input.current?.focus({ preventScroll: true })
-    else {
-      items[next]!.focus({ preventScroll: true })
-      items[next]!.scrollIntoView({ block: 'nearest' })
-    }
+    close()
   }
 
   if (!shown) return null
   return (
     <div ref={root} className="spot" data-leaving={!on || undefined} role="dialog" aria-modal="true" aria-label="Search" onKeyDown={onKey} {...(on ? null : ({ inert: '' } as object))}>
-      <button type="button" className="spot-away" aria-label="Close search" tabIndex={-1} onClick={close} />
+      {/* The ground behind: a tap on it closes search. The round button beside the field is the one with a name */}
+      <div className="spot-away" aria-hidden onClick={close} />
       <div
         className="spot-scroll"
         // A tap on the bare ground between results closes it, as a tap on the wallpaper does
@@ -280,7 +312,7 @@ export function Spotlight() {
       >
         {!typed ? (
           <>
-            <Group title="Siri Suggestions">
+            <Group title="Suggestions">
               <div className="spot-apps">
                 {APP_ORDER.map((id) => (
                   <button key={id} type="button" className="spot-app" data-spot-item onClick={() => launch(id)}>
@@ -302,6 +334,7 @@ export function Spotlight() {
                   aria-label={`Search for ${text}`}
                   onClick={() => {
                     setQuery(text)
+                    setAt(-1)
                     input.current?.focus({ preventScroll: true })
                   }}
                 >
@@ -356,14 +389,11 @@ export function Spotlight() {
             placeholder="Search"
             aria-label="Search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              // Return opens the best of what was found
-              if (e.key === 'Enter' && first) {
-                e.preventDefault()
-                first.open()
-              }
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setAt(-1)
             }}
+            onKeyDown={onFieldKey}
           />
           {query && (
             <button
@@ -373,6 +403,7 @@ export function Spotlight() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 setQuery('')
+                setAt(-1)
                 input.current?.focus({ preventScroll: true })
               }}
             >

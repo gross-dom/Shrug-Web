@@ -58,8 +58,10 @@ const fresh = (): Chat => ({
 function everything(from: Chat): Chat {
   const now = Date.now()
   const have = new Set(from.items.map((i) => i.key))
-  const items = from.items.map((i) => (i.kind === 'person' && i.typing ? { ...i, typing: false } : i))
-  const opening = QUESTION.map((text, n) => asMine(text, `ask-${n}`)).filter((i) => !have.has(i.key))
+  const asked = (key: string) => key.startsWith('ask-')
+  // The question first, whole and in order, however much of it had been sent
+  const opening = QUESTION.map((text, n) => asMine(text, `ask-${n}`))
+  const items = from.items.filter((i) => !asked(i.key)).map((i) => (i.kind === 'person' && i.typing ? { ...i, typing: false } : i))
   const people = PEOPLE.map((_, index): ChatItem => ({ key: `p-${index}`, kind: 'person', index, typing: false })).filter((i) => !have.has(i.key))
   const closing = have.has('end') ? [] : [asMine(SITE.mark, 'end')]
   return {

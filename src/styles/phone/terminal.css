@@ -63,45 +63,60 @@
 
 /* ---- The line being typed ---- */
 
+/* It takes a line of the log; what is in it is laid out at 16px, a field's
+   size on a phone, and drawn at the log's size, so the page never zooms and
+   the mark and the words still sit on one baseline */
 .term-ios .term-ios-entry {
+  position: relative;
+  display: block;
   flex: none;
-  gap: 1ch;
+  height: calc(1.65 * var(--term-size));
 }
 
 .term-ios-line {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  height: 1.65em;
-}
-
-/* Laid out at 16px and drawn at the log's size */
-.term-ios .term-ios-input {
   position: absolute;
   top: 0;
   left: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 1ch;
   width: calc(100% / var(--term-k));
   height: calc(100% / var(--term-k));
-  font-family: var(--font-mono);
   font-size: 16px;
-  letter-spacing: 0;
+  line-height: calc(1.65 * var(--term-size) / var(--term-k));
   transform: scale(var(--term-k));
   transform-origin: 0 0;
+}
+
+.term-ios .term-ios-input {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  font: inherit;
+  letter-spacing: 0;
   /* The keyboard that comes up over a black screen is the dark one */
   color-scheme: dark;
 }
 
+/* The block cursor a terminal shows, after the mark, while the line is empty and nobody is typing */
 .term-ios-cursor {
   position: absolute;
   top: 0;
-  left: 0;
+  bottom: 0;
+  left: 2ch;
   display: none;
+  align-items: center;
   pointer-events: none;
 }
 
-/* Nothing typed and nobody typing: the block cursor waits at the start of the line */
+.term-ios-cursor > .ss-term__caret {
+  margin: 0;
+  vertical-align: 0;
+}
+
 .term-ios-input:placeholder-shown:not(:focus) ~ .term-ios-cursor {
-  display: block;
+  display: flex;
 }
 
 /* ---- The keys at the foot ---- */
@@ -174,19 +189,6 @@
 .term-ios-key:not([aria-disabled='true']):active {
   transform: scale(0.94);
   transition-duration: 0.08s;
-}
-
-/* ---- The menu, over black ---- */
-
-/* The shared menu is drawn for a light screen; here it is the dark glass */
-.term-ios .ios-menu__list {
-  --ss-popover-bg: rgb(44 44 48 / 0.82);
-  --ss-popover-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 14px 44px rgb(0 0 0 / 0.6);
-  color: #fff;
-}
-
-.term-ios .ios-menu__item:active {
-  background: rgb(255 255 255 / 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {

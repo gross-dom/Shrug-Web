@@ -27,15 +27,24 @@
   padding: 7px 16px 7px 28px;
   border-radius: 0;
   will-change: auto;
-  transition: none;
+  /* Let go of, a row's highlight fades: seen on the way back from its conversation */
+  transition: background-color 0.5s ease 0.12s;
 }
 
-.msg-row.ss-row:active {
+.msg-row.ss-row:active,
+.msg-row.ss-row[data-picked] {
   background: rgb(0 0 0 / 0.08);
+  transition: none;
 }
 
 .msg-row.ss-row:focus-visible {
   outline-offset: -3px;
+}
+
+/* The name has no line of its own under it: what was said follows straight on,
+   two lines of it, so a row is 76 points tall as it is in Messages */
+.msg-row.ss-row .ss-row__body {
+  min-height: var(--ss-row-line);
 }
 
 .msg-row .ss-row__dot {
@@ -65,17 +74,6 @@
   min-height: calc(var(--ss-row-line-2) * 2);
   padding-right: 12px;
   letter-spacing: -0.015em;
-}
-
-/* The filter menu takes touches while it is open (the kit's popover, made for
-   drawn demos, lets them fall through) */
-.msg-list .ios-menu__list[data-show] {
-  pointer-events: auto;
-}
-
-/* The search field shows its caret, not a ring, as an iOS field does */
-.msg-list .ios-search__input:focus-visible {
-  outline: none;
 }
 
 /* A hairline under each row, from where the name starts */
@@ -133,7 +131,7 @@
   gap: 1px;
   max-width: 190px;
   height: 24px;
-  margin-top: -5px;
+  margin-top: -4px;
   padding: 0 7px 0 10px;
   border-radius: 12px;
   color: var(--label);
@@ -179,11 +177,11 @@
   left: 0;
   z-index: 3;
   height: calc(var(--status) + 120px);
-  background: linear-gradient(rgb(255 255 255 / 0.94) 0%, rgb(255 255 255 / 0.84) 52%, rgb(255 255 255 / 0) 100%);
-  -webkit-backdrop-filter: blur(9px);
-  backdrop-filter: blur(9px);
-  -webkit-mask-image: linear-gradient(#000 58%, transparent);
-  mask-image: linear-gradient(#000 58%, transparent);
+  background: linear-gradient(rgb(255 255 255 / 0.96) 0%, rgb(255 255 255 / 0.92) 56%, rgb(255 255 255 / 0) 100%);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  -webkit-mask-image: linear-gradient(#000 60%, transparent);
+  mask-image: linear-gradient(#000 60%, transparent);
   pointer-events: none;
 }
 
@@ -193,6 +191,13 @@
   mask-image: none;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  /* The thread keeps its own place: on the newest message, or where the reader left it */
+  overflow-anchor: none;
+}
+
+/* A box only for listening on (Messages.tsx, Thread): it takes no room of its own */
+.msg-thread {
+  display: contents;
 }
 
 .msg-convo .chat__scroll::-webkit-scrollbar {
@@ -496,6 +501,12 @@
   font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 16px;
+}
+
+/* Nothing left to pause once everyone has replied */
+.msg-off {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* A person's row: the hairline starts where the name does, past the 40pt face */

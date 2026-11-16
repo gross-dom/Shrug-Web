@@ -295,10 +295,14 @@
   pointer-events: auto;
 }
 
+/* A round button beside a bar is as tall as the bar; one with words keeps its own width */
 .ios-foot > .ios-button {
-  width: var(--control);
   height: var(--control);
   border-radius: calc(var(--control) / 2);
+}
+
+.ios-foot > .ios-button:not([data-wide]) {
+  width: var(--control);
 }
 
 .ios-foot__edge {
@@ -335,6 +339,16 @@
   color: var(--label);
   font-size: 17px;
   letter-spacing: -0.02em;
+}
+
+/* The capsule is the field: the ring goes round that, not round the words inside it */
+.ios-search__input:focus-visible {
+  outline: none;
+}
+
+.ios-search:focus-within {
+  outline: 3px solid color-mix(in srgb, var(--blue) 45%, transparent);
+  outline-offset: 1px;
 }
 
 .ios-search__input::placeholder {
@@ -436,7 +450,7 @@
   }
 }
 
-.ios-nav[data-still] .ios-page {
+.ios-nav[data-snap] .ios-page {
   animation: none;
   transition: none;
 }
@@ -660,6 +674,22 @@
   color: var(--label);
 }
 
+/* On a dark screen the menu is dark glass */
+.ios-screen[data-tone='dark'] .ios-menu__list {
+  --ss-popover-bg: rgb(44 44 48 / 0.86);
+  --ss-popover-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 14px 44px rgb(0 0 0 / 0.5);
+  color: #fff;
+}
+
+.ios-screen[data-tone='dark'] .ios-menu__item:active {
+  background: rgb(255 255 255 / 0.12);
+}
+
+/* The kit's popover is a picture of a menu; this one is pressed */
+.ios-menu__list[data-show] {
+  pointer-events: auto;
+}
+
 .ios-menu__list::before {
   -webkit-backdrop-filter: blur(30px) saturate(1.8);
   backdrop-filter: blur(30px) saturate(1.8);
@@ -701,6 +731,7 @@
 
 .ios-menu__label {
   flex: 1;
+  white-space: nowrap;
 }
 
 .ios-menu__icon {
@@ -774,7 +805,7 @@
   transition: transform 0.36s cubic-bezier(0.4, 0, 0.8, 0.5);
 }
 
-.ios-sheet[data-still] :is(.ios-sheet__panel, .ios-sheet__shade) {
+.ios-sheet[data-snap] :is(.ios-sheet__panel, .ios-sheet__shade) {
   animation: none;
 }
 
