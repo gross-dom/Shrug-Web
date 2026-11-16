@@ -97,13 +97,17 @@ const ConversationRow = memo(
         className="msg-row"
         role="button"
         tabIndex={0}
-        aria-label={`${row.name}${row.unread ? ', unread' : ''}`}
         data-conversation={row.conversation}
         // The row that was tapped stays lit while its conversation is open, and fades on the way back
         data-picked={picked || undefined}
         unread={row.unread}
         lead={<ConversationAvatar conversation={row.conversation} size={46} />}
-        title={row.name}
+        title={
+          <>
+            {row.name}
+            {row.unread && <span className="sr-only">, unread</span>}
+          </>
+        }
         meta={
           <>
             {row.when}

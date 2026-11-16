@@ -26,6 +26,8 @@ const FACTS: { label: string; value: number; app: PhoneApp }[] = [
 
 /** A row that leaves the site says so with an arrow, where a row that stays has a chevron. */
 const out = <ArrowUpRight className="about-out" size={18} strokeWidth={2.4} aria-hidden />
+/** The same, for someone who is told the row and not shown it. */
+const inBrowser = <span className="sr-only">, in the browser</span>
 
 export function AboutApp() {
   return (
@@ -41,14 +43,14 @@ export function AboutApp() {
           </div>
           <List>
             <Section>
-              <Cell title="Name" value={SITE.name} label={`Name, ${SITE.name}`} />
+              <Cell title="Name" value={SITE.name} />
               {FACTS.map((fact) => (
-                <Cell key={fact.label} title={fact.label} value={fact.value} chevron label={`${fact.label}, ${fact.value}`} onClick={() => launch(fact.app)} />
+                <Cell key={fact.label} title={fact.label} value={fact.value} chevron onClick={() => launch(fact.app)} />
               ))}
             </Section>
             <Section footer="Every figure here is counted from what is on the site.">
-              <Cell title="One-pager" label="One-pager, in the browser" href={SITE.onePager} trailing={out} />
-              <Cell title="Website" value={hostOf(SITE.url)} label={`Website, ${hostOf(SITE.url)}, in the browser`} href={SITE.url} trailing={out} />
+              <Cell title={<>One-pager{inBrowser}</>} href={SITE.onePager} trailing={out} />
+              <Cell title={<>Website{inBrowser}</>} value={hostOf(SITE.url)} href={SITE.url} trailing={out} />
             </Section>
           </List>
         </Screen>

@@ -131,7 +131,6 @@ function Folder() {
               <Cell
                 key={index}
                 className="notes-row"
-                label={faq.question}
                 title={<Marked text={faq.question} q={q} />}
                 subtitle={
                   <>

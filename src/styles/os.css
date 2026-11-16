@@ -1049,3 +1049,25 @@ html[data-wm-busy='se'] * {
     transform: translate(-50%, -50%);
   }
 }
+
+/* A window whose contents failed to draw */
+.window-failed {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  height: 100%;
+  padding: 24px;
+  color: var(--ss-text-strong);
+  font-size: 13px;
+  text-align: center;
+}
+
+.window-failed__retry {
+  padding: 5px 14px;
+  border-radius: 7px;
+  background: var(--ss-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+}

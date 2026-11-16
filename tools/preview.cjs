@@ -47,7 +47,8 @@ function fold(dir) {
     css = css.replace(/url\(([^)]*?)(wallpaper[\w-]*\.webp)\)/g, (_, __, file) => `url(${data(path.join(dir, file), 'image/webp')})`)
     return `<style>${css}</style>`
   })
-  html = html.replace(/<link rel="preload"[^>]*>\s*/g, '')
+  // Nothing beside the page can be fetched from a file: the hints and the Home Screen links go
+  html = html.replace(/<link rel="(preload|manifest|apple-touch-icon)"[^>]*>\s*/g, '')
   html = html.replace(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g, (_, src) => `<script type="module">${read(src).replace(/<\/script>/g, '<\\/script>')}</script>`)
 
   // The logos are files beside the page. They go in it as data, and the places

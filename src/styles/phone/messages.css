@@ -226,13 +226,13 @@
 
 .msg-convo .chat-stamp.ss-stamp {
   margin: 0 0 9px;
-  color: #8e8e93;
+  color: var(--label-2);
   line-height: 15px;
 }
 
 .msg-convo .chat-note.ss-stamp {
   margin: 0 0 14px;
-  color: #8e8e93;
+  color: var(--label-2);
 }
 
 /* Who is speaking: in line with the words in their bubble */
@@ -241,7 +241,7 @@
 }
 
 .msg-convo .chat__thread .ss-receipt {
-  color: #8e8e93;
+  color: var(--label-2);
   font-weight: 500;
 }
 

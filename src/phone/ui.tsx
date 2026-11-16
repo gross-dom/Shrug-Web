@@ -573,6 +573,7 @@ export function Sheet({ label, title, detent = 'large', leading, trailing, tone 
     <div className={`ios-sheet${className ? ` ${className}` : ''}`} data-detent={detent} data-tone={tone} data-closing={closing || undefined} data-snap={!motion || undefined} role="dialog" aria-modal="true" aria-label={label} {...(closing ? ({ inert: '' } as object) : null)}>
       <button ref={shade} type="button" className="ios-sheet__shade" aria-label="Close" tabIndex={-1} onClick={() => closeSheet()} />
       <div ref={panel} className="ios-sheet__panel" tabIndex={-1}>
+        <h2 className="sr-only">{label}</h2>
         <div className="ios-sheet__bar" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
           <span className="ios-sheet__grabber" aria-hidden />
           <span className="ios-sheet__side">{leading}</span>

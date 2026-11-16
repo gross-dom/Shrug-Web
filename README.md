@@ -58,7 +58,10 @@ Below 760px wide (or 480px tall) the site is an iPhone, in the look of the curre
 - **On a real phone the phone is the frame.** The screen is drawn edge to edge under the phone's own status bar, and the browser's bars are painted to match what is showing. The home indicator at the foot is the site's own: the phone's is below the browser, and leaves it.
 - **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed.
 - **Every move is a step in the browser's history.** Safari's swipe from the left edge (or an Android back button) is the phone's Back: it goes back a screen inside an app, closes a sheet, and leaves an app for the Home Screen. A reload comes back to where it was, unlocked.
-- **Apps stay as they were left**, as they do on an iPhone, until they are flicked out of the App Switcher.
+- **Apps stay as they were left**, as they do on an iPhone, until they are flicked out of the App Switcher. An app that fails does what one does on an iPhone: it closes to the Home Screen and starts afresh next time; the rest of the phone carries on.
+- **Turned on its side**, the apps reflow as apps do. A real iPhone keeps its Lock Screen and Home Screen upright; a page turns with the browser, so those two are laid out for the width instead, with the Dock down the trailing edge.
+- **Small gray type is a shade darker than iOS's own** (in the conversation on the desktop too), so that it meets the contrast guidance. The blue is iOS's, which on white falls a little short of that guidance for small text, as it does on an iPhone.
+- **Added to a phone's Home Screen** the site has Shrug's icon (`public/apple-touch-icon.png`, drawn by `tools/icons.cjs`) and still opens in the browser. Running it full screen from there is left off (`"display": "browser"` in `public/manifest.webmanifest`): in that mode the phone's status bar keeps one colour of ink, which can't be right over both the wallpaper and a white app. It also hasn't been tried on a real phone.
 - **Search** (the pill above the Dock, or a pull down on the Home Screen) looks through the people, the companies, the questions and the drops, and opens the app at what was found.
 - **The link preview** is the conversation's opening (`public/og.png`, taken by `tools/og.cjs`), so the address unfolds as the chat when it is texted.
 - **Reaching Shrug for real** would need a number or an address in `SITE.contact` (`src/data/site.ts`); nothing on the phone uses one yet.
@@ -68,7 +71,7 @@ To send someone the site as a single file they can open on a phone or in a brows
 ### Links
 
 - `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, it arrives unlocked with the last one named open). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
-- `?phone` shows the iPhone whatever the size of the screen, drawn in its frame.
+- `?phone` shows the iPhone whatever the size of the screen, drawn in its frame. `?phone=hand` draws it edge to edge instead, as a real phone gets it, for trying that layout in a browser on a computer.
 - `?saver` starts on the screen saver (desktop only). `?idle=20` sets how many seconds of stillness start it, and lock the phone.
 
 ## Content
@@ -102,10 +105,12 @@ Nothing leaves the page yet. A message typed into the group chat and an email gi
 ```
 public/        the companies' logos (logos/), the wallpaper, and the link preview (og.png)
 tools/         wallpaper.py draws the wallpaper; og.cjs takes the link preview;
-               preview.cjs makes the site into one file to send
+               icons.cjs draws the Home Screen icons; preview.cjs makes the site
+               into one file to send
 src/
   data/     the site's content
-  os/       the desktop: window manager, menu bar, Dock, icons, screen saver
+  os/       the site's root (Desktop.tsx) and the desktop itself (Surface.tsx):
+            window manager, menu bar, Dock, icons, screen saver
   apps/     one file per window, plus what windows and phone screens share
             (chat.ts: the chat's clock; chat-ui.tsx: the conversation;
             portfolio-ui.tsx: the companies and their logos; state.ts)
@@ -117,8 +122,9 @@ src/
   kit/      the Stageshow kit, copied in unmodified
 ```
 
+- **The desktop and the iPhone are separate downloads.** `os/Desktop.tsx` is the root and loads `os/Surface.tsx` (the desktop) or `phone/Phone.tsx` (the iPhone), whichever the screen shows; what they share (the conversation, the data, the kit) is loaded once. `os/Boundary.tsx` keeps a failure inside the window or app it happened in.
 - **Window behaviour** is in `os/wm.ts` (state) and `os/WindowFrame.tsx` (dragging, resizing, the lights).
-- **A new window**: add it to `os/apps.ts`, write its component in `apps/` and list it in `os/Desktop.tsx`.
+- **A new window**: add it to `os/apps.ts`, write its component in `apps/` and list it in `os/Surface.tsx`.
 - **The iPhone** is `phone/system.ts` (locked or not, which app is in front, how far into each app, mirrored into history), `phone/Phone.tsx` (the screen: edge to edge on a real phone, in the kit's frame elsewhere), `phone/Springboard.tsx` (the Lock Screen, the Home Screen, apps opening out of their icons, the App Switcher, banners, the home indicator), `phone/ui.tsx` with `styles/ios.css` (what the apps are built from: screens with floating glass buttons and folding large titles, stacks of screens, grouped lists, tab and search bars, menus, sheets), and `phone/apps/` (one file per app; `routes.ts` names the screens inside them).
 - **A new app on the iPhone**: write it in `phone/apps/` from the parts in `phone/ui.tsx`, name it in `phone/apps/index.tsx`, and put its icon on the Home Screen or in the Dock there.
 - **The wallpaper** is a picture, `public/wallpaper.webp`, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.

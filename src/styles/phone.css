@@ -917,6 +917,112 @@
   display: none;
 }
 
+/* ---- A phone on its side ----
+   A real iPhone keeps its Lock Screen and Home Screen upright when it is
+   turned; a page is turned with the browser. So on a short, wide screen those
+   two are laid out for the width: the clock over the notifications between
+   the two buttons, and the Dock down the trailing edge, as the larger iPhones
+   used to turn theirs. The apps reflow on their own, as apps do. */
+@container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
+  .ph--bleed .ss-lock__date {
+    margin-top: calc(var(--status) + 8px);
+    font-size: 18px;
+  }
+
+  .sb-lock .ss-lock__clock {
+    font-size: 84px;
+  }
+
+  .sb-lock .ss-lock__stack {
+    right: 112px;
+    bottom: calc(46px + var(--below, 0px));
+    left: 112px;
+  }
+
+  .sb-lock .ss-lock__controls {
+    bottom: calc(42px + var(--below, 0px));
+  }
+
+  .sb-lock__hint {
+    bottom: calc(14px + var(--below, 0px));
+  }
+
+  .sb-home {
+    --icon: clamp(48px, 7.2cqw, 60px);
+    --margin: 26px;
+    --dock: calc(var(--icon) + 30px);
+  }
+
+  /* Eight across leaves a name less room than four did */
+  .sb-icon__name {
+    width: calc(var(--icon) + 18px);
+    margin: 0 -9px;
+    font-size: 11px;
+  }
+
+  /* The widgets are shorter here: each says a little less */
+  .sb-chat {
+    gap: 6px;
+    padding: 11px 14px;
+  }
+
+  .sb-chat__bubble span {
+    -webkit-line-clamp: 2;
+  }
+
+  .sb-folio {
+    padding: 11px 12px;
+  }
+
+  .sb-folio__logos {
+    grid-template-columns: repeat(2, 32px);
+    gap: 5px;
+  }
+
+  .sb-folio__logos .logo {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .sb-folio__text span,
+  .sb-faq__list span:nth-child(n + 4) {
+    display: none;
+  }
+
+  .sb-grid {
+    top: calc(var(--status) + 14px);
+    right: calc(var(--dock) + 14px);
+    grid-template-columns: repeat(8, var(--icon));
+    row-gap: 14px;
+  }
+
+  .sb-widget--wide {
+    grid-column: span 4;
+  }
+
+  .sb-widget:not(.sb-widget--wide) {
+    display: grid;
+  }
+
+  .sb-dock {
+    top: 12px;
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + var(--below, 0px));
+    left: auto;
+    flex-direction: column;
+    align-items: center;
+    width: var(--dock);
+    height: auto;
+    padding: 15px 0;
+    border-radius: 30px;
+  }
+
+  .sb-search {
+    bottom: calc(12px + var(--below, 0px));
+    left: calc((100% - var(--dock) - 14px) / 2);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sb-lock,
   .sb-home,

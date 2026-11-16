@@ -17,8 +17,12 @@ import { clockOf, useNow } from './time'
 /** The kit's iPhone, frame and all, in points. */
 const DEVICE = { w: 428, h: 900 }
 
+/** `?phone=hand` draws it edge to edge whatever it is running on: for trying
+ * the layout a real phone gets in a browser that isn't one. */
+const HANDED = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('phone') === 'hand'
+
 /** Whether this is a phone in the hand: a touch screen about a phone's width. */
-const inHand = (w: number, h: number) => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches && Math.min(w, h) <= 500
+const inHand = (w: number, h: number) => HANDED || (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches && Math.min(w, h) <= 500)
 
 /** Whether the status bar's ink is light: over the wallpaper, or over a dark app. */
 function useDark() {

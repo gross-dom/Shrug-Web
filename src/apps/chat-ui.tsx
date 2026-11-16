@@ -589,24 +589,10 @@ export function ConversationPane({ conversation, active = true }: { conversation
 
 // ---- Details ----
 
-/** A run of replies and its controls, as the details panel needs them. */
-export interface ReplyStream {
-  replied: number
-  paused: boolean
-  done: boolean
-  toggle: () => void
-  finish: () => void
-  replay: () => void
-}
-
 /** What the info button opens: who is in the conversation, and the controls
- * for the replies as they play out. `tap` says what picking a person does: on
- * the desktop it opens their own conversation; on a phone, where there is only
- * the group, it shows their card (with what they said) in the same place. */
-export function Details({ conversation, onPick, onDone, tap = 'conversation', stream }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void; tap?: 'conversation' | 'details'; stream?: ReplyStream }) {
-  const desktop = useStore(chat, (s) => s)
-  // The replies the controls work: the desktop's group chat, unless another is handed in (the phone's own conversation)
-  const { replied, paused, done, toggle, finish, replay } = stream ?? { replied: desktop.replied, paused: desktop.paused, done: desktop.done, toggle: toggleChat, finish: finishChat, replay: replayChat }
+ * for the replies as they play out. Picking a person opens their own conversation. */
+export function Details({ conversation, onPick, onDone }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void }) {
+  const { replied, paused, done } = useStore(chat, (s) => s)
 
   if (typeof conversation === 'number') {
     const person = PEOPLE[conversation]!
@@ -624,7 +610,6 @@ export function Details({ conversation, onPick, onDone, tap = 'conversation', st
             </div>
           )}
         </div>
-        {tap === 'details' && person.quote && <blockquote className="details__quote">{person.quote}</blockquote>}
         {conversation < replied && (
           <div className="details__group">
             <button
@@ -652,14 +637,14 @@ export function Details({ conversation, onPick, onDone, tap = 'conversation', st
         <div className="details__sub">{TOTAL} People</div>
       </div>
       <div className="details__group">
-        <button type="button" className="details__row" role="switch" aria-checked={paused} aria-disabled={done || undefined} onClick={done ? undefined : toggle}>
+        <button type="button" className="details__row" role="switch" aria-checked={paused} aria-disabled={done || undefined} onClick={done ? undefined : toggleChat}>
           <span>Pause Replies</span>
           <Toggle on={paused} aria-hidden />
         </button>
-        <button type="button" className="details__row details__row--action" aria-disabled={done || undefined} onClick={done ? undefined : finish}>
+        <button type="button" className="details__row details__row--action" aria-disabled={done || undefined} onClick={done ? undefined : finishChat}>
           Show Every Reply
         </button>
-        <button type="button" className="details__row details__row--action" onClick={replay}>
+        <button type="button" className="details__row details__row--action" onClick={replayChat}>
           Play From the Start
         </button>
       </div>
@@ -672,7 +657,6 @@ export function Details({ conversation, onPick, onDone, tap = 'conversation', st
               type="button"
               className="details__row details__person"
               onClick={() => {
-                if (tap === 'details') return onPick?.(i)
                 openConversation(i)
                 onPick?.(i)
                 onDone?.()

@@ -19,7 +19,8 @@
   --red: #ff3b30;
   --green: #34c759;
   --label: #000;
-  --label-2: rgb(60 60 67 / 0.6);
+  /* iOS's secondary gray is 60% of this ink; at 74% small type on white, and on the grouped gray, meets the contrast guidance */
+  --label-2: rgb(60 60 67 / 0.74);
   --label-3: rgb(60 60 67 / 0.3);
   --sep: rgb(60 60 67 / 0.2);
   --fill: rgb(120 120 128 / 0.12);

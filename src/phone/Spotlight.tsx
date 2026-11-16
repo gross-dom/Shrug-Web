@@ -32,8 +32,6 @@ interface Hit {
   lead: (size: number) => ReactNode
   title: ReactNode
   subtitle?: ReactNode
-  /** What it is called, for assistive tech. */
-  label: string
   open: () => void
 }
 
@@ -102,7 +100,7 @@ function find(raw: string): Found {
     const named = rank(PHONE[id].label, q)
     const also = named < 0 ? Math.max(rank(APPS[id].name, q), rank(APPS[id].blurb, q)) : -1
     if (named < 0 && also < 0) return
-    apps.push({ key: `app:${id}`, kind: 'app', score: named >= 0 ? named : 4 + also, lead: tile(id), title: <Marked text={PHONE[id].label} q={q} />, subtitle: <Marked text={APPS[id].blurb} q={q} />, label: PHONE[id].label, open: () => launch(id) })
+    apps.push({ key: `app:${id}`, kind: 'app', score: named >= 0 ? named : 4 + also, lead: tile(id), title: <Marked text={PHONE[id].label} q={q} />, subtitle: <Marked text={APPS[id].blurb} q={q} />, open: () => launch(id) })
   })
 
   const people: Hit[] = []
@@ -119,7 +117,6 @@ function find(raw: string): Found {
       title: <Marked text={person.name} q={q} />,
       // What they said, where that is what matched; otherwise who they are
       subtitle: said ? <Marked text={around(person.quote!, q)} q={q} /> : <Marked text={person.role} q={q} />,
-      label: `${person.name}, ${person.role}`,
       open: () => launchAt('messages', [conversationView(i)]),
     })
   })
@@ -137,7 +134,6 @@ function find(raw: string): Found {
       lead: (size) => <CompanyLogo company={company} size={size} />,
       title: <Marked text={company.name} q={q} />,
       subtitle: described ? <Marked text={around(company.blurb!, q)} q={q} /> : <Marked text={company.vertical} q={q} />,
-      label: `${company.name}, ${company.vertical}`,
       open: () => launchAt('finder', [companyView(company.name)]),
     })
   })
@@ -158,7 +154,6 @@ function find(raw: string): Found {
       lead: tile('notes'),
       title: <Marked text={faq.question} q={q} />,
       subtitle: answered ? <Marked text={around(faq.answer!, q)} q={q} /> : 'Note',
-      label: faq.question,
       open: () => launchAt('notes', [noteView(i)]),
     })
   })
@@ -168,7 +163,7 @@ function find(raw: string): Found {
   DROPS.forEach((drop) => {
     const named = rank(drop, q)
     if (named < 0 && !anyDrop) return
-    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), label: `${drop}, a drop`, open: () => launchAt('photos', [albumView(drop)]) })
+    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), open: () => launchAt('photos', [albumView(drop)]) })
   })
 
   const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore), drop: drops.sort(byScore) }
@@ -199,7 +194,7 @@ const TRY = [PEOPLE[0]!.name, (ALL.find((c) => c.name === 'Anduril') ?? ALL[0]!)
 
 function Row({ hit, top }: { hit: Hit; top?: boolean }) {
   return (
-    <button type="button" className="spot-row" data-top={top || undefined} data-spot-item aria-label={hit.label} onClick={hit.open}>
+    <button type="button" className="spot-row" data-top={top || undefined} data-spot-item onClick={hit.open}>
       <span className="spot-row__lead">{hit.lead(top ? 52 : 40)}</span>
       <span className="spot-row__text">
         <span className="spot-row__title">{hit.title}</span>
@@ -212,14 +207,14 @@ function Row({ hit, top }: { hit: Hit; top?: boolean }) {
 function Group({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
   return (
     <section className="spot-group" aria-label={title}>
-      <h3 className="spot-group__head">
+      <h2 className="spot-group__head">
         {icon && (
           <span className="spot-group__icon" aria-hidden>
             {icon}
           </span>
         )}
         {title}
-      </h3>
+      </h2>
       <div className="spot-card">{children}</div>
     </section>
   )

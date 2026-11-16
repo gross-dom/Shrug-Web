@@ -194,10 +194,13 @@ function Collections() {
           const items = inDrop(drop)
           return (
             <div key={drop} role="listitem">
-              <button type="button" className="photos-album" aria-label={`${drop}, ${count(items.length, 'item')}`} onClick={() => push(albumView(drop))}>
+              <button type="button" className="photos-album" onClick={() => push(albumView(drop))}>
                 <span className="photos-album__cover">{items.length > 0 && <Picture index={items[0]!} cover />}</span>
                 <span className="photos-album__name">{drop}</span>
-                <span className="photos-album__count">{items.length}</span>
+                <span className="photos-album__count">
+                  {items.length}
+                  <span className="sr-only"> {items.length === 1 ? 'item' : 'items'}</span>
+                </span>
               </button>
             </div>
           )
@@ -448,6 +451,7 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
         className="photos-pager"
         role="group"
         aria-roledescription="carousel"
+        tabIndex={0}
         aria-label={`${describe(index)}. ${at + 1} of ${set.length}.`}
         onScroll={settleSoon}
         onPointerDown={down}

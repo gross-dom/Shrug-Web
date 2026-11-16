@@ -65,7 +65,7 @@ function Icons({ companies }: { companies: Listed[]; vertical?: boolean }) {
     <ul className="files-grid">
       {companies.map((company) => (
         <li key={company.name}>
-          <button type="button" className="files-item" aria-label={`${company.name}, ${company.vertical}`} onClick={() => open(company)}>
+          <button type="button" className="files-item" onClick={() => open(company)}>
             <CompanyLogo company={company} size={76} />
             <span className="files-item__name">{company.name}</span>
             <span className="files-item__where">{whereOf(company)}</span>
@@ -81,7 +81,7 @@ function Rows({ companies, vertical = true }: { companies: Listed[]; vertical?: 
     <ul className="files-rows">
       {companies.map((company) => (
         <li key={company.name}>
-          <button type="button" className="files-row" aria-label={`${company.name}, ${company.vertical}`} onClick={() => open(company)}>
+          <button type="button" className="files-row" onClick={() => open(company)}>
             <CompanyLogo company={company} size={44} />
             <span className="files-row__text">
               <span className="files-row__name">{company.name}</span>

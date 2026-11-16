@@ -335,6 +335,15 @@
   will-change: auto;
 }
 
+/* The conversation's small print (the stamp, who is speaking, Delivered) is
+   a shade darker than Messages' own gray: at this size that gray is hard to
+   read on white, and falls short of the contrast guidance */
+.chat-stamp.ss-stamp,
+.chat-note.ss-stamp,
+.chat__thread .ss-receipt {
+  color: #6e6e73;
+}
+
 /* "iMessage" over the day and the time, where a conversation begins */
 .chat-stamp.ss-stamp {
   margin: 2px 0 8px;
@@ -366,7 +375,7 @@
   overflow: hidden;
   font-size: 11px;
   line-height: 14px;
-  color: #8e8e93;
+  color: #6e6e73;
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: top var(--ss-scroll);

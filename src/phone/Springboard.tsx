@@ -11,6 +11,7 @@ import { SITE } from '../data/site'
 import type { Rect } from '../kit/measure'
 import { Expand } from '../kit/motion/Expand'
 import { LockScreen, Notification } from '../kit/phone'
+import { Boundary } from '../os/Boundary'
 import { AppIcon } from '../os/icons'
 import { idleSeconds } from '../os/saver'
 import { useStore } from '../os/store'
@@ -70,7 +71,6 @@ function Reply({ index, banner, origin, onOpen, className }: { index: number; ba
       data-origin={origin}
       role="button"
       tabIndex={0}
-      aria-label={`${person.name}, in ${GROUP_NAME}: ${person.quote ?? ''}`}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -193,7 +193,7 @@ function Lock() {
         )}
       </LockScreen>
       {/* A swipe opens it, as on any iPhone; the words can be pressed too, for a mouse or a keyboard */}
-      <button type="button" className="sb-lock__hint" data-show={hint || undefined} aria-label="Open the phone" onClick={unlock}>
+      <button type="button" className="sb-lock__hint" data-show={hint || undefined} onClick={unlock}>
         Swipe up to open
       </button>
     </div>
@@ -235,13 +235,14 @@ function ChatWidget() {
   const replied = useStore(chat, (s) => s.replied)
   const latest = replied > 0 ? PEOPLE[replied - 1]! : null
   return (
-    <button type="button" className="sb-widget sb-widget--wide" aria-label={`${GROUP_NAME}: ${replied} of ${TOTAL} have replied. Open the conversation.`} onClick={() => openGroup('widget:chat')}>
+    <button type="button" className="sb-widget sb-widget--wide" onClick={() => openGroup('widget:chat')}>
       <span className="sb-widget__face sb-chat" data-origin="widget:chat">
         <span className="sb-chat__head">
           <GroupAvatar size={24} />
           <span className="sb-chat__name">{GROUP_NAME}</span>
           <span className="sb-chat__count">
             {replied} of {TOTAL}
+            <span className="sr-only"> have replied</span>
           </span>
         </span>
         {latest ? (
@@ -271,7 +272,7 @@ const SHOWN = ALL.filter((c) => c.logo).slice(0, 4)
 
 function PortfolioWidget() {
   return (
-    <button type="button" className="sb-widget" aria-label={`Portfolio: ${ALL.length} companies. Open it.`} onClick={() => launch('finder', 'widget:portfolio')}>
+    <button type="button" className="sb-widget" onClick={() => launch('finder', 'widget:portfolio')}>
       <span className="sb-widget__face sb-folio" data-origin="widget:portfolio">
         <span className="sb-folio__logos">
           {SHOWN.map((c) => (
@@ -290,7 +291,7 @@ function PortfolioWidget() {
 
 function FaqWidget() {
   return (
-    <button type="button" className="sb-widget" aria-label={`FAQs: ${FAQS.length} questions. Open them.`} onClick={() => launch('notes', 'widget:faqs')}>
+    <button type="button" className="sb-widget" onClick={() => launch('notes', 'widget:faqs')}>
       <span className="sb-widget__face sb-faq" data-origin="widget:faqs">
         <span className="sb-faq__head">
           <b>FAQs</b>
@@ -459,7 +460,10 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
         >
           <div className="sb-drag">
             <AppContext.Provider value={{ app: id, active }}>
-              <Root />
+              {/* An app that fails does what an app on an iPhone does: it is gone, back to the Home Screen, and starts afresh next time */}
+              <Boundary onError={() => quit(id)}>
+                <Root />
+              </Boundary>
             </AppContext.Provider>
           </div>
         </Expand>
@@ -763,7 +767,9 @@ export function Springboard({ framed }: { framed: boolean }) {
       <div className="sb-wall" data-at={at} aria-hidden />
       <Home />
       <Apps />
-      <Spotlight />
+      <Boundary onError={() => showSpotlight(false)}>
+        <Spotlight />
+      </Boundary>
       <Lock />
       <Banners />
       <HomeBar drawn={!framed} />

@@ -1,40 +1,31 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { startChat } from '../apps/chat'
-import { AboutApp } from '../apps/About'
-import { FinderApp } from '../apps/Finder'
-import { MessagesApp } from '../apps/Messages'
-import { NotesApp } from '../apps/Notes'
-import { PhotosApp } from '../apps/Photos'
-import { TerminalApp } from '../apps/Terminal'
-import { SITE } from '../data/site'
 import { arriveIn, startSystem, watchHistory } from '../phone/system'
-import { Phone } from '../phone/Phone'
 import { APP_IDS, type AppId } from './apps'
-import { Dock } from './Dock'
 import { dockPoint } from './dom'
-import { DocumentIcon, FolderIcon } from './icons'
-import { MenuBar } from './MenuBar'
-import { ScreenSaver } from './ScreenSaver'
 import { saver, startSaver } from './saver'
 import { useStore } from './store'
-import { openApp, setViewport, tileRect, wm } from './wm'
-import { WindowFrame } from './WindowFrame'
+import { openApp, setViewport, wm } from './wm'
 
-// The desktop: wallpaper, the menu bar, a few things left out on the desk, the
-// windows, the Dock, and the screen saver over all of it. The root carries the
-// kit's stage class, so every kit part inside reads the same look.
-// On a phone-sized screen (or when the address asks, with `?phone`) the same
-// root holds an iPhone instead: the same apps, each redrawn as its iOS
-// counterpart (src/phone).
+// The site's root: the wallpaper, and over it either the desktop (the menu
+// bar, the desk, the windows, the Dock) or, on a phone-sized screen or when
+// the address asks with `?phone`, an iPhone with the same apps, each redrawn as
+// its iOS counterpart (src/phone). The root carries the kit's stage class, so
+// every kit part inside reads the same look.
+//
+// The two are separate downloads: a visitor gets the one their screen shows.
+// Whichever that is starts loading at once, alongside this file.
 
-const WINDOWS: Record<AppId, () => JSX.Element> = {
-  finder: FinderApp,
-  messages: MessagesApp,
-  notes: NotesApp,
-  terminal: TerminalApp,
-  photos: PhotosApp,
-  about: AboutApp,
+const load = {
+  surface: () => import('./Surface'),
+  phone: () => import('../phone/Phone').then((m) => ({ default: m.Phone })),
 }
+
+/** What this screen shows first, already on its way. */
+const first = wm.get().compact ? load.phone() : load.surface()
+
+const Surface = lazy(load.surface)
+const Phone = lazy(load.phone)
 
 /** The names a link can ask for: `?open=portfolio,faqs` opens those windows too. */
 const ALIASES: Record<string, AppId> = {
@@ -45,76 +36,6 @@ const ALIASES: Record<string, AppId> = {
   faq: 'notes',
   'case-studies': 'terminal',
   vip: 'photos',
-}
-
-interface DeskItem {
-  id: string
-  name: string
-  icon: JSX.Element
-  open: () => void
-}
-
-const DESK: DeskItem[] = [
-  { id: 'portfolio', name: 'Portfolio', icon: <FolderIcon />, open: () => openApp('finder', dockPoint('finder')) },
-  { id: 'one-pager', name: 'One-pager', icon: <DocumentIcon />, open: () => window.open(SITE.onePager, '_blank', 'noopener,noreferrer') },
-]
-
-function DeskIcons() {
-  const [picked, setPicked] = useState<string | null>(null)
-  /** What last pressed an icon: a mouse picks first, a finger or a key opens. */
-  const pointer = useRef('')
-  useEffect(() => {
-    if (!picked) return
-    const away = (e: PointerEvent) => {
-      if (!(e.target as HTMLElement).closest('.desk__item')) setPicked(null)
-    }
-    document.addEventListener('pointerdown', away)
-    return () => document.removeEventListener('pointerdown', away)
-  }, [picked])
-  return (
-    <ul className="desk" aria-label="On the desktop">
-      {DESK.map((item) => (
-        <li key={item.id} className="desk__cell">
-          <button
-            type="button"
-            className="desk__item"
-            data-picked={picked === item.id || undefined}
-            aria-label={`${item.name}. Double-click to open.`}
-            onPointerDown={(e) => {
-              pointer.current = e.pointerType
-              if (e.pointerType === 'mouse') setPicked(item.id)
-            }}
-            onClick={(e) => {
-              // A mouse picks on the first click and opens on the second; a
-              // finger or the keyboard (a click with no count) opens at once
-              if (pointer.current !== 'mouse' || e.detail === 0) item.open()
-            }}
-            onDoubleClick={() => {
-              if (pointer.current === 'mouse') item.open()
-            }}
-          >
-            <span className="desk__icon">{item.icon}</span>
-            <span className="desk__name">{item.name}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-/** The outline a dragged window will take if let go against this edge. It
- * sits just under the window being dragged, over the others. */
-function TilePreview() {
-  const preview = useStore(wm, (s) => s.preview)
-  const viewport = useStore(wm, (s) => s.viewport)
-  const front = useStore(wm, (s) => s.order.length)
-  const [last, setLast] = useState(preview)
-  useEffect(() => {
-    if (preview) setLast(preview)
-  }, [preview])
-  const tile = preview ?? last
-  const r = tile ? tileRect(tile, viewport, false) : null
-  return <div className="tile-preview" data-show={preview ? '' : undefined} style={r ? { left: r.x, top: r.y, width: r.w, height: r.h, zIndex: 9 + front } : undefined} aria-hidden />
 }
 
 export function Desktop() {
@@ -144,25 +65,37 @@ export function Desktop() {
     const quiet = query.has('still')
     // A phone picks up where a reload left it; a new visit starts on its Lock Screen
     const resumed = startSystem()
-    const t1 = setTimeout(() => setBooted(true), 60)
-    const t2 = setTimeout(
-      () => {
-        started.current = true
-        if (wm.get().compact) {
-          // A link that names an app arrives with it open (the last one named), and the phone unlocked
-          const asked = extra.pop()
-          if (!resumed && asked) arriveIn(asked)
-        } else {
-          if (!query.has('empty')) openApp('messages', dockPoint('messages'))
-          extra.forEach((id) => openApp(id, dockPoint(id)))
-        }
-        // The group chat plays whichever is showing: on a phone its replies arrive as notifications
-        startChat()
-        if (query.has('saver') && !wm.get().compact) startSaver()
-      },
-      quiet ? 0 : 520,
+    let gone = false
+    let t1: ReturnType<typeof setTimeout> | undefined
+    let t2: ReturnType<typeof setTimeout> | undefined
+    const open = () => {
+      if (gone) return
+      t1 = setTimeout(() => setBooted(true), 60)
+      t2 = setTimeout(
+        () => {
+          started.current = true
+          if (wm.get().compact) {
+            // A link that names an app arrives with it open (the last one named), and the phone unlocked
+            const asked = extra.pop()
+            if (!resumed && asked) arriveIn(asked)
+          } else {
+            if (!query.has('empty')) openApp('messages', dockPoint('messages'))
+            extra.forEach((id) => openApp(id, dockPoint(id)))
+          }
+          // The group chat plays whichever is showing: on a phone its replies arrive as notifications
+          startChat()
+          if (query.has('saver') && !wm.get().compact) startSaver()
+        },
+        quiet ? 0 : 520,
+      )
+    }
+    // Once what this screen shows has arrived and been drawn: the chat opens out of a Dock that is there
+    void first.then(
+      () => requestAnimationFrame(() => requestAnimationFrame(open)),
+      () => open(),
     )
     return () => {
+      gone = true
       clearTimeout(t1)
       clearTimeout(t2)
     }
@@ -183,27 +116,7 @@ export function Desktop() {
         <div className="os__grain" />
       </div>
       <h1 className="sr-only">Shrug: what people say, the portfolio, FAQs and drops</h1>
-      {compact ? (
-        <Phone />
-      ) : (
-        <>
-          <MenuBar />
-          <DeskIcons />
-          <main className="os__windows">
-            <TilePreview />
-            {APP_IDS.map((id) => {
-              const Body = WINDOWS[id]
-              return (
-                <WindowFrame key={id} id={id}>
-                  <Body />
-                </WindowFrame>
-              )
-            })}
-          </main>
-          <Dock />
-        </>
-      )}
-      <ScreenSaver />
+      <Suspense fallback={null}>{compact ? <Phone /> : <Surface />}</Suspense>
     </div>
   )
 }
