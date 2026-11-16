@@ -1,6 +1,847 @@
-/* Version 5. Everything here is under .v5. */
+/* Version 5: the feed. Everything here is under .v5. Four channels side by
+   side, each a pager that snaps one screen at a time; the scrolling is the
+   browser's own, so it has the phone's own weight and bounce. */
 
 .v5 {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  background: var(--c-night);
+  color: #fff;
+  font-size: 17px;
+  line-height: 22px;
+  letter-spacing: -0.02em;
+}
+
+/* ---- The channels, side by side ---- */
+
+.v5 .v5-channels {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.v5 .v5-channels::-webkit-scrollbar,
+.v5 .v5-pager::-webkit-scrollbar,
+.v5 .v5-verticals::-webkit-scrollbar {
+  display: none;
+}
+
+.v5 .v5-channel {
+  position: relative;
+  flex: none;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* ---- A pager: a screen at a time ---- */
+
+.v5 .v5-pager {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.v5 .v5-pager:focus-visible {
+  outline-offset: -4px;
+}
+
+.v5 .v5-page {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  contain: layout paint;
+}
+
+/* ---- The tabs over them, and the mark that follows the sideways scroll ---- */
+
+.v5 .v5-tabs {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  max-width: calc(100% - 16px);
+  padding: 3px;
+  border-radius: 20px;
+  background: rgba(14, 16, 50, 0.46);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.16);
+  transform: translateX(-50%);
+}
+
+.v5 .v5-tabs__ink {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: calc(100% - 6px);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.26);
+  will-change: transform, width;
+}
+
+.v5 .v5-tab {
+  position: relative;
+  flex: none;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 34px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.v5 .v5-tab[aria-selected='true'] {
+  color: #fff;
+}
+
+.v5 .v5-tab:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ---- A reply: its words, as large as they go, on sheets of colour ---- */
+
+.v5 .v5-page[data-kind='reply'],
+.v5 .v5-page[data-kind='ask'] {
+  background: linear-gradient(168deg, var(--a) 0%, var(--b) 84%);
+}
+
+/* Two sheets rising across the ground, each lit along its crest, as the wallpaper's are */
+.v5 .v5-sheets {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.v5 .v5-sheets > i {
+  position: absolute;
+  left: -35%;
+  width: 170%;
+  height: 52%;
+  border-radius: 50%;
+  box-shadow: 0 -22px 50px rgba(4, 6, 44, 0.3);
+}
+
+.v5 .v5-sheets > i:first-child {
+  bottom: -6%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 84%, #fff) 0%, color-mix(in srgb, var(--c) 72%, var(--a)) 6%, color-mix(in srgb, var(--c) 36%, var(--a)) 58%);
+  transform: translateX(var(--lean)) rotate(var(--tilt));
+}
+
+.v5 .v5-sheets > i:last-child {
+  bottom: -30%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--d) 84%, #fff) 0%, color-mix(in srgb, var(--d) 70%, var(--a)) 6%, color-mix(in srgb, var(--d) 32%, var(--a)) 62%);
+  transform: translateX(calc(var(--lean) * -1)) rotate(calc(var(--tilt) * -1.5));
+}
+
+/* Deeper toward the foot, so a name reads on any colour */
+.v5 .v5-sheets::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(6, 8, 46, 0.1) 0%, rgba(6, 8, 46, 0) 30%, rgba(6, 8, 46, 0.46) 100%);
+}
+
+.v5 .v5-reply {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 64px 20px calc(var(--safe-bottom) + 18px);
+  /* A double tap loves it: it mustn't select a word instead */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* The words have the page above the name, clear of the rail down the right;
+   fewer than fill it sit in the middle of it. The script sets their size */
+.v5 .v5-reply__quote {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin: 4px 54px 16px 0;
+  overflow: hidden;
+  font-weight: 650;
+  line-height: 1.24;
+  letter-spacing: -0.022em;
+  text-shadow: 0 1px 20px rgba(4, 6, 40, 0.34);
+  text-wrap: pretty;
+}
+
+.v5 .v5-reply__quote > span {
+  margin: auto 0;
+}
+
+/* More than the screen holds: they fade, and a button has the rest */
+.v5 .v5-reply__quote[data-over] {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 46px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 46px), transparent);
+}
+
+.v5 .v5-reply__more {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  align-self: flex-start;
+  height: 34px;
+  margin: -6px 0 14px;
+  padding: 0 14px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 34px;
+}
+
+.v5 .v5-reply__foot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.v5 .v5-reply__who {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px 0;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.v5 .v5-reply__who .ss-avatar {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.v5 .v5-reply__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.v5 .v5-reply__name > b {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 21px;
+}
+
+.v5 .v5-reply__name > i {
+  font-size: 14px;
+  font-style: normal;
+  line-height: 18px;
+  opacity: 0.88;
+}
+
+.v5 .v5-reply__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.v5 .v5-reply__tags > em {
+  padding: 2px 8px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 15px;
+  letter-spacing: 0;
+}
+
+/* ---- The rail: what a thumb can do to the page ---- */
+
+.v5 .v5-rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.v5 .v5-rail__button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 52px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0;
+}
+
+.v5 .v5-rail__button > svg {
+  box-sizing: content-box;
+  width: 24px;
+  height: 24px;
+  padding: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s var(--ph-ease), background-color 0.2s ease, color 0.2s ease;
+}
+
+.v5 .v5-rail__button:active > svg {
+  transform: scale(0.88);
+}
+
+.v5 .v5-rail__button[aria-pressed='true'] > svg {
+  background: #fff;
+  color: #ff3b5c;
+}
+
+.v5 .v5-rail__button:focus-visible {
+  outline-offset: 2px;
+}
+
+.v5 .v5-rail__count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11.5px;
+  line-height: 14px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.v5 .v5-rail__count > b {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 19px;
+}
+
+.v5 .v5-rail__count > i {
+  font-style: normal;
+  opacity: 0.8;
+}
+
+/* A double tap: a heart where the finger was */
+.v5 .v5-burst {
+  position: absolute;
+  z-index: 4;
+  width: 0;
+  height: 0;
+  color: #ff3b5c;
+  pointer-events: none;
+}
+
+.v5 .v5-burst > svg {
+  position: absolute;
+  top: -48px;
+  left: -48px;
+  filter: drop-shadow(0 8px 16px rgba(110, 0, 40, 0.4));
+  animation: v5-burst 0.85s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes v5-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-16deg);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1.22) rotate(-8deg);
+  }
+  42% {
+    transform: scale(0.94) rotate(-11deg);
+  }
+  68% {
+    opacity: 1;
+    transform: scale(1) rotate(-10deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-46px) scale(1.12) rotate(-10deg);
+  }
+}
+
+/* ---- The first screen: the question ---- */
+
+.v5 .v5-ask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 70px 24px calc(var(--safe-bottom) + 96px);
+}
+
+.v5 .v5-ask > :not(.v5-sheets) {
+  position: relative;
+  z-index: 1;
+}
+
+.v5 .v5-ask__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.v5 .v5-ask__who > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.v5 .v5-ask__who b {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.v5 .v5-ask__who i {
+  font-size: 13px;
+  font-style: normal;
+  line-height: 17px;
+  opacity: 0.82;
+}
+
+.v5 .v5-ask__first {
+  margin-bottom: 6px;
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 28px;
+  opacity: 0.86;
+}
+
+.v5 .v5-ask__second {
+  font-size: clamp(34px, 11.5vw, 48px);
+  font-weight: 800;
+  line-height: 1.03;
+  letter-spacing: -0.04em;
+  text-shadow: 0 2px 26px rgba(4, 6, 40, 0.35);
+  text-wrap: balance;
+}
+
+.v5 .v5-ask__count {
+  margin-top: 18px;
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.88;
+}
+
+.v5 .v5-ask > .v5-ask__cue {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 20px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0;
+  transform: translateX(-50%);
+  animation: v5-cue 1.7s ease-in-out infinite;
+}
+
+@keyframes v5-cue {
+  50% {
+    transform: translate(-50%, -9px);
+  }
+}
+
+/* ---- Portfolio: one company to a screen ---- */
+
+.v5 .v5-page[data-kind='company'] {
+  background: linear-gradient(180deg, #fff 8%, var(--tint, #e8eeff) 100%);
+  color: #0d0f2b;
+}
+
+.v5 .v5-company {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 28px calc(var(--safe-bottom) + 76px);
+  text-align: center;
+}
+
+.v5 .v5-company > .logo {
+  flex: none;
+  box-shadow: 0 2px 4px rgba(20, 30, 70, 0.12), 0 18px 40px rgba(20, 30, 90, 0.2);
+}
+
+.v5 .v5-company__kind {
+  margin-top: 24px;
+  color: var(--ph-label-2);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v5 .v5-company__name {
+  margin-top: 4px;
+  font-size: clamp(30px, 10vw, 40px);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+}
+
+.v5 .v5-company__blurb {
+  margin-top: 12px;
+  color: rgba(13, 15, 43, 0.78);
+  font-size: 19px;
+  line-height: 25px;
+  text-wrap: balance;
+}
+
+.v5 .v5-company .ph-button.v5-company__visit {
+  flex: none;
+  width: auto;
+  max-width: 100%;
+  margin-top: 24px;
+  padding: 0 22px;
+}
+
+.v5 .v5-company > .v5-rail,
+.v5 .v5-faq > .v5-rail,
+.v5 .v5-drop > .v5-rail {
+  position: absolute;
+  right: 12px;
+  bottom: calc(var(--safe-bottom) + 70px);
+}
+
+.v5 .v5-company .v5-rail__button > svg,
+.v5 .v5-faq .v5-rail__button > svg {
+  background: rgba(13, 15, 43, 0.07);
+}
+
+/* The verticals, along the foot: where you are, and a way to jump */
+.v5 .v5-verticals {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--safe-bottom) + 14px);
+  left: 0;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  padding: 0 14px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.v5 .v5-verticals > .ph-chip {
+  background: rgba(13, 15, 43, 0.07);
+  color: #0d0f2b;
+  letter-spacing: -0.01em;
+}
+
+.v5 .v5-verticals > .ph-chip[aria-pressed='true'] {
+  background: #0d0f2b;
+  color: #fff;
+}
+
+/* ---- FAQs: a question to a screen ---- */
+
+.v5 .v5-page[data-kind='faq'] {
+  background: linear-gradient(180deg, #ffefb8 0%, #fff8e1 26%, #fffdf7 62%);
+  color: #1c180c;
+}
+
+.v5 .v5-faq {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 64px 26px calc(var(--safe-bottom) + 40px);
+}
+
+.v5 .v5-faq__n {
+  margin-bottom: 12px;
+  color: #9a7400;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+  letter-spacing: 0.02em;
+}
+
+.v5 .v5-faq__q {
+  font-size: clamp(32px, 10.5vw, 44px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.v5 .v5-faq__a {
+  margin-top: 18px;
+  font-size: 19px;
+  line-height: 27px;
+}
+
+/* An answer still to be written: the slot it goes in */
+.v5 .v5-faq__todo {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px dashed #b7a468;
+  border-radius: 16px;
+  color: #6a5d36;
+  font-size: 16px;
+  line-height: 23px;
+}
+
+.v5 .v5-faq > .v5-rail {
+  bottom: calc(var(--safe-bottom) + 22px);
+}
+
+/* ---- Drops: a photo or a video to a screen ---- */
+
+.v5 .v5-page[data-kind='drop'] {
+  background: #eceef3;
+  color: #1d1d1f;
+}
+
+.v5 .v5-drop {
+  position: absolute;
+  inset: 0;
+}
+
+.v5 .v5-drop__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.v5 .v5-drop__slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-image: repeating-linear-gradient(135deg, transparent 0, transparent 14px, rgba(0, 0, 0, 0.032) 14px, rgba(0, 0, 0, 0.032) 17px);
+  color: rgba(60, 60, 67, 0.55);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v5 .v5-drop[data-media='video'] {
+  background: #131316;
+  color: #fff;
+}
+
+.v5 .v5-drop[data-media='video'] .v5-drop__slot {
+  background-image: none;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.v5 .v5-drop__cap {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 22px);
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 100px);
+  padding: 10px 14px 11px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  color: #1d1d1f;
+}
+
+.v5 .v5-drop__cap > b {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.v5 .v5-drop__cap > span {
+  color: var(--ph-label-2);
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.v5 .v5-drop > .v5-rail {
+  bottom: calc(var(--safe-bottom) + 26px);
+}
+
+.v5 .v5-drop:not([data-media='video']) .v5-rail__count {
+  color: #1d1d1f;
+}
+
+/* The last of the drops' screens: what is kept private, and the one-pager */
+.v5 .v5-page[data-kind='private'] {
+  background: radial-gradient(120% 70% at 50% 0%, #23233a 0%, #101014 62%);
+}
+
+.v5 .v5-private {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 26px calc(var(--safe-bottom) + 30px);
+  text-align: center;
+}
+
+.v5 .v5-private__lock {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.v5 .v5-private__title {
+  margin-top: 16px;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 40px;
+  letter-spacing: -0.03em;
+}
+
+.v5 .v5-private__sub {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.v5 .v5-private__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0 24px;
+}
+
+.v5 .v5-private__list > li {
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+
+.v5 .v5-private > .ph-button {
+  flex: none;
+  max-width: 340px;
+}
+
+.v5 .v5-private__pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 12px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ---- "Copied", where there is no share sheet ---- */
+
+.v5 .v5-toast {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 96px);
+  left: 50%;
+  z-index: 6;
+  padding: 8px 16px;
+  border-radius: 18px;
+  background: rgba(20, 20, 26, 0.92);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  /* Hidden as well as see-through once it has faded: Safari can leave the last frame of something that only went to no opacity */
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.25s var(--ph-ease), visibility 0s linear 0.25s;
+}
+
+.v5 .v5-toast[data-show] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* A short screen: less air round the words */
+@media (max-height: 640px) {
+  .v5 .v5-reply {
+    padding-top: 58px;
+  }
+
+  .v5 .v5-rail {
+    gap: 8px;
+  }
+
+  .v5 .v5-company > .logo {
+    width: 88px !important;
+    height: 88px !important;
+  }
+
+  .v5 .v5-company__kind {
+    margin-top: 16px;
+  }
+
+  .v5 .v5-company .ph-button.v5-company__visit {
+    margin-top: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v5 .v5-ask > .v5-ask__cue {
+    animation: none;
+  }
+
+  .v5 .v5-burst > svg {
+    animation-duration: 0.01s;
+  }
+
+  .v5 .v5-toast,
+  .v5 .v5-rail__button > svg {
+    transition-duration: 0.01s;
+  }
 }

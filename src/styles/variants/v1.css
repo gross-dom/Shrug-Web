@@ -1,6 +1,940 @@
-/* Version 1. Everything here is under .v1. */
+/* Version 1, the scroll: one long page of chapters. Everything here is under .v1. */
 
 .v1 {
   position: absolute;
   inset: 0;
+  background: #fff;
+  color: #000;
+}
+
+.v1__scroll {
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.v1__scroll::-webkit-scrollbar,
+.v1-chapters__row::-webkit-scrollbar,
+.v1-row::-webkit-scrollbar,
+.v1-gallery::-webkit-scrollbar {
+  display: none;
+}
+
+.v1 blockquote,
+.v1 figure {
+  margin: 0;
+}
+
+/* The colour sheets of the wallpaper, for the things set large */
+.v1 [data-sheet='azure'] {
+  background: linear-gradient(155deg, #5aa8ff 0%, #2b55cf 100%);
+}
+
+.v1 [data-sheet='violet'] {
+  background: linear-gradient(155deg, #a98cff 0%, #4a22cc 100%);
+}
+
+.v1 [data-sheet='pink'] {
+  background: linear-gradient(155deg, #ff8fd0 0%, #b01fc0 100%);
+}
+
+.v1 [data-sheet='coral'] {
+  background: linear-gradient(155deg, #ffa860 0%, #ee3f4c 100%);
+}
+
+.v1 [data-sheet='cyan'] {
+  background: linear-gradient(155deg, #3fd0ee 0%, #0f62d6 100%);
+}
+
+.v1 [data-sheet='night'] {
+  background: linear-gradient(155deg, #3e52dc 0%, #0b1150 100%);
+}
+
+/* ---- The opening: Niv's question, over the wallpaper ---- */
+
+.v1-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 20px 20px calc(var(--safe-bottom) + 14px);
+  color: #fff;
+  isolation: isolate;
+}
+
+/* A little night over the wallpaper, so white type holds on its pinks */
+.v1-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(8, 12, 70, 0.1) 0%, rgba(8, 12, 70, 0.34) 100%);
+}
+
+.v1-hero__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0;
+  text-shadow: 0 1px 8px rgba(0, 10, 80, 0.4);
+}
+
+.v1-hero__ask {
+  margin-top: auto;
+  padding-top: 32px;
+}
+
+.v1-hero__title {
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 46px;
+  letter-spacing: -0.04em;
+  text-shadow: 0 2px 18px rgba(0, 10, 80, 0.35);
+}
+
+.v1-hero__sub {
+  margin: 8px 0 26px;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 22px;
+  opacity: 0.92;
+  text-shadow: 0 1px 8px rgba(0, 10, 80, 0.4);
+}
+
+.v1-hero__who {
+  margin: 0 0 3px 58px;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  opacity: 0.86;
+}
+
+.v1-hero__bubble {
+  position: relative;
+  width: fit-content;
+  max-width: 86%;
+  margin-left: 42px;
+  padding: 10px 16px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(4, 10, 70, 0.22);
+  color: #000;
+  font-size: 21px;
+  line-height: 26px;
+  letter-spacing: -0.02em;
+}
+
+.v1-hero__last {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.v1-hero__last .v1-hero__bubble {
+  margin-left: 0;
+}
+
+.v1-hero__last .v1-msg__tail {
+  fill: #fff;
+}
+
+.v1-hero__last .shrug-avatar {
+  box-shadow: 0 4px 12px rgba(4, 10, 70, 0.3);
+}
+
+.v1-hero__cue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: fit-content;
+  margin: 34px auto 0;
+  padding: 6px 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-shadow: 0 1px 8px rgba(0, 10, 80, 0.4);
+}
+
+.v1-hero__cue > svg {
+  animation: v1-cue 1.8s ease-in-out infinite;
+}
+
+@keyframes v1-cue {
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+/* On arriving: the name, then Niv's two lines sent one after the other, then the way on */
+.v1-hero__title,
+.v1-hero__sub {
+  animation: v1-arrive 0.7s var(--ph-ease) 0.1s backwards;
+}
+
+.v1-hero__sub {
+  animation-delay: 0.2s;
+}
+
+.v1-hero__who,
+.v1-hero__ask > .v1-hero__bubble {
+  transform-origin: 0 100%;
+  animation: v1-send 0.46s var(--ph-ease) 0.7s backwards;
+}
+
+.v1-hero__last {
+  transform-origin: 0 100%;
+  animation: v1-send 0.46s var(--ph-ease) 1.5s backwards;
+}
+
+.v1-hero__cue {
+  animation: v1-arrive 0.7s var(--ph-ease) 2.3s backwards;
+}
+
+@keyframes v1-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes v1-send {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.72);
+  }
+}
+
+/* ---- The bar of chapters: it stays at the top once the opening has gone ---- */
+
+.v1-chapters {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  border-bottom: 0.5px solid var(--ph-separator);
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.v1-chapters__row {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.v1-chapter {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 16px;
+  color: rgba(60, 60, 67, 0.86);
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* The whole height of the bar is the chip's to be tapped */
+.v1-chapter::after {
+  content: '';
+  position: absolute;
+  inset: -6px -3px;
+}
+
+.v1-chapter[aria-current] {
+  background: #1d1d1f;
+  color: #fff;
+}
+
+/* ---- A chapter ---- */
+
+.v1-section {
+  padding-bottom: 30px;
+}
+
+.v1-head {
+  padding: 36px 20px 16px;
+}
+
+.v1-head h2 {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 40px;
+  letter-spacing: -0.035em;
+}
+
+.v1-head p {
+  margin-top: 6px;
+  color: rgba(60, 60, 67, 0.8);
+  font-size: 17px;
+  line-height: 23px;
+}
+
+/* ---- Replies ---- */
+
+/* How far through them, under the bar for as long as they last. It is also a
+   way through them: drag along it, or tap a place on it. */
+.v1-progress {
+  position: sticky;
+  top: 44.5px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 32px;
+  padding: 0 20px;
+  /* The handle's run is as wide as the line: at the far end it must not widen the page */
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  /* Up and down still scrolls the page from here; sideways is the scrub */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.v1 .v1-progress:focus-visible {
+  outline-offset: -3px;
+}
+
+.v1-progress__track {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  height: 100%;
+}
+
+.v1-progress__line {
+  display: block;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--ph-fill);
+  transition: height 0.2s var(--ph-ease);
+}
+
+.v1-progress__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ss-accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.25s ease;
+}
+
+/* The handle: it rides the end of the line */
+.v1-progress__knob {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease;
+}
+
+.v1-progress__knob::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  background: var(--ss-accent);
+  box-shadow: 0 0 0 2.5px #fff;
+  transition: transform 0.2s var(--ph-ease);
+}
+
+.v1-progress[data-scrub] .v1-progress__line {
+  height: 5px;
+}
+
+.v1-progress[data-scrub] .v1-progress__knob::before {
+  transform: scale(1.8);
+}
+
+.v1-progress[data-scrub] :is(.v1-progress__fill, .v1-progress__knob) {
+  transition: none;
+}
+
+.v1-progress__count {
+  flex: none;
+  min-width: 52px;
+  color: var(--ph-label-2);
+  font-size: 12.5px;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.v1-progress[data-scrub] .v1-progress__count {
+  color: var(--ss-accent);
+  font-weight: 600;
+}
+
+.v1-thread {
+  padding: 4px 14px 0 12px;
+}
+
+/* Each thing in the thread rises in once, as the page reaches it */
+.v1-rise {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.5s ease, transform 0.65s var(--ph-ease);
+}
+
+.v1-rise[data-in] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Flicked past, or come back up to: no waiting about */
+.v1__scroll[data-fast] .v1-rise {
+  transition-duration: 0.16s;
+}
+
+.v1-rise[data-in='now'] {
+  transition: none;
+}
+
+/* The kit gives every avatar a layer of its own; a thread of ninety doesn't need them */
+.v1 .ss-avatar {
+  will-change: auto;
+}
+
+.v1-msg {
+  margin-top: 11px;
+}
+
+.v1-msg__who {
+  margin: 0 0 2px 47px;
+  overflow: hidden;
+  color: #8e8e93;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v1-msg__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.v1-msg__face {
+  position: relative;
+  display: flex;
+  flex: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* A small face, a finger's worth of target */
+.v1-msg__face::after {
+  content: '';
+  position: absolute;
+  inset: -9px -6px -9px -10px;
+}
+
+.v1-msg__face:active {
+  opacity: 0.6;
+}
+
+.v1-msg__bubble {
+  position: relative;
+  max-width: 84%;
+  padding: 8px 13px;
+  border-radius: 19px;
+  background: #e9e9eb;
+  font-size: 16px;
+  line-height: 21px;
+  letter-spacing: -0.015em;
+  overflow-wrap: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.v1-msg__tail {
+  position: absolute;
+  bottom: 0;
+  left: -0.36em;
+  width: 1.06em;
+  height: 0.94em;
+  fill: #e9e9eb;
+  pointer-events: none;
+}
+
+/* Niv's last word, at the foot of the thread */
+.v1-msg--niv .v1-msg__bubble {
+  max-width: none;
+  margin-top: 26px;
+  padding: 0;
+  background: none;
+  color: #8e8e93;
+  font-size: 26px;
+  line-height: 32px;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+/* One reply in a dozen, set large on a colour sheet */
+.v1-feature {
+  margin: 24px 2px 18px 4px;
+  padding: 26px 22px 18px;
+  border-radius: 30px;
+  box-shadow: 0 14px 34px rgba(20, 30, 110, 0.2);
+  color: #fff;
+}
+
+.v1-feature blockquote {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.v1-feature[data-size='l'] blockquote {
+  font-size: 30px;
+  line-height: 34px;
+}
+
+.v1-feature[data-size='m'] blockquote {
+  font-size: 25px;
+  line-height: 30px;
+}
+
+.v1-feature[data-size='s'] blockquote {
+  font-size: 21px;
+  line-height: 26px;
+}
+
+.v1-feature figcaption {
+  margin-top: 20px;
+}
+
+.v1-feature__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.v1-feature__who > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 17px;
+  letter-spacing: 0;
+}
+
+.v1-feature__who b {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 19px;
+}
+
+.v1-feature__who > span:last-child > span {
+  opacity: 0.86;
+}
+
+.v1-feature .ss-avatar {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+/* ---- Portfolio: a row of logos to each vertical ---- */
+
+.v1-vertical__name {
+  margin: 18px 20px 8px;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.v1-vertical__name > span {
+  margin-left: 3px;
+  color: var(--ph-label-2);
+  font-size: 15px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.v1-row {
+  display: flex;
+  gap: 2px;
+  padding: 2px 12px 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-left: 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.v1-row > li {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+.v1-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 82px;
+  padding: 4px 2px;
+  border-radius: 16px;
+}
+
+.v1-tile > span:last-child {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 15px;
+  letter-spacing: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.v1-tile .logo {
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.v1-tile:active .logo {
+  filter: brightness(0.84);
+  transform: scale(0.94);
+}
+
+.v1-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 40px);
+  height: 46px;
+  margin: 18px 20px 0;
+  border-radius: 23px;
+  background: var(--ph-fill);
+  color: var(--ss-accent);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.v1-more:active {
+  background: rgba(118, 118, 128, 0.22);
+}
+
+/* ---- FAQs: questions that open where they are ---- */
+
+.v1-faqs {
+  margin: 0 20px;
+  border-top: 0.5px solid var(--ph-separator);
+}
+
+.v1-faq {
+  border-bottom: 0.5px solid var(--ph-separator);
+}
+
+.v1-faq__q {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+.v1-faq__chevron {
+  flex: none;
+  margin-top: 2px;
+  color: var(--ph-label-2);
+  transition: transform 0.3s var(--ph-ease);
+}
+
+.v1-faq[data-open] .v1-faq__chevron {
+  transform: rotate(180deg);
+}
+
+.v1-faq__a {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.32s var(--ph-ease), opacity 0.24s ease;
+}
+
+.v1-faq[data-open] .v1-faq__a {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.v1-faq__a > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.v1-faq__a p {
+  margin-bottom: 18px;
+  font-size: 17px;
+  line-height: 24px;
+}
+
+.v1-faq__a p.faq__todo {
+  font-size: 16px;
+  line-height: 23px;
+}
+
+/* ---- Case studies: what the terminal says, and a button to answer it ---- */
+
+.v1 .v1-term.ss-term {
+  margin: 0 16px 14px;
+  padding: 14px 16px 16px;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #17171a;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.v1 .v1-request {
+  width: calc(100% - 32px);
+  margin: 0 16px;
+}
+
+.v1-noted {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 52px;
+  margin: 0 16px;
+  border-radius: 26px;
+  background: rgba(52, 199, 89, 0.16);
+  color: #1c8a3c;
+  font-weight: 600;
+}
+
+/* ---- VIP: a gallery that snaps from one to the next ---- */
+
+.v1-gallery {
+  display: flex;
+  gap: 10px;
+  padding: 2px 20px 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.v1-slot {
+  position: relative;
+  flex: none;
+  width: 70%;
+  max-width: 290px;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #f0f1f4;
+  scroll-snap-align: start;
+}
+
+.v1-slot[data-kind='video'] {
+  background: #1d1d1f;
+}
+
+.v1-slot > img,
+.v1-slot > video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.v1-slot__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-bottom: 40px;
+  background-image: repeating-linear-gradient(135deg, transparent 0, transparent 10px, rgba(0, 0, 0, 0.026) 10px, rgba(0, 0, 0, 0.026) 12px);
+  color: #8a8b92;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v1-slot[data-kind='video'] .v1-slot__empty {
+  background-image: none;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.v1-slot__cap {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - 20px);
+  padding: 7px 11px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #63646b;
+  font-size: 12.5px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+
+.v1-slot__cap b {
+  color: #1d1d1f;
+  font-weight: 600;
+}
+
+/* ---- The end ---- */
+
+.v1-end {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 64px 24px calc(var(--safe-bottom) + 56px);
+  color: #fff;
+  text-align: center;
+  isolation: isolate;
+}
+
+.v1-end::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(8, 12, 70, 0.22);
+}
+
+.v1-end__mark {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 42px;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 14px rgba(0, 10, 80, 0.4);
+}
+
+.v1-end__name {
+  margin-bottom: 18px;
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.92;
+}
+
+.v1-end__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 340px;
+  min-height: 52px;
+  border-radius: 26px;
+  background: #fff;
+  color: #1d1d1f;
+  font-size: 17px;
+  font-weight: 600;
+  transition: transform 0.18s ease;
+}
+
+.v1-end__button:active {
+  transform: scale(0.98);
+}
+
+.v1-end__button--quiet {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
+@media (max-width: 350px) {
+  .v1-hero__title {
+    font-size: 40px;
+    line-height: 41px;
+  }
+
+  .v1-hero__bubble {
+    font-size: 19px;
+    line-height: 24px;
+  }
+
+  .v1-head h2 {
+    font-size: 32px;
+    line-height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v1-rise {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .v1-hero__cue,
+  .v1-hero__cue > svg,
+  .v1-hero__title,
+  .v1-hero__sub,
+  .v1-hero__who,
+  .v1-hero__ask > .v1-hero__bubble,
+  .v1-hero__last {
+    animation: none;
+  }
+
+  .v1-faq__a,
+  .v1-faq__chevron,
+  .v1-progress__fill,
+  .v1-progress__knob,
+  .v1-progress__knob::before,
+  .v1-progress__line {
+    transition-duration: 0.01s;
+  }
 }

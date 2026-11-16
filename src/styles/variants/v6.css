@@ -1,6 +1,1247 @@
-/* Version 6. Everything here is under .v6. */
+/* Version 6: the deck. Everything here is under .v6. A table with a deck on
+   it: the top card is picked up and thrown, and the two under it rise as it
+   goes. Where the card is comes from the script, as it follows a finger; how
+   the rest answers is here, through --lift (0 at rest, 1 once it has gone). */
 
 .v6 {
+  --v6-ink: #0b1150;
+  --v6-ink-2: rgba(11, 17, 80, 0.64);
+  --v6-ink-3: rgba(11, 17, 80, 0.42);
+  --v6-shadow: 0 22px 44px -18px rgba(2, 4, 34, 0.7), 0 3px 8px rgba(2, 4, 34, 0.22);
+  --v6-glass: rgba(255, 255, 255, 0.15);
+
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The wallpaper, dimmed to a table for the cards to lie on */
+.v6::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(130% 75% at 50% 44%, rgba(9, 13, 70, 0.34), rgba(5, 8, 44, 0.88));
+  pointer-events: none;
+}
+
+.v6 .v6-felt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.v6 :is(button, a) {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.v6 :is(button, a):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ---- The top: which deck, and how many are kept ---- */
+
+.v6 .v6-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+
+.v6 .v6-switch {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 3px;
+  border-radius: 20px;
+  background: var(--v6-glass);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+}
+
+/* The chosen deck's white pill: one, that slides between them. The script says where (--x) and how wide (--w) */
+.v6 .v6-switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: var(--w, 0);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 1px 5px rgba(2, 4, 34, 0.28);
+  transform: translateX(var(--x, 0));
+  transition: transform 0.32s var(--ph-ease), width 0.32s var(--ph-ease);
+}
+
+.v6 .v6-switch__deck {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 17px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.22s ease;
+}
+
+.v6 .v6-switch__deck i {
+  font-size: 11.5px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+.v6 .v6-switch__deck[aria-selected='true'] {
+  color: var(--v6-ink);
+}
+
+.v6 .v6-kept {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 58px;
+  height: 40px;
+  padding: 0 13px;
+  border-radius: 20px;
+  background: var(--v6-glass);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 15px;
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+}
+
+.v6 .v6-kept svg {
+  color: #ff7aa2;
+}
+
+.v6 .v6-kept b {
+  display: inline-block;
+  min-width: 1ch;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+  animation: v6-pop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.v6 .v6-kept:active {
+  filter: brightness(1.25);
+}
+
+/* ---- The table and the deck on it ---- */
+
+/* A finger that lands just beside the deck is still about the deck: the page doesn't pan under it */
+.v6 .v6-table {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  padding: 14px 18px 2px;
+  place-items: center;
+  touch-action: none;
+}
+
+.v6 .v6-stack {
+  --lift: 0;
+
+  position: relative;
+  width: min(100%, 380px);
+  height: min(100%, 570px);
+  outline: none;
+}
+
+.v6 .v6-stack:focus-visible {
+  border-radius: 32px;
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 5px;
+}
+
+/* A card. The two under the top one sit lower and smaller, and come up as it leaves */
+.v6 .v6-card {
+  position: absolute;
+  inset: 0 0 26px;
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: var(--v6-shadow);
+  color: var(--v6-ink);
+  transform-origin: 50% 100%;
+  /* Each on a layer of its own: following a finger then costs no repainting */
+  will-change: transform;
+  animation: v6-deal 0.34s var(--ph-ease);
+}
+
+.v6 .v6-card[data-pos='0'] {
+  z-index: 3;
+  cursor: grab;
+  touch-action: none;
+  transform-origin: 50% 50%;
+}
+
+/* Picked up: a little further off the table */
+.v6 .v6-card[data-held] {
+  box-shadow: 0 36px 60px -22px rgba(2, 4, 34, 0.82), 0 5px 12px rgba(2, 4, 34, 0.26);
+  cursor: grabbing;
+}
+
+.v6 .v6-card[data-deck='questions'][data-held] {
+  box-shadow: none;
+}
+
+.v6 .v6-card[data-pos='1'] {
+  z-index: 2;
+  transform: translateY(calc(13px * (1 - var(--lift)))) scale(calc(0.95 + 0.05 * var(--lift)));
+}
+
+.v6 .v6-card[data-pos='2'] {
+  z-index: 1;
+  transform: translateY(calc(26px - 13px * var(--lift))) scale(calc(0.9 + 0.05 * var(--lift)));
+}
+
+/* Thrown, and still in the air: over everything, where the script left it, and out of reach */
+.v6 .v6-card[data-pos='-1'] {
+  z-index: 4;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+
+/* The further down the pile, the more in shadow. Never quite none, even on top:
+   Safari can leave the last shade painted when it fades to nothing */
+.v6 .v6-card:not([data-pos='-1'])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #0a0f52;
+  opacity: 0.002;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+.v6 .v6-card[data-pos='1']::after {
+  opacity: calc(0.002 + 0.14 * (1 - var(--lift)));
+}
+
+.v6 .v6-card[data-pos='2']::after {
+  opacity: calc(0.28 - 0.14 * var(--lift));
+}
+
+/* Let go, or sent off by a button: the pile closes up on its own. While a finger has the top card it keeps up with it instead */
+.v6 .v6-stack[data-anim] .v6-card:not([data-pos='-1']),
+.v6 .v6-stack[data-anim] .v6-card:not([data-pos='-1'])::after {
+  transition: transform 0.3s var(--ph-ease), opacity 0.3s ease;
+}
+
+.v6 .v6-stack[data-anim] .v6-stamp {
+  transition: opacity 0.16s ease;
+}
+
+.v6 .v6-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.v6 .v6-face__foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--v6-ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* ---- A person: who they are, and what they said, as large as it fits ---- */
+
+.v6 .v6-card[data-deck='people'] {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 17%, #fff), #fff 54%);
+}
+
+.v6 .v6-face--person {
+  gap: 12px;
+  padding: 18px 20px 14px;
+}
+
+.v6 .v6-person {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.v6 .v6-person > :first-child {
+  flex: none;
+}
+
+.v6 .v6-person__name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.v6 .v6-person__name b {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v6 .v6-person__name i {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--v6-ink-2);
+  font-size: 13.5px;
+  font-style: normal;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.v6 .v6-tags {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: -2px;
+}
+
+.v6 .v6-tags em {
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(43, 85, 207, 0.1);
+  background: color-mix(in srgb, var(--tint) 20%, #fff);
+  color: #2b55cf;
+  color: color-mix(in srgb, var(--tint) 42%, #0b1150);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* The words take what is left of the card. The script sets their size */
+.v6 .v6-quote {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  line-height: calc(1.12em + 3.5px);
+  text-wrap: pretty;
+}
+
+.v6 .v6-quote > span {
+  margin: auto 0;
+}
+
+/* Too many for the card even at their smallest: they scroll inside it */
+.v6 .v6-quote[data-over] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 30px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 30px), transparent);
+  -webkit-overflow-scrolling: touch;
+}
+
+.v6 .v6-quote[data-over] > span {
+  padding-bottom: 24px;
+}
+
+.v6 .v6-quote::-webkit-scrollbar {
+  display: none;
+}
+
+.v6 .v6-quote:focus-visible {
+  outline: 2px solid var(--ss-accent);
+  outline-offset: 3px;
+}
+
+/* ---- A company ---- */
+
+.v6 .v6-card[data-deck='companies'] {
+  background: radial-gradient(120% 62% at 50% 0%, color-mix(in srgb, var(--tint) 24%, #fff), #fff 72%);
+}
+
+.v6 .v6-face--company {
+  align-items: center;
+  justify-content: center;
+  padding: 22px 22px 42px;
+  text-align: center;
+}
+
+.v6 .v6-face--company .logo {
+  box-shadow: 0 14px 28px -12px rgba(11, 17, 80, 0.4), 0 1px 2px rgba(11, 17, 80, 0.14);
+}
+
+.v6 .v6-company__kind {
+  display: block;
+  margin-top: 22px;
+  color: var(--v6-ink-3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.v6 .v6-company__name {
+  display: block;
+  margin-top: 6px;
+  font-size: 32px;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.v6 .v6-company__blurb {
+  display: block;
+  max-width: 26ch;
+  margin-top: 10px;
+  color: var(--v6-ink-2);
+  font-size: 17px;
+  line-height: 1.32;
+  text-wrap: balance;
+}
+
+.v6 .v6-company__visit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  height: 46px;
+  margin-top: 22px;
+  padding: 0 20px;
+  border-radius: 23px;
+  background: var(--v6-ink);
+  color: #fff;
+  font-size: 15.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: transform 0.16s ease;
+}
+
+.v6 .v6-company__visit:active {
+  transform: scale(0.96);
+}
+
+.v6 .v6-face--company .v6-face__foot {
+  position: absolute;
+  right: 20px;
+  bottom: 14px;
+  left: 20px;
+}
+
+/* ---- A question: it turns over for its answer ---- */
+
+.v6 .v6-card[data-deck='questions'] {
+  background: none;
+  box-shadow: none;
+  perspective: 1100px;
+}
+
+.v6 .v6-flip {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+
+.v6 .v6-flip[data-flipped] {
+  transform: rotateY(180deg);
+}
+
+.v6 .v6-flip > .v6-face {
+  padding: 22px 22px 18px;
+  box-shadow: var(--v6-shadow);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.v6 .v6-face--question {
+  background: linear-gradient(165deg, #2b55cf, #0b1150 90%);
+  background: radial-gradient(95% 60% at 100% 0%, color-mix(in srgb, var(--tint) 62%, transparent), transparent 72%), linear-gradient(165deg, #2b55cf, #0b1150 90%);
+  /* A hairline of light round it: without one, dark cards on a dark table lose their edges */
+  box-shadow: var(--v6-shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.v6 .v6-face--answer {
+  background: #fff;
+  color: var(--v6-ink);
+  transform: rotateY(180deg);
+}
+
+.v6 .v6-question__n {
+  display: block;
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+
+.v6 .v6-question__q {
+  display: block;
+  margin: auto 0;
+  font-size: 31px;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.v6 .v6-question__back {
+  display: block;
+  flex: none;
+  color: var(--v6-ink-2);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.v6 .v6-question__a {
+  display: block;
+  min-height: 0;
+  margin: auto 0;
+  overflow-y: auto;
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.38;
+}
+
+.v6 .v6-question__todo {
+  display: block;
+  margin: auto 0;
+  padding: 18px;
+  border: 1.5px dashed rgba(11, 17, 80, 0.26);
+  border-radius: 18px;
+  color: var(--v6-ink-2);
+  font-size: 16.5px;
+  line-height: 1.38;
+}
+
+.v6 .v6-question__hint {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* ---- What letting go will do, stamped on the card as it moves ---- */
+
+/* One shows at a time: the script says which (data-way) and how strongly
+   (--show). The others are out of the page, not just see-through. */
+.v6 .v6-stamp {
+  --stamp: #12a35f;
+
+  position: absolute;
+  top: 24px;
+  z-index: 5;
+  display: none;
+  padding: 6px 12px 5px;
+  border: 3.5px solid var(--stamp);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--stamp);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1;
+  opacity: var(--show, 0);
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.v6 .v6-card[data-way='keep'] .v6-stamp--keep,
+.v6 .v6-card[data-way='next'] .v6-stamp--next,
+.v6 .v6-card[data-way='send'] .v6-stamp--send {
+  display: block;
+}
+
+.v6 .v6-stamp--keep {
+  left: 18px;
+  transform: rotate(-11deg) scale(calc(0.84 + 0.16 * var(--show, 0)));
+}
+
+.v6 .v6-stamp--next {
+  --stamp: #f0492c;
+
+  right: 18px;
+  transform: rotate(11deg) scale(calc(0.84 + 0.16 * var(--show, 0)));
+}
+
+.v6 .v6-stamp--send {
+  --stamp: #2b55cf;
+
+  top: auto;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) scale(calc(0.84 + 0.16 * var(--show, 0)));
+}
+
+/* Far enough that letting go does it: the stamp fills in */
+.v6 .v6-card[data-armed] .v6-stamp {
+  background: var(--stamp);
+  color: #fff;
+}
+
+/* ---- The end of a deck ---- */
+
+.v6 .v6-end {
+  position: absolute;
+  inset: 0 0 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.34);
+  border-radius: 28px;
+  text-align: center;
+  animation: v6-deal 0.4s ease;
+}
+
+.v6 .v6-end__mark {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.v6 .v6-end__text {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 17px;
+}
+
+.v6 .v6-end__again {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 50px;
+  padding: 0 24px;
+  border-radius: 25px;
+  background: #fff;
+  color: var(--v6-ink);
+  font-size: 16.5px;
+  font-weight: 650;
+  transition: transform 0.16s ease;
+}
+
+.v6 .v6-end__again:active {
+  transform: scale(0.96);
+}
+
+.v6 .v6-end__others {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.v6 .v6-end__others button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 21px;
+  background: var(--v6-glass);
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.v6 .v6-end__others i {
+  font-size: 12.5px;
+  font-style: normal;
+  opacity: 0.62;
+}
+
+/* ---- Under the deck: the same things as the flicks, as buttons ---- */
+
+.v6 .v6-actions {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px 14px 2px;
+}
+
+.v6 .v6-act {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 62px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  transition: opacity 0.2s ease;
+}
+
+.v6 .v6-act__disc {
+  display: grid;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 10px 22px -8px rgba(2, 4, 34, 0.6);
+  color: #f0492c;
+  place-items: center;
+  transition: transform 0.16s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.v6 .v6-act--keep .v6-act__disc {
+  background: linear-gradient(150deg, #ff7ab6, #ff4d6d);
+  color: #fff;
+}
+
+.v6 .v6-act--small {
+  margin-top: 7px;
+}
+
+.v6 .v6-act--small .v6-act__disc {
+  width: 46px;
+  height: 46px;
+  background: var(--v6-glass);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.22);
+  color: #fff;
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+}
+
+.v6 .v6-act__label {
+  white-space: nowrap;
+}
+
+.v6 .v6-act:active:not(:disabled) .v6-act__disc {
+  transform: scale(0.88);
+}
+
+.v6 .v6-act:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+/* ---- The rest of the site, in a row at the bottom ---- */
+
+.v6 .v6-links {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px calc(var(--safe-bottom) + 10px);
+}
+
+.v6 .v6-links :is(button, a) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A finger's worth to press, without the row growing */
+.v6 .v6-links :is(button, a)::after {
+  content: '';
+  position: absolute;
+  inset: -6px -2px;
+}
+
+.v6 .v6-links :is(button, a):active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* A word on the table for a moment */
+.v6 .v6-toast {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  z-index: 20;
+  padding: 9px 16px;
+  border-radius: 20px;
+  background: rgba(8, 11, 52, 0.86);
+  box-shadow: 0 8px 22px -8px rgba(2, 4, 34, 0.6), inset 0 0 0 0.5px rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 650;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: v6-toast 0.28s var(--ph-ease);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+/* ---- The hand: what has been kept, in a sheet ---- */
+
+.v6 .v6-hand {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.v6 .v6-hand__shade {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: rgba(3, 5, 34, 0.56);
+  cursor: default;
+  transition: opacity 0.24s ease;
+  animation: v6-fade 0.26s ease;
+}
+
+.v6 .v6-hand[data-leaving] .v6-hand__shade {
+  opacity: 0;
+}
+
+.v6 .v6-hand__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 86%;
+  padding: 0 16px calc(var(--safe-bottom) + 16px);
+  border-radius: 26px 26px 0 0;
+  outline: none;
+  background: #f2f2f7;
+  box-shadow: 0 -12px 44px rgba(2, 4, 34, 0.36);
+  color: #000;
+  animation: v6-rise 0.4s var(--ph-ease);
+}
+
+.v6 .v6-hand__bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 4px 12px;
+  touch-action: none;
+}
+
+/* The grabber: it pulls down */
+.v6 .v6-hand__bar::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 36px;
+  height: 5px;
+  margin-left: -18px;
+  border-radius: 3px;
+  background: rgba(60, 60, 67, 0.3);
+}
+
+.v6 .v6-hand__bar h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.v6 .v6-hand__bar h3 i {
+  color: rgba(60, 60, 67, 0.5);
+  font-size: 17px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.v6 .v6-hand__close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.16);
+  color: rgba(60, 60, 67, 0.7);
+  place-items: center;
+}
+
+.v6 .v6-hand__none {
+  display: block;
+  padding: 18px 14px 34px;
+  color: rgba(60, 60, 67, 0.72);
+  font-size: 16.5px;
+  line-height: 1.4;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.v6 .v6-hand__list {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 16px;
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.v6 .v6-hand__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 10px;
+}
+
+.v6 .v6-hand__item + .v6-hand__item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 62px;
+  border-top: 0.5px solid rgba(60, 60, 67, 0.2);
+}
+
+.v6 .v6-hand__open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 4px 11px 12px;
+  text-align: left;
+}
+
+.v6 button.v6-hand__open:active {
+  opacity: 0.6;
+}
+
+.v6 .v6-hand__lead {
+  display: grid;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+}
+
+.v6 .v6-hand__q {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(165deg, #2b55cf, #0b1150);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 800;
+  place-items: center;
+}
+
+.v6 .v6-hand__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v6 .v6-hand__text b {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.v6 .v6-hand__text span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgba(60, 60, 67, 0.7);
+  font-size: 13.5px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.v6 .v6-hand__drop {
+  position: relative;
+  display: grid;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.13);
+  color: rgba(60, 60, 67, 0.55);
+  place-items: center;
+}
+
+.v6 .v6-hand__drop::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.v6 .v6-hand__share {
+  flex: none;
+  gap: 8px;
+}
+
+/* ---- Narrow and short phones ---- */
+
+@media (max-width: 359px) {
+  .v6 .v6-switch__deck {
+    font-size: 13px;
+  }
+
+  .v6 .v6-switch__deck i {
+    display: none;
+  }
+
+  .v6 .v6-kept {
+    min-width: 52px;
+    padding: 0 10px;
+  }
+
+  .v6 .v6-table {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .v6 .v6-actions {
+    gap: 8px;
+  }
+
+  .v6 .v6-links {
+    gap: 5px;
+  }
+
+  .v6 .v6-links :is(button, a) {
+    padding: 0 10px;
+    font-size: 12.5px;
+  }
+
+  .v6 .v6-company__name,
+  .v6 .v6-question__q {
+    font-size: 27px;
+  }
+}
+
+@media (max-height: 660px) {
+  .v6 .v6-top {
+    padding-top: 6px;
+  }
+
+  .v6 .v6-table {
+    padding-top: 9px;
+    padding-bottom: 0;
+  }
+
+  .v6 .v6-card,
+  .v6 .v6-end {
+    border-radius: 24px;
+  }
+
+  .v6 .v6-face--person {
+    gap: 9px;
+    padding: 14px 16px 10px;
+  }
+
+  .v6 .v6-actions {
+    padding-top: 2px;
+  }
+
+  .v6 .v6-act {
+    min-width: 54px;
+  }
+
+  .v6 .v6-act__disc {
+    width: 50px;
+    height: 50px;
+  }
+
+  .v6 .v6-act--small {
+    margin-top: 5px;
+  }
+
+  .v6 .v6-act--small .v6-act__disc {
+    width: 40px;
+    height: 40px;
+  }
+
+  .v6 .v6-act__label {
+    display: none;
+  }
+
+  .v6 .v6-links {
+    padding-top: 6px;
+    padding-bottom: calc(var(--safe-bottom) + 8px);
+  }
+
+  .v6 .v6-face--company {
+    padding: 14px 18px 34px;
+  }
+
+  .v6 .v6-face--company .logo {
+    zoom: 0.66;
+  }
+
+  .v6 .v6-company__kind {
+    margin-top: 12px;
+  }
+
+  .v6 .v6-company__name {
+    font-size: 25px;
+  }
+
+  .v6 .v6-company__blurb {
+    margin-top: 6px;
+    font-size: 15px;
+  }
+
+  .v6 .v6-company__visit {
+    height: 40px;
+    margin-top: 12px;
+    font-size: 14.5px;
+  }
+
+  .v6 .v6-flip > .v6-face {
+    padding: 16px 18px 14px;
+  }
+
+  .v6 .v6-question__q {
+    font-size: 25px;
+  }
+
+  .v6 .v6-question__todo {
+    padding: 14px;
+    font-size: 15px;
+  }
+
+  .v6 .v6-end {
+    gap: 9px;
+  }
+
+  .v6 .v6-end__mark {
+    font-size: 26px;
+  }
+
+  .v6 .v6-end__text {
+    margin-bottom: 0;
+  }
+
+  .v6 .v6-end__again {
+    height: 44px;
+  }
+}
+
+/* ---- Motion ---- */
+
+@keyframes v6-deal {
+  from {
+    opacity: 0;
+    transform: translateY(34px) scale(0.92);
+  }
+}
+
+@keyframes v6-pop {
+  from {
+    transform: scale(0.4);
+  }
+}
+
+@keyframes v6-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes v6-rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes v6-toast {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v6 .v6-card,
+  .v6 .v6-end,
+  .v6 .v6-kept b,
+  .v6 .v6-toast,
+  .v6 .v6-hand__shade,
+  .v6 .v6-hand__panel {
+    animation: none;
+  }
+
+  .v6 .v6-flip,
+  .v6 .v6-switch::before,
+  .v6 .v6-act__disc,
+  .v6 .v6-stack[data-anim] .v6-card:not([data-pos='-1']),
+  .v6 .v6-stack[data-anim] .v6-card:not([data-pos='-1'])::after {
+    transition: none;
+  }
 }

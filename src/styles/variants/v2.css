@@ -1,6 +1,877 @@
-/* Version 2. Everything here is under .v2. */
+/* Version 2: Messages, with apps where the keyboard is. Everything here is
+   under .v2. The conversation is the shared one (phone.css); this adds the
+   plus beside the field, the apps that come up in the keyboard's place, what
+   they send into the thread, and the times behind the thread's right edge. */
 
 .v2 {
   position: absolute;
   inset: 0;
+}
+
+/* The apps reach the bottom of the screen themselves; the field keeps clear of
+   the home indicator only while they are away */
+.v2 .ph-page[data-fixed] > .ph-page__content {
+  padding-bottom: 0;
+}
+
+.v2 .composer {
+  gap: 8px;
+  padding: 6px 12px calc(8px + var(--safe-bottom)) 10px;
+  transition: padding-bottom 0.4s var(--ph-ease);
+}
+
+.v2[data-apps] .composer {
+  padding-bottom: 8px;
+}
+
+/* ---- The thread, and the times behind its right edge ---- */
+
+.v2-thread {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* As wide as the screen, however long a name over a bubble runs */
+.v2-thread > .chat__pane {
+  min-width: 0;
+}
+
+/* Up and down is the thread's own scrolling; a drag across it is ours */
+.v2 .chat__scroll {
+  touch-action: pan-y;
+}
+
+.v2-times {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 78px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.v2-times > span {
+  position: absolute;
+  right: 12px;
+  margin-top: -8px;
+  color: #8e8e93;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The suggested replies, slimmer: the apps do most of the saying ---- */
+
+.v2 .ph-replies {
+  gap: 6px;
+  padding: 6px 12px 0;
+}
+
+.v2 .ph-reply {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+/* ---- The plus ---- */
+
+.v2-plus {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e9e9eb;
+  color: #6c6c72;
+  transition: transform 0.36s var(--ph-ease), background-color 0.2s ease, color 0.2s ease, opacity 0.3s ease;
+}
+
+.v2-plus:active {
+  background: #dcdce0;
+}
+
+.v2-plus[aria-expanded='true'] {
+  background: var(--ss-accent);
+  color: #fff;
+  transform: rotate(45deg);
+}
+
+.v2-plus[aria-disabled] {
+  opacity: 0.4;
+}
+
+/* ---- What the apps send into the thread ---- */
+
+/* The visitor's own, of a kind that isn't words: on the right, as their bubbles are */
+.v2 .chat-attach--me {
+  justify-content: flex-end;
+  margin-top: 8px;
+  will-change: transform;
+}
+
+/* A sticker: the logo, large, with the white edge a die-cut sticker has */
+.v2 .chat-sticker {
+  padding: 6px 4px 6px 0;
+  animation: none;
+}
+
+.v2 .chat-sticker .logo,
+.v2 .chat-sticker__ghost {
+  border-radius: 24%;
+  box-shadow: 0 0 0 4px #fff, 0 0 0 4.5px rgba(0, 0, 0, 0.1), 0 6px 16px rgba(20, 30, 60, 0.2);
+  /* A tilt of its own: the copy that flies in is moved by its transform */
+  rotate: -3deg;
+}
+
+.v2 .chat-sticker .logo::after,
+.v2 .chat-sticker__ghost::after {
+  box-shadow: none;
+}
+
+/* A company, as a link Niv sends */
+.v2 .chat-link--company .chat-link__art {
+  height: 104px;
+  background: linear-gradient(180deg, #f6f7fb, #e2e6ef);
+}
+
+.v2 .chat-link--company .logo {
+  border-radius: 22.5%;
+}
+
+/* A picture Niv sends: a photo or a video from a drop */
+.v2 .chat-media {
+  position: relative;
+  display: block;
+  width: 216px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #f0f1f4;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+  transition: filter 0.15s ease;
+}
+
+.v2 .chat-media[data-kind='video'] {
+  aspect-ratio: 16 / 10;
+  background: #1d1d1f;
+}
+
+.v2 .chat-media:active {
+  filter: brightness(0.9);
+}
+
+.v2 .chat-media > img,
+.v2 .chat-media > video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.v2 .chat-media__slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background-image: repeating-linear-gradient(135deg, transparent 0, transparent 10px, rgba(0, 0, 0, 0.028) 10px, rgba(0, 0, 0, 0.028) 12px);
+  color: #8e8e93;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v2 .chat-media[data-kind='video'] .chat-media__slot {
+  background-image: none;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* ---- The apps, where the keyboard would be ---- */
+
+.v2-apps {
+  flex: none;
+  height: 0;
+  overflow: hidden;
+  overflow: clip;
+  background: #f2f2f7;
+  transition: height 0.4s var(--ph-ease);
+}
+
+.v2-apps[data-open] {
+  height: var(--apps-h);
+}
+
+/* Laid out at its full height from the start, so nothing in it moves while it comes up */
+.v2-apps__inner {
+  display: flex;
+  flex-direction: column;
+  height: var(--apps-h);
+  box-shadow: inset 0 0.5px 0 var(--ph-separator);
+}
+
+/* The strip that switches between them */
+.v2-strip {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 6px 6px 5px;
+  /* A swipe down across it puts the apps away */
+  touch-action: none;
+}
+
+.v2-strip__app {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 0 4px;
+  border-radius: 13px;
+  color: var(--ph-label-2);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.v2-strip__app[aria-selected='true'] {
+  background: rgba(118, 118, 128, 0.16);
+  color: #000;
+}
+
+.v2-strip__icon {
+  display: block;
+  width: 30px;
+  height: 30px;
+  filter: drop-shadow(0 1px 1.5px rgba(20, 30, 60, 0.18));
+  transition: transform 0.3s var(--ph-ease);
+}
+
+.v2-strip__app:active .v2-strip__icon {
+  transform: scale(0.88);
+}
+
+.v2-strip__label {
+  font-size: clamp(9.5px, 2.9vw, 10.5px);
+  font-weight: 500;
+  line-height: 13px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.v2-strip__app[aria-selected='true'] .v2-strip__label {
+  font-weight: 600;
+}
+
+/* People has no window on the Mac to borrow an icon from: a monogram's gray, with faces */
+.v2-glyph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 24%;
+  background: linear-gradient(180deg, #a9afbd, #838791);
+  color: #fff;
+}
+
+.v2-apps__body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: calc(12px + var(--safe-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  animation: v2-app-in 0.26s ease both;
+}
+
+.v2-apps__body::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes v2-app-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* What stays put at the top of an app while the rest scrolls under it */
+.v2-apps__pinned {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(#f2f2f7 78%, rgba(242, 242, 247, 0));
+}
+
+.v2-apps__pinned .ph-chips {
+  gap: 6px;
+  padding: 2px 12px 10px;
+}
+
+.v2-apps__pinned .ph-chip {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background: rgba(118, 118, 128, 0.14);
+  font-size: 14px;
+}
+
+.v2-apps__pinned .ph-chip[aria-pressed='true'] {
+  background: #1d1d1f;
+}
+
+/* People: every monogram, by first name */
+.v2-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  row-gap: 8px;
+  padding: 4px 8px 0;
+}
+
+.v2-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 2px;
+  border-radius: 14px;
+}
+
+.v2-person__face {
+  position: relative;
+  display: block;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.v2-person:active .v2-person__face {
+  filter: brightness(0.86);
+  transform: scale(0.9);
+}
+
+/* In the thread already: a blue dot, as a conversation with something in it has */
+.v2-person[data-here] .v2-person__face::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #f2f2f7;
+  border-radius: 50%;
+  background: var(--ss-accent);
+}
+
+.v2-person__name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 14px;
+  letter-spacing: 0;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Portfolio: a sheet of stickers, four across */
+.v2-stickers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  row-gap: 6px;
+  padding: 2px 8px 0;
+}
+
+.v2-sticker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 2px 3px;
+  border-radius: 16px;
+}
+
+.v2-sticker__logo {
+  display: flex;
+  transition: transform 0.22s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.2s ease;
+}
+
+.v2-sticker:active .v2-sticker__logo {
+  transform: scale(0.88) rotate(-4deg);
+}
+
+/* Peeled off and on its way to the thread: its place on the sheet waits for it */
+.v2-sticker__logo[data-peeled] {
+  opacity: 0.25;
+  transform: scale(0.82);
+}
+
+.v2-sticker__name {
+  max-width: 100%;
+  overflow: hidden;
+  color: rgba(60, 60, 67, 0.82);
+  font-size: 11.5px;
+  line-height: 14px;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* FAQs: each question, ready to send */
+.v2-faqs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 12px 0;
+}
+
+.v2-faq {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 7px 7px 14px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  font-size: 16px;
+  line-height: 20px;
+  text-align: left;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+.v2-faq:active {
+  background: #e9e9ee;
+  transform: scale(0.98);
+}
+
+.v2-faq__q {
+  flex: 1;
+  min-width: 0;
+  color: var(--ss-accent);
+}
+
+.v2-faq__go {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ss-accent);
+  color: #fff;
+}
+
+.v2-faq[data-asked] .v2-faq__q {
+  color: var(--ph-label-2);
+}
+
+.v2-faq[data-asked] .v2-faq__go {
+  background: rgba(118, 118, 128, 0.16);
+  color: var(--ph-label-2);
+}
+
+/* Case studies: six locked, and where the key goes */
+.v2-apps__body[data-app='cases'] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.v2-cases {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 4px 12px 0;
+}
+
+/* The rows scroll if they must; the field under them is always there */
+.v2-cases__list {
+  display: grid;
+  flex: 0 1 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-height: 0;
+  padding: 1px;
+  margin: -1px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.v2-cases__list::-webkit-scrollbar {
+  display: none;
+}
+
+.v2-case {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 10px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+.v2-case:active {
+  background: #e9e9ee;
+  transform: scale(0.97);
+}
+
+.v2-case__logo {
+  position: relative;
+  display: block;
+  flex: none;
+}
+
+.v2-case__logo .logo {
+  display: grid;
+}
+
+.v2-case__lock {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: #1d1d1f;
+  color: #fff;
+}
+
+.v2-case__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-cases__form {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  margin-top: auto;
+  padding: 0 5px 0 14px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #d4d4d8;
+}
+
+.v2-cases__form:focus-within {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ss-accent) 70%, transparent);
+}
+
+.v2-cases__form[data-nudged] {
+  animation: v2-nudge 0.4s ease;
+}
+
+@keyframes v2-nudge {
+  20% {
+    transform: translateX(-7px);
+  }
+  45% {
+    transform: translateX(6px);
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+}
+
+.v2-cases__key {
+  flex: none;
+  color: var(--ph-label-2);
+}
+
+.v2-cases__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  color: #000;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.v2-cases__input::placeholder {
+  color: #b4b4ba;
+}
+
+.v2-cases__input:focus-visible {
+  outline: none;
+}
+
+.v2-cases__input[aria-invalid] {
+  color: #d70015;
+}
+
+.v2-cases__send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ss-accent);
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.24s var(--ph-ease);
+}
+
+.v2-cases__send[data-ready] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.v2-cases__send[data-ready]:active {
+  transform: scale(0.9);
+}
+
+.v2-cases__done {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 44px;
+  margin-top: auto;
+  border-radius: 22px;
+  background: rgba(52, 199, 89, 0.16);
+  color: #1c8a3c;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* VIP: the drops' photos and videos, three across */
+.v2-media {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px 12px 0;
+}
+
+.v2-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.v2-tile[data-kind='video'] {
+  background: #1d1d1f;
+}
+
+.v2-tile:active {
+  filter: brightness(0.88);
+  transform: scale(0.95);
+}
+
+.v2-tile > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.v2-tile__slot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-bottom: 30px;
+  background-image: repeating-linear-gradient(135deg, transparent 0, transparent 9px, rgba(0, 0, 0, 0.03) 9px, rgba(0, 0, 0, 0.03) 11px);
+  color: #9a9aa2;
+}
+
+.v2-tile[data-kind='video'] .v2-tile__slot {
+  background-image: none;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.v2-tile__cap {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  left: 6px;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #1d1d1f;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0;
+  text-align: left;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.v2-tile[data-kind='video'] .v2-tile__cap {
+  color: #fff;
+}
+
+/* The one-pager: one thing to ask for */
+.v2-pager {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 100%;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.v2-pager__art {
+  display: block;
+  width: 62px;
+  height: 62px;
+  filter: drop-shadow(0 4px 8px rgba(20, 30, 70, 0.18));
+}
+
+.v2-pager__text {
+  display: flex;
+  flex-direction: column;
+  margin: 4px 0 12px;
+  font-size: 17px;
+  line-height: 22px;
+}
+
+.v2-pager__text b {
+  font-weight: 600;
+}
+
+.v2-pager__text span {
+  color: var(--ph-label-2);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+
+.v2-pager .ph-button {
+  min-height: 46px;
+  border-radius: 23px;
+}
+
+/* A narrow phone: the longest names still fit */
+@media (max-width: 350px) {
+  .v2-case {
+    gap: 8px;
+    padding: 0 8px;
+    font-size: 14px;
+  }
+}
+
+/* A short phone: with the apps up, the conversation's bar gives up its name so the conversation keeps some room */
+@media (max-height: 700px) {
+  .v2 .ph-thread-id__name {
+    transition: opacity 0.2s ease;
+  }
+
+  .v2 .ph-thread-id .shrug-avatar {
+    transform-origin: 50% 0;
+    transition: transform 0.36s var(--ph-ease);
+  }
+
+  .v2 .ph-nav::before,
+  .v2 .ph-bar-button {
+    transition: opacity 0.2s ease, transform 0.36s var(--ph-ease);
+  }
+
+  .v2[data-apps] .ph-thread-id__name {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .v2[data-apps] .ph-thread-id .shrug-avatar {
+    transform: scale(0.78);
+  }
+
+  .v2[data-apps] .ph-bar-button {
+    transform: scale(0.82);
+    transform-origin: 100% 0;
+  }
+
+  /* The bar's fade is shortened to match: it covers the face, no further */
+  .v2[data-apps] .ph-nav[data-center]::before {
+    transform: scaleY(0.6);
+    transform-origin: 50% 0;
+  }
+
+  .v2[data-apps] .chat__flow {
+    padding-top: 62px;
+  }
+}
+
+/* ---- With the real keyboard up for the email among the apps: only that field stays, above it ---- */
+
+.ph[data-keyboard] .v2[data-typing] .v2-apps,
+.ph[data-keyboard] .v2[data-typing] .v2-apps__inner {
+  height: auto;
+}
+
+.ph[data-keyboard] .v2[data-typing] .v2-strip,
+.ph[data-keyboard] .v2[data-typing] .v2-cases__list,
+.ph[data-keyboard] .v2[data-typing] .composer,
+.ph[data-keyboard] .v2[data-typing] .ph-replies {
+  display: none;
+}
+
+.ph[data-keyboard] .v2[data-typing] .v2-apps__body {
+  padding: 8px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-apps,
+  .v2 .composer,
+  .v2-plus,
+  .v2-sticker__logo,
+  .v2-strip__icon {
+    transition-duration: 0.01s;
+  }
+
+  .v2-apps__body,
+  .v2-cases__form[data-nudged] {
+    animation: none;
+  }
 }

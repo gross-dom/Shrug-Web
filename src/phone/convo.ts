@@ -1,7 +1,9 @@
 import { BETWEEN, QUESTION, TOTAL, WRITING } from '../apps/chat'
+import { ALL } from '../apps/portfolio-ui'
 import { answer, isEmail, term } from '../apps/Terminal'
-import { DROPS } from '../data/drops'
+import { DROPS, MEDIA } from '../data/drops'
 import { ANSWER_PLACEHOLDER, FAQS } from '../data/faqs'
+import { PEOPLE } from '../data/people'
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
 import { SITE } from '../data/site'
 import { prefersReducedMotion } from '../os/dom'
@@ -21,16 +23,26 @@ import type { PhoneApp } from './nav'
 /** The windows of Niv's Mac he can send a screenshot of. */
 export type ShotApp = Exclude<PhoneApp, 'messages'>
 
-export type Item =
-  /** A line the conversation itself says, as Messages does: who named it, who was added. */
-  | { key: string; kind: 'note'; text: string }
+export type Item = (
+  | /** A line the conversation itself says, as Messages does: who named it, who was added. */
+  { key: string; kind: 'note'; text: string }
   | { key: string; kind: 'niv'; text: string; typing: boolean; todo?: boolean }
   | { key: string; kind: 'person'; index: number; typing: boolean }
   /** The visitor's own. `from` is the thing on screen its words lift out of. */
   | { key: string; kind: 'you'; text: string; from: 'field' | 'chip' }
+  /** A company's logo, sent by the visitor as a sticker. */
+  | { key: string; kind: 'sticker'; company: string }
   | { key: string; kind: 'shot'; app: ShotApp }
   | { key: string; kind: 'link' }
+  /** A company, as a link Niv sends: its logo, its name, where it lives. */
+  | { key: string; kind: 'company'; company: string }
+  /** A photo or video from a drop, by its place in MEDIA. */
+  | { key: string; kind: 'media'; index: number }
   | { key: string; kind: 'action'; act: 'people' | 'share' | 'reach' }
+) & {
+  /** When it was sent, or landed. */
+  at?: number
+}
 
 export type TopicId = 'people' | 'portfolio' | 'questions' | 'cases' | 'drops' | 'onepager' | 'reach'
 
@@ -62,6 +74,8 @@ export interface Convo {
   awaiting: 'email' | null
   /** Messages the visitor has loved, by key. */
   loved: string[]
+  /** People asked for by name, who answered ahead of their turn: the group doesn't have them answer twice. */
+  early: number[]
 }
 
 const TOPICS: { id: TopicId; label: string; words: RegExp }[] = [
@@ -74,7 +88,7 @@ const TOPICS: { id: TopicId; label: string; words: RegExp }[] = [
   { id: 'reach', label: 'how do i reach you?', words: /reach|contact|text|e-?mail|call|talk|touch|number/i },
 ]
 
-const fresh = (): Convo => ({ items: [], replied: 0, flowing: false, done: false, started: false, startedAt: Date.now(), ready: false, asked: [], faqs: [], mode: 'topics', awaiting: null, loved: [] })
+const fresh = (): Convo => ({ items: [], replied: 0, flowing: false, done: false, started: false, startedAt: Date.now(), ready: false, asked: [], faqs: [], mode: 'topics', awaiting: null, loved: [], early: [] })
 
 export const convo = createStore<Convo>(fresh())
 
@@ -122,7 +136,7 @@ const id = () => `m-${++serial}`
 
 /** Adds a message. A second screenshot of the same window takes the place of the
  * first, so the thread never holds two copies of one window. */
-const push = (item: Item) => convo.set((s) => ({ ...s, items: [...(item.kind === 'shot' ? s.items.filter((i) => !(i.kind === 'shot' && i.app === item.app)) : s.items), item] }))
+const push = (item: Item) => convo.set((s) => ({ ...s, items: [...(item.kind === 'shot' ? s.items.filter((i) => !(i.kind === 'shot' && i.app === item.app)) : s.items), { at: Date.now(), ...item }] }))
 const patch = (key: string, change: Partial<Item>) => convo.set((s) => ({ ...s, items: s.items.map((item) => (item.key === key ? ({ ...item, ...change } as Item) : item)) }))
 
 // ---- Niv ----
@@ -135,7 +149,7 @@ async function nivSays(my: number, ...lines: (string | { text: string; todo: tru
     push({ key, kind: 'niv', text: '', typing: true })
     await wait(Math.min(1900, 650 + text.length * 22))
     if (my !== epoch) return false
-    patch(key, { text, typing: false, todo: typeof line === 'string' ? undefined : true })
+    patch(key, { text, typing: false, at: Date.now(), todo: typeof line === 'string' ? undefined : true })
     await wait(420)
     if (my !== epoch) return false
   }
@@ -170,10 +184,15 @@ async function flow() {
   while (convo.get().flowing && convo.get().replied < TOTAL) {
     const index = convo.get().replied
     const key = `p-${index}`
+    // Asked for by name already: they have had their say
+    if (convo.get().early.includes(index)) {
+      convo.set((s) => ({ ...s, replied: index + 1 }))
+      continue
+    }
     push({ key, kind: 'person', index, typing: true })
     await wait(WRITING)
     if (my !== epoch) return
-    convo.set((s) => ({ ...s, replied: index + 1, items: s.items.map((item) => (item.key === key ? { ...item, typing: false } : item)) as Item[] }))
+    convo.set((s) => ({ ...s, replied: index + 1, items: s.items.map((item) => (item.key === key ? { ...item, typing: false, at: Date.now() } : item)) as Item[] }))
     await wait(BETWEEN)
     if (my !== epoch) return
   }
@@ -183,6 +202,9 @@ async function flow() {
     reply((mine) => nivSays(mine, SITE.mark))
   }
 }
+
+/** How many of the group have answered, in turn or asked for by name. */
+export const answered = (s: Convo) => s.replied + s.early.filter((i) => i >= s.replied).length
 
 /** The group holds on: the visitor and Niv are talking. */
 export const hold = () => convo.set((s) => (s.flowing ? { ...s, flowing: false } : s))
@@ -325,12 +347,13 @@ export function pick(chip: Chip) {
   about(chip.id as TopicId)
 }
 
-/** The visitor typed something of their own. */
-export function say(text: string) {
+/** The visitor typed something of their own. `from` is where its words lift out
+ * of: the message field, or wherever `chip-origin` has been put. */
+export function say(text: string, from: 'field' | 'chip' = 'field') {
   const body = text.trim()
   if (!body) return
   hold()
-  you(body, 'field')
+  you(body, from)
   // An email is only ever one thing here: asking for the case studies, whether or not Niv has got as far as asking for it
   if (isEmail(body)) {
     convo.set((c) => ({ ...c, awaiting: null, asked: c.asked.includes('cases') ? c.asked : [...c.asked, 'cases'] }))
@@ -347,6 +370,72 @@ export function say(text: string) {
   const topic = TOPICS.find((t) => t.words.test(body))
   if (topic) return about(topic.id)
   reply((my) => nivSays(my, SITE.mark, 'try one of the replies below.'))
+}
+
+// ---- Said from the apps, where the keyboard would be ----
+
+/** Whether someone's reply is in the conversation yet (or on its way in). */
+export const isHere = (index: number) => convo.get().items.some((i) => i.kind === 'person' && i.index === index)
+
+/** Has one person answer now, whatever their turn. With `asking`, the visitor
+ * asks for them by name first and they take a moment to write; without, their
+ * reply is simply there. False if it already was. */
+export function bring(index: number, asking = false) {
+  if (!PEOPLE[index] || isHere(index)) return false
+  const key = `p-${index}`
+  convo.set((s) => ({ ...s, early: [...s.early, index] }))
+  if (!asking) {
+    push({ key, kind: 'person', index, typing: false })
+    return true
+  }
+  hold()
+  you(`@${PEOPLE[index].name}`, 'chip')
+  reply(async (my) => {
+    push({ key, kind: 'person', index, typing: true })
+    await wait(WRITING)
+    if (my === epoch) patch(key, { typing: false, at: Date.now() })
+  })
+  return true
+}
+
+/** A company's logo, sent as a sticker. Niv says what it does and sends where it lives. */
+export function sendSticker(name: string) {
+  const company = ALL.find((c) => c.name === name)
+  if (!company) return
+  hold()
+  push({ key: id(), kind: 'sticker', company: name })
+  reply(async (my) => (await nivSays(my, company.blurb ?? `${company.vertical}.`)) && nivSends(my, { key: id(), kind: 'company', company: name }))
+}
+
+/** One of the FAQs, asked from the list of them. */
+export function askFaq(index: number) {
+  if (!FAQS[index]) return
+  hold()
+  you(FAQS[index].question, 'chip')
+  ask(index)
+}
+
+/** Asking after one case study. They are all private: the answer is the same. */
+export function askCase(name: string) {
+  hold()
+  you(`can i see the ${name} case study?`, 'chip')
+  about('cases')
+}
+
+/** Asking to see something from a drop: Niv sends the picture. */
+export function showMedia(index: number) {
+  const slot = MEDIA[index]
+  if (!slot) return
+  hold()
+  you(`show me ${slot.drop}`, 'chip')
+  reply((my) => nivSends(my, { key: id(), kind: 'media', index }))
+}
+
+/** Asking for the one-pager. */
+export function sendOnePager() {
+  hold()
+  you('send me the one-pager', 'chip')
+  about('onepager')
 }
 
 /** A double tap on a message loves it, or takes that back. */

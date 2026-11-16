@@ -116,8 +116,36 @@ function TilePreview() {
   return <div className="tile-preview" data-show={preview ? '' : undefined} style={r ? { left: r.x, top: r.y, width: r.w, height: r.h, zIndex: 9 + front } : undefined} aria-hidden />
 }
 
+/** Everything on the desktop but its wallpaper: the menu bar, the things left
+ * out on the desk, the windows and the Dock. The desktop draws it across the
+ * screen; the phone's "window" version draws it at desktop size and looks at
+ * it through the phone. */
+export function DesktopSurface() {
+  return (
+    <>
+      <MenuBar />
+      <DeskIcons />
+      <main className="os__windows">
+        <TilePreview />
+        {APP_IDS.map((id) => {
+          const Body = WINDOWS[id]
+          return (
+            <WindowFrame key={id} id={id}>
+              <Body />
+            </WindowFrame>
+          )
+        })}
+      </main>
+      <Dock />
+    </>
+  )
+}
+
 export function Desktop() {
   const saving = useStore(saver, (s) => s.on)
+  /** The screen is a phone's: the phone layout is what shows. */
+  const phone = useStore(wm, (s) => s.phone)
+  /** The desk the windows are on is too small for them (it is the screen's, on a phone). */
   const compact = useStore(wm, (s) => s.compact)
   const [booted, setBooted] = useState(false)
   /** The opening has played: the chat is open and under way. */
@@ -156,7 +184,7 @@ export function Desktop() {
           extra.forEach((id) => openApp(id, dockPoint(id)))
           startChat()
         }
-        if (query.has('saver') && !wm.get().compact) startSaver()
+        if (query.has('saver') && !wm.get().phone) startSaver()
       },
       quiet ? 0 : 520,
     )
@@ -176,32 +204,14 @@ export function Desktop() {
   }, [compact])
 
   return (
-    <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={compact || undefined}>
+    <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={phone || undefined}>
       <div className="os__wallpaper" aria-hidden>
         <div className="os__grain" />
       </div>
       <h1 className="sr-only">Shrug: what people say, the portfolio, FAQs and drops</h1>
-      {compact ? (
-        <Phone />
-      ) : (
-        <>
-          <MenuBar />
-          <DeskIcons />
-          <main className="os__windows">
-            <TilePreview />
-            {APP_IDS.map((id) => {
-              const Body = WINDOWS[id]
-              return (
-                <WindowFrame key={id} id={id}>
-                  <Body />
-                </WindowFrame>
-              )
-            })}
-          </main>
-          <Dock />
-        </>
-      )}
-      <ScreenSaver />
+      {phone ? <Phone /> : <DesktopSurface />}
+      {/* A phone has no screen saver, whatever desk its windows are on */}
+      {!phone && <ScreenSaver />}
     </div>
   )
 }
