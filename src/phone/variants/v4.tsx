@@ -396,6 +396,7 @@ function Viewer({
   const queued = useRef<0 | 1 | -1>(0)
   const reads = useRef(0)
   const waits = useRef<number[]>([])
+  const born = useRef(performance.now())
 
   const reels = LISTS[at.list]
   const reel = reels[at.reel]!
@@ -602,6 +603,8 @@ function Viewer({
   const down = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (closing || press.current || (e.pointerType === 'mouse' && e.button !== 0)) return
     if ((e.target as HTMLElement).closest('button, a')) return
+    // The second tap of a double tap on a ring is not a tap on the story it opened
+    if (performance.now() - born.current < 360) return
     if (busy.current) {
       // Tapping on through people faster than the box turns
       const box = e.currentTarget.getBoundingClientRect()
@@ -627,6 +630,7 @@ function Viewer({
       p.mode = Math.abs(dy) > Math.abs(dx) ? 'down' : 'across'
       clearTimeout(reads.current)
       setReading(false)
+      if (p.mode === 'down') root.current?.setAttribute('data-pull', '')
     }
     const dt = Math.max(1, e.timeStamp - p.last)
     // At either end there is nobody further: it gives, but not far. Upwards there is nothing at all.
@@ -655,6 +659,7 @@ function Viewer({
     clearTimeout(reads.current)
     setHeld(false)
     setReading(false)
+    root.current?.removeAttribute('data-pull')
     if (e.type === 'pointercancel') return p.mode ? settle(p.mode) : undefined
     // A drag that stopped before it was let go is not a flick
     const flick = e.timeStamp - p.last < 90 ? p.v : 0

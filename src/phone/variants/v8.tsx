@@ -76,8 +76,8 @@ interface Hold {
 interface Jar {
   /** Empties the jar and pours these in: `gap(k)` is the wait, in ms, before the one after the k-th. */
   pour(bodies: HTMLElement[], gap: (k: number) => number): void
-  /** The room there is. */
-  resize(width: number, height: number): void
+  /** The room there is, and how much of the top of it is written over. */
+  resize(width: number, height: number, clear: number): void
   /** Which way is down across the screen, each from -1 to 1. */
   down(x: number, y: number): void
   /** Everyone thrown up. */
@@ -103,6 +103,8 @@ interface Telling {
 function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: boolean): Jar {
   let W = 0
   let H = 0
+  /** How far down the writing over the top of the jar comes: the pile is kept below it. */
+  let top = 200
   let els: HTMLElement[] = []
   let n = 0
 
@@ -177,10 +179,11 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
   let owed = 0
   let quiet = 0
 
-  /** Sizes for everyone, by the room there is: enough to fill the jar about half way. */
+  /** Sizes for everyone, by the room there is: enough to fill the jar about half way, and to lie clear of what is written over the top of it. */
   function size() {
     if (!W || !H || !n) return
-    const room = Math.min(FULL, (0.84 * (H - 200)) / H)
+    // A pile of them is about seven parts disc to three of gaps, and its top is never level
+    const room = Math.min(FULL, (0.7 * (H - top - 24)) / H)
     const base = clamp(Math.sqrt((Math.max(0.24, room) * W * H) / (n * Math.PI)), 12, 27)
     let widest = 0
     for (let i = 0; i < n; i++) {
@@ -686,10 +689,11 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
       if (still) settle()
       else wake()
     },
-    resize(width, height) {
-      if (width === W && height === H) return
+    resize(width, height, clear) {
+      if (width === W && height === H && clear === top) return
       W = width
       H = height
+      top = clear
       size()
       if (still) settle()
       else wake()
@@ -744,13 +748,15 @@ const KEY: Relation[] = ['F', 'L', 'C']
 // button costs several times what a box does to restyle, and a body's box is
 // restyled every frame it moves.
 
-/** Everyone, as discs: made once, and from then on only the jar moves them. */
+/** Everyone, as discs: made once, and from then on only the jar moves them. A
+ * disc is the colour of the first way its person knows Shrug, and ringed in
+ * the colour of the second where there is one. */
 const People = memo(function People() {
   return (
     <>
       {PEOPLE.map((person, i) => (
         <div key={i} className="v8__body" data-body={i}>
-          <button type="button" className="v8__disc" data-r={person.relations[0] ?? 'N'} tabIndex={i ? -1 : 0} aria-label={`${person.name}, ${person.role}`}>
+          <button type="button" className="v8__disc" data-r={person.relations[0] ?? 'N'} data-also={person.relations[1]} data-all={person.relations.join('')} tabIndex={i ? -1 : 0} aria-label={`${person.name}, ${person.role}`}>
             {initials(person.name)}
           </button>
         </div>
@@ -789,6 +795,7 @@ const quickPour = () => 46
 
 export default function V8({ active }: { active: boolean }) {
   const host = useRef<HTMLDivElement>(null)
+  const head = useRef<HTMLElement>(null)
   const count = useRef<HTMLElement>(null)
   const ripple = useRef<HTMLElement>(null)
   const tag = useRef<HTMLDivElement>(null)
@@ -800,6 +807,8 @@ export default function V8({ active }: { active: boolean }) {
   const [logos, setLogos] = useState(false)
   /** ask: the phone has to be asked first. on: it is telling us how it is held. off: there is nothing to ask, or it said no. */
   const [motion, setMotion] = useState<'ask' | 'on' | 'off'>(() => (motionNeedsAsking() ? 'ask' : hasMotion() ? 'on' : 'off'))
+  /** One way of knowing Shrug, picked out: everyone else is dimmed. */
+  const [only, setOnly] = useState<Relation | null>(null)
   const still = prefersReducedMotion()
   const showing = useRef(mode)
   showing.current = mode
@@ -843,9 +852,12 @@ export default function V8({ active }: { active: boolean }) {
       still,
     )
     jar.current = made
-    made.resize(el.clientWidth, el.clientHeight)
-    const watch = new ResizeObserver(([entry]) => entry && made.resize(entry.contentRect.width, entry.contentRect.height))
+    // The room in the jar, and how far down it the words at the top come (their fade aside)
+    const fit = () => made.resize(el.clientWidth, el.clientHeight, Math.max(0, (head.current?.offsetHeight ?? 230) - 30))
+    fit()
+    const watch = new ResizeObserver(fit)
     watch.observe(el)
+    if (head.current) watch.observe(head.current)
     return () => {
       watch.disconnect()
       made.destroy()
@@ -923,8 +935,8 @@ export default function V8({ active }: { active: boolean }) {
   const total = mode === 'people' ? PEOPLE.length : ALL.length
 
   return (
-    <div className="v8" data-mode={mode} data-motion={motion}>
-      <header className="v8__top">
+    <div className="v8" data-mode={mode} data-motion={motion} data-only={(mode === 'people' && only) || undefined}>
+      <header ref={head} className="v8__top">
         <div className="v8__bar">
           <div className="v8__switch" role="group" aria-label="What is in the jar">
             <button type="button" aria-pressed={mode === 'people'} onClick={() => swap('people')}>
@@ -970,10 +982,20 @@ export default function V8({ active }: { active: boolean }) {
           {still ? '' : motion === 'on' ? ' Tip your phone and they slide.' : ' Drag one to throw it.'}
         </p>
         {mode === 'people' && (
-          <ul className="v8__key" aria-label="What the colours mean">
+          <ul className="v8__key" aria-label="What the colours mean: pick one out">
             {KEY.map((r) => (
-              <li key={r} data-r={r}>
-                {RELATION_LABEL[r]}
+              <li key={r}>
+                <button
+                  type="button"
+                  data-r={r}
+                  aria-pressed={only === r}
+                  onClick={() => {
+                    haptic()
+                    setOnly(only === r ? null : r)
+                  }}
+                >
+                  {RELATION_LABEL[r]}
+                </button>
               </li>
             ))}
           </ul>

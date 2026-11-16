@@ -449,12 +449,17 @@
   inset: 0;
   background: #05061c;
   opacity: var(--dim, 1);
+  transition: opacity 0.3s ease;
   animation: v4-dim 0.3s ease backwards;
+}
+
+/* Under a finger it keeps up with the finger */
+.v4-viewer[data-pull]::before {
+  transition: none;
 }
 
 .v4-viewer[data-closing]::before {
   opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
 @keyframes v4-dim {

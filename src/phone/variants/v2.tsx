@@ -1,5 +1,5 @@
 import '../../styles/variants/v2.css'
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { ArrowUp, Check, Image as ImageIcon, Lock, Play, Plus, UsersRound } from 'lucide-react'
 import { TOTAL } from '../../apps/chat'
 import { clock, GROUP_NAME, PersonAvatar, Scroller } from '../../apps/chat-ui'
@@ -300,6 +300,8 @@ function useTimes() {
   const [times, setTimes] = useState<Time[] | null>(null)
   const drag = useRef<{ id: number; x: number; y: number; on: boolean; moved: Moved[] } | null>(null)
   const settling = useRef<{ moved: Moved[]; timer: ReturnType<typeof setTimeout> } | null>(null)
+  /** When the last pull was let go of: a click that ends one isn't a tap on what was under it. */
+  const pulledAt = useRef(0)
 
   const finish = () => {
     const s = settling.current
@@ -380,6 +382,7 @@ function useTimes() {
     if (!d || d.id !== e.pointerId) return
     drag.current = null
     if (!d.on) return
+    pulledAt.current = e.timeStamp
     const moved = layer.current ? [...d.moved, { el: layer.current, k: 1 }] : d.moved
     const still = prefersReducedMotion()
     for (const { el } of moved) {
@@ -399,7 +402,13 @@ function useTimes() {
     </div>
   )
 
-  return { wrap, foot, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up } }
+  const click = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (e.timeStamp - pulledAt.current > 350) return
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  return { wrap, foot, handlers: { onPointerDown: down, onPointerMove: move, onPointerUp: up, onPointerCancel: up, onClickCapture: click } }
 }
 
 // ---- The screen ----
@@ -525,16 +534,10 @@ export default function V2({ active }: { active: boolean }) {
           <div ref={times.wrap} className="v2-thread" {...times.handlers}>
             <Scroller label={GROUP_NAME} nodes={nodes} jump={jump} onJumped={clearJump} active={active} onTap={onTap} foot={times.foot} />
           </div>
-          <Replies
-            chips={chips}
-            left={TOTAL - answered(state)}
-            onPick={(chip, el) =>
-              send(el.querySelector('span') ?? el, () => pick(chip))
-            }
-          />
+          <Replies chips={chips} left={TOTAL - answered(state)} onPick={(chip, el) => send(el.querySelector('span') ?? el, () => pick(chip))} />
           <Field
             leading={
-              <button type="button" className="v2-plus" aria-label={open ? 'Close apps' : 'Apps'} aria-expanded={open} aria-controls="v2-apps" aria-disabled={!state.ready || undefined} onClick={state.ready ? toggle : undefined}>
+              <button type="button" className="v2-plus" aria-label={open ? 'Close apps' : 'Apps'} aria-expanded={open} aria-controls="v2-apps" aria-disabled={!state.ready || undefined} data-hint={(state.ready && !used) || undefined} onClick={state.ready ? toggle : undefined}>
                 <Plus size={20} strokeWidth={2.5} aria-hidden />
               </button>
             }

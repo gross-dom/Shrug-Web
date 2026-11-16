@@ -1,5 +1,5 @@
 import '../../styles/variants/v1.css'
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { ArrowUpRight, Check, ChevronDown, Image as ImageIcon, Play, Share } from 'lucide-react'
 import { QUESTION, TOTAL } from '../../apps/chat'
 import { GROUP_NAME, PersonAvatar } from '../../apps/chat-ui'
@@ -121,6 +121,76 @@ function Faqs() {
     </div>
   )
 }
+
+// The long parts of the page never change, so each is drawn once: the page
+// marking a new chapter as it scrolls is no reason to go through them again.
+
+/** Everything they said, in the order they said it. */
+const Thread = memo(function Thread() {
+  return (
+    <div className="v1-thread">
+      {PEOPLE.map((_, i) => (
+        <Reply key={i} index={i} />
+      ))}
+      <div className="v1-msg v1-msg--niv v1-rise">
+        <p className="v1-msg__bubble">{SITE.mark}</p>
+      </div>
+    </div>
+  )
+})
+
+/** The portfolio: a row of logos to each vertical. */
+const Verticals = memo(function Verticals() {
+  return (
+    <>
+      {VERTICALS.map((v) => (
+        <div key={v.name} className="v1-vertical">
+          <h3 className="v1-vertical__name">
+            {v.name} <span>{v.companies.length}</span>
+          </h3>
+          <ul className="v1-row" aria-label={v.name}>
+            {v.companies.map((c) => (
+              <li key={c.name}>
+                <button type="button" className="v1-tile" onClick={() => openSheet(`company:${c.name}`)}>
+                  <CompanyLogo company={c} size={62} />
+                  <span>{c.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </>
+  )
+})
+
+/** The drops: a photo or a video to each place, or the place one goes. */
+const Gallery = memo(function Gallery() {
+  return (
+    <ul className="v1-gallery" aria-label={`${DROPS.length} drops`}>
+      {MEDIA.map((slot, i) => (
+        <li key={i} className="v1-slot" data-kind={slot.kind}>
+          {slot.src ? (
+            slot.kind === 'video' ? (
+              <video src={slot.src} controls preload="metadata" />
+            ) : (
+              <img src={slot.src} alt={`${slot.drop}${slot.from ? `, from ${slot.from}` : ''}`} loading="lazy" />
+            )
+          ) : (
+            <span className="v1-slot__empty">
+              {slot.kind === 'video' ? <Play size={24} strokeWidth={1.6} aria-hidden /> : <ImageIcon size={24} strokeWidth={1.6} aria-hidden />}
+              {slot.kind === 'video' ? 'Video slot' : 'Photo slot'}
+            </span>
+          )}
+          <span className="v1-slot__cap">
+            <b>{slot.from ?? '[Name]'}</b>
+            <span>{slot.drop}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+})
 
 export default function V1(_: { active: boolean }) {
   const scroller = useRef<HTMLDivElement>(null)
@@ -358,14 +428,7 @@ export default function V1(_: { active: boolean }) {
               <span ref={count}>0</span> of {TOTAL}
             </span>
           </div>
-          <div className="v1-thread">
-            {PEOPLE.map((_, i) => (
-              <Reply key={i} index={i} />
-            ))}
-            <div className="v1-msg v1-msg--niv v1-rise">
-              <p className="v1-msg__bubble">{SITE.mark}</p>
-            </div>
-          </div>
+          <Thread />
         </section>
 
         <section className="v1-section" data-chapter="portfolio" aria-label="Portfolio">
@@ -375,23 +438,7 @@ export default function V1(_: { active: boolean }) {
               {COMPANY_COUNT} companies in {VERTICALS.length} verticals.
             </p>
           </header>
-          {VERTICALS.map((v) => (
-            <div key={v.name} className="v1-vertical">
-              <h3 className="v1-vertical__name">
-                {v.name} <span>{v.companies.length}</span>
-              </h3>
-              <ul className="v1-row" aria-label={v.name}>
-                {v.companies.map((c) => (
-                  <li key={c.name}>
-                    <button type="button" className="v1-tile" onClick={() => openSheet(`company:${c.name}`)}>
-                      <CompanyLogo company={c} size={62} />
-                      <span>{c.name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <Verticals />
           <button type="button" className="v1-more" data-shot="finder" onClick={() => openApp('finder')}>
             Search the portfolio
           </button>
@@ -430,28 +477,7 @@ export default function V1(_: { active: boolean }) {
             <h2>VIP</h2>
             <p>When the drops landed. Photos and videos from the people who got one.</p>
           </header>
-          <ul className="v1-gallery" aria-label={`${DROPS.length} drops`}>
-            {MEDIA.map((slot, i) => (
-              <li key={i} className="v1-slot" data-kind={slot.kind}>
-                {slot.src ? (
-                  slot.kind === 'video' ? (
-                    <video src={slot.src} controls preload="metadata" />
-                  ) : (
-                    <img src={slot.src} alt={`${slot.drop}${slot.from ? `, from ${slot.from}` : ''}`} loading="lazy" />
-                  )
-                ) : (
-                  <span className="v1-slot__empty">
-                    {slot.kind === 'video' ? <Play size={24} strokeWidth={1.6} aria-hidden /> : <ImageIcon size={24} strokeWidth={1.6} aria-hidden />}
-                    {slot.kind === 'video' ? 'Video slot' : 'Photo slot'}
-                  </span>
-                )}
-                <span className="v1-slot__cap">
-                  <b>{slot.from ?? '[Name]'}</b>
-                  <span>{slot.drop}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <Gallery />
           <button type="button" className="v1-more" data-shot="photos" onClick={() => openApp('photos')}>
             Browse by drop
           </button>

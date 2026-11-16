@@ -359,7 +359,8 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
     box = view.getBoundingClientRect()
     pts.set(e.pointerId, at(e))
     touched = true
-    // A finger down stops whatever it was doing, where it is
+    // A finger down stops whatever it was doing, where it is. One that stops a flick is only that: not a press on what it lands on.
+    const stopping = Math.hypot(vel.x, vel.y) > 90 || !!coast || !!glide
     glide = null
     vel = { x: 0, y: 0 }
     coast = null
@@ -368,7 +369,8 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
       mode = 'press'
       start = { ...p, t: performance.now(), target: e.target as Element }
       trail = [{ ...p, t: performance.now() }]
-      swallow = 0
+      swallow = stopping ? Infinity : 0
+      if (stopping) lastTap = null
       mac.setAttribute('data-moving', '')
     } else beginPinch()
   }
@@ -503,9 +505,9 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
     if (mode === 'pinch') {
       pinch = null
       if (pts.size === 1) {
-        // One finger is still down: it carries the view on
+        // One finger is still down: it carries the view on, from where it is
         mode = 'pan'
-        raw = { ...cam }
+        raw = unbanded(cam)
         trail = []
         return
       }
@@ -513,7 +515,7 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
     if (pts.size > 0) return
     const was = mode
     mode = 'none'
-    if (was === 'press') tap(e)
+    if (was === 'press' && swallow !== Infinity) tap(e)
     else swallow = performance.now() + 380
     if (was === 'pan' && e.type !== 'pointercancel' && !still) vel = flick()
     if (was === 'roll' && roll && e.type !== 'pointercancel') {
@@ -595,7 +597,8 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
   let revealing: ReturnType<typeof setTimeout> | undefined
   const focusin = (e: FocusEvent) => {
     const el = e.target
-    if (!(el instanceof Element) || !el.matches(TYPING)) return
+    // A field that takes the keyboard, or anything the keyboard itself has moved on to (but not a whole window: the view goes to those by itself)
+    if (!(el instanceof Element) || !(el.matches(TYPING) || (el.matches(':focus-visible') && !el.matches('.wf')))) return
     clearTimeout(revealing)
     // Once the keyboard has come up and the view has taken its new size
     revealing = setTimeout(() => reveal(el), 360)

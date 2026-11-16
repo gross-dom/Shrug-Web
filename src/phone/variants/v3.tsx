@@ -168,6 +168,7 @@ function useSheet() {
     fit()
     const ro = new ResizeObserver(fit)
     ro.observe(el)
+    if (safe.current) ro.observe(safe.current)
     return () => {
       ro.disconnect()
       cancelAnimationFrame(m.current.frame)
@@ -269,7 +270,7 @@ function useSheet() {
       el.removeAttribute('data-dragging')
       if (!d || d.mode !== 'sheet') {
         // Let go of mid-flight without moving it: carry on to where it was going
-        if (d && Math.abs(s.h - s.stops[s.to]) > 0.5) settle(s.stops[s.to], 0)
+        if (!s.frame && Math.abs(s.h - s.stops[s.to]) > 0.5) settle(s.stops[s.to], 0)
         return
       }
       s.draggedAt = performance.now()
@@ -292,7 +293,8 @@ function useSheet() {
     }
 
     const touchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return void (s.drag = null)
+      // A second finger: whatever the first was doing is over, and the sheet goes to rest
+      if (e.touches.length !== 1) return end(e.timeStamp)
       const t = e.touches[0]!
       begin(t.clientX, t.clientY, e.timeStamp, e.target)
     }
@@ -649,7 +651,7 @@ export default function V3({ active }: { active: boolean }) {
   useEffect(() => {
     const el = stage.current
     if (!el) return
-    const fit = () => setWide(el.clientWidth >= 384)
+    const fit = () => setWide(el.clientWidth >= 372)
     fit()
     const ro = new ResizeObserver(fit)
     ro.observe(el)
@@ -760,7 +762,17 @@ export default function V3({ active }: { active: boolean }) {
       </div>
       {/* The conversation dims as the sheet rises; with the sheet at full, a tap on what is left of it lowers the sheet */}
       <div ref={dim} className="v3-dim" data-on={detent === 2 || undefined} onClick={() => go(1)} aria-hidden />
-      <section ref={sheet} className="v3-sheet" aria-label={`Browse ${GROUP_NAME}`}>
+      <section
+        ref={sheet}
+        className="v3-sheet"
+        aria-label={`Browse ${GROUP_NAME}`}
+        onClick={(e) => {
+          // On the peek, a tap anywhere that isn't a control raises it
+          if (detent !== 0 || (e.target as HTMLElement).closest('button, a, label, input')) return
+          haptic()
+          go(1)
+        }}
+      >
         <div className="v3-sheet__inner">
           <button
             type="button"

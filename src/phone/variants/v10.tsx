@@ -12,7 +12,7 @@ import { COMPANY_COUNT } from '../../data/portfolio'
 import { SITE } from '../../data/site'
 import { prefersReducedMotion } from '../../os/dom'
 import { AppIcon, DocumentIcon } from '../../os/icons'
-import { askMotion, hasMotion, motionNeedsAsking, watchFacing } from '../native'
+import { askMotion, haptic, hasMotion, motionNeedsAsking, watchFacing } from '../native'
 import { openApp, openSheet } from '../nav'
 import '../../styles/variants/v10.css'
 
@@ -44,6 +44,8 @@ const HIGH = 24
 const MARK_AT = -30
 /** A card this close to the middle of the view starts to come forward. */
 const REACH = 9.5
+/** Let go of this close to something, the view comes to rest on it. */
+const REST = 7.2
 /** The room's wall: eight flat pieces of wallpaper, further out than everything else, each going into the dark at its edges. */
 const WALLS = [0, 45, 90, 135, 180, 225, 270, 315]
 const WALL_FAR = 2400
@@ -123,6 +125,8 @@ function makeRoom(root: HTMLElement, scene: HTMLElement, world: HTMLElement, mov
   let on = true
   let dragging = false
   let told = false
+  /** The card that has come forward, if one has: which person. */
+  let front = -1
 
   const facing = () => ({ yaw: wrap(user.yaw + sense.yaw), pitch: clamp(user.pitch + sense.pitch, LOW, HIGH) })
 
@@ -133,7 +137,10 @@ function makeRoom(root: HTMLElement, scene: HTMLElement, world: HTMLElement, mov
     // Only what is near the view is painted at all
     const reachAcross = across + 8
     const reachUp = up + 13
-    for (const c of cards) {
+    let nearest = -1
+    let most = 0.6
+    for (let i = 0; i < cards.length; i++) {
+      const c = cards[i]!
       const dy = turn(c.b - yaw)
       const dp = c.e - pitch
       const shown = Math.abs(dy) < reachAcross && Math.abs(dp) < reachUp
@@ -146,6 +153,10 @@ function makeRoom(root: HTMLElement, scene: HTMLElement, world: HTMLElement, mov
       // The nearer the middle of the view, the further forward: full size and bright in the middle, small and dim away from it
       const t = clamp(1 - Math.hypot(dy, dp) / REACH, 0, 1)
       const f = t * t * (3 - 2 * t)
+      if (f > most) {
+        most = f
+        nearest = i
+      }
       if (Math.abs(f - c.f) < 0.003) continue
       c.f = f
       const far = FAR - (FAR - near) * f
@@ -153,6 +164,7 @@ function makeRoom(root: HTMLElement, scene: HTMLElement, world: HTMLElement, mov
       c.el.style.setProperty('--dim', (0.56 * (1 - f)).toFixed(3))
       c.el.toggleAttribute('data-near', f > 0.6)
     }
+    front = nearest
     for (const thing of fixed) {
       const shown = Math.abs(turn(thing.b - yaw)) < across + thing.half
       if (shown === thing.on) continue
@@ -223,18 +235,25 @@ function makeRoom(root: HTMLElement, scene: HTMLElement, world: HTMLElement, mov
     if (on && !frame) frame = requestAnimationFrame(step)
   }
 
-  /** Once a finger has let go and the room has stopped, it comes to rest on the card nearest the middle of the view, if one is near. */
+  /** Once a finger has let go and the room has stopped, it comes to rest on what is nearest the middle of the view, if anything is near: a card, the question, a landmark. */
   const rest = () => {
     if (still || !on || dragging || glide) return
     const { yaw, pitch } = facing()
-    let best: (typeof cards)[number] | null = null
-    let least = REACH * 0.62
+    let best: { b: number; e: number } | null = null
+    let least = REST
     for (const c of cards) {
       if (!c.on) continue
       const d = Math.hypot(turn(c.b - yaw), c.e - pitch)
       if (d < least) {
         least = d
         best = c
+      }
+    }
+    for (const name of NAMES) {
+      const d = Math.hypot(turn(name.b - yaw), name.e - pitch)
+      if (d < least) {
+        least = d
+        best = name
       }
     }
     if (best && least > 0.15) turnTo(best.b, best.e, 240 + least * 30)
@@ -271,7 +290,9 @@ function makeRoom(root: HTMLElement, scene: HTMLElement, world: HTMLElement, mov
     at = start = { x: e.clientX, y: e.clientY }
     trail = [{ ...at, t: performance.now() }]
     dragging = false
-    swallow = 0
+    // A finger that stops the room while it is still turning is only that: not a tap on the card it lands on
+    const turning = Math.hypot(vel.yaw, vel.pitch) > 12 || (!!glide && Math.abs(glide.to.yaw - user.yaw) + Math.abs(glide.to.pitch - user.pitch) > 2)
+    swallow = turning ? performance.now() + 700 : 0
     glide = null
     vel = { yaw: 0, pitch: 0 }
   }
@@ -301,14 +322,21 @@ function makeRoom(root: HTMLElement, scene: HTMLElement, world: HTMLElement, mov
     const now = performance.now()
     trail.push({ ...p, t: now })
     while (trail.length > 2 && now - trail[0]!.t > 110) trail.shift()
-    wake()
+    // Drawn here, under the finger, so that each card coming forward can be felt as it does
+    const was = front
+    paint()
+    if (front !== was && front >= 0) haptic(8)
   }
 
   const lift = (e: PointerEvent) => {
     if (e.pointerId !== finger) return
     finger = null
     scene.removeAttribute('data-dragging')
-    if (!dragging) return
+    if (!dragging) {
+      // Stopped, not dragged: it still comes to rest on someone
+      if (swallow) rest()
+      return
+    }
     dragging = false
     swallow = performance.now() + 380
     const a = trail[0]

@@ -110,6 +110,33 @@
   opacity: 0.4;
 }
 
+/* Until it has been tried once, it asks to be: a ring goes out from it, twice */
+.v2-plus[data-hint] {
+  position: relative;
+}
+
+.v2-plus[data-hint]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--ss-accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: v2-plus-hint 1.5s ease-out 1.4s 2;
+}
+
+@keyframes v2-plus-hint {
+  from {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
 /* ---- What the apps send into the thread ---- */
 
 /* The visitor's own, of a kind that isn't words: on the right, as their bubbles are */
@@ -871,7 +898,8 @@
   }
 
   .v2-apps__body,
-  .v2-cases__form[data-nudged] {
+  .v2-cases__form[data-nudged],
+  .v2-plus[data-hint]::after {
     animation: none;
   }
 }

@@ -223,6 +223,9 @@ export default function V7({ active }: { active: boolean }) {
         </h2>
         <p className="v7__count" role="status">
           <b>{count}</b> of {TOTAL} heard
+          <span className="sr-only">
+            : {PEOPLE[now.index]!.name}, {PEOPLE[now.index]!.role}
+          </span>
         </p>
       </header>
 

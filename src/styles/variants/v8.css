@@ -9,11 +9,14 @@
   background: radial-gradient(130% 70% at 50% 0%, #20349f 0%, #101a6b 38%, #080d47 72%, #050834 100%);
   color: #fff;
   --floor: calc(64px + var(--safe-bottom));
-  /* The colours of the three ways of being in the family */
+  /* The colours of the three ways of being in the family: as a disc, and as the ring round one */
   --f: linear-gradient(160deg, #6fb4ff 0%, #3f8cff 42%, #2b55cf 100%);
   --l: linear-gradient(160deg, #c2a6ff 0%, #8a6dff 45%, #6a3fe0 100%);
   --c: linear-gradient(160deg, #ffe08f 0%, #ffc56e 40%, #ff9a4a 100%);
   --n: linear-gradient(160deg, #b9bdc9 0%, #8a8f9e 100%);
+  --f-ring: #6fb4ff;
+  --l-ring: #b79bff;
+  --c-ring: #ffc56e;
 }
 
 /* The glass: a light down one side of it */
@@ -81,7 +84,7 @@
 
 .v8__body > button {
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.2s cubic-bezier(0.2, 1.4, 0.4, 1), box-shadow 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 1.4, 0.4, 1), box-shadow 0.2s ease, opacity 0.22s ease, filter 0.22s ease;
 }
 
 .v8__body > button:focus-visible {
@@ -131,6 +134,31 @@
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+/* Someone who knows Shrug a second way wears its colour as a ring */
+.v8__disc[data-also] {
+  box-shadow: inset 0 0 0 calc(var(--d, 40px) * 0.075) var(--ring), inset 0 -3px 5px rgba(8, 12, 80, 0.26), 0 2px 5px rgba(2, 4, 40, 0.42);
+}
+
+.v8__disc[data-also='F'] {
+  --ring: var(--f-ring);
+}
+
+.v8__disc[data-also='L'] {
+  --ring: var(--l-ring);
+}
+
+.v8__disc[data-also='C'] {
+  --ring: var(--c-ring);
+}
+
+/* One way picked out in the key: everyone who isn't that is dimmed */
+.v8[data-only='F'] .v8__disc:not([data-all*='F']),
+.v8[data-only='L'] .v8__disc:not([data-all*='L']),
+.v8[data-only='C'] .v8__disc:not([data-all*='C']) {
+  opacity: 0.24;
+  filter: saturate(0.4);
+}
+
 /* A company: its logo on a tile that just fits inside its circle */
 .v8 .v8__tile {
   display: grid;
@@ -151,6 +179,10 @@
 .v8__body[data-held] > button {
   transform: scale(1.2);
   box-shadow: inset 0 1px 0.5px rgba(255, 255, 255, 0.6), inset 0 -3px 5px rgba(8, 12, 80, 0.26), 0 12px 22px rgba(2, 4, 40, 0.5);
+}
+
+.v8__body[data-held] > .v8__disc[data-also] {
+  box-shadow: inset 0 0 0 calc(var(--d, 40px) * 0.075) var(--ring), inset 0 -3px 5px rgba(8, 12, 80, 0.26), 0 12px 22px rgba(2, 4, 40, 0.5);
 }
 
 .v8 .v8__body[data-held] > .v8__tile {
@@ -380,40 +412,52 @@
 .v8__key {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px 11px;
-  margin-top: 7px;
-  font-size: 11.5px;
-  font-weight: 500;
-  line-height: 14px;
-  letter-spacing: 0;
+  gap: 5px;
+  margin: 8px 0 0 -2px;
 }
 
-.v8__key > li {
+/* Each is a switch: on, only the people it names are lit */
+.v8__key button {
   display: flex;
   align-items: center;
   gap: 5px;
+  height: 26px;
+  padding: 0 9px 0 7px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0;
   white-space: nowrap;
-  opacity: 0.9;
+  pointer-events: auto;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
-.v8__key > li::before {
+.v8__key button::before {
   content: '';
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--n);
 }
 
-.v8__key > li[data-r='F']::before {
+.v8__key button[data-r='F']::before {
   background: var(--f);
 }
 
-.v8__key > li[data-r='L']::before {
+.v8__key button[data-r='L']::before {
   background: var(--l);
 }
 
-.v8__key > li[data-r='C']::before {
+.v8__key button[data-r='C']::before {
   background: var(--c);
+}
+
+.v8__key button[aria-pressed='true'] {
+  background: #fff;
+  color: #0b1150;
 }
 
 /* ---- The floor of the jar: the way to the rest ---- */

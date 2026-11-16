@@ -11,7 +11,7 @@
   overflow: clip;
   background: #fff;
   /* The shortcuts on the peek, and the room they take beside the search field */
-  --short: 166px;
+  --short: 158px;
 }
 
 /* How tall the home indicator's share of the screen is, for the script to read */
@@ -204,7 +204,7 @@
   top: 0;
   right: 0;
   display: flex;
-  gap: 6px;
+  gap: 4px;
   opacity: calc(1 - var(--p) * 2.4);
   transform: translateX(calc(var(--p) * 26px)) scale(calc(1 - var(--p) * 0.14));
   transform-origin: 100% 50%;

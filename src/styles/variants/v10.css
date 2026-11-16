@@ -471,17 +471,23 @@
 }
 
 .v10 .v10__hint {
+  height: 18px;
   margin: 0;
+  overflow: hidden;
   color: rgba(255, 255, 255, 0.78);
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
   letter-spacing: 0;
   text-align: center;
-  transition: opacity 0.4s ease;
+  white-space: nowrap;
+  transition: opacity 0.3s ease, height 0.3s ease 0.2s, margin 0.3s ease 0.2s;
 }
 
+/* Once the visitor has looked round, it has done its work and gives up its room */
 .v10 .v10__hint[data-gone] {
+  height: 0;
+  margin-bottom: -10px;
   opacity: 0;
 }
 
