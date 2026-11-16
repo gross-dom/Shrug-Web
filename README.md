@@ -1,6 +1,6 @@
 # Shrug Web
 
-Shrug's website as a desktop you can click around: a macOS-style skin over the "Shrug desktop" design, built with the [Stageshow](https://github.com/benjitaylor/skills) kit's window chrome, message thread, rows and controls. On a phone it is one conversation instead, with the visitor in it.
+Shrug's website as a desktop you can click around: a macOS-style skin over the "Shrug desktop" design, built with the [Stageshow](https://github.com/benjitaylor/skills) kit's window chrome, message thread, rows and controls. How it works on a phone is being chosen: there are ten versions of that to try.
 
 ## Run it
 
@@ -40,32 +40,38 @@ It is laid out as an iMessage group conversation, seen from Shrug's side:
 
 ### On a phone
 
-Below 760px wide (or 480px tall) the site is not a phone drawn inside a phone. It is one conversation, and the visitor is in it: Niv adds you to Shrug Family, asks the group his question, and the ninety answer at the pace the desktop keeps. On the desktop you look over Niv's shoulder at his Mac; on a phone the messages are sent to you.
+Below 760px wide (or 480px tall) the site is laid out for a phone, and how it should work there is still being chosen. There are ten versions, from the most familiar to the least. `?v=3` shows the third; with no `v`, a phone shows the list of them. A bar above each one names it, steps to the next and goes back to the list. The list and the bar are scaffolding for choosing: they are not part of any version.
 
-You get around by replying. Above the message field are the replies you might send; tap one, or type your own words. While you and Niv are talking the group holds on, and "keep the replies coming" brings them back.
+| | Version | What it is | What of the phone it uses |
+| --- | --- | --- | --- |
+| 1 | The scroll | One long page. The conversation plays as you scroll into it; the rest follows as chapters. | Scrolling, snap carousels |
+| 2 | Messages, with apps | The conversation, with the site living where the keyboard does, as iMessage apps do. | The keyboard's place, taps, stickers |
+| 3 | The sheet | The conversation never stops; everything else is a sheet you pull up over it with a thumb. | A draggable sheet, one-thumb reach |
+| 4 | Stories | Ninety rings. Tap one and their reply fills the screen; tap on, hold to read, swipe away. | Taps, holds, swipes |
+| 5 | The feed | One reply to a screen. Swipe up for the next, sideways for the portfolio, double tap to love. | Paging swipes, double tap, the share sheet |
+| 6 | The deck | A deck of ninety cards to flick through: keep the ones that land, and share your hand. | Dragging and flinging, flips, ticks |
+| 7 | Shrug it | Ask the question, then shrug your phone. Every shrug is another answer. | Shaking and tilting |
+| 8 | The jar | Ninety people pour in and pile up. Tilt the phone and they roll; tap one to hear them out. | Which way is down, flicks |
+| 9 | The window | Your phone is a window onto Niv's Mac: pan, pinch and turn it to look around the real desktop. | Pan, pinch, turning the phone |
+| 10 | The room | The family is all around you. Turn where you stand to look round the room at them. | Which way you face, the camera |
 
-| You say | Niv answers with |
-| --- | --- |
-| who’s in here? | How many, who they are, and a button to everyone in the group, each with what they said |
-| show me the portfolio | A screenshot of the Portfolio window on his Mac. Tap it and it opens, laid out for a phone |
-| i have questions | The FAQs become the replies to send, and each is answered in the conversation |
-| can i see the case studies? | A screenshot of the terminal, and a request for your email, which you type into the message field |
-| what’s a drop? | A screenshot of the VIP window, which opens as a photo library |
-| send me the one-pager | The link, unfolded as Messages unfolds one |
-| how do i reach you? | A button that opens the phone's real Messages or Mail with a first line written, and one that shares the site |
-
-- **The screenshots are live.** Each is the desktop's own window, drawn at full size and scaled into a bubble (`src/phone/Shot.tsx`), so it is always the window as it stands.
-- **Opening is a step in the browser's history**, so the phone's back gesture or button closes what is open, and a reload comes back to it.
-- **A double tap loves a message**, and the button at the top right shares the site through the phone's own share sheet.
+- **Every version works by touch alone.** Shaking, tilting, turning and the camera are extras: a phone has to be asked before it will report its movement (each version that wants it has a button for that), and where it says no, or there is nothing to ask, the same things are done by dragging and tapping.
+- **What they share**: the pages a version can open over itself (the portfolio, FAQs, case studies and VIP, in `src/phone/apps.tsx`), the sheets (a company, a person, the access request), and `src/phone/native.ts`, which is the share sheet, a tick under the finger, and how the phone is held and moved.
+- **Opening a page or a sheet is a step in the browser's history**, so the phone's back gesture or button closes what is open.
+- **Versions 2 and 3 are the conversation with the visitor in it**: Niv adds you to Shrug Family, asks his question, and you get around by replying. `src/phone/convo.ts` holds what is said and what each reply sets off. Niv's lines other than the two he opens with are placeholder copy.
+- **Reaching Shrug for real** needs a number or an address in `SITE.contact` (`src/data/site.ts`). Until then the versions that offer it say so in its place.
 - **The link preview** is the conversation's opening (`public/og.png`, taken by `tools/og.cjs`), so the address unfolds as the chat when it is texted.
-- **Reaching Shrug for real** needs a number or an address in `SITE.contact` (`src/data/site.ts`). Until then the conversation says so in its place.
-- **Niv's lines** other than the two he opens with are placeholder copy, in `src/phone/convo.ts`.
+
+Once one is picked, the others, the list and the bar come out: `src/phone/variants/` and `src/styles/variants/` hold one file each per version, and `src/phone/Phone.tsx` is where the chosen one would be named.
 
 The status bar and home indicator are the real phone's; the page only keeps clear of them. There is no screen saver on a phone.
 
+To send someone the site as a single file they can open on a phone or in a browser, with all ten versions in it: `node tools/preview.cjs shrug.html`.
+
 ### Links
 
-- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, the last one named is open over the conversation). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
+- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, the last one named is open over the version being shown). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
+- `?v=1` to `?v=10` picks the phone's version.
 - `?saver` starts on the screen saver. `?idle=20` sets how many seconds of stillness start it. Desktop only.
 
 ## Content
@@ -98,21 +104,24 @@ Nothing leaves the page yet. A message typed into the group chat and an email gi
 
 ```
 public/        the companies' logos (logos/), the wallpaper, and the link preview (og.png)
-tools/         wallpaper.py draws the wallpaper; og.cjs takes the link preview
+tools/         wallpaper.py draws the wallpaper; og.cjs takes the link preview;
+               preview.cjs makes the site into one file to send
 src/
   data/     the site's content
   os/       the desktop: window manager, menu bar, Dock, icons, screen saver
   apps/     one file per window, plus what windows and phone screens share
             (chat.ts: the chat's clock; chat-ui.tsx: the conversation;
             portfolio-ui.tsx: the companies and their logos; state.ts)
-  phone/    the phone: the conversation, what opens out of it, and its sheets
-  styles/   base.css, os.css (the desktop), apps.css (the windows), phone.css
+  phone/    the phone: its ten versions (variants/), the pages and sheets they
+            share, and what a phone can do that a desktop can't (native.ts)
+  styles/   base.css, os.css (the desktop), apps.css (the windows), phone.css,
+            and a stylesheet per phone version (variants/)
   kit/      the Stageshow kit, copied in unmodified
 ```
 
 - **Window behaviour** is in `os/wm.ts` (state) and `os/WindowFrame.tsx` (dragging, resizing, the lights).
 - **A new window**: add it to `os/apps.ts`, write its component in `apps/`, list it in `os/Desktop.tsx`, and give it a screen in `phone/apps.tsx`.
-- **The phone** is `phone/convo.ts` (the conversation: what is said, in what order, and what each reply sets off), `phone/Thread.tsx` (the conversation's screen), `phone/Shot.tsx` (a window of the Mac as a screenshot), `phone/apps.tsx` (what the screenshots open into, and the sheets), `phone/nav.ts` (what is open, mirrored into history) and `phone/ui.tsx` (pages, sheets, lists).
+- **The phone** is `phone/Phone.tsx` (which version is showing, and what is open over it), `phone/variants/` (the versions), `phone/apps.tsx` (the pages and sheets they open), `phone/nav.ts` (what is open, mirrored into history), `phone/ui.tsx` (pages, sheets, lists) and `phone/native.ts` (sharing, ticks, movement). The conversation that versions 2 and 3 are built on is `phone/convo.ts` (what is said and what each reply sets off), `phone/Thread.tsx` (its screen) and `phone/Shot.tsx` (a window of the Mac as a screenshot).
 - **The wallpaper** is a picture, `public/wallpaper.webp`, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
 

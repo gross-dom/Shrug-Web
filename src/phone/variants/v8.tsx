@@ -803,7 +803,7 @@ export default function V8({ active }: { active: boolean }) {
   const [mode, setMode] = useState<Mode>('people')
   /** The set on its way out through the floor, while the other pours in. */
   const [leaving, setLeaving] = useState<Mode | null>(null)
-  /** The logos are only drawn once they are wanted, or the page has had a moment to itself. */
+  /** The logos are only drawn once they are wanted, or once everyone is in and the jar has gone quiet: drawing ninety-seven of them mid-pour would be felt. */
   const [logos, setLogos] = useState(false)
   /** ask: the phone has to be asked first. on: it is telling us how it is held. off: there is nothing to ask, or it said no. */
   const [motion, setMotion] = useState<'ask' | 'on' | 'off'>(() => (motionNeedsAsking() ? 'ask' : hasMotion() ? 'on' : 'off'))
@@ -814,6 +814,7 @@ export default function V8({ active }: { active: boolean }) {
   showing.current = mode
   const poured = useRef({ people: false, portfolio: false })
   const timer = useRef<ReturnType<typeof setTimeout>>()
+  const quiet = useRef<ReturnType<typeof setTimeout>>()
 
   // The jar itself, for as long as this is on the page
   useEffect(() => {
@@ -827,6 +828,10 @@ export default function V8({ active }: { active: boolean }) {
       {
         count: (k) => {
           if (count.current) count.current.textContent = String(k)
+          if (k === PEOPLE.length && showing.current === 'people') {
+            clearTimeout(quiet.current)
+            quiet.current = setTimeout(() => setLogos(true), 2600)
+          }
         },
         open: (i) => {
           haptic()
@@ -862,6 +867,7 @@ export default function V8({ active }: { active: boolean }) {
       watch.disconnect()
       made.destroy()
       jar.current = null
+      clearTimeout(quiet.current)
     }
   }, [still])
 
@@ -904,9 +910,11 @@ export default function V8({ active }: { active: boolean }) {
     }
   }, [active, motion, still])
 
-  // The logos are fetched once the page is quiet, so they are there by the time they are asked for
+  // The logos themselves are fetched early, so they are there by the time they are asked for
   useEffect(() => {
-    const t = setTimeout(() => setLogos(true), 2600)
+    const t = setTimeout(() => {
+      for (const company of ALL) if (company.logo) new Image().src = `${import.meta.env.BASE_URL}logos/${company.logo}`
+    }, 2600)
     return () => {
       clearTimeout(t)
       clearTimeout(timer.current)

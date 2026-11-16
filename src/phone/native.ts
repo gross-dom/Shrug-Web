@@ -3,9 +3,14 @@
 // being held and moved. Each degrades to nothing where it isn't there, so a
 // version always needs a way to work by touch alone.
 
+import { SITE } from '../data/site'
+
+/** The address to pass on: this page's, or the site's where the page has none of its own (a preview opened from a file). */
+export const pageUrl = () => (/^https?:$/.test(location.protocol) ? `${location.origin}${location.pathname}` : SITE.url)
+
 /** Sends something on through the phone's own share sheet, or copies the address where there is none. */
 export async function share(data: { title?: string; text?: string; url?: string } = {}): Promise<'shared' | 'copied' | 'neither'> {
-  const url = data.url ?? `${location.origin}${location.pathname}`
+  const url = data.url ?? pageUrl()
   try {
     if (navigator.share) {
       await navigator.share({ ...data, url })

@@ -155,6 +155,7 @@ export default function V7({ active }: { active: boolean }) {
   /** How far everything is leaning now (-1 to 1 each way): it eases toward how the phone is held. */
   const lean = useRef({ x: 0, y: 0 })
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const dealing = useRef(0)
   const still = prefersReducedMotion()
 
   /** Another answer: from someone not yet heard, until everyone has been. */
@@ -169,22 +170,39 @@ export default function V7({ active }: { active: boolean }) {
     }
     const index = pool[Math.floor(Math.random() * pool.length)]!
     heard.current.add(index)
-    setCount(heard.current.size)
-    setNow({ index, n: was.n + 1 })
+    let made = false
+    const deal = () => {
+      if (made) return
+      made = true
+      setCount(heard.current.size)
+      setNow({ index, n: was.n + 1 })
+    }
     haptic(8)
-    if (still) return
+    if (still) return deal()
     busy.current = true
+    // The card goes first, and the next is only made once it has been seen to
+    // go (two frames on): making a card takes a moment, and the toss mustn't
+    // wait for that. Should the screen be slow to draw, it is made regardless.
     setGone(was)
+    cancelAnimationFrame(dealing.current)
+    dealing.current = requestAnimationFrame(() => (dealing.current = requestAnimationFrame(deal)))
     // A shrug before the last one was cleared away takes over from it
     timers.current.forEach(clearTimeout)
     timers.current = [
+      setTimeout(deal, 100),
       setTimeout(() => haptic(16), LANDS),
       setTimeout(() => (busy.current = false), READY),
       setTimeout(() => setGone(null), CLEARED),
     ]
   }, [still])
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
+  useEffect(
+    () => () => {
+      timers.current.forEach(clearTimeout)
+      cancelAnimationFrame(dealing.current)
+    },
+    [],
+  )
 
   // The phone's own word on how it is held and moved, while this is in front
   useEffect(() => {
@@ -282,7 +300,7 @@ export default function V7({ active }: { active: boolean }) {
             {SITE.mark}
           </div>
         )}
-        <Card key={now.n} deal={now} state={now.n === 0 || still ? 'rest' : 'in'} side={now.n % 2 ? 1 : -1} />
+        {now.n !== gone?.n && <Card key={now.n} deal={now} state={now.n === 0 || still ? 'rest' : 'in'} side={now.n % 2 ? 1 : -1} />}
         {/* The same card it was while it was the answer (its key is its deal), so nothing about it is worked out again */}
         {gone && <Card key={gone.n} deal={gone} state="out" side={gone.n % 2 ? -1 : 1} />}
       </div>

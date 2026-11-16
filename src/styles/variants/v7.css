@@ -168,7 +168,7 @@
 /* A shrug: the old answer is tossed up and away, the table is bare for a
    moment (the mark has it), and the next drops in from above and settles */
 .v7__card[data-state='in'] {
-  animation: v7-land 0.6s cubic-bezier(0.2, 1.36, 0.36, 1) 0.4s backwards;
+  animation: v7-land 0.6s cubic-bezier(0.2, 1.36, 0.36, 1) 0.37s backwards;
 }
 
 .v7__card[data-state='out'] {

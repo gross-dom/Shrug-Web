@@ -1,6 +1,6 @@
 import { lazy, type ComponentType } from 'react'
 
-// Each version is loaded on its own while they are being built, so one that is
+// Each version is loaded only when it is the one being shown, and one that is
 // mid-edit can't take the others down with it.
 const V1 = lazy(() => import('./v1'))
 const V2 = lazy(() => import('./v2'))
@@ -42,11 +42,24 @@ export const VARIANTS: Variant[] = [
   { id: 10, name: 'The room', pitch: 'The family is all around you. Turn where you stand to look round the room at them.', uses: 'Which way you face, the camera', Home: V10 },
 ]
 
+/** A page that shows the site inside a frame of its own picks the version for
+ * it and is asked for the next one. The one-file preview does this: a file has
+ * no address to reload onto, so it can't go from version to version itself. */
+interface Host {
+  v: number
+  go(id: number): void
+}
+
+const host = (window as { __shrugHost?: Host }).__shrugHost
+
 /** The version the address asks for, or 0 for the list of them. */
 export const variantFromUrl = () => {
-  const v = Number(new URLSearchParams(location.search).get('v'))
+  const v = host ? host.v : Number(new URLSearchParams(location.search).get('v'))
   return Number.isInteger(v) && v >= 1 && v <= VARIANTS.length ? v : 0
 }
 
 /** Goes to a version (or, with 0, back to the list) as a page of its own, so the browser's back returns. */
-export const goToVariant = (id: number) => location.assign(id ? `${location.pathname}?v=${id}` : location.pathname)
+export const goToVariant = (id: number) => {
+  if (host) host.go(id)
+  else location.assign(id ? `${location.pathname}?v=${id}` : location.pathname)
+}

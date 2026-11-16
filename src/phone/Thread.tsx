@@ -14,6 +14,7 @@ import { prefersReducedMotion } from '../os/dom'
 import { DocumentIcon } from '../os/icons'
 import { useStore } from '../os/store'
 import { convo, love, pick, say, suggestions, type Chip, type Item } from './convo'
+import { pageUrl } from './native'
 import { openApp, openSheet } from './nav'
 import { Shot } from './Shot'
 
@@ -24,7 +25,7 @@ import { Shot } from './Shot'
 
 /** Sends the site on through the phone's own share sheet, or copies its address where there is none. */
 async function share(): Promise<'shared' | 'copied' | 'neither'> {
-  const url = `${location.origin}${location.pathname}`
+  const url = pageUrl()
   try {
     if (navigator.share) {
       await navigator.share({ title: GROUP_NAME, text: QUESTION.join(' '), url })
