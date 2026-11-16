@@ -7,10 +7,10 @@ import { ConversationAvatar, ConversationList, conversationName, ConversationPan
 import { inbox, openConversation } from './state'
 import { Tool } from './ui'
 
-// The group chat, as Messages on a Mac: the conversations down the sidebar
-// (the group, then each person as they reply), the conversation that's open
-// beside it, and its details behind the name. This is Shrug's own Messages:
-// Shrug's bubbles are the blue ones on the right.
+// The group chat, as Messages on a Mac: every conversation down the sidebar
+// (the group, then everyone's own message, all there from the start), the
+// conversation that's open beside it, and its details behind the name. This
+// is Shrug's own Messages: Shrug's bubbles are the blue ones on the right.
 
 function Sidebar() {
   return (

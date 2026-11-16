@@ -683,23 +683,6 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ss-accent) 40%, transparent);
 }
 
-/* A conversation that has just arrived opens its row at the top of the list */
-.conv-slot {
-  display: grid;
-  grid-template-rows: 1fr;
-}
-
-.conv-slot[data-new] {
-  animation: conv-in 0.45s var(--ease-out) both;
-}
-
-@keyframes conv-in {
-  from {
-    grid-template-rows: 0fr;
-    opacity: 0;
-  }
-}
-
 .conv.ss-row {
   --ss-row-title: 13px;
   --ss-row-subtitle: 12px;
@@ -880,10 +863,6 @@
   color: var(--ss-text);
 }
 
-/* Someone who hasn't replied yet is in the list, but quietly */
-.details__person[data-state='waiting'] > * {
-  opacity: 0.45;
-}
 
 /* ---- Sidebars and headings the windows share ---- */
 
@@ -1963,7 +1942,6 @@
   .chat-who,
   .chat-failed::after,
   .chat-undelivered,
-  .conv-slot,
   .ss-bubble-row > .ss-bubble__avatar {
     animation: none !important;
   }

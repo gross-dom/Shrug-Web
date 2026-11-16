@@ -3,11 +3,10 @@ import { SITE } from '../data/site'
 import { prefersReducedMotion } from '../os/dom'
 import { createStore } from '../os/store'
 
-// The group chat as it plays out. This is Shrug's own Messages: Shrug types
-// the question into the field and sends it, then ninety people reply, slowly
-// at first so the opening line can be read, then piling in, and Shrug signs
-// off with a shrug. It runs on its own clock whether or not its window is
-// showing, so the menu bar and the Dock's badge can count along.
+// The group chat as it plays out. This is Shrug's own Messages: the question
+// is typed into the field and sent, then ninety people reply, each one
+// written and then sent at the same unhurried pace, and Shrug signs off with a
+// shrug. It runs on its own clock whether or not its window is showing.
 
 export type ChatItem =
   /** A message from this Mac: Shrug's own, or one the visitor typed. */
@@ -37,7 +36,7 @@ export interface Chat {
 }
 
 export const TOTAL = PEOPLE.length
-export const QUESTION = ['ok be honest.', `what’s it actually like working with us? ${SITE.mark}`]
+export const QUESTION = ['ok be honest.', 'what’s it actually like working with us?']
 
 const asMine = (text: string, key: string): ChatItem => ({ key, kind: 'me', text, by: 'shrug' })
 
@@ -78,6 +77,17 @@ function everything(from: Chat): Chat {
 }
 
 export const chat = createStore<Chat>(fresh())
+
+/** How long before the conversation began each person's own message reached
+ * Shrug: the first a few minutes before, the last a couple of days. Made from
+ * their place in the list, so it is the same on every visit. */
+const AGO = (() => {
+  let minutes = 0
+  return PEOPLE.map((_, i) => (minutes += 7 + ((i * 37 + 11) % 43)) * 60_000)
+})()
+
+/** When a person's own message to Shrug is dated. */
+export const sentAt = (index: number, startedAt: number) => startedAt - AGO[index]!
 
 // ---- The clock ----
 
@@ -142,40 +152,25 @@ function typeAndSend(text: string, key: string, each: number, then: () => void) 
   after(each, step)
 }
 
-/** The first few people are seen typing; after that the replies just land. */
-const TYPED = 6
-
-/** ms from one reply to the next: unhurried at first, then quickening. */
-function pace(index: number) {
-  if (index === 0) return 3400
-  const t = Math.min(1, index / 26)
-  const eased = 1 - Math.pow(1 - t, 2.2)
-  return Math.round(1600 - eased * 1230)
-}
-
-const settle = (items: ChatItem[], key: string): ChatItem[] => items.map((item) => (item.key === key && item.kind === 'person' ? { ...item, typing: false } : item))
+/** Every reply keeps the same time: its dots show while it is written, it is
+ * sent, and there is a breath before the next person starts. It never speeds up. */
+const WRITING = 1700
+const BETWEEN = 1100
 
 function person(index: number) {
-  if (index >= TOTAL) return after(1100, closing)
+  if (index >= TOTAL) return after(BETWEEN, closing)
   const key = `p-${index}`
-  const land = () => {
+  // Being written: their dots
+  chat.set((s) => ({ ...s, typing: index, items: [...s.items, { key, kind: 'person', index, typing: true }] }))
+  after(WRITING, () => {
+    // Sent: the dots grow into the message
     chat.set((s) => {
       const repliedAt = s.repliedAt.slice()
       repliedAt[index] = Date.now()
-      return {
-        ...s,
-        typing: -1,
-        replied: index + 1,
-        repliedAt,
-        items: s.items.some((i) => i.key === key) ? settle(s.items, key) : [...s.items, { key, kind: 'person', index, typing: false }],
-      }
+      return { ...s, typing: -1, replied: index + 1, repliedAt, items: s.items.map((item) => (item.key === key && item.kind === 'person' ? { ...item, typing: false } : item)) }
     })
-    after(pace(index), () => person(index + 1))
-  }
-  if (index < TYPED) {
-    chat.set((s) => ({ ...s, typing: index, items: [...s.items, { key, kind: 'person', index, typing: true }] }))
-    after(index === 0 ? 1800 : 1200 - index * 110, land)
-  } else land()
+    after(BETWEEN, () => person(index + 1))
+  })
 }
 
 function closing() {
@@ -187,7 +182,7 @@ function opening() {
     after(380, () =>
       typeAndSend(QUESTION[1]!, 'ask-1', 30, () => {
         chat.set((s) => ({ ...s, asked: true }))
-        after(1300, () => person(0))
+        after(BETWEEN, () => person(0))
       }),
     ),
   )

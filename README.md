@@ -32,7 +32,8 @@ It is laid out as an iMessage group conversation, seen from Shrug's side:
 
 - Shrug's messages are the blue bubbles on the right. The script types them into the message field and sends them, so each bubble leaves the field the way a sent message does, and "Delivered" sits under the last one.
 - Everyone else is gray on the left, with their name and role over the bubble and their initials beside it.
-- The sidebar is the list of conversations: the group, then a conversation for each person as they reply, newest first, unread until opened. A person's own conversation shows the question and their reply.
+- The sidebar is the list of conversations: the group (“Shrug Family”), then everyone's own message, all there from the start and unread until opened, so they can be read through while the group plays out beside them. A person's own conversation shows the question and their reply.
+- In the group, every reply keeps the same time: its typing dots, the message, a breath, the next. It never speeds up. The pace is `WRITING` and `BETWEEN` in `src/apps/chat.ts`.
 - The name in the bar, or the Details button, opens the details: pause the replies, show them all, play it again, and everyone in the group.
 - The plus beside the field opens the rest of the site.
 - Anything a visitor types is shown as Not Delivered, as Messages marks a message that didn't go. Nothing is sent and nobody replies.
@@ -93,7 +94,8 @@ Nothing leaves the page yet. A message typed into the group chat and an email gi
 ## Where things are
 
 ```
-public/logos/  the companies' logos
+public/        the companies' logos (logos/) and the wallpaper
+tools/         wallpaper.py, which draws the wallpaper
 src/
   data/     the site's content
   os/       the desktop: window manager, menu bar, Dock, icons, screen saver
@@ -108,7 +110,7 @@ src/
 - **Window behaviour** is in `os/wm.ts` (state) and `os/WindowFrame.tsx` (dragging, resizing, the lights).
 - **A new window**: add it to `os/apps.ts`, write its component in `apps/`, list it in `os/Desktop.tsx`, and give it a screen in `phone/apps.tsx`.
 - **The phone** is `phone/Phone.tsx` (dashboard, Dock, apps opening and closing), `phone/nav.ts` (where it is, mirrored into history), `phone/apps.tsx` (each app's screen and its sheets) and `phone/ui.tsx` (pages, sheets, lists).
-- **The wallpaper** is drawn in CSS (`.os__wallpaper` in `os.css`). To use a photograph, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
+- **The wallpaper** is a picture, `public/wallpaper.webp` (and `wallpaper-phone.webp`, composed upright). Both are drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
 
 ## The kit
@@ -120,4 +122,4 @@ src/
 - The kit's `Row` and `Avatar` draw the list of conversations and the monograms.
 - The kit's `Popover` draws the menus and the details. The menu bar adds the items, keyboard and focus handling.
 
-The app icons, folder, document and wallpaper are drawn for this site. No operating system's artwork is used. The company logos belong to the companies.
+The app icons, folder, document and wallpaper are drawn for this site; the group chat's icon is drawn after the Messages icon (a white speech bubble on green). No file from an operating system is used. The company logos belong to the companies.

@@ -179,9 +179,6 @@ export function Desktop() {
   return (
     <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={compact || undefined}>
       <div className="os__wallpaper" aria-hidden>
-        <div className="os__ribbon os__ribbon--a" />
-        <div className="os__ribbon os__ribbon--b" />
-        <div className="os__ribbon os__ribbon--c" />
         <div className="os__grain" />
       </div>
       <h1 className="sr-only">Shrug: what people say, the portfolio, FAQs and drops</h1>

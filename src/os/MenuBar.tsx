@@ -1,10 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { MessageCircle } from 'lucide-react'
-import { chat, finishChat, replayChat, toggleChat, TOTAL } from '../apps/chat'
+import { chat, finishChat, replayChat, toggleChat } from '../apps/chat'
 import { finder, photos, setFinderView, setMediaFilter, showNote, notes } from '../apps/state'
 import { FAQS } from '../data/faqs'
 import { SITE } from '../data/site'
-import { Count } from '../kit/motion/Count'
 import { Popover } from '../kit/motion/Popover'
 import { APPS, DOCK_APPS, type AppId } from './apps'
 import { dockPoint } from './dom'
@@ -13,8 +11,8 @@ import { useStore } from './store'
 import { activeApp, bringAllToFront, closeApp, focusApp, minimizeApp, openApp, tileApp, toggleZoom, wm } from './wm'
 
 // The menu bar: Shrug's mark where the system menu goes, the front app's name
-// and its menus, and on the right how many people have replied, the one-pager
-// and the time. Every item does something; nothing is there for show.
+// and its menus, and on the right the day and the time. Every item does
+// something; nothing is there for show.
 
 type Item =
   | { kind: 'item'; label: string; run?: () => void; href?: string; checked?: boolean; disabled?: boolean }
@@ -105,7 +103,6 @@ function useMenus(): MenuDef[] {
       ...(shown.length ? [rule, ...shown.map((id) => item(APPS[id].name, () => (wm.get().wins[id].minimized ? openApp(id, dockPoint(id)) : focusApp(id)), { checked: id === active }))] : []),
     ],
   })
-  menus.push({ id: 'help', label: 'Help menu', title: 'Help', items: [item('Shrug FAQs', () => launch('notes'))] })
   return menus
 }
 
@@ -125,7 +122,6 @@ export function MenuBar() {
   const menus = useMenus()
   const [open, setOpen] = useState<string | null>(null)
   const bar = useRef<HTMLElement>(null)
-  const replied = useStore(chat, (s) => s.replied)
   const compact = useStore(wm, (s) => s.compact)
   const now = useNow()
 
@@ -299,18 +295,8 @@ export function MenuBar() {
         })}
       </nav>
       <div className="menubar__status">
-        <button type="button" className="menubar__extra" onClick={() => launch('messages')} aria-label={`Group chat: ${replied} of ${TOTAL} replied`}>
-          <MessageCircle size={14} strokeWidth={2} aria-hidden />
-          <span aria-hidden>
-            <Count value={replied} /> of {TOTAL}
-            <span className="menubar__wide"> replied</span>
-          </span>
-        </button>
-        <a className="menubar__extra menubar__wide" href={SITE.onePager} target="_blank" rel="noreferrer">
-          One-pager
-        </a>
         <time className="menubar__clock" dateTime={now.toISOString()}>
-          <span className="menubar__wide">{DAY.format(now)}</span>
+          <span>{DAY.format(now)}</span>
           <span>{TIME.format(now)}</span>
         </time>
       </div>

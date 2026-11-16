@@ -57,18 +57,14 @@ function Tile({ from, to, children, sheen = 0.5 }: { from: string; to: string; c
   )
 }
 
+/** Messages: a white speech bubble on green, as the app that sends them is drawn. */
 function ChatIcon() {
   return (
-    <Tile from="#63c6ff" to="#0a67f2">
+    <Tile from="#6cf486" to="#0bbf2f" sheen={0.4}>
       <path
-        d="M50 23c-17.7 0-32 11-32 24.6 0 7.6 4.5 14.4 11.6 18.9-.7 4-2.7 7.5-5.8 10.2 6.3-.3 11.8-2.4 15.9-6 3.3.8 6.7 1.3 10.3 1.3 17.7 0 32-11 32-24.4S67.7 23 50 23z"
+        d="M50 22.5c-18.5 0-33.5 12.1-33.5 27 0 9.1 5.6 17.1 14.2 22-.5 4.6-2.6 8.5-6.3 11.4-.6.5-.2 1.4.6 1.3 7-.9 12.8-3.7 16.8-7.9 2.6.5 5.4.8 8.2.8 18.5 0 33.5-12.4 33.5-27.6S68.5 22.5 50 22.500z"
         fill="#fff"
       />
-      <g fill="none" stroke="#0b6df4" strokeWidth="4.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M36.5 40.5l3.7 7.3" />
-        <path d="M45.8 38l3.6 7.3" />
-        <path d="M63.5 38c-.8 10.3-7.4 16.9-19 19" />
-      </g>
     </Tile>
   )
 }

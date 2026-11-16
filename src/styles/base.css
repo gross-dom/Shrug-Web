@@ -27,7 +27,7 @@ html {
 body {
   overflow: hidden;
   overscroll-behavior: none;
-  background: #2459d3;
+  background: #0b1150;
   font-family: var(--font-ui);
   -webkit-text-size-adjust: 100%;
 }

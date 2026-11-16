@@ -13,7 +13,7 @@ import { prefersReducedMotion } from '../os/dom'
 import { AppIcon, DocumentIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
-import { chat, finishChat, QUESTION, replayChat, sendMessage, toggleChat, TOTAL, type ChatItem } from './chat'
+import { chat, finishChat, QUESTION, replayChat, sendMessage, sentAt, toggleChat, TOTAL, type ChatItem } from './chat'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
 import { SearchField, ShrugAvatar } from './ui'
 
@@ -23,7 +23,7 @@ import { SearchField, ShrugAvatar } from './ui'
 // receipts; everything here is laid out the way Messages lays it out, and the
 // two screens differ only in their chrome and their sizes.
 
-export const GROUP_NAME = 'The Shrug group chat'
+export const GROUP_NAME = 'Shrug Family'
 
 const TIME = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
 /** A time as Messages writes it beside a conversation. */
@@ -73,11 +73,27 @@ const QUOTES: ReactNode[] = PEOPLE.map((person, index) =>
 
 // ---- The conversation ----
 
-const stamp = (startedAt: number) => (
+const DAY_MS = 86_400_000
+const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: 'long' })
+const DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'numeric', year: '2-digit' })
+
+/** How many midnights ago a moment was. */
+const daysAgo = (t: number) => Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / DAY_MS)
+
+/** The day a message is from, as Messages names it: Today, Yesterday, the weekday, then the date. */
+const dayOf = (t: number) => {
+  const days = daysAgo(t)
+  return days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 7 ? WEEKDAY.format(t) : DATE.format(t)
+}
+
+/** When a conversation last heard something, as its row in the list says it: the time today, the day before that. */
+const rowTime = (t: number) => (daysAgo(t) <= 0 ? clock(t) : dayOf(t))
+
+const stamp = (at: number) => (
   <Stamp key="stamp" className="chat-stamp">
     <b>iMessage</b>
     <br />
-    <b>Today</b> {clock(startedAt)}
+    <b>{dayOf(at)}</b> {clock(at)}
   </Stamp>
 )
 
@@ -130,28 +146,26 @@ function groupNodes(items: ChatItem[], asked: boolean, startedAt: number, source
   return nodes
 }
 
-function personNodes(index: number, asked: boolean, startedAt: number, state: 'waiting' | 'typing' | 'replied', direct: { key: string; text: string }[], source: string) {
-  const nodes: ReactElement[] = [stamp(startedAt)]
-  if (asked) {
-    QUESTION.forEach((text, n) =>
-      nodes.push(
-        <Bubble key={`ask-${n}`} from="me">
-          {text}
-        </Bubble>,
-      ),
-    )
+/** One person's own conversation: the question, and what they said to it. It is all there from the start. */
+function personNodes(index: number, at: number, direct: { key: string; text: string }[], source: string) {
+  const nodes: ReactElement[] = [stamp(at)]
+  QUESTION.forEach((text, n) =>
     nodes.push(
-      <Receipt key="receipt" show>
-        Delivered
-      </Receipt>,
-    )
-  }
-  if (state !== 'waiting')
-    nodes.push(
-      <Bubble key="reply" from="them" typing={state === 'typing'} tail>
-        {QUOTES[index]}
+      <Bubble key={`ask-${n}`} from="me">
+        {text}
       </Bubble>,
-    )
+    ),
+  )
+  nodes.push(
+    <Receipt key="receipt" show>
+      Delivered
+    </Receipt>,
+  )
+  nodes.push(
+    <Bubble key="reply" from="them" tail>
+      {QUOTES[index]}
+    </Bubble>,
+  )
   for (const message of direct) {
     nodes.push(
       <Bubble key={message.key} from="me" source={source} className="chat-failed">
@@ -173,7 +187,6 @@ export function Transcript({ conversation, source, active = true }: { conversati
   const items = useStore(chat, (s) => s.items)
   const asked = useStore(chat, (s) => s.asked)
   const startedAt = useStore(chat, (s) => s.startedAt)
-  const state = useStore(chat, (s) => (typeof conversation !== 'number' ? 'waiting' : conversation < s.replied ? 'replied' : s.typing === conversation ? 'typing' : 'waiting'))
   const direct = useStore(chat, (s) => (typeof conversation === 'number' ? (s.direct[conversation] ?? NO_MESSAGES) : NO_MESSAGES))
   const jump = useStore(inbox, (s) => (conversation === 'group' ? s.jump : null))
   const scroller = useRef<HTMLDivElement>(null)
@@ -185,8 +198,8 @@ export function Transcript({ conversation, source, active = true }: { conversati
   const run = useRef<{ frame: number; from: number; t0: number; to: number | null } | null>(null)
   const flash = useRef<ReturnType<typeof setTimeout>>()
   const nodes = useMemo(
-    () => (conversation === 'group' ? groupNodes(items, asked, startedAt, source) : personNodes(conversation, asked, startedAt, state, direct, source)),
-    [conversation, items, asked, startedAt, state, direct, source],
+    () => (conversation === 'group' ? groupNodes(items, asked, startedAt, source) : personNodes(conversation, sentAt(conversation, startedAt), direct, source)),
+    [conversation, items, asked, startedAt, direct, source],
   )
   const count = nodes.length
   const [seen, setSeen] = useState(count)
@@ -443,33 +456,33 @@ interface ListRow {
   conversation: Conversation
   name: string
   preview: ReactNode
-  at: number
+  /** When it last heard something, as the row says it. */
+  when: string
   unread: boolean
 }
 
-const ConversationRow = memo(function ConversationRow({ row, selected, fresh, avatar, onPick }: { row: ListRow; selected: boolean; fresh: boolean; avatar: number; onPick: (c: Conversation) => void }) {
+const ConversationRow = memo(function ConversationRow({ row, selected, avatar, onPick }: { row: ListRow; selected: boolean; avatar: number; onPick: (c: Conversation) => void }) {
   return (
-    <div className="conv-slot" data-new={fresh || undefined}>
-      <Row
-        className="conv"
-        pad={8}
-        role="option"
-        aria-selected={selected}
-        aria-label={`${row.name}${row.unread ? ', unread' : ''}`}
-        data-conversation={row.conversation}
-        unread={row.unread}
-        selected={selected}
-        lead={<ConversationAvatar conversation={row.conversation} size={avatar} />}
-        title={row.name}
-        meta={clock(row.at)}
-        preview={row.preview}
-        onClick={() => onPick(row.conversation)}
-      />
-    </div>
+    <Row
+      className="conv"
+      pad={8}
+      role="option"
+      aria-selected={selected}
+      aria-label={`${row.name}${row.unread ? ', unread' : ''}`}
+      data-conversation={row.conversation}
+      unread={row.unread}
+      selected={selected}
+      lead={<ConversationAvatar conversation={row.conversation} size={avatar} />}
+      title={row.name}
+      meta={row.when}
+      preview={row.preview}
+      onClick={() => onPick(row.conversation)}
+    />
   )
 })
 
-/** Every conversation, newest first: the group, then each person as they reply. */
+/** Every conversation: the group, then everyone's own message to Shrug, all
+ * there from the start, to read through while the group plays out beside them. */
 export function ConversationList({ onPick, selectable = true, avatar = 40 }: { onPick?: (c: Conversation) => void; selectable?: boolean; avatar?: number }) {
   const replied = useStore(chat, (s) => s.replied)
   const repliedAt = useStore(chat, (s) => s.repliedAt)
@@ -488,12 +501,11 @@ export function ConversationList({ onPick, selectable = true, avatar = 40 }: { o
   const rows = useMemo(() => {
     const out: ListRow[] = []
     if (!q || GROUP_NAME.toLowerCase().includes(q))
-      out.push({ conversation: 'group', name: GROUP_NAME, preview: last || ' ', at: replied ? repliedAt[replied - 1]! : startedAt, unread: open !== 'group' && replied > groupSeen })
-    for (let i = replied - 1; i >= 0; i--) {
-      const person = PEOPLE[i]!
-      if (q && !person.name.toLowerCase().includes(q) && !person.role.toLowerCase().includes(q) && !(person.quote ?? '').toLowerCase().includes(q)) continue
-      out.push({ conversation: i, name: person.name, preview: person.quote ?? [150, 96], at: repliedAt[i]!, unread: !read.includes(i) && open !== i })
-    }
+      out.push({ conversation: 'group', name: GROUP_NAME, preview: last || ' ', when: clock(replied ? repliedAt[replied - 1]! : startedAt), unread: open !== 'group' && replied > groupSeen })
+    PEOPLE.forEach((person, i) => {
+      if (q && !person.name.toLowerCase().includes(q) && !person.role.toLowerCase().includes(q) && !(person.quote ?? '').toLowerCase().includes(q)) return
+      out.push({ conversation: i, name: person.name, preview: person.quote ?? [150, 96], when: rowTime(sentAt(i, startedAt)), unread: !read.includes(i) && open !== i })
+    })
     return out
   }, [q, last, replied, repliedAt, startedAt, open, read, groupSeen])
 
@@ -510,14 +522,20 @@ export function ConversationList({ onPick, selectable = true, avatar = 40 }: { o
     const next = rows[Math.max(0, Math.min(rows.length - 1, at + (e.key === 'ArrowDown' ? 1 : -1)))]
     if (!next) return
     pick(next.conversation)
-    ;(e.currentTarget as HTMLElement).querySelector<HTMLElement>(`[data-conversation="${next.conversation}"]`)?.scrollIntoView({ block: 'nearest' })
+    // Keeps the row that was picked in view, moving only the list
+    const list = e.currentTarget as HTMLElement
+    const row = list.querySelector<HTMLElement>(`[data-conversation="${next.conversation}"]`)
+    if (!row) return
+    const box = list.getBoundingClientRect()
+    const r = row.getBoundingClientRect()
+    if (r.top < box.top) list.scrollTop -= box.top - r.top + 8
+    else if (r.bottom > box.bottom) list.scrollTop += r.bottom - box.bottom + 8
   }
 
-  const now = Date.now()
   return (
     <div className="conv-list scrolls" role="listbox" aria-label="Conversations" tabIndex={0} onKeyDown={onKey}>
       {rows.map((row) => (
-        <ConversationRow key={row.conversation} row={row} selected={selectable && row.conversation === open} fresh={row.conversation !== 'group' && now - row.at < 900} avatar={avatar} onPick={pick} />
+        <ConversationRow key={row.conversation} row={row} selected={selectable && row.conversation === open} avatar={avatar} onPick={pick} />
       ))}
       {rows.length === 0 && <div className="side-empty">No Results</div>}
     </div>
@@ -548,7 +566,6 @@ export function ConversationPane({ conversation, active = true }: { conversation
  * the group, it shows their card (with what they said) in the same place. */
 export function Details({ conversation, onPick, onDone, tap = 'conversation' }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void; tap?: 'conversation' | 'details' }) {
   const replied = useStore(chat, (s) => s.replied)
-  const typing = useStore(chat, (s) => s.typing)
   const paused = useStore(chat, (s) => s.paused)
   const done = useStore(chat, (s) => s.done)
 
@@ -568,7 +585,7 @@ export function Details({ conversation, onPick, onDone, tap = 'conversation' }: 
             </div>
           )}
         </div>
-        {tap === 'details' && conversation < replied && person.quote && <blockquote className="details__quote">{person.quote}</blockquote>}
+        {tap === 'details' && person.quote && <blockquote className="details__quote">{person.quote}</blockquote>}
         {conversation < replied && (
           <div className="details__group">
             <button
@@ -610,13 +627,11 @@ export function Details({ conversation, onPick, onDone, tap = 'conversation' }: 
       <div className="details__label">{TOTAL} People</div>
       <div className="details__group details__people">
         {PEOPLE.map((person, i) => {
-          const here = i < replied
           return (
             <button
               key={i}
               type="button"
               className="details__row details__person"
-              data-state={here ? 'replied' : i === typing ? 'typing' : 'waiting'}
               onClick={() => {
                 if (tap === 'details') return onPick?.(i)
                 openConversation(i)

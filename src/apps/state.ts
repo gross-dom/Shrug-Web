@@ -1,5 +1,5 @@
 import { createStore, useStore } from '../os/store'
-import { chat } from './chat'
+import { chat, TOTAL } from './chat'
 
 // What each app is showing. Kept outside the windows so the menu bar's View
 // menu can change it, and so a closed window comes back the way it was left.
@@ -90,7 +90,7 @@ export function openConversation(open: Conversation) {
       jump: null,
       // Leaving the group: remember how far it had got, so later replies read as new
       groupSeen: s.open === 'group' ? replied : s.groupSeen,
-      read: typeof open === 'number' && open < replied && !s.read.includes(open) ? [...s.read, open] : s.read,
+      read: typeof open === 'number' && !s.read.includes(open) ? [...s.read, open] : s.read,
     }
   })
 }
@@ -103,15 +103,8 @@ export function showInGroup(index: number) {
 export const clearJump = () => inbox.set((s) => (s.jump === null ? s : { ...s, jump: null }))
 export const setInboxQuery = (query: string) => inbox.set((s) => ({ ...s, query }))
 
-/** Conversations with a reply nobody has opened yet: what the Dock's badge counts. */
-export const unreadCount = (replied: number, read: number[]) => replied - read.filter((i) => i < replied).length
-
-/** The same count, kept up to date for whatever shows it. */
-export const useUnread = () =>
-  unreadCount(
-    useStore(chat, (s) => s.replied),
-    useStore(inbox, (s) => s.read),
-  )
+/** People whose message hasn't been opened yet: what the desktop Dock's badge counts. */
+export const useUnread = () => TOTAL - useStore(inbox, (s) => s.read.length)
 
 /** The group conversation is on screen: every reply so far has been seen. */
 export function seeGroup() {
