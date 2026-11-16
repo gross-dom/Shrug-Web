@@ -1,6 +1,6 @@
 # Shrug Web
 
-Shrug's website as a desktop you can click around: a macOS-style skin over the "Shrug desktop" design, built with the [Stageshow](https://github.com/benjitaylor/skills) kit's window chrome, message thread, rows and controls. On a phone it is laid out for a phone instead: a dashboard, a Dock, and one app at a time.
+Shrug's website as a desktop you can click around: a macOS-style skin over the "Shrug desktop" design, built with the [Stageshow](https://github.com/benjitaylor/skills) kit's window chrome, message thread, rows and controls. On a phone it is one conversation instead, with the visitor in it.
 
 ## Run it
 
@@ -40,29 +40,32 @@ It is laid out as an iMessage group conversation, seen from Shrug's side:
 
 ### On a phone
 
-Below 760px wide (or 480px tall) the site is drawn for a phone: a dashboard, a Dock that stays at the foot of the screen, and one app at a time between them.
+Below 760px wide (or 480px tall) the site is not a phone drawn inside a phone. It is one conversation, and the visitor is in it: Niv adds you to Shrug Family, asks the group his question, and the ninety answer at the pace the desktop keeps. On the desktop you look over Niv's shoulder at his Mac; on a phone the messages are sent to you.
 
-- **The Dock is the way around.** Home, Chat, Portfolio, FAQs, Cases, VIP: every app is one tap from every other, the one you are in is marked, and Home closes it. Every app also has a back button, top left, that does the same. The Chat icon counts the replies that land while you are somewhere else.
-- **The dashboard** is the site at a glance: the group chat as it stands, a tile for each other app with its count, and the one-pager.
-- **Anything more comes up as a sheet** over the app: a grabber to drag it down by, a close button, a tap outside, or the browser's back.
-- **Every move is a step in the browser's history**, so the phone's back gesture or button undoes it, and a reload comes back to the same place. The first app opens by itself and adds no step.
+You get around by replying. Above the message field are the replies you might send; tap one, or type your own words. While you and Niv are talking the group holds on, and "keep the replies coming" brings them back.
 
-Each part of the site is the app a phone would give it, not its desktop window made small:
-
-| Part | On a phone |
+| You say | Niv answers with |
 | --- | --- |
-| Group chat | Messages, on the one conversation. The name opens its details as a sheet: the replies' controls and everyone in the group, each with what they said. |
-| Portfolio | A library of logos, by vertical, with search. A company comes up as a sheet with what it does and its link. |
-| FAQs | One page of questions; each opens where it is. |
-| Case Studies | What the terminal says (they're private), then a button and a sheet to ask for access with. No typing commands on a phone. |
-| VIP | A photo library, by drop. |
-| About | The dashboard itself. |
+| who’s in here? | How many, who they are, and a button to everyone in the group, each with what they said |
+| show me the portfolio | A screenshot of the Portfolio window on his Mac. Tap it and it opens, laid out for a phone |
+| i have questions | The FAQs become the replies to send, and each is answered in the conversation |
+| can i see the case studies? | A screenshot of the terminal, and a request for your email, which you type into the message field |
+| what’s a drop? | A screenshot of the VIP window, which opens as a photo library |
+| send me the one-pager | The link, unfolded as Messages unfolds one |
+| how do i reach you? | A button that opens the phone's real Messages or Mail with a first line written, and one that shares the site |
 
-There is no screen saver on a phone. The status bar and home indicator are the real phone's; the page only keeps clear of them.
+- **The screenshots are live.** Each is the desktop's own window, drawn at full size and scaled into a bubble (`src/phone/Shot.tsx`), so it is always the window as it stands.
+- **Opening is a step in the browser's history**, so the phone's back gesture or button closes what is open, and a reload comes back to it.
+- **A double tap loves a message**, and the button at the top right shares the site through the phone's own share sheet.
+- **The link preview** is the conversation's opening (`public/og.png`, taken by `tools/og.cjs`), so the address unfolds as the chat when it is texted.
+- **Reaching Shrug for real** needs a number or an address in `SITE.contact` (`src/data/site.ts`). Until then the conversation says so in its place.
+- **Niv's lines** other than the two he opens with are placeholder copy, in `src/phone/convo.ts`.
+
+The status bar and home indicator are the real phone's; the page only keeps clear of them. There is no screen saver on a phone.
 
 ### Links
 
-- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, the last one named opens in its place). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
+- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, the last one named is open over the conversation). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
 - `?saver` starts on the screen saver. `?idle=20` sets how many seconds of stillness start it. Desktop only.
 
 ## Content
@@ -89,28 +92,28 @@ Fill in a field and the real thing replaces its placeholder; nothing else needs 
 
 The 15 companies without a logo are Senra, Mona Lee Solar, Homemade, BloxSnacks, Loyal, Supergreat, Drumroll, Lula, Seis, RTFKT, Once Upon, Diagram, Tome, Opal and Poparazzi: their sites had no icon or served one that isn't their logo (a host's default, a parked page, another product's, a placeholder), and no site could be confirmed for Drumroll or Lula. About a quarter of the other logos come from small icons (32 to 48px) and are soft at the preview's size; a proper logo file replaces any of them the same way.
 
-Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal (or, on a phone, to the request sheet) are shown on screen and go nowhere. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`, which the phone's sheet calls too).
+Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal (or, on a phone, to Niv in the conversation) are shown on screen and go nowhere. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`, which the phone's sheet calls too).
 
 ## Where things are
 
 ```
-public/        the companies' logos (logos/) and the wallpaper
-tools/         wallpaper.py, which draws the wallpaper
+public/        the companies' logos (logos/), the wallpaper, and the link preview (og.png)
+tools/         wallpaper.py draws the wallpaper; og.cjs takes the link preview
 src/
   data/     the site's content
   os/       the desktop: window manager, menu bar, Dock, icons, screen saver
   apps/     one file per window, plus what windows and phone screens share
             (chat.ts: the chat's clock; chat-ui.tsx: the conversation;
             portfolio-ui.tsx: the companies and their logos; state.ts)
-  phone/    the phone: dashboard, Dock, navigation, each app's screen and sheets
+  phone/    the phone: the conversation, what opens out of it, and its sheets
   styles/   base.css, os.css (the desktop), apps.css (the windows), phone.css
   kit/      the Stageshow kit, copied in unmodified
 ```
 
 - **Window behaviour** is in `os/wm.ts` (state) and `os/WindowFrame.tsx` (dragging, resizing, the lights).
 - **A new window**: add it to `os/apps.ts`, write its component in `apps/`, list it in `os/Desktop.tsx`, and give it a screen in `phone/apps.tsx`.
-- **The phone** is `phone/Phone.tsx` (dashboard, Dock, apps opening and closing), `phone/nav.ts` (where it is, mirrored into history), `phone/apps.tsx` (each app's screen and its sheets) and `phone/ui.tsx` (pages, sheets, lists).
-- **The wallpaper** is a picture, `public/wallpaper.webp` (and `wallpaper-phone.webp`, composed upright). Both are drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
+- **The phone** is `phone/convo.ts` (the conversation: what is said, in what order, and what each reply sets off), `phone/Thread.tsx` (the conversation's screen), `phone/Shot.tsx` (a window of the Mac as a screenshot), `phone/apps.tsx` (what the screenshots open into, and the sheets), `phone/nav.ts` (what is open, mirrored into history) and `phone/ui.tsx` (pages, sheets, lists).
+- **The wallpaper** is a picture, `public/wallpaper.webp`, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
 
 ## The kit

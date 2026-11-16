@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactElement, type ReactNode } from 'react'
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { PEOPLE, RELATION_LABEL } from '../data/people'
 import { SITE } from '../data/site'
@@ -59,7 +59,7 @@ function lineWidths(index: number) {
 }
 
 /** One element per person, made once: a bubble only re-measures when its content really changes. */
-const QUOTES: ReactNode[] = PEOPLE.map((person, index) =>
+export const QUOTES: ReactNode[] = PEOPLE.map((person, index) =>
   person.quote ? (
     person.quote
   ) : (
@@ -89,7 +89,7 @@ const dayOf = (t: number) => {
 /** When a conversation last heard something, as its row in the list says it: the time today, the day before that. */
 const rowTime = (t: number) => (daysAgo(t) <= 0 ? clock(t) : dayOf(t))
 
-const stamp = (at: number) => (
+export const stamp = (at: number) => (
   <Stamp key="stamp" className="chat-stamp">
     <b>iMessage</b>
     <br />
@@ -182,13 +182,11 @@ const settle = (k: number) => 1 - Math.pow(1 - k, 4)
 const FOLLOW_MS = 550
 const NO_MESSAGES: { key: string; text: string }[] = []
 
-/** One conversation: it scrolls, and stays on the newest message the way a chat does. */
-export function Transcript({ conversation, source, active = true }: { conversation: Conversation; source: string; active?: boolean }) {
-  const items = useStore(chat, (s) => s.items)
-  const asked = useStore(chat, (s) => s.asked)
-  const startedAt = useStore(chat, (s) => s.startedAt)
-  const direct = useStore(chat, (s) => (typeof conversation === 'number' ? (s.direct[conversation] ?? NO_MESSAGES) : NO_MESSAGES))
-  const jump = useStore(inbox, (s) => (conversation === 'group' ? s.jump : null))
+/** A conversation's messages: they scroll, and the view stays on the newest
+ * one the way a chat does, until the reader scrolls back to read. The desktop's
+ * conversations and the phone's are both drawn through this.
+ * `jump` is a person whose reply to bring into view and ring. */
+export function Scroller({ label, nodes, jump, onJumped, active = true, foot, onTap }: { label: string; nodes: ReactElement[]; jump?: number | null; onJumped?: () => void; active?: boolean; foot?: ReactNode; onTap?: (e: MouseEvent<HTMLDivElement>) => void }) {
   const scroller = useRef<HTMLDivElement>(null)
   const flow = useRef<HTMLDivElement>(null)
   /** Following the newest message, until the reader scrolls back. */
@@ -197,10 +195,6 @@ export function Transcript({ conversation, source, active = true }: { conversati
    * going: a fixed place, or null for the end, wherever that is by then. */
   const run = useRef<{ frame: number; from: number; t0: number; to: number | null } | null>(null)
   const flash = useRef<ReturnType<typeof setTimeout>>()
-  const nodes = useMemo(
-    () => (conversation === 'group' ? groupNodes(items, asked, startedAt, source) : personNodes(conversation, sentAt(conversation, startedAt), direct, source)),
-    [conversation, items, asked, startedAt, direct, source],
-  )
   const count = nodes.length
   const [seen, setSeen] = useState(count)
   const [away, setAway] = useState(false)
@@ -289,10 +283,10 @@ export function Transcript({ conversation, source, active = true }: { conversati
 
   // Asked for from elsewhere: bring one person's reply to the middle and ring it
   useEffect(() => {
-    if (jump === null || !active) return
+    if (jump === null || jump === undefined || !active) return
     const el = scroller.current
     const bubble = el?.querySelector<HTMLElement>(`[data-person="${jump}"]`)
-    clearJump()
+    onJumped?.()
     if (!el || !bubble) return
     const box = el.getBoundingClientRect()
     const at = bubble.getBoundingClientRect()
@@ -326,6 +320,7 @@ export function Transcript({ conversation, source, active = true }: { conversati
       <div
         ref={scroller}
         className="chat__scroll"
+        onClick={onTap}
         onScroll={onScroll}
         onWheel={stop}
         onPointerDown={stop}
@@ -338,13 +333,14 @@ export function Transcript({ conversation, source, active = true }: { conversati
         onTouchCancel={() => (held.current = false)}
         tabIndex={0}
         role="log"
-        aria-label={conversationName(conversation)}
+        aria-label={label}
         aria-live="off"
       >
         <div ref={flow} className="chat__flow">
           <Thread app="imessage" className="chat__thread">
             {nodes}
           </Thread>
+          {foot}
         </div>
       </div>
       <button
@@ -365,6 +361,20 @@ export function Transcript({ conversation, source, active = true }: { conversati
       </button>
     </div>
   )
+}
+
+/** One of the desktop's conversations: the group as it plays out, or one person's own. */
+export function Transcript({ conversation, source, active = true }: { conversation: Conversation; source: string; active?: boolean }) {
+  const items = useStore(chat, (s) => s.items)
+  const asked = useStore(chat, (s) => s.asked)
+  const startedAt = useStore(chat, (s) => s.startedAt)
+  const direct = useStore(chat, (s) => (typeof conversation === 'number' ? (s.direct[conversation] ?? NO_MESSAGES) : NO_MESSAGES))
+  const jump = useStore(inbox, (s) => (conversation === 'group' ? s.jump : null))
+  const nodes = useMemo(
+    () => (conversation === 'group' ? groupNodes(items, asked, startedAt, source) : personNodes(conversation, sentAt(conversation, startedAt), direct, source)),
+    [conversation, items, asked, startedAt, direct, source],
+  )
+  return <Scroller label={conversationName(conversation)} nodes={nodes} jump={jump} onJumped={clearJump} active={active} />
 }
 
 // ---- The message field ----
@@ -560,14 +570,24 @@ export function ConversationPane({ conversation, active = true }: { conversation
 
 // ---- Details ----
 
+/** A run of replies and its controls, as the details panel needs them. */
+export interface ReplyStream {
+  replied: number
+  paused: boolean
+  done: boolean
+  toggle: () => void
+  finish: () => void
+  replay: () => void
+}
+
 /** What the info button opens: who is in the conversation, and the controls
  * for the replies as they play out. `tap` says what picking a person does: on
  * the desktop it opens their own conversation; on a phone, where there is only
  * the group, it shows their card (with what they said) in the same place. */
-export function Details({ conversation, onPick, onDone, tap = 'conversation' }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void; tap?: 'conversation' | 'details' }) {
-  const replied = useStore(chat, (s) => s.replied)
-  const paused = useStore(chat, (s) => s.paused)
-  const done = useStore(chat, (s) => s.done)
+export function Details({ conversation, onPick, onDone, tap = 'conversation', stream }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void; tap?: 'conversation' | 'details'; stream?: ReplyStream }) {
+  const desktop = useStore(chat, (s) => s)
+  // The replies the controls work: the desktop's group chat, unless another is handed in (the phone's own conversation)
+  const { replied, paused, done, toggle, finish, replay } = stream ?? { replied: desktop.replied, paused: desktop.paused, done: desktop.done, toggle: toggleChat, finish: finishChat, replay: replayChat }
 
   if (typeof conversation === 'number') {
     const person = PEOPLE[conversation]!
@@ -613,14 +633,14 @@ export function Details({ conversation, onPick, onDone, tap = 'conversation' }: 
         <div className="details__sub">{TOTAL} People</div>
       </div>
       <div className="details__group">
-        <button type="button" className="details__row" role="switch" aria-checked={paused} aria-disabled={done || undefined} onClick={done ? undefined : toggleChat}>
+        <button type="button" className="details__row" role="switch" aria-checked={paused} aria-disabled={done || undefined} onClick={done ? undefined : toggle}>
           <span>Pause Replies</span>
           <Toggle on={paused} aria-hidden />
         </button>
-        <button type="button" className="details__row details__row--action" aria-disabled={done || undefined} onClick={done ? undefined : finishChat}>
+        <button type="button" className="details__row details__row--action" aria-disabled={done || undefined} onClick={done ? undefined : finish}>
           Show Every Reply
         </button>
-        <button type="button" className="details__row details__row--action" onClick={replayChat}>
+        <button type="button" className="details__row details__row--action" onClick={replay}>
           Play From the Start
         </button>
       </div>

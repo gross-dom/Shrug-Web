@@ -8,6 +8,7 @@ import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
 import { SITE } from '../data/site'
 import { arriveIn, PHONE_APPS, startNav, watchHistory, type PhoneApp } from '../phone/nav'
+import { startConvo } from '../phone/convo'
 import { Phone } from '../phone/Phone'
 import { APP_IDS, type AppId } from './apps'
 import { Dock } from './Dock'
@@ -147,18 +148,16 @@ export function Desktop() {
       () => {
         started.current = true
         if (wm.get().compact) {
-          // A phone shows one app at a time: the last one asked for, or the chat.
-          // After a reload it is already where it was left.
+          // A phone is the conversation, with at most one thing open out of it:
+          // the last one a link asked for. After a reload it is where it was left.
           const asked = extra.filter((id): id is PhoneApp => (PHONE_APPS as string[]).includes(id)).pop()
-          if (!resumed) {
-            if (asked) arriveIn(asked)
-            else if (!query.has('empty')) arriveIn('messages')
-          }
+          if (!resumed && asked) arriveIn(asked)
+          startConvo()
         } else {
           if (!query.has('empty')) openApp('messages', dockPoint('messages'))
           extra.forEach((id) => openApp(id, dockPoint(id)))
+          startChat()
         }
-        startChat()
         if (query.has('saver') && !wm.get().compact) startSaver()
       },
       quiet ? 0 : 520,
@@ -169,9 +168,12 @@ export function Desktop() {
     }
   }, [])
 
-  // Widened from a phone to a desktop that has never had a window: the chat opens here too
+  // The layout changed under a visit already going: the other one's conversation
+  // starts too, and a desktop that has never had a window opens the chat
   useEffect(() => {
-    if (compact || !started.current) return
+    if (!started.current) return
+    if (compact) return startConvo()
+    startChat()
     const { wins } = wm.get()
     if (!APP_IDS.some((id) => wins[id].mounted)) openApp('messages', dockPoint('messages'))
   }, [compact])

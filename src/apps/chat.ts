@@ -154,8 +154,8 @@ function typeAndSend(text: string, key: string, each: number, then: () => void) 
 
 /** Every reply keeps the same time: its dots show while it is written, it is
  * sent, and there is a breath before the next person starts. It never speeds up. */
-const WRITING = 1700
-const BETWEEN = 1100
+export const WRITING = 1700
+export const BETWEEN = 1100
 
 function person(index: number) {
   if (index >= TOTAL) return after(BETWEEN, closing)

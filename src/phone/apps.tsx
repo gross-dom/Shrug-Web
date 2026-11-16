@@ -1,56 +1,47 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import { ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
-import { chat } from '../apps/chat'
-import { ConversationPane, Details, GROUP_NAME, GroupAvatar } from '../apps/chat-ui'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { ArrowUpRight, Check, ChevronDown, ChevronLeft, Lock } from 'lucide-react'
+import { Details, type ReplyStream } from '../apps/chat-ui'
 import { MediaFilterControl, MediaGrid } from '../apps/Photos'
 import { companiesIn, companyNamed, CompanyLogo, visitLabel, type Listed } from '../apps/portfolio-ui'
-import { finder, notes, photos, seeGroup, setDrop, setFinderQuery, showNote, showVertical, type Conversation } from '../apps/state'
+import { finder, notes, photos, setDrop, setFinderQuery, showNote, showVertical, type Conversation } from '../apps/state'
 import { answer, isEmail, term, TerminalLog } from '../apps/Terminal'
 import { CASE_STUDIES } from '../data/caseStudies'
 import { DROPS } from '../data/drops'
 import { ANSWER_PLACEHOLDER, FAQS } from '../data/faqs'
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
 import { useStore } from '../os/store'
-import { closeSheet, openSheet, type PhoneApp } from './nav'
-import { Chips, Group, Page, PhoneSearch, Sheet, useView } from './ui'
+import { convo, finishConvo, hold, replayConvo, resume, type ShotApp } from './convo'
+import { closeSheet, openSheet } from './nav'
+import { Chips, Group, Page, PhoneSearch, Sheet } from './ui'
 
-// Each part of the site as the app a phone would give it. They share their
-// content and state with the desktop's windows, but not their shape: a
-// conversation in Messages, a library of logos, a note of questions, a locked
-// folder with a way to ask for the key, and a photo library. Every app is one
-// screen; anything more comes up over it as a sheet.
+// What the screenshots in the conversation open into: each window of Niv's Mac
+// laid out for a phone. They share their content and state with the desktop's
+// windows, but not their shape: a library of logos, a page of questions, a
+// locked folder with a way to ask for the key, and a photo library. Each is
+// one screen; anything more comes up over it as a sheet, as the conversation's
+// own details do.
 
-// ---- Group chat: Messages, one conversation ----
-
-function ChatApp() {
-  const { active } = useView()
-  const replied = useStore(chat, (s) => s.replied)
-  // On screen, the replies are being read: the Dock has nothing to count
-  useEffect(() => {
-    if (active) seeGroup()
-  }, [active, replied])
-  return (
-    <Page
-      fixed
-      className="ph-thread"
-      center={
-        <button type="button" className="ph-thread-id" aria-label={`${GROUP_NAME}: details`} onClick={() => openSheet('details')}>
-          <GroupAvatar size={44} />
-          <span className="ph-thread-id__name">
-            <span>{GROUP_NAME}</span>
-            <ChevronRight size={11} strokeWidth={2.6} aria-hidden />
-          </span>
-        </button>
-      }
-    >
-      <ConversationPane conversation="group" active={active} />
-    </Page>
-  )
-}
+// ---- The conversation's details ----
 
 /** Who is in the conversation, and the replies' own controls. A person opens inside the same sheet. */
 function DetailsSheet({ closing }: { closing: boolean }) {
   const [who, setWho] = useState<Conversation>('group')
+  const state = useStore(convo, (c) => c)
+  // The group's replies in the phone's conversation, for the panel's controls to work
+  const stream: ReplyStream = {
+    replied: state.replied,
+    paused: !state.flowing && !state.done,
+    done: state.done,
+    toggle: () => (convo.get().flowing ? hold() : resume()),
+    finish: () => {
+      finishConvo()
+      closeSheet()
+    },
+    replay: () => {
+      replayConvo()
+      closeSheet()
+    },
+  }
   return (
     <Sheet
       label="Details"
@@ -64,7 +55,7 @@ function DetailsSheet({ closing }: { closing: boolean }) {
       }
     >
       <div className="ph-details" key={String(who)}>
-        <Details conversation={who} onPick={(next) => setWho(next)} onDone={() => closeSheet()} tap="details" />
+        <Details conversation={who} onPick={(next) => setWho(next)} onDone={() => closeSheet()} tap="details" stream={stream} />
       </div>
     </Sheet>
   )
@@ -310,15 +301,14 @@ function VipApp() {
 
 // ---- Which screen an app is, and which sheet a name is ----
 
-const SCREENS: Record<PhoneApp, () => ReactNode> = {
-  messages: ChatApp,
+const SCREENS: Record<ShotApp, () => ReactNode> = {
   finder: PortfolioApp,
   notes: FaqsApp,
   terminal: CasesApp,
   photos: VipApp,
 }
 
-export function AppScreen({ app }: { app: PhoneApp }) {
+export function AppScreen({ app }: { app: ShotApp }) {
   const Screen = SCREENS[app]
   return <Screen />
 }

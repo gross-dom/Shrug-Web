@@ -1,19 +1,20 @@
 import type { AppId } from '../os/apps'
 import { createStore } from '../os/store'
 
-// Where the phone is: the dashboard, or one app, with at most one sheet over
-// it. Every move the visitor makes is a step in the browser's history, the way
-// pages are, so the phone's own back gesture or button undoes it. Moves made
-// here are drawn with motion; moves the browser makes (its back and forward)
-// are drawn at once, because Safari has already slid the page across itself.
+// Where the phone is: the conversation, or something opened out of it, with at
+// most one sheet over that. Opening a thing is a step in the browser's history
+// and closing it is the step back, so the phone's own back gesture or button
+// closes whatever is open. Moves made here are drawn with motion; moves the
+// browser makes (its back and forward) are drawn at once, because Safari has
+// already slid the page across itself.
 
-/** The apps a phone has. About is the dashboard itself there. */
+/** What a phone can have open: the conversation is `messages`; the others open out of it. */
 export type PhoneApp = Exclude<AppId, 'about'>
 
 export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'photos']
 
 export interface Place {
-  /** The app that is open, or null on the dashboard. */
+  /** What is open over the conversation, or null when it is the conversation itself. */
   app: PhoneApp | null
   /** The sheet over it: `details`, `company:Anduril`, `request`. */
   sheet: string | null
@@ -43,10 +44,13 @@ function read(state: unknown): Entry | null {
   const place = entry?.shrug as Partial<Place> | undefined
   if (!place || typeof place !== 'object') return null
   const app = isApp(place.app) ? place.app : null
-  return { shrug: { app, sheet: app && typeof place.sheet === 'string' ? place.sheet : null }, n: typeof entry?.n === 'number' ? entry.n : 0 }
+  return { shrug: { app, sheet: typeof place.sheet === 'string' ? place.sheet : null }, n: typeof entry?.n === 'number' ? entry.n : 0 }
 }
 
 const here = () => read(history.state) ?? { shrug: { app: null, sheet: null }, n: 0 }
+
+/** Whether the next move the browser reports is one asked for here, and so drawn with motion. */
+let expected: boolean | null = null
 
 let appTimer: ReturnType<typeof setTimeout> | undefined
 let sheetTimer: ReturnType<typeof setTimeout> | undefined
@@ -70,20 +74,26 @@ function go(place: Place) {
   apply(place, true)
 }
 
-/** Opens an app, from the dashboard or straight from another app. */
-export const openApp = (app: PhoneApp) => go({ app, sheet: null })
+/** Opens something out of the conversation. */
+export const openApp = (app: PhoneApp) => go({ app: app === 'messages' ? null : app, sheet: null })
 
-/** Closes whatever is open: back to the dashboard. */
-export const goHome = () => go({ app: null, sheet: null })
-
-/** Brings a sheet up over the app that is open. */
-export function openSheet(sheet: string) {
-  const { app } = phone.get()
-  if (app) go({ app, sheet })
+/** Closes what is open: a step back to the conversation, since opening it was a step forward. */
+export function closeApp() {
+  const now = phone.get()
+  if (!now.app) return
+  const entry = here()
+  if (entry.n > 0) {
+    expected = true
+    history.back()
+    return
+  }
+  // Arrived straight onto it (a restored tab): there is nothing to step back to
+  history.replaceState({ shrug: { app: null, sheet: null }, n: entry.n } satisfies Entry, '')
+  apply({ app: null, sheet: null }, true)
 }
 
-/** Whether the next move the browser reports is one asked for here, and so drawn with motion. */
-let expected: boolean | null = null
+/** Brings a sheet up over whatever is open. */
+export const openSheet = (sheet: string) => go({ app: phone.get().app, sheet })
 
 /** Closes the sheet: a step back, since opening it was a step forward. `motion`
  * is false when the sheet has already been dragged away by hand. */
@@ -115,10 +125,12 @@ export function startNav(): boolean {
   return resumed
 }
 
-/** The first app opens by itself, as the page arrives. Nobody asked for it,
- * so it takes the place of the entry the visit began on instead of adding one:
- * a browser's back button skips steps a page adds on its own. */
+/** A link that names a window (`?open=portfolio`) arrives with it open. Nobody
+ * tapped anything, so it takes the place of the entry the visit began on
+ * instead of adding one: a browser's back button skips steps a page adds on
+ * its own. */
 export function arriveIn(app: PhoneApp) {
+  if (app === 'messages') return
   history.replaceState({ shrug: { app, sheet: null }, n: here().n } satisfies Entry, '')
   apply({ app, sheet: null }, true)
 }

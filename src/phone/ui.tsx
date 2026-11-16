@@ -1,14 +1,14 @@
 import { createContext, useContext, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { ChevronLeft, Search, X } from 'lucide-react'
-import { closeSheet, goHome } from './nav'
+import { GROUP_NAME } from '../apps/chat-ui'
+import { closeApp, closeSheet } from './nav'
 
-// The parts every screen on the phone is built from, laid out the way iOS
-// lays them out: a bar with a back button, a large title that moves into the
-// bar as the page scrolls, a search field, grouped lists, and a sheet that
-// can be dragged away. The phone's own status bar and home indicator are the
-// real ones.
+// The parts of the phone's screens other than the conversation itself: a page
+// with a back button and a large title that moves into the bar as it scrolls,
+// a search field, grouped lists, and a sheet that can be dragged away. The
+// phone's own status bar and home indicator are the real ones.
 
-/** Whether the app a screen belongs to is the one on screen, with nothing over it. */
+/** Whether a screen is the one in front, with nothing over it. */
 export const ViewContext = createContext<{ active: boolean }>({ active: true })
 export const useView = () => useContext(ViewContext)
 
@@ -26,7 +26,7 @@ export interface PageProps {
   children: ReactNode
 }
 
-/** An app's screen: a bar whose back button leaves the app, and the content under it. */
+/** Something opened out of the conversation: a bar whose back button returns to it, and the content under it. */
 export function Page({ title, center, trailing, tone = 'plain', fixed, className, children }: PageProps) {
   const scroller = useRef<HTMLDivElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -47,11 +47,12 @@ export function Page({ title, center, trailing, tone = 'plain', fixed, className
     <div className={`ph-page${className ? ` ${className}` : ''}`} data-tone={tone} data-fixed={fixed || undefined}>
       <header className="ph-nav" data-scrolled={scrolled || !large || undefined} data-center={center ? '' : undefined}>
         <div className="ph-nav__side">
-          <button type="button" className="ph-bar-button" aria-label="Home" onClick={goHome}>
-            <ChevronLeft size={25} strokeWidth={2.2} aria-hidden />
+          <button type="button" className="ph-back" aria-label={`Back to ${GROUP_NAME}`} onClick={closeApp}>
+            <ChevronLeft size={22} strokeWidth={2.4} aria-hidden />
+            <span>{GROUP_NAME}</span>
           </button>
         </div>
-        <div className="ph-nav__middle">{center ?? (title ? <span className="ph-nav__title">{title}</span> : null)}</div>
+        <div className="ph-nav__middle">{center}</div>
         <div className="ph-nav__side ph-nav__side--end">{trailing}</div>
       </header>
       <div ref={scroller} className="ph-page__content" data-scroller={fixed ? undefined : ''}>

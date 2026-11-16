@@ -1,9 +1,9 @@
-/* The site on a phone: a dashboard, a Dock that never leaves the foot of the
-   screen, and one app at a time between them, each with the bars, lists and
-   sheets iOS gives one. Everything is in points, as on an iPhone. The real
-   status bar and home indicator are left to the phone: the safe areas are
-   padded, never drawn. Motion is transform and opacity only, so it stays
-   smooth on a phone. */
+/* The site on a phone: one conversation, full screen, with the visitor in it.
+   What Niv sends that can be opened (a screenshot of a window on his Mac)
+   opens out of its bubble and closes back into it; anything smaller is a
+   sheet. Everything is in points, as on an iPhone. The real status bar and
+   home indicator are left to the phone: the safe areas are padded, never
+   drawn. Motion is transform and opacity only, so it stays smooth on a phone. */
 
 .os[data-compact] {
   --safe-top: env(safe-area-inset-top, 0px);
@@ -13,18 +13,13 @@
   --ph-separator: rgba(60, 60, 67, 0.29);
   --ph-fill: rgba(118, 118, 128, 0.12);
   --ph-grouped: #f2f2f7;
-  /* UIKit's own curve for an app opening and a sheet coming up */
+  /* UIKit's own curve for a thing opening and a sheet coming up */
   --ph-ease: cubic-bezier(0.3, 0.75, 0.1, 1);
   --ss-accent: #007aff;
 }
 
-/* The same wallpaper, composed for a screen held upright, and small enough
-   for a phone to hold */
-.os[data-compact] .os__wallpaper::before {
-  background-image: url('/wallpaper-phone.webp');
-}
-
-.os[data-compact] .os__grain {
+/* Nothing of the desktop shows on a phone but what Niv sends of it */
+.os[data-compact] .os__wallpaper {
   display: none;
 }
 
@@ -35,340 +30,28 @@
   left: 0;
   height: var(--vv-h, 100%);
   overflow: hidden;
+  background: #fff;
   color: #000;
   font-size: 17px;
   line-height: 22px;
   letter-spacing: -0.02em;
   transform: translateY(var(--vv-top, 0px));
   touch-action: manipulation;
-  /* Room every screen keeps clear at its foot for the Dock */
-  --dock-h: 66px;
-  --dock-space: calc(var(--dock-h) + var(--safe-bottom) + 18px);
 }
 
-/* The keyboard is up: the Dock steps aside and gives its room back */
-.ph[data-keyboard] {
-  --dock-space: 0px;
-}
-
-/* ---- The Dock: always there, the way around ---- */
-
-.ph-dock {
-  position: absolute;
-  right: 10px;
-  bottom: calc(var(--safe-bottom) + 8px);
-  left: 10px;
-  z-index: 30;
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-  max-width: 440px;
-  height: var(--dock-h);
-  margin: 0 auto;
-  padding: 5px;
-  border-radius: 26px;
-  background: rgba(250, 250, 252, 0.8);
-  -webkit-backdrop-filter: blur(24px) saturate(1.8);
-  backdrop-filter: blur(24px) saturate(1.8);
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.09), 0 8px 28px rgba(8, 14, 60, 0.2), inset 0 0.5px 0 rgba(255, 255, 255, 0.9);
-}
-
-/* It comes up as the page arrives, so the eye finds it once */
-.os:not([data-booted]) .ph-dock {
-  opacity: 0;
-  transform: translateY(140%);
-}
-
-.os[data-booted] .ph-dock {
-  transition: transform 0.6s var(--ph-ease) 0.15s, opacity 0.3s ease 0.15s;
-}
-
-.ph[data-keyboard] .ph-dock {
-  display: none;
-}
-
-.ph-dock__item {
-  position: relative;
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-width: 0;
-  border-radius: 21px;
-  color: rgba(60, 60, 67, 0.78);
-  transition: background-color 0.2s ease, transform 0.18s ease;
-}
-
-.ph-dock__item:active {
-  transform: scale(0.94);
-}
-
-/* Where you are */
-.ph-dock__item[aria-current] {
-  background: rgba(60, 60, 67, 0.12);
-  color: #000;
-}
-
-.ph-dock__item:focus-visible {
-  outline-offset: -2px;
-}
-
-.ph-dock__icon {
-  position: relative;
-  display: block;
-  width: 32px;
-  height: 32px;
-}
-
-.ph-dock__name {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 10.5px;
-  font-weight: 600;
-  line-height: 12px;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ph-dock__rule {
-  flex: none;
-  align-self: center;
-  width: 1px;
-  height: 30px;
-  margin: 0 2px;
-  background: rgba(60, 60, 67, 0.18);
-}
-
-.ph-dock__badge {
-  position: absolute;
-  top: -6px;
-  right: -10px;
-  display: grid;
-  place-items: center;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 5px;
-  border-radius: 10px;
-  background: #ff3b30;
-  box-shadow: 0 0 0 2px rgba(250, 250, 252, 0.9);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---- The dashboard ---- */
-
-.ph-home {
+/* The conversation, under whatever is open */
+.ph-under {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: calc(var(--safe-top) + 22px) 16px calc(var(--dock-space) + 8px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  transition: transform 0.44s var(--ph-ease), opacity 0.3s ease, visibility 0s;
 }
 
-.ph-home > * {
-  flex: none;
-}
-
-/* An app is open over it: it draws back, then stops being drawn */
-.ph-home[data-covered] {
+.ph-under[data-covered] {
   visibility: hidden;
-  opacity: 0;
-  transform: scale(0.94);
-  transition: transform 0.44s var(--ph-ease), opacity 0.3s ease, visibility 0s 0.44s;
+  transition: visibility 0s 0.46s;
 }
 
-.ph-home__top {
-  margin-bottom: 6px;
-  color: #fff;
-  text-align: center;
-  text-shadow: 0 1px 10px rgba(0, 20, 100, 0.4);
-}
-
-.ph-home__mark {
-  font-size: 30px;
-  font-weight: 600;
-  line-height: 38px;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-}
-
-.ph-home__name {
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 20px;
-  opacity: 0.9;
-}
-
-/* A card: one app, said in a glance */
-.ph-card {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  min-width: 0;
-  padding: 13px 15px 14px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 8px 26px rgba(4, 10, 70, 0.18), inset 0 0.5px 0 rgba(255, 255, 255, 0.9);
-  text-align: left;
-  transition: transform 0.2s ease;
-}
-
-.ph-card:active {
-  transform: scale(0.97);
-}
-
-.ph-card--chat {
-  width: 100%;
-  max-width: 440px;
-}
-
-.ph-card__head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--ph-label-2);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 18px;
-  letter-spacing: -0.01em;
-}
-
-.ph-card__icon {
-  flex: none;
-  width: 22px;
-  height: 22px;
-}
-
-.ph-card__app {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ph-card__count {
-  flex: none;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.ph-card__count .ss-count {
-  font: inherit;
-}
-
-.ph-card__ask {
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 22px;
-}
-
-.ph-card__reply {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  min-height: 57px;
-  font-size: 14px;
-  line-height: 19px;
-  animation: ph-fade 0.4s ease both;
-}
-
-.ph-card__reply--waiting {
-  align-items: center;
-  color: var(--ph-label-2);
-}
-
-.ph-card__text {
-  display: -webkit-box;
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(60, 60, 67, 0.86);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.ph-card__text b {
-  margin-right: 5px;
-  color: #000;
-  font-weight: 600;
-}
-
-.ph-tiles {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  width: 100%;
-  max-width: 440px;
-}
-
-.ph-card--tile {
-  position: relative;
-  min-height: 92px;
-  padding: 12px 14px 13px;
-}
-
-.ph-card__figure {
-  margin-top: auto;
-  color: var(--ph-label-2);
-  font-size: 15px;
-  line-height: 24px;
-}
-
-.ph-card__figure b {
-  margin-right: 2px;
-  color: #000;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-
-.ph-card__logos {
-  display: flex;
-  flex: none;
-}
-
-.ph-card__logos .logo {
-  margin-left: -6px;
-  box-shadow: 0 0 0 1.5px #fff;
-}
-
-.ph-home__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 40px;
-  margin-top: 4px;
-  padding: 0 16px 0 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.5);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  text-shadow: 0 1px 4px rgba(0, 10, 70, 0.3);
-}
-
-.ph-home__link:active {
-  background: rgba(255, 255, 255, 0.34);
-}
-
-/* ---- An app: it grows out of its place in the Dock, and shrinks back ---- */
+/* ---- Something opened out of the conversation: it grows out of the bubble
+   it was sent in, and shrinks back into it ---- */
 
 .ph-app {
   position: absolute;
@@ -377,8 +60,8 @@
   overflow: hidden;
   background: #fff;
   --dx: 0px;
-  --dy: 40vh;
-  --k: 0.1;
+  --dy: 48px;
+  --k: 0.94;
 }
 
 .ph-app[data-state='open'] {
@@ -389,12 +72,6 @@
   z-index: 9;
   pointer-events: none;
   animation: ph-app-out 0.34s cubic-bezier(0.4, 0, 0.7, 0.4) forwards;
-}
-
-/* Another app is opening over it: it waits underneath until that has arrived */
-.ph-app[data-state='under'] {
-  z-index: 9;
-  pointer-events: none;
 }
 
 /* A move the browser made: it is simply there */
@@ -500,19 +177,31 @@
   min-width: 0;
 }
 
-.ph-nav__title {
-  overflow: hidden;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 22px;
-  text-overflow: ellipsis;
+/* Back to the conversation, by name */
+.ph-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  max-width: 100%;
+  height: 44px;
+  padding: 0 16px 0 9px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.1);
+  color: #1d1d1f;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: transform 0.18s ease;
 }
 
-.ph-nav[data-scrolled] .ph-nav__title {
-  opacity: 1;
+.ph-back > svg {
+  flex: none;
+}
+
+.ph-back:active {
+  transform: scale(0.95);
 }
 
 .ph-bar-button {
@@ -529,10 +218,6 @@
   transition: transform 0.18s ease;
 }
 
-.ph-bar-button > svg {
-  margin-left: -2px;
-}
-
 .ph-bar-button:active {
   transform: scale(0.92);
 }
@@ -540,7 +225,7 @@
 .ph-page__content {
   flex: 1;
   min-height: 0;
-  padding: calc(var(--safe-top) + 62px) 0 calc(var(--dock-space) + 16px);
+  padding: calc(var(--safe-top) + 62px) 0 calc(var(--safe-bottom) + 28px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -551,7 +236,7 @@
 .ph-page[data-fixed] > .ph-page__content {
   display: flex;
   flex-direction: column;
-  padding: 0 0 var(--dock-space);
+  padding: 0 0 var(--safe-bottom);
   overflow: hidden;
 }
 
@@ -637,7 +322,6 @@
 }
 
 .ph-chips::-webkit-scrollbar,
-.ph-home::-webkit-scrollbar,
 .ph-page__content::-webkit-scrollbar,
 .ph-sheet__body::-webkit-scrollbar {
   display: none;
@@ -907,9 +591,9 @@
   scrollbar-width: none;
 }
 
-/* ---- Group chat: Messages ---- */
+/* ---- The conversation ---- */
 
-/* The conversation's face over its name, in the bar */
+/* Its face over its name, in the bar */
 .ph-thread-id {
   display: flex;
   flex-direction: column;
@@ -958,18 +642,22 @@
   scrollbar-width: none;
 }
 
-.ph .chat__scroll::-webkit-scrollbar {
+.ph .chat__scroll::-webkit-scrollbar,
+.ph-replies::-webkit-scrollbar {
   display: none;
 }
 
 /* Messages run up under the bar, as they do on an iPhone */
 .ph .chat__flow {
-  padding: calc(var(--safe-top) + 100px) 14px 8px 12px;
+  padding: calc(var(--safe-top) + 100px) 14px 10px 12px;
 }
 
 .ph .chat__thread {
   --ss-thread-size: 16px;
   letter-spacing: -0.015em;
+  /* A double tap loves a message here, as in Messages: it mustn't select a word instead */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .ph .chat__thread .ss-bubble {
@@ -979,21 +667,18 @@
 .ph .chat-who,
 .ph .chat-stamp.ss-stamp,
 .ph .chat-note.ss-stamp,
-.ph .chat__thread .ss-receipt,
-.ph .chat-undelivered {
+.ph .chat__thread .ss-receipt {
   font-size: 12px;
   line-height: 16px;
   letter-spacing: 0;
 }
 
-.ph .chat-failed::after {
-  width: 22px;
-  height: 22px;
-  font-size: 14px;
+.ph .chat-note.ss-stamp {
+  margin-bottom: 4px;
 }
 
-.ph .chat-undelivered {
-  margin-right: 29px;
+.ph .chat-note.ss-stamp:last-of-type {
+  margin-bottom: 12px;
 }
 
 .ph .chat__new {
@@ -1003,26 +688,270 @@
   font-size: 14px;
 }
 
+/* A line of Niv's still to be written: the slot it goes in */
+.chat-todo .ss-bubble {
+  --t: #63646b;
+}
+
+.chat-todo .ss-bubble::before {
+  border: 1px dashed #a4a5ad;
+  background: none;
+}
+
+.chat-todo .ss-bubble__tail {
+  display: none;
+}
+
+/* Where a face would be, on a message that isn't the last of a run */
+.chat-gap {
+  display: block;
+  flex: none;
+  width: 28px;
+}
+
+/* What Niv sends that isn't words. It rides the thread like a bubble does. */
+.chat-attach {
+  position: relative;
+  top: 0;
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 1px;
+  transition: top var(--ss-scroll);
+  animation: ph-arrive 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ph-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.chat-shot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chat-shot__cap {
+  margin-left: 4px;
+  color: #8e8e93;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+
+/* A screenshot of a window on Niv's Mac: the window itself, small */
+.shot {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #1b2f9e;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.14);
+  /* The window inside is laid out at desktop sizes, whatever the phone's are */
+  letter-spacing: 0;
+}
+
+.shot__screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  background: #1b2f9e url('/wallpaper.webp') center / cover no-repeat;
+  pointer-events: none;
+  contain: strict;
+}
+
+.shot__window.wf__content {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.shot__open {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transition: background-color 0.15s ease;
+}
+
+.shot__open:active {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.shot__open:focus-visible {
+  outline-offset: -3px;
+}
+
+/* A link, as Messages unfolds one */
+.chat-link {
+  display: flex;
+  flex-direction: column;
+  width: 232px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #e9e9eb;
+}
+
+.chat-link:active {
+  filter: brightness(0.94);
+}
+
+.chat-link__art {
+  display: grid;
+  place-items: center;
+  height: 112px;
+  background: linear-gradient(180deg, #f8f9fc, #dde2ec);
+}
+
+.chat-link__art > svg {
+  width: 62px;
+  height: 62px;
+  filter: drop-shadow(0 4px 8px rgba(20, 30, 70, 0.18));
+}
+
+.chat-link__text {
+  display: flex;
+  flex-direction: column;
+  padding: 9px 12px 10px;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.chat-link__text b {
+  font-weight: 600;
+}
+
+.chat-link__text span {
+  color: #8e8e93;
+  font-size: 13px;
+  line-height: 17px;
+  letter-spacing: 0;
+}
+
+/* A button Niv sends: it does a real thing */
+.chat-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 8px 12px 8px 10px;
+  border-radius: 18px;
+  background: #e9e9eb;
+  color: #000;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.chat-card > svg {
+  flex: none;
+  color: #8e8e93;
+}
+
+.chat-card:active {
+  filter: brightness(0.92);
+}
+
+.chat-card__faces {
+  display: flex;
+}
+
+.chat-card__faces > * + * {
+  margin-left: -8px;
+  box-shadow: 0 0 0 2px #e9e9eb;
+}
+
+.chat-card--go {
+  padding: 0 16px;
+  background: var(--ss-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chat-card--go > svg {
+  color: #fff;
+}
+
+/* The replies the visitor might send next, in a row above the field */
+.ph-replies {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  padding: 8px 12px 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.ph-replies[data-empty] {
+  display: none;
+}
+
+.ph-reply {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #d4d4d8;
+  color: var(--ss-accent);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  animation: ph-reply-in 0.4s var(--ph-ease) both;
+}
+
+.ph-reply:active {
+  background: #eeeef0;
+}
+
+@keyframes ph-reply-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* The group, waiting to carry on: the one reply that isn't a thing to say */
+.ph-reply[data-kind='resume'] {
+  background: var(--ss-accent);
+  box-shadow: none;
+  color: #fff;
+}
+
+.ph-reply[data-kind='resume'] em {
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.82;
+}
+
+.ph-reply[data-kind='others'] {
+  color: #1d1d1f;
+}
+
+/* Wherever the reply that was tapped had its words: its bubble forms out of here */
+.chip-origin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  color: var(--ss-accent);
+  pointer-events: none;
+}
+
 /* The message field, at the size the kit measured from Messages */
 .ph .composer {
-  gap: 8px;
-  padding: 6px 12px 8px 10px;
-}
-
-.ph[data-keyboard] .composer {
-  padding-bottom: 8px;
-}
-
-.ph .composer__plus {
-  width: 36px;
-  height: 36px;
-  background: #eeeef0;
-  color: #85858b;
-}
-
-.ph .composer__plus > svg {
-  width: 21px;
-  height: 21px;
+  padding: 6px 12px 8px;
 }
 
 .ph .composer__field {
@@ -1036,8 +965,7 @@
   box-shadow: inset 0 0 0 1px #c2c2c8;
 }
 
-.ph .composer__input,
-.ph .composer__ghost {
+.ph .composer__input {
   font-size: 17px;
   letter-spacing: -0.02em;
 }
@@ -1046,38 +974,13 @@
   color: #c2c2c6;
 }
 
-.ph .composer__origin,
-.ph .composer__ghost {
+.ph .composer__origin {
   left: 14px;
 }
 
 .ph .composer__send {
   width: 30px;
   height: 30px;
-}
-
-.ph .composer__send > svg {
-  width: 19px;
-  height: 19px;
-}
-
-.ph .composer__more.ss-popover {
-  min-width: 232px;
-  padding: 6px;
-  border-radius: 20px;
-}
-
-.ph .composer__app {
-  gap: 12px;
-  height: 46px;
-  padding: 0 14px 0 9px;
-  border-radius: 14px;
-  font-size: 17px;
-}
-
-.ph .composer__app-icon {
-  width: 29px;
-  height: 29px;
 }
 
 /* Details: a contact card over grouped lists */
@@ -1436,33 +1339,26 @@
   font-size: 15px;
 }
 
-.ph .vip__grid {
+.ph-vip .vip__grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: 92px;
   gap: 8px;
   padding: 0 16px 8px;
 }
 
-.ph .vip-tile[data-span='big'],
-.ph .vip-tile[data-span='wide'] {
+.ph-vip .vip-tile[data-span='big'],
+.ph-vip .vip-tile[data-span='wide'] {
   grid-column: span 1;
 }
 
-.ph .vip-tile__cap {
+.ph-vip .vip-tile__cap {
   font-size: 12px;
   letter-spacing: 0;
 }
 
-.ph .vip__none {
+.ph-vip .vip__none {
   padding: 48px 24px;
   font-size: 17px;
-}
-
-/* The narrowest phones: a tile has no room for the logos beside its name */
-@media (max-width: 350px) {
-  .ph-card__logos {
-    display: none;
-  }
 }
 
 /* Wider than a phone held upright: more to a row */
@@ -1471,24 +1367,8 @@
     grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   }
 
-  .ph .vip__grid {
+  .ph-vip .vip__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-/* A phone on its side: less height for everything */
-@media (max-height: 480px) {
-  .ph {
-    --dock-h: 54px;
-  }
-
-  .ph-dock__icon {
-    width: 26px;
-    height: 26px;
-  }
-
-  .ph-home {
-    padding-top: calc(var(--safe-top) + 10px);
   }
 }
 
@@ -1496,13 +1376,12 @@
   .ph-app,
   .ph-sheet__panel,
   .ph-sheet__shade,
-  .ph-card__reply,
-  .ph-details {
+  .ph-details,
+  .ph-reply,
+  .chat-attach {
     animation: none !important;
   }
 
-  .ph-home,
-  .ph-dock,
   .ph-faq__answer,
   .ph-faq__chevron,
   .ph-sheet__panel {
