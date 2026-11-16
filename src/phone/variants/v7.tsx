@@ -57,20 +57,29 @@ function Card({ deal, state, side }: { deal: Deal; state: 'rest' | 'in' | 'out';
     if (!el) return
     let width = 0
     let height = 0
+    /** Sets it at the k-th size, and says whether it then fits. */
+    const fitsAt = (k: number) => {
+      const size = SIZES[k]!
+      el.style.fontSize = `${size}px`
+      // A few words are set like a headline; a long answer like a paragraph
+      el.dataset.set = size >= 24 ? 'large' : size >= 18 ? 'medium' : 'small'
+      return el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1
+    }
     const fit = () => {
       width = el.clientWidth
       height = el.clientHeight
-      let fits = false
-      for (const size of SIZES) {
-        el.style.fontSize = `${size}px`
-        // A few words are set like a headline; a long answer like a paragraph
-        el.dataset.set = size >= 24 ? 'large' : size >= 18 ? 'medium' : 'small'
-        if (el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1) {
-          fits = true
-          break
-        }
+      // Whatever fits at one size fits at every smaller one, so the largest
+      // that fits is found by halving: each try has the words laid out again
+      let big = 0
+      let small = SIZES.length - 1
+      if (!fitsAt(small)) return setClipped(true)
+      while (big < small) {
+        const mid = (big + small) >> 1
+        if (fitsAt(mid)) small = mid
+        else big = mid + 1
       }
-      setClipped(!fits)
+      fitsAt(big)
+      setClipped(false)
     }
     fit()
     const watch = new ResizeObserver(() => {
@@ -274,7 +283,8 @@ export default function V7({ active }: { active: boolean }) {
           </div>
         )}
         <Card key={now.n} deal={now} state={now.n === 0 || still ? 'rest' : 'in'} side={now.n % 2 ? 1 : -1} />
-        {gone && <Card key={`out-${gone.n}`} deal={gone} state="out" side={gone.n % 2 ? -1 : 1} />}
+        {/* The same card it was while it was the answer (its key is its deal), so nothing about it is worked out again */}
+        {gone && <Card key={gone.n} deal={gone} state="out" side={gone.n % 2 ? -1 : 1} />}
       </div>
 
       <div className="v7__act">
