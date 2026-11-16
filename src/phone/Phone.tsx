@@ -1,18 +1,22 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 import { APPS } from '../os/apps'
 import { useStore } from '../os/store'
 import { AppScreen, SheetScreen } from './apps'
 import type { ShotApp } from './convo'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Chooser } from './Chooser'
 import { phone } from './nav'
-import { Thread } from './Thread'
 import { ViewContext } from './ui'
+import { goToVariant, variantFromUrl, VARIANTS } from './variants'
 
-// The site on a phone: one conversation. Anything Niv sends that can be
-// opened (a screenshot of a window on his Mac) opens out of its bubble to fill
-// the screen and closes back into it, and anything smaller comes up as a
-// sheet. There is no home screen and no Dock: getting around is replying. It
-// is drawn edge to edge and leaves the status bar and the home indicator to
-// the real phone.
+// The site on a phone. While the phone's design is being chosen there are ten
+// versions of it (src/phone/variants): the address picks one (`?v=3`), and with
+// none it shows the list. A version is the phone's home; the pages and sheets
+// that can open over it are shared. It is drawn edge to edge and leaves the
+// status bar and the home indicator to the real phone.
+
+/** The version this page is showing: fixed for the life of the page. */
+const PICKED = variantFromUrl()
 
 /** What a screenshot opens into: full screen, out of the bubble it was sent in and back into it. */
 function Opened({ app, state, still, active }: { app: ShotApp; state: 'open' | 'closing'; still: boolean; active: boolean }) {
@@ -78,15 +82,46 @@ export function Phone() {
   const opened = app && app !== 'messages' ? app : null
   const going = leaving && leaving !== 'messages' && leaving !== opened ? leaving : null
   const over = sheet ?? closing
+  const variant = VARIANTS[PICKED - 1]
 
-  return (
-    <div ref={root} className="ph">
-      <div className="ph-under" data-covered={opened ? '' : undefined} {...(opened || sheet ? ({ inert: '' } as object) : null)}>
-        <Thread active={!opened && !sheet} />
+  if (!variant)
+    return (
+      <div ref={root} className="ph">
+        <Chooser />
       </div>
-      {going && <Opened key={going} app={going} state="closing" still={!motion} active={false} />}
-      {opened && <Opened key={opened} app={opened} state="open" still={!motion} active={!sheet} />}
-      {over && <SheetScreen key={over} sheet={over} closing={!sheet} />}
+    )
+
+  const Home = variant.Home
+  return (
+    <div ref={root} className="ph" data-v={variant.id}>
+      {/* Scaffolding for choosing between the versions: not part of any of them */}
+      <nav className="ph-proto" aria-label="Versions">
+        <button type="button" className="ph-proto__all" onClick={() => goToVariant(0)}>
+          <ChevronLeft size={15} strokeWidth={2.6} aria-hidden />
+          All
+        </button>
+        <span className="ph-proto__name">
+          {variant.id} · {variant.name}
+        </span>
+        <span className="ph-proto__step">
+          <button type="button" aria-label="Previous version" disabled={variant.id === 1} onClick={() => goToVariant(variant.id - 1)}>
+            <ChevronLeft size={16} strokeWidth={2.6} aria-hidden />
+          </button>
+          <button type="button" aria-label="Next version" disabled={variant.id === VARIANTS.length} onClick={() => goToVariant(variant.id + 1)}>
+            <ChevronRight size={16} strokeWidth={2.6} aria-hidden />
+          </button>
+        </span>
+      </nav>
+      <div className="ph-stage">
+        <div className="ph-under" data-covered={opened ? '' : undefined} {...(opened || sheet ? ({ inert: '' } as object) : null)}>
+          <Suspense fallback={null}>
+            <Home active={!opened && !sheet} />
+          </Suspense>
+        </div>
+        {going && <Opened key={going} app={going} state="closing" still={!motion} active={false} />}
+        {opened && <Opened key={opened} app={opened} state="open" still={!motion} active={!sheet} />}
+        {over && <SheetScreen key={over} sheet={over} closing={!sheet} />}
+      </div>
     </div>
   )
 }

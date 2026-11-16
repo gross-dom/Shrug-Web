@@ -8,7 +8,6 @@ import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
 import { SITE } from '../data/site'
 import { arriveIn, PHONE_APPS, startNav, watchHistory, type PhoneApp } from '../phone/nav'
-import { startConvo } from '../phone/convo'
 import { Phone } from '../phone/Phone'
 import { APP_IDS, type AppId } from './apps'
 import { Dock } from './Dock'
@@ -152,7 +151,6 @@ export function Desktop() {
           // the last one a link asked for. After a reload it is where it was left.
           const asked = extra.filter((id): id is PhoneApp => (PHONE_APPS as string[]).includes(id)).pop()
           if (!resumed && asked) arriveIn(asked)
-          startConvo()
         } else {
           if (!query.has('empty')) openApp('messages', dockPoint('messages'))
           extra.forEach((id) => openApp(id, dockPoint(id)))
@@ -171,8 +169,7 @@ export function Desktop() {
   // The layout changed under a visit already going: the other one's conversation
   // starts too, and a desktop that has never had a window opens the chat
   useEffect(() => {
-    if (!started.current) return
-    if (compact) return startConvo()
+    if (!started.current || compact) return
     startChat()
     const { wins } = wm.get()
     if (!APP_IDS.some((id) => wins[id].mounted)) openApp('messages', dockPoint('messages'))

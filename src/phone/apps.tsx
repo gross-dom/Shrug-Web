@@ -1,12 +1,14 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { ArrowUpRight, Check, ChevronDown, ChevronLeft, Lock } from 'lucide-react'
-import { Details, type ReplyStream } from '../apps/chat-ui'
+import { Details, PersonAvatar, relationsOf, type ReplyStream } from '../apps/chat-ui'
 import { MediaFilterControl, MediaGrid } from '../apps/Photos'
 import { companiesIn, companyNamed, CompanyLogo, visitLabel, type Listed } from '../apps/portfolio-ui'
 import { finder, notes, photos, setDrop, setFinderQuery, showNote, showVertical, type Conversation } from '../apps/state'
 import { answer, isEmail, term, TerminalLog } from '../apps/Terminal'
 import { CASE_STUDIES } from '../data/caseStudies'
 import { DROPS } from '../data/drops'
+import { PEOPLE } from '../data/people'
+import { Badge } from '../kit/controls/Badge'
 import { ANSWER_PLACEHOLDER, FAQS } from '../data/faqs'
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
 import { useStore } from '../os/store'
@@ -313,9 +315,35 @@ export function AppScreen({ app }: { app: ShotApp }) {
   return <Screen />
 }
 
+/** One person: who they are and what they said. Any version can bring this up with `openSheet('person:12')`. */
+function PersonSheet({ index, closing }: { index: number; closing: boolean }) {
+  const person = PEOPLE[index]
+  if (!person) return null
+  return (
+    <Sheet label={person.name} closing={closing}>
+      <div className="ph-person details">
+        <div className="details__head">
+          <PersonAvatar index={index} size={72} />
+          <div className="details__name">{person.name}</div>
+          <div className="details__sub">{person.role}</div>
+          {person.relations.length > 0 && (
+            <div className="details__tags">
+              {relationsOf(index).map((label) => (
+                <Badge key={label}>{label}</Badge>
+              ))}
+            </div>
+          )}
+        </div>
+        {person.quote && <blockquote className="details__quote">{person.quote}</blockquote>}
+      </div>
+    </Sheet>
+  )
+}
+
 export function SheetScreen({ sheet, closing }: { sheet: string; closing: boolean }) {
   const [name, ...rest] = sheet.split(':')
   if (name === 'details') return <DetailsSheet closing={closing} />
+  if (name === 'person') return <PersonSheet index={Number(rest[0])} closing={closing} />
   if (name === 'company') return <CompanySheet name={rest.join(':')} closing={closing} />
   if (name === 'request') return <RequestSheet closing={closing} />
   return null

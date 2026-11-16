@@ -39,7 +39,196 @@
   touch-action: manipulation;
 }
 
-/* The conversation, under whatever is open */
+/* ---- Choosing between the versions: scaffolding, not part of any of them ---- */
+
+.os[data-compact] {
+  /* The wallpaper's own colours, for a version to draw with */
+  --c-night: #0b1150;
+  --c-blue: #2b55cf;
+  --c-azure: #3f8cff;
+  --c-cyan: #3fe0ee;
+  --c-violet: #8a6dff;
+  --c-pink: #ff66b8;
+  --c-peach: #ffc56e;
+  --c-coral: #ff5a3c;
+}
+
+.ph {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The bar that names the version on screen and steps between them */
+.ph-proto {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: calc(var(--safe-top) + 30px);
+  padding: var(--safe-top) 4px 0;
+  background: #0a0c2c;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 16px;
+}
+
+.ph-proto__all,
+.ph-proto__step > button {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.ph-proto__step {
+  display: flex;
+}
+
+.ph-proto__step > button:disabled {
+  opacity: 0.3;
+}
+
+.ph-proto__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What a version has to itself: everything under the bar */
+.ph-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* The bar above has already kept clear of the status bar */
+  --safe-top: 0px;
+}
+
+/* The wallpaper, upright, for a version that wants it behind it */
+.ph-wallpaper {
+  background: var(--c-night) url('/wallpaper-phone.webp') center / cover no-repeat;
+}
+
+.v-stub {
+  display: grid;
+  place-items: center;
+  color: var(--ph-label-2);
+}
+
+.chooser {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--safe-top) + 26px) 16px calc(var(--safe-bottom) + 28px);
+  overflow-y: auto;
+  background: var(--c-night) url('/wallpaper-phone.webp') center top / cover no-repeat;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.chooser__head {
+  margin-bottom: 20px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 12px rgba(0, 10, 80, 0.5);
+}
+
+.chooser__mark {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 34px;
+  letter-spacing: 0.01em;
+}
+
+.chooser__title {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 33px;
+  letter-spacing: -0.03em;
+}
+
+.chooser__sub {
+  max-width: 320px;
+  margin: 8px auto 0;
+  font-size: 15px;
+  line-height: 20px;
+  opacity: 0.9;
+}
+
+.chooser__list {
+  display: grid;
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.chooser__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  width: 100%;
+  padding: 14px 16px 15px 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 26px rgba(4, 10, 70, 0.2);
+  text-align: left;
+  transition: transform 0.18s ease;
+}
+
+.chooser__item:active {
+  transform: scale(0.98);
+}
+
+.chooser__n {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1d1d1f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.chooser__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chooser__text b {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.chooser__text span {
+  color: rgba(60, 60, 67, 0.86);
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.chooser__text em {
+  margin-top: 3px;
+  color: var(--ss-accent);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 17px;
+  letter-spacing: 0;
+}
+
+/* What a version draws, under whatever is open over it */
 .ph-under {
   position: absolute;
   inset: 0;
