@@ -1,1579 +1,862 @@
-/* The site on a phone: one conversation, full screen, with the visitor in it.
-   What Niv sends that can be opened (a screenshot of a window on his Mac)
-   opens out of its bubble and closes back into it; anything smaller is a
-   sheet. Everything is in points, as on an iPhone. The real status bar and
-   home indicator are left to the phone: the safe areas are padded, never
-   drawn. Motion is transform and opacity only, so it stays smooth on a phone. */
+/* The site as an iPhone (src/phone): the screen, the Lock Screen, the Home
+   Screen, apps opening out of their icons, the App Switcher, banners and the
+   home indicator. The parts the apps are built from are in ios.css; each app
+   has a stylesheet of its own in styles/phone/. Sizes are iOS points. */
 
-.os[data-compact] {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --ph-label-2: rgba(60, 60, 67, 0.6);
-  --ph-label-3: rgba(60, 60, 67, 0.3);
-  --ph-separator: rgba(60, 60, 67, 0.29);
-  --ph-fill: rgba(118, 118, 128, 0.12);
-  --ph-grouped: #f2f2f7;
-  /* UIKit's own curve for a thing opening and a sheet coming up */
-  --ph-ease: cubic-bezier(0.3, 0.75, 0.1, 1);
-  --ss-accent: #007aff;
-}
-
-/* Nothing of the desktop shows on a phone but what Niv sends of it */
-.os[data-compact] .os__wallpaper {
-  display: none;
-}
+/* ---- The screen ---- */
 
 .ph {
   position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: var(--vv-h, 100%);
+  inset: 0;
   overflow: hidden;
-  background: #fff;
+  container-type: size;
   color: #000;
+  font-family: var(--font-ui);
   font-size: 17px;
-  line-height: 22px;
-  letter-spacing: -0.02em;
-  transform: translateY(var(--vv-top, 0px));
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
-/* ---- Choosing between the versions: scaffolding, not part of any of them ---- */
-
-.os[data-compact] {
-  /* The wallpaper's own colours, for a version to draw with */
-  --c-night: #0b1150;
-  --c-blue: #2b55cf;
-  --c-azure: #3f8cff;
-  --c-cyan: #3fe0ee;
-  --c-violet: #8a6dff;
-  --c-pink: #ff66b8;
-  --c-peach: #ffc56e;
-  --c-coral: #ff5a3c;
+.ph :where(input, textarea) {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
-.ph {
-  display: flex;
-  flex-direction: column;
+/* On a real phone the screen is the page. Where the page runs under the
+   phone's own home indicator (added to the Home Screen, it does), the site's
+   indicator and everything that floats at the foot keep above it */
+.ph--bleed {
+  --status: env(safe-area-inset-top, 0px);
+  --below: env(safe-area-inset-bottom, 0px);
+  --home: calc(34px + var(--below));
+  --foot-gap: calc(21px + var(--below));
+  background: #000;
 }
 
-/* The bar that names the version on screen and steps between them */
-.ph-proto {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  height: calc(var(--safe-top) + 30px);
-  padding: var(--safe-top) 4px 0;
-  background: #0a0c2c;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: 16px;
+/* The keyboard is up: the screen is what is left above it, and nothing waits on a home indicator */
+.ph--bleed[data-keyboard] {
+  top: var(--vv-top, 0px);
+  bottom: auto;
+  height: var(--vv-h, 100%);
+  --below: 0px;
+  --home: 0px;
+  --foot-gap: 8px;
 }
 
-.ph-proto__all,
-.ph-proto__step > button {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 8px;
-  color: rgba(255, 255, 255, 0.92);
+/* The desktop's wallpaper is behind a phone drawn in a frame; a real phone covers it, so it isn't drawn */
+.os:has(.ph--bleed) .os__wallpaper {
+  display: none;
 }
 
-.ph-proto__step {
-  display: flex;
+/* Drawn in the kit's iPhone: its status bar is 62 points tall */
+.ph--framed {
+  --status: 62px;
 }
 
-.ph-proto__step > button:disabled {
-  opacity: 0.3;
-}
-
-.ph-proto__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* What a version has to itself: everything under the bar */
-.ph-stage {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  /* The bar above has already kept clear of the status bar */
-  --safe-top: 0px;
-}
-
-/* The wallpaper, upright, for a version that wants it behind it */
-.ph-wallpaper {
-  background: var(--c-night) url('/wallpaper-phone.webp') center / cover no-repeat;
-}
-
-.v-stub {
+/* The window around a framed phone */
+.ph-desk {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  color: var(--ph-label-2);
-}
-
-.chooser {
-  position: absolute;
-  inset: 0;
-  padding: calc(var(--safe-top) + 26px) 16px calc(var(--safe-bottom) + 28px);
-  overflow-y: auto;
-  background: var(--c-night) url('/wallpaper-phone.webp') center top / cover no-repeat;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.chooser__head {
-  margin-bottom: 20px;
-  color: #fff;
-  text-align: center;
-  text-shadow: 0 1px 12px rgba(0, 10, 80, 0.5);
-}
-
-.chooser__mark {
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 34px;
-  letter-spacing: 0.01em;
-}
-
-.chooser__title {
-  margin-top: 6px;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 33px;
-  letter-spacing: -0.03em;
-}
-
-.chooser__sub {
-  max-width: 320px;
-  margin: 8px auto 0;
-  font-size: 15px;
-  line-height: 20px;
-  opacity: 0.9;
-}
-
-.chooser__list {
-  display: grid;
-  gap: 10px;
-  max-width: 460px;
-  margin: 0 auto;
-}
-
-.chooser__item {
-  display: flex;
-  align-items: flex-start;
-  gap: 13px;
-  width: 100%;
-  padding: 14px 16px 15px 14px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 8px 26px rgba(4, 10, 70, 0.2);
-  text-align: left;
-  transition: transform 0.18s ease;
-}
-
-.chooser__item:active {
-  transform: scale(0.98);
-}
-
-.chooser__n {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #1d1d1f;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.chooser__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.chooser__text b {
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 22px;
-}
-
-.chooser__text span {
-  color: rgba(60, 60, 67, 0.86);
-  font-size: 15px;
-  line-height: 20px;
-}
-
-.chooser__text em {
-  margin-top: 3px;
-  color: var(--ss-accent);
-  font-size: 13px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 17px;
-  letter-spacing: 0;
-}
-
-/* What a version draws, under whatever is open over it */
-.ph-under {
-  position: absolute;
-  inset: 0;
-}
-
-.ph-under[data-covered] {
-  visibility: hidden;
-  transition: visibility 0s 0.46s;
-}
-
-/* ---- Something opened out of the conversation: it grows out of the bubble
-   it was sent in, and shrinks back into it ---- */
-
-.ph-app {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
   overflow: hidden;
-  background: #fff;
-  --dx: 0px;
-  --dy: 48px;
-  --k: 0.94;
 }
 
-.ph-app[data-state='open'] {
-  animation: ph-app-in 0.44s var(--ph-ease) backwards;
+.ph-device .ss-phone__screen {
+  font-family: var(--font-ui);
 }
 
-.ph-app[data-state='closing'] {
-  z-index: 9;
+/* The frame's home indicator is only drawn: the strip over it takes the touches */
+.ph-device .ss-phone__home {
   pointer-events: none;
-  animation: ph-app-out 0.34s cubic-bezier(0.4, 0, 0.7, 0.4) forwards;
+  transition:
+    color 0.3s ease,
+    opacity 0.3s ease;
 }
 
-/* A move the browser made: it is simply there */
-.ph-app[data-still] {
-  animation: none;
-}
-
-@keyframes ph-app-in {
-  from {
-    opacity: 0;
-    transform: translate(var(--dx), var(--dy)) scale(var(--k));
-  }
-  30% {
-    opacity: 1;
-  }
-}
-
-@keyframes ph-app-out {
-  60% {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-    transform: translate(var(--dx), var(--dy)) scale(var(--k));
-  }
-}
-
-/* ---- A page ---- */
-
-.ph-page {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  --ph-page: 255, 255, 255;
-}
-
-.ph-page[data-tone='grouped'] {
-  background: var(--ph-grouped);
-  --ph-page: 242, 242, 247;
-}
-
-/* The bar: a back button over the content, which fades out under it */
-.ph-nav {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 5;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-height: calc(var(--safe-top) + 58px);
-  padding: calc(var(--safe-top) + 8px) 12px 6px;
-  pointer-events: none;
-}
-
-.ph-nav > * {
-  pointer-events: auto;
-}
-
-.ph-nav::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 -14px;
-  z-index: -1;
-  background: linear-gradient(rgba(var(--ph-page), 0.96) 62%, rgba(var(--ph-page), 0));
+/* The Home Screen has no home indicator */
+.ph-device:has(.sb-homebar[data-at='home']) .ss-phone__home {
   opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
 }
 
-.ph-nav[data-scrolled]::before {
-  opacity: 1;
+/* Messages are at true iOS size on the phone, in a frame or not */
+.ph .ss-thread {
+  --ss-thread-size: 17px;
 }
 
-.ph-nav[data-center] {
-  align-items: start;
+/* A banner on a light screen needs its own edge: frosted white on white vanishes */
+.ph--bleed:not([data-dark]) .ss-notification {
+  background: rgb(255 255 255 / 0.92);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.08),
+    0 8px 24px rgb(0 0 0 / 0.12);
 }
 
-/* A conversation's bar is taller, with the name at its foot: solid down to the name */
-.ph-nav[data-center]::before {
-  inset: 0 0 -10px;
-  background: linear-gradient(rgba(var(--ph-page), 0.96) 86%, rgba(var(--ph-page), 0));
-}
-
-.ph-nav__side {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.ph-nav__side--end {
-  justify-content: flex-end;
-}
-
-.ph-nav__middle {
-  display: flex;
-  justify-content: center;
-  min-width: 0;
-}
-
-/* Back to the conversation, by name */
-.ph-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-  max-width: 100%;
-  height: 44px;
-  padding: 0 16px 0 9px;
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.1);
-  color: #1d1d1f;
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  transition: transform 0.18s ease;
-}
-
-.ph-back > svg {
-  flex: none;
-}
-
-.ph-back:active {
-  transform: scale(0.95);
-}
-
-.ph-bar-button {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 2px 12px rgba(0, 0, 0, 0.1);
-  color: #1d1d1f;
-  transition: transform 0.18s ease;
-}
-
-.ph-bar-button:active {
-  transform: scale(0.92);
-}
-
-.ph-page__content {
-  flex: 1;
-  min-height: 0;
-  padding: calc(var(--safe-top) + 62px) 0 calc(var(--safe-bottom) + 28px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.ph-page[data-fixed] > .ph-page__content {
-  display: flex;
-  flex-direction: column;
-  padding: 0 0 var(--safe-bottom);
-  overflow: hidden;
-}
-
-.ph-large-title {
-  margin: 0 20px 8px;
-  font-size: 34px;
-  font-weight: 700;
-  line-height: 41px;
-  letter-spacing: -0.025em;
-}
-
-.ph-lede {
-  margin: -2px 20px 16px;
-  color: rgba(60, 60, 67, 0.78);
-  font-size: 17px;
-  line-height: 23px;
-}
-
-.ph-empty {
-  padding: 48px 32px;
-  color: var(--ph-label-2);
-  text-align: center;
-}
-
-/* ---- Search, chips, grouped lists, buttons ---- */
-
-.ph-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  margin: 4px 16px 12px;
-  padding: 0 8px;
-  border-radius: 12px;
-  background: var(--ph-fill);
-  color: var(--ph-label-2);
-}
-
-.ph-search > svg {
-  flex: none;
-}
-
-.ph-search > input {
-  flex: 1;
-  min-width: 0;
+.ph .app-icon {
+  display: block;
+  width: 100%;
   height: 100%;
-  color: #000;
-  font-size: 17px;
-  letter-spacing: -0.02em;
 }
 
-.ph-search > input::placeholder {
-  color: var(--ph-label-2);
+/* ---- The wallpaper ---- */
+
+.sb-wall {
+  position: absolute;
+  inset: 0;
+  background: #2c3796 url('/wallpaper-phone.webp') center / cover no-repeat;
+  transition:
+    filter 0.45s ease,
+    transform 0.5s var(--glide);
 }
 
-.ph-search > input:focus-visible {
-  outline: none;
+/* Behind the App Switcher it falls back and out of focus */
+.sb-wall[data-at='switcher'] {
+  filter: blur(16px) brightness(0.72);
+  transform: scale(1.08);
 }
 
-.ph-search:focus-within {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ss-accent) 60%, transparent);
+/* ---- The Lock Screen ---- */
+
+.sb-lock {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  touch-action: none;
+  transition:
+    transform 0.5s var(--glide),
+    opacity 0.4s ease;
 }
 
-.ph-search__clear {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(60, 60, 67, 0.45);
+.sb-lock[data-leaving] {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+/* On a real phone the page starts under the phone's own status bar */
+.ph--bleed .ss-lock__date {
+  margin-top: calc(var(--status) + 22px);
+}
+
+/* A short screen (a phone's browser, with its bars showing) keeps the clock clear of the notifications */
+@container (max-height: 600px) {
+  .sb-lock .ss-lock__clock {
+    font-size: 92px;
+  }
+
+  .sb-lock .ss-lock__stack {
+    bottom: 104px;
+  }
+}
+
+.sb-lock__hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  width: 190px;
+  margin-left: -95px;
+  padding: 7px 0;
   color: #fff;
-}
-
-.ph-chips {
-  display: flex;
-  gap: 8px;
-  padding: 2px 16px 14px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.ph-chips::-webkit-scrollbar,
-.ph-page__content::-webkit-scrollbar,
-.ph-sheet__body::-webkit-scrollbar {
-  display: none;
-}
-
-.ph-chip {
-  display: flex;
-  flex: none;
-  align-items: center;
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 17px;
-  background: var(--ph-fill);
   font-size: 15px;
   font-weight: 500;
-  white-space: nowrap;
-}
-
-.ph-chip[aria-pressed='true'] {
-  background: #1d1d1f;
-  color: #fff;
-}
-
-.ph-group {
-  margin: 0 16px 24px;
-}
-
-.ph-group__label {
-  margin: 0 16px 7px;
-  color: var(--ph-label-2);
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 18px;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.ph-group__rows {
-  overflow: hidden;
-  border-radius: 22px;
-  background: #fff;
-}
-
-.ph-group__footer {
-  margin: 8px 16px 0;
-  color: var(--ph-label-2);
-  font-size: 13px;
-  line-height: 18px;
-  letter-spacing: 0;
-}
-
-.ph-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 52px;
-  padding: 10px 16px;
-  font-size: 17px;
-  text-align: left;
-}
-
-.ph-row + .ph-row::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 16px;
-  height: 0.5px;
-  background: var(--ph-separator);
-}
-
-.ph-row:has(.ph-row__icon) + .ph-row::before {
-  left: 58px;
-}
-
-.ph-row:active {
-  background: rgba(0, 0, 0, 0.07);
-}
-
-.ph-row:focus-visible {
-  outline-offset: -3px;
-}
-
-.ph-row__icon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-}
-
-.ph-row__title {
-  flex: 1;
-  min-width: 0;
-}
-
-.ph-row__chevron {
-  flex: none;
-  color: var(--ph-label-3);
-}
-
-.ph-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  min-height: 52px;
-  padding: 0 20px;
-  border-radius: 26px;
-  background: var(--ss-accent);
-  color: #fff;
-  font-size: 17px;
-  font-weight: 600;
-  transition: transform 0.18s ease, filter 0.18s ease;
-}
-
-.ph-button:active {
-  filter: brightness(0.9);
-  transform: scale(0.98);
-}
-
-.ph-field {
-  width: 100%;
-  height: 52px;
-  padding: 0 16px;
-  border-radius: 14px;
-  background: var(--ph-fill);
-  color: #000;
-  font-size: 17px;
-  letter-spacing: -0.02em;
-}
-
-.ph-field::placeholder {
-  color: var(--ph-label-2);
-}
-
-.ph-field:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ss-accent) 70%, transparent);
-}
-
-.ph-field[aria-invalid] {
-  box-shadow: 0 0 0 2px #ff3b30;
-}
-
-/* ---- A sheet: over the app and the Dock, and draggable away ---- */
-
-.ph-sheet {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-}
-
-.ph-sheet__shade {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.32);
-  animation: ph-fade 0.3s ease both;
-  transition: opacity 0.3s ease;
-}
-
-.ph-sheet__panel {
-  position: absolute;
-  right: 8px;
-  bottom: calc(var(--safe-bottom) + 8px);
-  left: 8px;
-  display: flex;
-  flex-direction: column;
-  max-width: 480px;
-  max-height: calc(100% - var(--safe-top) - var(--safe-bottom) - 28px);
-  margin: 0 auto;
-  border-radius: 34px;
-  background: #fff;
-  box-shadow: 0 -6px 40px rgba(0, 0, 0, 0.18);
-  animation: ph-sheet-in 0.46s var(--ph-ease) both;
-  transition: transform 0.32s var(--ph-ease);
-}
-
-.ph-sheet[data-closing] .ph-sheet__shade {
-  animation: ph-fade-out 0.3s ease both;
-}
-
-.ph-sheet[data-closing] .ph-sheet__panel {
-  animation: ph-sheet-out 0.32s cubic-bezier(0.4, 0, 0.9, 0.6) both;
-}
-
-@keyframes ph-sheet-in {
-  from {
-    transform: translateY(112%);
-  }
-}
-
-@keyframes ph-sheet-out {
-  to {
-    transform: translateY(112%);
-  }
-}
-
-@keyframes ph-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes ph-fade-out {
-  to {
-    opacity: 0;
-  }
-}
-
-/* The top of the sheet is its handle: a grabber, and room to take hold of */
-.ph-sheet__bar {
-  position: relative;
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  height: 58px;
-  padding: 8px 12px 0;
-  touch-action: none;
-}
-
-.ph-sheet__grabber {
-  position: absolute;
-  top: 7px;
-  left: 50%;
-  width: 38px;
-  height: 5px;
-  margin-left: -19px;
-  border-radius: 3px;
-  background: var(--ph-label-3);
-}
-
-.ph-sheet__lead {
-  display: flex;
-  min-width: 36px;
-}
-
-.ph-sheet__close,
-.ph-sheet__back {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
-  background: var(--ph-fill);
-  color: rgba(60, 60, 67, 0.76);
-}
-
-.ph-sheet__close:active,
-.ph-sheet__back:active {
-  background: rgba(118, 118, 128, 0.24);
-}
-
-.ph-sheet__body {
-  flex: 1;
-  min-height: 0;
-  padding-bottom: 20px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-/* ---- The conversation ---- */
-
-/* Its face over its name, in the bar */
-.ph-thread-id {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 100%;
-  border-radius: 16px;
-}
-
-.ph-thread-id .shrug-avatar {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
-}
-
-.ph-thread-id__name {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  max-width: min(100%, 60vw);
-  height: 24px;
-  margin-top: -5px;
-  padding: 0 8px 0 10px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.09);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 16px;
   letter-spacing: -0.01em;
-  white-space: nowrap;
+  text-align: center;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.25);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s var(--glide);
 }
 
-.ph-thread-id__name > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.sb-lock__hint[data-show] {
+  opacity: 0.9;
+  transform: none;
 }
 
-.ph-thread-id__name > svg {
-  flex: none;
-  color: var(--ph-label-2);
+/* The replies so far, as iOS stacks notifications from one conversation: the newest on top, the edges of the others under it */
+.sb-stack {
+  position: relative;
+  isolation: isolate;
 }
 
-.ph .chat__scroll {
-  -webkit-mask-image: none;
-  mask-image: none;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+.sb-stack[data-more]::before,
+.sb-stack[data-more='2']::after {
+  position: absolute;
+  right: 30px;
+  bottom: -8px;
+  left: 30px;
+  z-index: -1;
+  height: 40px;
+  border-radius: 23px;
+  background: rgb(252 252 253 / 0.5);
+  -webkit-backdrop-filter: blur(30px) saturate(1.25);
+  backdrop-filter: blur(30px) saturate(1.25);
+  content: '';
 }
 
-.ph .chat__scroll::-webkit-scrollbar,
-.ph-replies::-webkit-scrollbar {
-  display: none;
+.sb-stack[data-more='2']::after {
+  right: 44px;
+  bottom: -15px;
+  left: 44px;
+  z-index: -2;
+  background: rgb(252 252 253 / 0.3);
 }
 
-/* Messages run up under the bar, as they do on an iPhone */
-.ph .chat__flow {
-  padding: calc(var(--safe-top) + 100px) 14px 10px 12px;
+.sb-stack > .sb-note {
+  animation: sb-note-in 0.55s var(--glide);
 }
 
-.ph .chat__thread {
-  --ss-thread-size: 16px;
-  letter-spacing: -0.015em;
-  /* A double tap loves a message here, as in Messages: it mustn't select a word instead */
-  user-select: none;
-  -webkit-user-select: none;
+@keyframes sb-note-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
 }
 
-.ph .chat__thread .ss-bubble {
-  max-width: 78%;
+/* A message's notification: the sender's face with the app's icon on its corner */
+.sb-note {
+  cursor: pointer;
 }
 
-.ph .chat-who,
-.ph .chat-stamp.ss-stamp,
-.ph .chat-note.ss-stamp,
-.ph .chat__thread .ss-receipt {
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0;
-}
-
-.ph .chat-note.ss-stamp {
-  margin-bottom: 4px;
-}
-
-.ph .chat-note.ss-stamp:last-of-type {
-  margin-bottom: 12px;
-}
-
-.ph .chat__new {
-  height: 34px;
-  border-radius: 17px;
-  background: #fff;
-  font-size: 14px;
-}
-
-/* A line of Niv's still to be written: the slot it goes in */
-.chat-todo .ss-bubble {
-  --t: #63646b;
-}
-
-.chat-todo .ss-bubble::before {
-  border: 1px dashed #a4a5ad;
+.sb-note .ss-notification__icon {
+  overflow: visible;
+  border-radius: 0;
   background: none;
 }
 
-.chat-todo .ss-bubble__tail {
-  display: none;
-}
-
-/* Where a face would be, on a message that isn't the last of a run */
-.chat-gap {
+.sb-note__face {
+  position: relative;
   display: block;
-  flex: none;
-  width: 28px;
+  width: 38px;
+  height: 38px;
 }
 
-/* What Niv sends that isn't words. It rides the thread like a bubble does. */
-.chat-attach {
-  position: relative;
-  top: 0;
-  display: flex;
-  flex: none;
-  align-items: flex-end;
-  gap: 8px;
-  margin-top: 1px;
-  transition: top var(--ss-scroll);
-  animation: ph-arrive 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes ph-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-.chat-shot {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.chat-shot__cap {
-  margin-left: 4px;
-  color: #8e8e93;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0;
-}
-
-/* A screenshot of a window on Niv's Mac: the window itself, small */
-.shot {
-  position: relative;
-  flex: none;
-  overflow: hidden;
-  border-radius: 18px;
-  background: #1b2f9e;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.14);
-  /* The window inside is laid out at desktop sizes, whatever the phone's are */
-  letter-spacing: 0;
-}
-
-.shot__screen {
+.sb-note__app {
   position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: 0 0;
-  background: #1b2f9e url('/wallpaper.webp') center / cover no-repeat;
-  pointer-events: none;
-  contain: strict;
+  right: -5px;
+  bottom: -4px;
+  width: 17px;
+  height: 17px;
+  filter: drop-shadow(0 0 0.5px rgb(0 0 0 / 0.3));
 }
 
-.shot__window.wf__content {
-  inset: auto;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.sb-note .ss-notification__body {
+  -webkit-line-clamp: 4;
 }
 
-.shot__open {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  transition: background-color 0.15s ease;
+.sb-note .ss-notification__body b {
+  font-weight: 600;
 }
 
-.shot__open:active {
-  background: rgba(0, 0, 0, 0.14);
-}
-
-.shot__open:focus-visible {
-  outline-offset: -3px;
-}
-
-/* A link, as Messages unfolds one */
-.chat-link {
-  display: flex;
-  flex-direction: column;
-  width: 232px;
-  overflow: hidden;
-  border-radius: 18px;
-  background: #e9e9eb;
-}
-
-.chat-link:active {
+.sb-note:active {
   filter: brightness(0.94);
 }
 
-.chat-link__art {
+/* ---- The Home Screen ---- */
+
+.sb-home {
+  /* An icon's size follows the screen's width, as it does from phone to phone */
+  --icon: clamp(54px, 15.3cqw, 68px);
+  --margin: 6.9cqw;
+  position: absolute;
+  inset: 0;
+  color: #fff;
+  transition:
+    transform 0.5s var(--glide),
+    opacity 0.3s ease,
+    filter 0.3s ease;
+}
+
+/* An app is in front: the icons fall back behind it */
+.sb-home[data-covered] {
+  transform: scale(0.9);
+  opacity: 0;
+}
+
+/* Locked: the icons wait a little way out, and fly in when it opens */
+.sb-home[data-locked] {
+  transform: scale(1.16);
+  opacity: 0;
+}
+
+.sb-home[data-searching] {
+  transform: scale(0.94);
+  filter: blur(20px);
+  opacity: 0.7;
+}
+
+/* Under a finger dragging an app away, they are already there */
+.ph[data-dragging] .sb-home[data-covered] {
+  transform: scale(0.95);
+  opacity: 1;
+  transition: none;
+}
+
+.sb-grid {
+  position: absolute;
+  top: calc(var(--status) + 14px);
+  right: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(4, var(--icon));
+  justify-content: space-between;
+  row-gap: 17px;
+  padding: 0 var(--margin);
+}
+
+.sb-icon {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: var(--icon);
+}
+
+.sb-icon__tile {
+  position: relative;
+  display: block;
+  width: var(--icon);
+  height: var(--icon);
+  filter: drop-shadow(0 2px 5px rgb(0 0 0 / 0.16));
+  transition: filter 0.2s ease;
+}
+
+.sb-icon:active .sb-icon__tile {
+  filter: drop-shadow(0 2px 5px rgb(0 0 0 / 0.16)) brightness(0.68);
+  transition: none;
+}
+
+.sb-icon__name {
+  width: calc(var(--icon) + 26px);
+  margin: 0 -13px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 14px;
+  text-align: center;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sb-badge {
+  position: absolute;
+  top: -8px;
+  right: -9px;
   display: grid;
   place-items: center;
-  height: 112px;
-  background: linear-gradient(180deg, #f8f9fc, #dde2ec);
-}
-
-.chat-link__art > svg {
-  width: 62px;
-  height: 62px;
-  filter: drop-shadow(0 4px 8px rgba(20, 30, 70, 0.18));
-}
-
-.chat-link__text {
-  display: flex;
-  flex-direction: column;
-  padding: 9px 12px 10px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 12px;
+  background: #ff3b30;
+  color: #fff;
   font-size: 15px;
-  line-height: 20px;
-}
-
-.chat-link__text b {
-  font-weight: 600;
-}
-
-.chat-link__text span {
-  color: #8e8e93;
-  font-size: 13px;
-  line-height: 17px;
-  letter-spacing: 0;
-}
-
-/* A button Niv sends: it does a real thing */
-.chat-card {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 46px;
-  padding: 8px 12px 8px 10px;
-  border-radius: 18px;
-  background: #e9e9eb;
-  color: #000;
-  font-size: 16px;
   font-weight: 500;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
 }
 
-.chat-card > svg {
-  flex: none;
-  color: #8e8e93;
-}
-
-.chat-card:active {
-  filter: brightness(0.92);
-}
-
-.chat-card__faces {
-  display: flex;
-}
-
-.chat-card__faces > * + * {
-  margin-left: -8px;
-  box-shadow: 0 0 0 2px #e9e9eb;
-}
-
-.chat-card--go {
-  padding: 0 16px;
-  background: var(--ss-accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-.chat-card--go > svg {
-  color: #fff;
-}
-
-/* The replies the visitor might send next, in a row above the field */
-.ph-replies {
-  display: flex;
-  flex: none;
-  gap: 8px;
-  padding: 8px 12px 2px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.ph-replies[data-empty] {
-  display: none;
-}
-
-.ph-reply {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
+/* Widgets: two icons tall; a small one is two wide, a wide one four */
+.sb-widget {
+  display: grid;
+  grid-column: span 2;
+  justify-items: center;
   gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
+  min-width: 0;
+}
+
+.sb-widget--wide {
+  grid-column: 1 / -1;
+}
+
+.sb-widget__face {
+  display: block;
+  width: calc(100% - 4px);
+  height: calc(var(--icon) * 2 + 37px);
+  overflow: hidden;
+  border-radius: 24px;
   background: #fff;
-  box-shadow: inset 0 0 0 1px #d4d4d8;
-  color: var(--ss-accent);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 20px;
-  white-space: nowrap;
-  animation: ph-reply-in 0.4s var(--ph-ease) both;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.14);
+  color: #000;
+  text-align: left;
+  transition: filter 0.2s ease;
 }
 
-.ph-reply:active {
-  background: #eeeef0;
+.sb-widget--wide .sb-widget__face {
+  width: 100%;
 }
 
-@keyframes ph-reply-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
+.sb-widget:active .sb-widget__face {
+  filter: brightness(0.86);
+  transition: none;
+}
+
+/* A short screen has room for the wide widget only */
+@container (max-height: 659px) {
+  .sb-widget:not(.sb-widget--wide) {
+    display: none;
   }
 }
 
-/* The group, waiting to carry on: the one reply that isn't a thing to say */
-.ph-reply[data-kind='resume'] {
-  background: var(--ss-accent);
-  box-shadow: none;
-  color: #fff;
+.sb-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px 16px;
 }
 
-.ph-reply[data-kind='resume'] em {
-  font-style: normal;
-  font-weight: 400;
-  opacity: 0.82;
+.sb-chat__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
 }
 
-.ph-reply[data-kind='others'] {
-  color: #1d1d1f;
-}
-
-/* Wherever the reply that was tapped had its words: its bubble forms out of here */
-.chip-origin {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 0;
-  color: var(--ss-accent);
-  pointer-events: none;
-}
-
-/* The message field, at the size the kit measured from Messages */
-.ph .composer {
-  padding: 6px 12px 8px;
-}
-
-.ph .composer__field {
-  height: 38px;
-  padding: 0 4px 0 14px;
-  border-radius: 19px;
-  box-shadow: inset 0 0 0 1px #d4d4d8;
-}
-
-.ph .composer__field:focus-within {
-  box-shadow: inset 0 0 0 1px #c2c2c8;
-}
-
-.ph .composer__input {
-  font-size: 17px;
+.sb-chat__name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
-.ph .composer__input::placeholder {
-  color: #c2c2c6;
+.sb-chat__count {
+  color: var(--label-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
-.ph .composer__origin {
-  left: 14px;
+.sb-chat__reply {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: 8px;
+  min-height: 0;
+  animation: sb-reply-in 0.5s var(--glide);
 }
 
-.ph .composer__send {
+@keyframes sb-reply-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.sb-chat__bubble {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 1px;
+  min-width: 0;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 7px 12px 8px;
+  border-radius: 18px;
+  background: #e9e9eb;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.sb-chat__bubble b {
+  color: var(--label-2);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+}
+
+.sb-chat__bubble span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.sb-chat__ask {
+  display: grid;
+  flex: 1;
+  align-content: end;
+  justify-items: end;
+  gap: 3px;
+}
+
+.sb-chat__mine {
+  max-width: 88%;
+  padding: 6px 12px 7px;
+  border-radius: 18px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  line-height: 19px;
+}
+
+.sb-folio {
+  display: grid;
+  align-content: space-between;
+  padding: 14px;
+}
+
+.sb-folio__logos {
+  display: grid;
+  grid-template-columns: repeat(2, 40px);
+  gap: 6px;
+}
+
+.sb-folio__logos .logo {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.sb-folio__text {
+  display: grid;
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.sb-folio__text b {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 19px;
+}
+
+.sb-folio__text span {
+  color: var(--label-2);
+}
+
+.sb-faq {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.sb-faq__head {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 11px 14px 9px;
+  background: linear-gradient(#ffd84a, #ffc81f);
+  color: #5c4500;
+  font-size: 13px;
+}
+
+.sb-faq__head b {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sb-faq__list {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  min-height: 0;
+  overflow: hidden;
+  padding: 2px 14px;
+}
+
+.sb-faq__list span {
+  overflow: hidden;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sb-faq__list span + span {
+  box-shadow: 0 -0.5px 0 var(--sep);
+}
+
+/* The Dock: a strip of glass with the four apps that are always to hand */
+.sb-dock {
+  --inset: 3.3cqw;
+  position: absolute;
+  right: var(--inset);
+  bottom: calc(var(--inset) + var(--below, 0px));
+  left: var(--inset);
+  display: flex;
+  justify-content: space-between;
+  height: calc(var(--icon) + 34px);
+  padding: 17px calc(var(--margin) - var(--inset)) 0;
+  border-radius: 9.6cqw;
+  background: rgb(255 255 255 / 0.22);
+  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  backdrop-filter: blur(28px) saturate(1.7);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.3);
+}
+
+.sb-dock .sb-icon__name {
+  display: none;
+}
+
+.sb-search {
+  position: absolute;
+  bottom: calc(3.3cqw + var(--icon) + 34px + 14px + var(--below, 0px));
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 13px 0 11px;
+  border-radius: 15px;
+  background: rgb(255 255 255 / 0.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.26);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transform: translateX(-50%);
+}
+
+.sb-search:active {
+  filter: brightness(0.8);
+}
+
+/* ---- Apps ---- */
+
+.sb-apps {
+  --stride: 76cqw;
+  position: absolute;
+  inset: 0;
+  /* A layer of its own, under the status bar: nothing in an app can rise over that */
+  z-index: 1;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.sb-slot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition:
+    transform 0.46s var(--glide),
+    opacity 0.25s ease;
+}
+
+.sb-slot[data-front] {
+  z-index: 20;
+}
+
+.sb-card {
+  position: absolute;
+  inset: 0;
+  transition:
+    transform 0.46s var(--glide),
+    border-radius 0.46s var(--glide);
+}
+
+.sb-app {
+  pointer-events: auto;
+}
+
+/* Shut, it is no more than its icon: it takes no touches, and once it has landed it isn't drawn */
+.sb-app[data-shut] {
+  pointer-events: none;
+  animation: sb-rest 0s 0.75s forwards;
+}
+
+/* Shut without having flown there, it isn't drawn at all */
+.sb-app[data-shut][data-still] {
+  visibility: hidden;
+  animation: none;
+}
+
+@keyframes sb-rest {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* What a finger on the home indicator carries off: the app, whole */
+.sb-drag {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transition:
+    transform 0.5s var(--glide),
+    border-radius 0.5s var(--glide);
+}
+
+.ph[data-dragging] .sb-drag {
+  transition: none;
+}
+
+.ph[data-dragging] .sb-app {
+  background-color: transparent !important;
+  clip-path: none !important;
+}
+
+.sb-face--card {
+  display: block;
+  border-radius: 23px;
+  background: rgb(255 255 255 / 0.92);
+}
+
+/* ---- The App Switcher ---- */
+
+.sb-apps[data-switcher] {
+  pointer-events: auto;
+}
+
+.sb-apps__away {
+  position: absolute;
+  inset: 0;
+}
+
+.sb-apps[data-switcher] .sb-slot,
+.sb-slot[data-lingering]:not([data-front]) {
+  z-index: calc(10 - var(--i));
+  transform: translateX(calc(var(--pan, 0px) - var(--i) * var(--stride))) translateY(var(--lift, 0px));
+}
+
+.sb-apps[data-switcher] .sb-card,
+.sb-slot[data-lingering]:not([data-front]) .sb-card {
+  overflow: hidden;
+  border-radius: 46px;
+  box-shadow: 0 30px 70px rgb(0 0 0 / 0.4);
+  transform: scale(0.72);
+}
+
+/* The cards that weren't picked fade where they are */
+.sb-slot[data-lingering]:not([data-front]) {
+  opacity: 0;
+}
+
+.sb-apps[data-panning] .sb-slot,
+.sb-slot[data-lifting] {
+  transition: none;
+}
+
+.sb-slot[data-thrown] {
+  transition: transform 0.24s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.sb-slot__label {
+  position: absolute;
+  top: calc(14cqh - 40px);
+  left: 15.5cqw;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.sb-apps[data-switcher] .sb-slot__label {
+  opacity: 1;
+  transition: opacity 0.3s ease 0.15s;
+}
+
+.sb-slot__icon {
+  display: block;
   width: 30px;
   height: 30px;
 }
 
-/* Details: a contact card over grouped lists */
-.ph-details {
-  animation: ph-fade 0.24s ease both;
+.sb-card__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: auto;
+  touch-action: none;
 }
 
-.ph .details {
-  padding: 0 16px 8px;
-  overflow: visible;
+/* ---- Banners ---- */
+
+.sb-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
 }
 
-.ph .details__name {
-  margin-top: 12px;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 29px;
-  letter-spacing: -0.02em;
+.sb-banner .ss-notification {
+  pointer-events: auto;
+  touch-action: none;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 1, 1);
 }
 
-.ph .details__sub {
-  margin-top: 2px;
-  color: var(--ph-label-2);
-  font-size: 15px;
-  line-height: 20px;
+/* On a real phone there is no island to drop in under */
+.ph--bleed .sb-banner .ss-notification {
+  top: calc(var(--status) + 8px);
 }
 
-/* What they said, as a bubble of theirs */
-.details__quote {
-  margin: 18px 4px 0;
-  padding: 11px 15px;
-  border-radius: 20px;
-  background: #e9e9eb;
-  font-size: 16px;
-  line-height: 21px;
-  text-align: left;
-  user-select: text;
-  -webkit-user-select: text;
+.sb-banner[data-leaving] .ss-notification {
+  transform: translateY(-180px);
 }
 
-.ph .details__group {
-  margin-top: 20px;
-  border-radius: 22px;
-  background: var(--ph-grouped);
+/* ---- The home indicator ---- */
+
+.sb-homebar {
+  position: absolute;
+  right: 0;
+  bottom: var(--below, 0px);
+  left: 0;
+  z-index: 2;
+  height: 26px;
+  color: #000;
+  touch-action: none;
 }
 
-.ph .details__row {
-  min-height: 52px;
-  padding: 8px 16px;
-  font-size: 17px;
+.ph[data-dark] .sb-homebar {
+  color: #fff;
 }
 
-.ph .details__row + .details__row {
-  box-shadow: inset 0 0.5px 0 var(--ph-separator);
+.sb-homebar[data-at='lock'] {
+  pointer-events: none;
 }
 
-.ph .details__row:hover {
-  background: none;
+.sb-homebar__pill {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  width: min(144px, 36cqw);
+  height: 5px;
+  border-radius: 2.5px;
+  background: currentColor;
+  transform: translateX(-50%);
+  transition:
+    color 0.3s ease,
+    opacity 0.3s ease;
 }
 
-.ph .details__row:active {
-  background: rgba(0, 0, 0, 0.07);
-}
-
-.ph .details__label {
-  margin: 24px 16px 0;
-  color: var(--ph-label-2);
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 18px;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.ph .details__people {
-  margin-top: 7px;
-}
-
-.ph .details__person {
-  gap: 12px;
-  min-height: 58px;
-}
-
-.ph .details__who-role {
-  color: var(--ph-label-2);
-  font-size: 14px;
-  line-height: 18px;
-}
-
-.ph .details .ss-badge {
-  font-size: 12px;
-}
-
-/* ---- Portfolio ---- */
-
-.ph-section-title {
-  margin: 12px 20px 10px;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 25px;
-}
-
-.ph-section-title > span {
-  margin-left: 3px;
-  color: var(--ph-label-2);
-  font-size: 15px;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-}
-
-.ph-logos-section {
-  margin-bottom: 8px;
-}
-
-.ph-logos {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  row-gap: 12px;
-  padding: 0 10px 8px;
-}
-
-.ph-logos > li {
-  display: flex;
-  justify-content: center;
-  min-width: 0;
-}
-
-.ph-logo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  min-width: 0;
-  padding: 4px 2px;
-  border-radius: 16px;
-}
-
-.ph-logo .logo {
-  transition: transform 0.18s ease, filter 0.18s ease;
-}
-
-.ph-logo:active .logo {
-  filter: brightness(0.82);
-  transform: scale(0.94);
-}
-
-.ph-logo__name {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 12px;
-  line-height: 15px;
-  letter-spacing: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ph-company {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 24px 4px;
-  text-align: center;
-}
-
-.ph-company__name {
-  margin-top: 16px;
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 31px;
-  letter-spacing: -0.025em;
-}
-
-.ph-company__kind {
-  margin-top: 2px;
-  color: var(--ph-label-2);
-  font-size: 15px;
-  line-height: 20px;
-}
-
-.ph-company__blurb {
-  margin-top: 12px;
-  font-size: 17px;
-  line-height: 23px;
-  text-wrap: balance;
-}
-
-.ph-company .ph-button {
-  margin-top: 24px;
-}
-
-/* ---- FAQs: questions that open where they are ---- */
-
-.ph-faq-list {
-  margin: 0 20px;
-  border-top: 0.5px solid var(--ph-separator);
-}
-
-.ph-faq {
-  border-bottom: 0.5px solid var(--ph-separator);
-}
-
-.ph-faq__question {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  width: 100%;
-  padding: 16px 0;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 25px;
-  letter-spacing: -0.02em;
-  text-align: left;
-}
-
-.ph-faq__chevron {
-  flex: none;
-  margin-top: 3px;
-  color: var(--ph-label-2);
-  transition: transform 0.3s var(--ph-ease);
-}
-
-.ph-faq[data-open] .ph-faq__chevron {
-  transform: rotate(180deg);
-}
-
-/* Opens by growing a grid row, so it eases to whatever height the answer is */
-.ph-faq__answer {
-  display: grid;
-  grid-template-rows: 0fr;
+.sb-homebar[data-at='home'] .sb-homebar__pill {
   opacity: 0;
-  transition: grid-template-rows 0.32s var(--ph-ease), opacity 0.24s ease;
 }
 
-.ph-faq[data-open] .ph-faq__answer {
-  grid-template-rows: 1fr;
-  opacity: 1;
-}
-
-.ph-faq__answer > div {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.ph-faq__answer p {
-  margin-bottom: 18px;
-  font-size: 17px;
-  line-height: 24px;
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-.ph-faq__answer p.faq__todo {
-  font-size: 16px;
-  line-height: 23px;
-}
-
-/* ---- Case studies: what the terminal said, and a button to answer it ---- */
-
-.ph-term-card.ss-term {
-  margin: 0 16px 14px;
-  padding: 14px 16px 16px;
-  overflow: hidden;
-  border-radius: 22px;
-  background: #17171a;
-  font-size: 13px;
-  letter-spacing: 0;
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-.ph-cases .ph-button {
-  width: calc(100% - 32px);
-  margin: 0 16px 26px;
-}
-
-.ph-cases__done {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 52px;
-  margin: 0 16px 26px;
-  border-radius: 26px;
-  background: rgba(52, 199, 89, 0.16);
-  color: #1c8a3c;
-  font-weight: 600;
-}
-
-.ph-request {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 0 24px 4px;
-  text-align: center;
-}
-
-.ph-request__mark {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--ph-fill);
-  color: #1d1d1f;
-}
-
-.ph-request__mark[data-done] {
-  background: rgba(52, 199, 89, 0.18);
-  color: #1c8a3c;
-}
-
-.ph-request__title {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 29px;
-  letter-spacing: -0.02em;
-}
-
-.ph-request__text {
-  margin-bottom: 6px;
-  color: rgba(60, 60, 67, 0.8);
-  line-height: 23px;
-  text-wrap: balance;
-}
-
-.ph-request__wrong {
-  align-self: flex-start;
-  margin: -4px 4px 0;
-  color: #d70015;
-  font-size: 14px;
-  line-height: 18px;
-}
-
-/* ---- VIP ---- */
-
-.ph-vip__filter {
-  display: flex;
-  padding: 0 16px 16px;
-}
-
-.ph-vip__filter .seg,
-.ph-vip__filter .ss-seg {
-  width: 100%;
-}
-
-.ph-vip__filter .ss-seg {
-  --ss-row: 34px;
-}
-
-.ph-vip__filter .ss-seg__option {
-  flex: 1;
-  justify-content: center;
-  font-size: 15px;
-}
-
-.ph-vip .vip__grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: 92px;
-  gap: 8px;
-  padding: 0 16px 8px;
-}
-
-.ph-vip .vip-tile[data-span='big'],
-.ph-vip .vip-tile[data-span='wide'] {
-  grid-column: span 1;
-}
-
-.ph-vip .vip-tile__cap {
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-.ph-vip .vip__none {
-  padding: 48px 24px;
-  font-size: 17px;
-}
-
-/* Wider than a phone held upright: more to a row */
-@media (min-width: 540px) {
-  .ph-logos {
-    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-  }
-
-  .ph-vip .vip__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.ph--bleed[data-keyboard] .sb-homebar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ph-app,
-  .ph-sheet__panel,
-  .ph-sheet__shade,
-  .ph-details,
-  .ph-reply,
-  .chat-attach {
-    animation: none !important;
-  }
-
-  .ph-faq__answer,
-  .ph-faq__chevron,
-  .ph-sheet__panel {
-    transition-duration: 0.01s !important;
+  .sb-lock,
+  .sb-home,
+  .sb-wall,
+  .sb-slot,
+  .sb-card,
+  .sb-drag,
+  .sb-lock__hint,
+  .sb-banner .ss-notification,
+  .sb-stack > .sb-note,
+  .sb-chat__reply {
+    animation: none;
+    transition: none;
   }
 }

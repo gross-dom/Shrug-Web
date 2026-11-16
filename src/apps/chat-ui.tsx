@@ -87,7 +87,7 @@ const dayOf = (t: number) => {
 }
 
 /** When a conversation last heard something, as its row in the list says it: the time today, the day before that. */
-const rowTime = (t: number) => (daysAgo(t) <= 0 ? clock(t) : dayOf(t))
+export const rowTime = (t: number) => (daysAgo(t) <= 0 ? clock(t) : dayOf(t))
 
 export const stamp = (at: number) => (
   <Stamp key="stamp" className="chat-stamp">
@@ -290,8 +290,10 @@ export function Scroller({ label, nodes, jump, onJumped, active = true, foot, on
     if (!el || !bubble) return
     const box = el.getBoundingClientRect()
     const at = bubble.getBoundingClientRect()
+    // What is measured on the page is as it is drawn: inside a scaled frame (the phone's), a distance on the page is that much less of the thread
+    const k = box.width / el.offsetWidth || 1
     // A long reply is shown from its top; a short one sits in the middle
-    const top = el.scrollTop + (at.top - box.top) - Math.max(28, (el.clientHeight - at.height) / 2)
+    const top = el.scrollTop + (at.top - box.top) / k - Math.max(28, (el.clientHeight - at.height / k) / 2)
     // The thread lets go of its end to stay here
     pinned.current = false
     setAway(el.scrollHeight - el.clientHeight - top > 56)
@@ -538,8 +540,9 @@ export function ConversationList({ onPick, selectable = true, avatar = 40 }: { o
     if (!row) return
     const box = list.getBoundingClientRect()
     const r = row.getBoundingClientRect()
-    if (r.top < box.top) list.scrollTop -= box.top - r.top + 8
-    else if (r.bottom > box.bottom) list.scrollTop += r.bottom - box.bottom + 8
+    const k = box.width / list.offsetWidth || 1
+    if (r.top < box.top) list.scrollTop -= (box.top - r.top) / k + 8
+    else if (r.bottom > box.bottom) list.scrollTop += (r.bottom - box.bottom) / k + 8
   }
 
   return (

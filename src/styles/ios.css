@@ -1,0 +1,888 @@
+/* The parts every app on the phone is built from (src/phone/ui.tsx), drawn
+   the way the current iOS draws them. Sizes are iOS points; inside the phone a
+   point is a pixel. Everything here lives under .ph, the phone's screen. */
+
+.ph {
+  /* The status bar's height: the frame's, where the phone is drawn in one; on
+     a real phone the page starts under the phone's own */
+  --status: 0px;
+  /* The strip the home indicator sits in */
+  --home: 34px;
+  /* The strip a screen's glass buttons sit in */
+  --bar: 52px;
+  /* A screen's side margins */
+  --edge: 16px;
+  /* How far above the screen's bottom edge a floating bar sits */
+  --foot-gap: 21px;
+
+  --blue: #0a84ff;
+  --red: #ff3b30;
+  --green: #34c759;
+  --label: #000;
+  --label-2: rgb(60 60 67 / 0.6);
+  --label-3: rgb(60 60 67 / 0.3);
+  --sep: rgb(60 60 67 / 0.2);
+  --fill: rgb(120 120 128 / 0.12);
+  --fill-2: rgb(120 120 128 / 0.2);
+  --surface: #fff;
+  --grouped: #f2f2f7;
+
+  /* UIKit-quick: off the tap fast, a long soft settle */
+  --ui: cubic-bezier(0.3, 0.75, 0.1, 1);
+  /* A thrown page or sheet */
+  --glide: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* ---- Glass ---- */
+
+.ios-glass {
+  background: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 4px 14px -4px rgb(0 0 0 / 0.18),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.9);
+  color: #1c1c1e;
+}
+
+.ios-screen[data-tone='dark'] .ios-glass,
+.ios-glass[data-dark] {
+  background: rgb(70 70 76 / 0.55);
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.14),
+    0 4px 14px -4px rgb(0 0 0 / 0.5),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.16);
+  color: #fff;
+}
+
+.ios-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  transition:
+    transform 0.25s var(--ui),
+    opacity 0.2s ease;
+}
+
+.ios-button[data-wide] {
+  grid-auto-flow: column;
+  gap: 6px;
+  width: auto;
+  padding: 0 16px;
+}
+
+.ios-button[data-tint] {
+  color: var(--blue);
+}
+
+.ios-button[data-prominent] {
+  background: var(--blue);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 4px 14px -4px rgb(10 132 255 / 0.5),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.35);
+  color: #fff;
+  font-weight: 600;
+}
+
+.ios-button:active {
+  transform: scale(0.92);
+  transition-duration: 0.08s;
+}
+
+.ios-button[aria-disabled='true'] {
+  opacity: 0.35;
+}
+
+.ios-group {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 44px;
+  padding: 0 4px;
+  border-radius: 22px;
+}
+
+.ios-group__part {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 44px;
+  transition: opacity 0.15s ease;
+}
+
+.ios-group__part[data-tint] {
+  color: var(--blue);
+}
+
+.ios-group__part:active {
+  opacity: 0.4;
+}
+
+.ios-group__part[aria-disabled='true'] {
+  opacity: 0.3;
+}
+
+/* ---- A screen ---- */
+
+.ios-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--label);
+}
+
+.ios-screen[data-tone='grouped'] {
+  --surface-under: var(--grouped);
+  background: var(--grouped);
+}
+
+.ios-screen[data-tone='dark'] {
+  --label: #fff;
+  --label-2: rgb(235 235 245 / 0.6);
+  --label-3: rgb(235 235 245 / 0.3);
+  --sep: rgb(84 84 88 / 0.65);
+  --fill: rgb(118 118 128 / 0.24);
+  --surface: #000;
+  --grouped: #000;
+  background: #000;
+}
+
+.ios-screen__scroll {
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-top: calc(var(--status) + var(--bar));
+  padding-bottom: calc(var(--home) + 16px);
+  scrollbar-width: none;
+}
+
+.ios-screen__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Clear of whatever floats at the foot */
+.ios-screen[data-foot] > .ios-screen__scroll {
+  padding-bottom: calc(var(--foot-gap) + 62px + 24px);
+}
+
+.ios-screen__body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ios-large {
+  margin: 0 20px 6px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 41px;
+  letter-spacing: 0.01em;
+}
+
+/* The bar: nothing but its buttons, floating. Touches fall through it to the page */
+.ios-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  height: calc(var(--status) + var(--bar));
+  padding: var(--status) var(--edge) 0;
+  pointer-events: none;
+}
+
+.ios-bar__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  pointer-events: auto;
+}
+
+.ios-bar__side--end {
+  justify-content: flex-end;
+}
+
+.ios-bar__side:empty {
+  pointer-events: none;
+}
+
+.ios-bar__title {
+  position: relative;
+  min-width: 0;
+  text-align: center;
+  pointer-events: none;
+}
+
+.ios-bar__title > * {
+  pointer-events: auto;
+}
+
+.ios-bar__name {
+  display: block;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* A large title in the page keeps the bar's own name back until it has scrolled away */
+.ios-screen:not([data-folded]) .ios-bar__name {
+  opacity: 0;
+}
+
+/* The scroll edge: what passes under the bar blurs and fades out, no line drawn */
+.ios-bar__edge,
+.ios-foot__edge {
+  position: absolute;
+  inset: 0 0 -20px;
+  z-index: -1;
+  background: linear-gradient(color-mix(in srgb, var(--surface-under, var(--surface)) 92%, transparent) 50%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(#000 62%, transparent);
+  mask-image: linear-gradient(#000 62%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.ios-screen[data-scrolled] .ios-bar__edge {
+  opacity: 1;
+}
+
+.ios-foot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--edge) var(--foot-gap);
+  pointer-events: none;
+  --control: 48px;
+}
+
+.ios-foot:has(.ios-tabs) {
+  --control: 62px;
+}
+
+.ios-foot > * {
+  pointer-events: auto;
+}
+
+.ios-foot > .ios-button {
+  width: var(--control);
+  height: var(--control);
+  border-radius: calc(var(--control) / 2);
+}
+
+.ios-foot__edge {
+  inset: -24px 0 0;
+  background: linear-gradient(transparent, color-mix(in srgb, var(--surface-under, var(--surface)) 88%, transparent) 55%);
+  -webkit-mask-image: linear-gradient(transparent, #000 45%);
+  mask-image: linear-gradient(transparent, #000 45%);
+  opacity: 1;
+}
+
+/* ---- Search, tabs ---- */
+
+.ios-search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 14px 0 15px;
+  border-radius: 24px;
+  cursor: text;
+}
+
+.ios-search__glass,
+.ios-search__mic {
+  flex: none;
+  color: var(--label-2);
+}
+
+.ios-search__input {
+  flex: 1;
+  min-width: 0;
+  color: var(--label);
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.ios-search__input::placeholder {
+  color: var(--label-2);
+  opacity: 1;
+}
+
+.ios-search__clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--label-3);
+  color: #fff;
+}
+
+.ios-tabs {
+  display: flex;
+  flex: 1;
+  height: 62px;
+  padding: 4px;
+  border-radius: 31px;
+}
+
+.ios-tabs__item {
+  display: grid;
+  flex: 1;
+  place-content: center;
+  justify-items: center;
+  gap: 1px;
+  min-width: 0;
+  height: 54px;
+  border-radius: 27px;
+  color: #1c1c1e;
+  transition: background-color 0.2s ease;
+}
+
+.ios-tabs__item[aria-current='page'] {
+  background: rgb(0 0 0 / 0.07);
+  color: var(--blue);
+}
+
+.ios-tabs__icon {
+  display: grid;
+  place-items: center;
+  height: 28px;
+}
+
+.ios-tabs__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 12px;
+}
+
+/* ---- A stack of screens ---- */
+
+.ios-nav {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.ios-page {
+  position: absolute;
+  inset: 0;
+  transition:
+    transform 0.5s var(--glide),
+    visibility 0s;
+}
+
+/* The screen underneath has moved a third of the way off, and is not drawn once covered */
+.ios-page[data-pos='under'] {
+  transform: translateX(-30%);
+  visibility: hidden;
+  transition:
+    transform 0.5s var(--glide),
+    visibility 0s 0.5s;
+}
+
+.ios-page[data-pos='gone'] {
+  transform: translateX(100%);
+  pointer-events: none;
+}
+
+.ios-page:not([data-depth='0']) {
+  box-shadow: -12px 0 28px rgb(0 0 0 / 0.07);
+}
+
+.ios-page[data-enter] {
+  animation: ios-push 0.5s var(--glide);
+}
+
+@keyframes ios-push {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.ios-nav[data-still] .ios-page {
+  animation: none;
+  transition: none;
+}
+
+/* ---- Lists ---- */
+
+.ios-list {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 10px var(--edge) 8px;
+}
+
+.ios-section__header {
+  margin: 0 16px 8px;
+  color: var(--label-2);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+}
+
+.ios-section__rows {
+  overflow: hidden;
+  border-radius: 26px;
+  background: var(--surface);
+}
+
+.ios-screen[data-tone='dark'] .ios-section__rows {
+  background: #1c1c1e;
+}
+
+/* A plain section's rows run edge to edge on the page itself */
+.ios-section[data-plain] > .ios-section__rows {
+  margin: 0 calc(var(--edge) * -1);
+  border-radius: 0;
+  background: none;
+}
+
+.ios-section__footer {
+  margin: 8px 16px 0;
+  color: var(--label-2);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.ios-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 16px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  text-align: left;
+}
+
+/* A hairline over every row but the first, from where the words start */
+.ios-cell + .ios-cell::before {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  left: 16px;
+  height: 0.5px;
+  background: var(--sep);
+  content: '';
+}
+
+.ios-cell[data-lead] + .ios-cell[data-lead]::before {
+  left: var(--cell-inset, 58px);
+}
+
+:is(button, a).ios-cell:active {
+  background: rgb(0 0 0 / 0.07);
+}
+
+.ios-cell[aria-disabled='true'] {
+  opacity: 0.4;
+}
+
+.ios-cell__lead {
+  display: grid;
+  flex: none;
+  place-items: center;
+}
+
+.ios-cell__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.ios-cell__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ios-cell[data-tint] .ios-cell__title {
+  color: var(--blue);
+}
+
+.ios-cell[data-destructive] .ios-cell__title {
+  color: var(--red);
+}
+
+.ios-cell__subtitle {
+  overflow: hidden;
+  color: var(--label-2);
+  font-size: 15px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+}
+
+.ios-cell__value {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  color: var(--label-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ios-cell__chevron {
+  flex: none;
+  margin-right: -4px;
+  color: var(--label-3);
+}
+
+.ios-switch {
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 28px;
+  border-radius: 14px;
+  background: rgb(120 120 128 / 0.22);
+  transition: background-color 0.25s ease;
+}
+
+.ios-switch[aria-checked='true'] {
+  background: var(--green);
+}
+
+.ios-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 39px;
+  height: 24px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 0.14),
+    0 0 0 0.5px rgb(0 0 0 / 0.04);
+  transition: transform 0.3s var(--ui);
+}
+
+.ios-switch[aria-checked='true'] .ios-switch__knob {
+  transform: translateX(21px);
+}
+
+.ios-segments {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  height: 36px;
+  padding: 2px;
+  border-radius: 18px;
+  background: var(--fill);
+}
+
+.ios-segments__thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc((100% - 4px) / var(--n));
+  border-radius: 16px;
+  background: #fff;
+  box-shadow:
+    0 2px 8px rgb(0 0 0 / 0.1),
+    0 0 0 0.5px rgb(0 0 0 / 0.04);
+  transform: translateX(calc(var(--at) * 100%));
+  transition: transform 0.3s var(--ui);
+}
+
+.ios-segments__item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.ios-segments__item[aria-checked='true'] {
+  font-weight: 600;
+}
+
+/* ---- Menus ---- */
+
+.ios-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.ios-menu__list {
+  --ss-popover-bg: rgb(250 250 252 / 0.84);
+  --ss-popover-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.08), 0 14px 44px rgb(0 0 0 / 0.2);
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  min-width: 232px;
+  padding: 6px 0;
+  border-radius: 26px;
+  color: var(--label);
+}
+
+.ios-menu__list::before {
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+}
+
+.ios-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 0 18px 0 12px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+.ios-menu__item[data-divided] {
+  box-shadow: 0 -0.5px 0 var(--sep);
+}
+
+.ios-menu__item:active {
+  background: rgb(0 0 0 / 0.08);
+}
+
+.ios-menu__item[data-destructive] {
+  color: var(--red);
+}
+
+.ios-menu__item[aria-disabled='true'] {
+  opacity: 0.35;
+}
+
+.ios-menu__tick {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+}
+
+.ios-menu__label {
+  flex: 1;
+}
+
+.ios-menu__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--label);
+}
+
+/* ---- Sheets ---- */
+
+.ios-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
+.ios-sheet__shade {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.26);
+  animation: ios-fade-in 0.3s ease;
+  transition: opacity 0.3s ease;
+}
+
+.ios-sheet[data-detent='medium'] .ios-sheet__shade {
+  background: rgb(0 0 0 / 0.12);
+}
+
+.ios-sheet__panel {
+  position: absolute;
+  top: calc(var(--status) + 10px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 38px 38px 0 0;
+  background: var(--surface);
+  box-shadow: 0 -4px 40px rgb(0 0 0 / 0.14);
+  color: var(--label);
+  outline: none;
+  animation: ios-sheet-up 0.5s var(--glide);
+  transition: transform 0.4s var(--glide);
+}
+
+.ios-sheet[data-tone='grouped'] .ios-sheet__panel {
+  background: var(--grouped);
+}
+
+/* About half the screen, floating clear of its edges */
+.ios-sheet[data-detent='medium'] .ios-sheet__panel {
+  top: auto;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  max-height: min(66%, 560px);
+  border-radius: 38px;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 12px 50px rgb(0 0 0 / 0.22);
+}
+
+.ios-sheet[data-closing] .ios-sheet__shade {
+  opacity: 0;
+}
+
+.ios-sheet[data-closing] .ios-sheet__panel {
+  transform: translateY(115%);
+  transition: transform 0.36s cubic-bezier(0.4, 0, 0.8, 0.5);
+}
+
+.ios-sheet[data-still] :is(.ios-sheet__panel, .ios-sheet__shade) {
+  animation: none;
+}
+
+@keyframes ios-sheet-up {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+@keyframes ios-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.ios-sheet__bar {
+  position: relative;
+  display: grid;
+  flex: none;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 68px;
+  padding: 14px 12px 8px;
+  touch-action: none;
+}
+
+.ios-sheet__grabber {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 36px;
+  height: 5px;
+  margin-left: -18px;
+  border-radius: 3px;
+  background: var(--label-3);
+}
+
+.ios-sheet__side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ios-sheet__side--end {
+  justify-content: flex-end;
+}
+
+.ios-sheet__title {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ios-sheet__body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--home) + 8px);
+  scrollbar-width: none;
+}
+
+.ios-sheet__body::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---- Small things ---- */
+
+.ios-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 72px 40px;
+  color: var(--label-2);
+  text-align: center;
+}
+
+.ios-empty__icon {
+  margin-bottom: 8px;
+  color: var(--label-3);
+}
+
+.ios-empty__title {
+  color: var(--label);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ios-empty__text {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ios-page,
+  .ios-page[data-enter],
+  .ios-sheet__panel,
+  .ios-sheet__shade {
+    animation: none;
+    transition: none;
+  }
+}

@@ -44,13 +44,9 @@ export interface WM {
   wins: Record<AppId, Win>
   /** Back to front. */
   order: AppId[]
-  /** The desk the windows are laid out on: the screen, unless one has been lent (see lendDesk). */
   viewport: Size
-  /** That desk is phone-sized: too small for windows to be moved about on. */
+  /** A phone-sized screen: the desktop gives way to the phone layout (src/phone). */
   compact: boolean
-  /** The screen itself is phone-sized, whatever desk the windows are on: the
-   * desktop gives way to the phone layout (src/phone). */
-  phone: boolean
   /** The outline shown while a dragged window is held against an edge. */
   preview: Tile | null
 }
@@ -65,7 +61,10 @@ export const metrics = (compact: boolean) => ({
   dock: compact ? 74 : 82,
 })
 
-const isCompact = (v: Size) => v.w < 760 || v.h < 480
+/** The address asks for the phone whatever the screen's size (`?phone`), or a page holding this one does. */
+const asked = typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('phone') || (window as { __shrugHost?: { phone?: boolean } }).__shrugHost?.phone === true)
+
+const isCompact = (v: Size) => asked || v.w < 760 || v.h < 480
 
 const viewportNow = (): Size => (typeof window === 'undefined' ? { w: 1440, h: 900 } : { w: window.innerWidth, h: window.innerHeight })
 
@@ -83,17 +82,11 @@ const blank = (id: AppId): Win => ({
 
 const initialViewport = viewportNow()
 
-/** The screen's own size, as last reported. */
-let screenSize: Size = initialViewport
-/** A desk lent in place of the screen's, and how a point on the screen falls on it. */
-let lent: { size: Size; onto: (point: Point) => Point } | null = null
-
 export const wm = createStore<WM>({
   wins: Object.fromEntries(APP_IDS.map((id) => [id, blank(id)])) as Record<AppId, Win>,
   order: [],
   viewport: initialViewport,
   compact: isCompact(initialViewport),
-  phone: isCompact(initialViewport),
   preview: null,
 })
 
@@ -204,9 +197,6 @@ function later(key: string, ms: number, fn: () => void) {
   )
 }
 
-/** A point on the screen (a Dock icon's middle), as a point on the desk the windows are on. */
-const onDesk = (point: Point | null) => (point && lent ? lent.onto(point) : point)
-
 /** Opens an app's window, or brings it back and to the front. */
 export function openApp(id: AppId, origin: Point | null = null) {
   const s = wm.get()
@@ -228,7 +218,7 @@ export function openApp(id: AppId, origin: Point | null = null) {
         rect: fresh ? centered(id, s.viewport, s.compact) : s.compact ? win.rect : refit(win, s.viewport).rect,
         // A minimised window glides back out of its icon; a closed one opens
         phase: restoring ? null : 'opening',
-        origin: onDesk(origin) ?? win.origin,
+        origin: origin ?? win.origin,
       },
     },
   })
@@ -245,7 +235,7 @@ export function closeApp(id: AppId) {
 export function minimizeApp(id: AppId, origin: Point | null = null) {
   const win = wm.get().wins[id]
   if (!win.open || win.minimized) return
-  patch(id, { minimized: true, origin: onDesk(origin) ?? win.origin })
+  patch(id, { minimized: true, origin: origin ?? win.origin })
 }
 
 export function focusApp(id: AppId) {
@@ -291,37 +281,15 @@ export function bringAllToFront() {
   }))
 }
 
-/** Every window brought onto a desk of this size. */
-const refitAll = (wins: Record<AppId, Win>, viewport: Size) => Object.fromEntries(APP_IDS.map((id) => [id, refit(wins[id], viewport)])) as Record<AppId, Win>
-
-/** The screen changed size. */
 export function setViewport(viewport: Size) {
-  screenSize = viewport
   wm.set((s) => {
-    const phone = isCompact(viewport)
-    // On a lent desk the windows stay where they are: only what the screen is has changed
-    if (lent) return s.phone === phone ? s : { ...s, phone }
-    if (s.viewport.w === viewport.w && s.viewport.h === viewport.h && s.phone === phone) return s
+    if (s.viewport.w === viewport.w && s.viewport.h === viewport.h) return s
+    const compact = isCompact(viewport)
     // A phone-sized screen draws its own layout and never reads these rects:
     // leave them as they are, to come back to
-    return { ...s, viewport, compact: phone, phone, wins: phone ? s.wins : refitAll(s.wins, viewport), preview: null }
+    const wins = compact ? s.wins : (Object.fromEntries(APP_IDS.map((id) => [id, refit(s.wins[id], viewport)])) as Record<AppId, Win>)
+    return { ...s, viewport, compact, wins, preview: null }
   })
-}
-
-/** Lays the windows out on a desk of a size of its own, whatever the screen's.
- * The phone's "window" version does this: it draws the Mac at desktop size and
- * looks at it through the phone. `onto` turns a point on the screen into a
- * point on that desk. Returns the way to give the desk back. */
-export function lendDesk(size: Size, onto: (point: Point) => Point): () => void {
-  const mine = { size, onto }
-  lent = mine
-  wm.set((s) => ({ ...s, viewport: size, compact: false, wins: refitAll(s.wins, size), preview: null }))
-  return () => {
-    if (lent !== mine) return
-    lent = null
-    const phone = isCompact(screenSize)
-    wm.set((s) => ({ ...s, viewport: screenSize, compact: phone, phone, wins: phone ? s.wins : refitAll(s.wins, screenSize), preview: null }))
-  }
 }
 
 /** Puts the keyboard in a window: on what it marks to take it, or on the window itself. */

@@ -1,6 +1,6 @@
 # Shrug Web
 
-Shrug's website as a desktop you can click around: a macOS-style skin over the "Shrug desktop" design, built with the [Stageshow](https://github.com/benjitaylor/skills) kit's window chrome, message thread, rows and controls. How it works on a phone is being chosen: there are ten versions of that to try.
+Shrug's website as a desktop you can click around: a macOS-style skin over the "Shrug desktop" design, built with the [Stageshow](https://github.com/benjitaylor/skills) kit's window chrome, message thread, rows and controls. On a phone it is an iPhone instead: the same apps, each redrawn as its iOS counterpart, with the kit's lock screen, notifications and message thread.
 
 ## Run it
 
@@ -40,39 +40,36 @@ It is laid out as an iMessage group conversation, seen from Shrug's side:
 
 ### On a phone
 
-Below 760px wide (or 480px tall) the site is laid out for a phone, and how it should work there is still being chosen. There are ten versions, from the most familiar to the least. `?v=3` shows the third; with no `v`, a phone shows the list of them. A bar above each one names it, steps to the next and goes back to the list. The list and the bar are scaffolding for choosing: they are not part of any version.
+Below 760px wide (or 480px tall) the site is an iPhone, in the look of the current iOS. Everything on the desktop is there, redrawn as the thing an iPhone has in its place:
 
-| | Version | What it is | What of the phone it uses |
-| --- | --- | --- | --- |
-| 1 | The scroll | One long page. The conversation plays as you scroll into it; the rest follows as chapters. | Scrolling, snap carousels |
-| 2 | Messages, with apps | The conversation, with the site living where the keyboard does, as iMessage apps do. | The keyboard's place, taps, stickers |
-| 3 | The sheet | The conversation never stops; everything else is a sheet you pull up over it with a thumb. | A draggable sheet, one-thumb reach |
-| 4 | Stories | Ninety rings. Tap one and their reply fills the screen; tap on, hold to read, swipe away. | Taps, holds, swipes |
-| 5 | The feed | One reply to a screen. Swipe up for the next, sideways for the portfolio, double tap to love. | Paging swipes, double tap, the share sheet |
-| 6 | The deck | A deck of ninety cards to flick through: keep the ones that land, and share your hand. | Dragging and flinging, flips, ticks |
-| 7 | Shrug it | Ask the question, then shrug your phone. Every shrug is another answer. | Shaking and tilting |
-| 8 | The jar | Ninety people pour in and pile up. Tilt the phone and they roll; tap one to hear them out. | Which way is down, flicks |
-| 9 | The window | Your phone is a window onto Niv's Mac: pan, pinch and turn it to look around the real desktop. | Pan, pinch, turning the phone |
-| 10 | The room | The family is all around you. Turn where you stand to look round the room at them. | Which way you face, the camera |
+| On the desktop | On the iPhone |
+| --- | --- |
+| The screen saver | **The Lock Screen.** The time and date, and the group's replies arriving as notifications, stacked as iOS stacks a conversation's. Swipe up to open it, or tap a notification to go straight to the conversation. Left alone for two and a half minutes the phone locks again. |
+| The desk, its icons and the Dock | **The Home Screen.** Three widgets (the newest reply, the portfolio, the FAQs), the icons, a Dock of the four main apps with the unread badge on Messages, and Search. |
+| Group chat | **Messages.** The list of conversations (Shrug Family, then everyone's own, unread until opened), a conversation with its floating header and the message field, and the details sheet with Pause Replies, Show Every Reply and Play From the Start. |
+| Portfolio (a Finder window) | **Files.** Every company under its logo, grouped by vertical, as icons or a list; a Browse tab of the verticals as folders; search; and a card for each company with its link. |
+| FAQs (Notes) | **Notes.** The questions as a list of notes, and each note on its own page. |
+| Case Studies (Terminal) | **A terminal**, with keys over the keyboard so nobody has to type to ask for access. |
+| VIP (Photos) | **Photos.** The Library as a grid, the drops as albums under Collections, and a full-screen viewer to swipe through. |
+| About Shrug | **About**, laid out as Settings lays out General › About: the counts, each opening its app. |
+| Moving, minimising and closing windows | **The home indicator.** Swipe it up to go to the Home Screen; swipe up and pause for the App Switcher, where a tap goes to an app and a flick upward closes it. |
+| A reply landing while another window is in front | **A banner** at the top of the screen. Tap it to open the conversation. |
 
-- **Every version works by touch alone.** Shaking, tilting, turning and the camera are extras: a phone has to be asked before it will report its movement (each version that wants it has a button for that), and where it says no, or there is nothing to ask, the same things are done by dragging and tapping.
-- **What they share**: the pages a version can open over itself (the portfolio, FAQs, case studies and VIP, in `src/phone/apps.tsx`), the sheets (a company, a person, the access request), and `src/phone/native.ts`, which is the share sheet, a tick under the finger, and how the phone is held and moved.
-- **Opening a page or a sheet is a step in the browser's history**, so the phone's back gesture or button closes what is open.
-- **Versions 2 and 3 are the conversation with the visitor in it**: Niv adds you to Shrug Family, asks his question, and you get around by replying. `src/phone/convo.ts` holds what is said and what each reply sets off. Niv's lines other than the two he opens with are placeholder copy.
-- **Reaching Shrug for real** needs a number or an address in `SITE.contact` (`src/data/site.ts`). Until then the versions that offer it say so in its place.
+- **On a real phone the phone is the frame.** The screen is drawn edge to edge under the phone's own status bar, and the browser's bars are painted to match what is showing. The home indicator at the foot is the site's own: the phone's is below the browser, and leaves it.
+- **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions.
+- **Every move is a step in the browser's history.** Safari's swipe from the left edge (or an Android back button) is the phone's Back: it goes back a screen inside an app, closes a sheet, and leaves an app for the Home Screen. A reload comes back to where it was, unlocked.
+- **Apps stay as they were left**, as they do on an iPhone, until they are flicked out of the App Switcher.
+- **Search** (the pill above the Dock, or a pull down on the Home Screen) looks through the people, the companies, the questions and the drops, and opens the app at what was found.
 - **The link preview** is the conversation's opening (`public/og.png`, taken by `tools/og.cjs`), so the address unfolds as the chat when it is texted.
+- **Reaching Shrug for real** would need a number or an address in `SITE.contact` (`src/data/site.ts`); nothing on the phone uses one yet.
 
-Once one is picked, the others, the list and the bar come out: `src/phone/variants/` and `src/styles/variants/` hold one file each per version, and `src/phone/Phone.tsx` is where the chosen one would be named.
-
-The status bar and home indicator are the real phone's; the page only keeps clear of them. There is no screen saver on a phone.
-
-To send someone the site as a single file they can open on a phone or in a browser, with all ten versions in it: `node tools/preview.cjs shrug.html`.
+To send someone the site as a single file they can open on a phone or in a browser: `node tools/preview.cjs shrug.html`. Opened on a computer, the file shows the iPhone, with a button for the desktop.
 
 ### Links
 
-- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, the last one named is open over the version being shown). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
-- `?v=1` to `?v=10` picks the phone's version.
-- `?saver` starts on the screen saver. `?idle=20` sets how many seconds of stillness start it. Desktop only.
+- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, it arrives unlocked with the last one named open). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
+- `?phone` shows the iPhone whatever the size of the screen, drawn in its frame.
+- `?saver` starts on the screen saver (desktop only). `?idle=20` sets how many seconds of stillness start it, and lock the phone.
 
 ## Content
 
@@ -98,7 +95,7 @@ Fill in a field and the real thing replaces its placeholder; nothing else needs 
 
 The 15 companies without a logo are Senra, Mona Lee Solar, Homemade, BloxSnacks, Loyal, Supergreat, Drumroll, Lula, Seis, RTFKT, Once Upon, Diagram, Tome, Opal and Poparazzi: their sites had no icon or served one that isn't their logo (a host's default, a parked page, another product's, a placeholder), and no site could be confirmed for Drumroll or Lula. About a quarter of the other logos come from small icons (32 to 48px) and are soft at the preview's size; a proper logo file replaces any of them the same way.
 
-Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal (or, on a phone, to Niv in the conversation) are shown on screen and go nowhere. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`, which the phone's sheet calls too).
+Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal are shown on screen and go nowhere, on the desktop and on the iPhone alike. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`): the iPhone's Messages and terminal call the same two.
 
 ## Where things are
 
@@ -112,16 +109,18 @@ src/
   apps/     one file per window, plus what windows and phone screens share
             (chat.ts: the chat's clock; chat-ui.tsx: the conversation;
             portfolio-ui.tsx: the companies and their logos; state.ts)
-  phone/    the phone: its ten versions (variants/), the pages and sheets they
-            share, and what a phone can do that a desktop can't (native.ts)
-  styles/   base.css, os.css (the desktop), apps.css (the windows), phone.css,
-            and a stylesheet per phone version (variants/)
+  phone/    the iPhone: the system (lock, home, switcher), the parts its apps
+            are built from, and the apps themselves (apps/)
+  styles/   base.css, os.css (the desktop), apps.css (the windows), phone.css
+            (the iPhone's own screens), ios.css (the parts its apps share),
+            and a stylesheet per iPhone app (phone/)
   kit/      the Stageshow kit, copied in unmodified
 ```
 
 - **Window behaviour** is in `os/wm.ts` (state) and `os/WindowFrame.tsx` (dragging, resizing, the lights).
-- **A new window**: add it to `os/apps.ts`, write its component in `apps/`, list it in `os/Desktop.tsx`, and give it a screen in `phone/apps.tsx`.
-- **The phone** is `phone/Phone.tsx` (which version is showing, and what is open over it), `phone/variants/` (the versions), `phone/apps.tsx` (the pages and sheets they open), `phone/nav.ts` (what is open, mirrored into history), `phone/ui.tsx` (pages, sheets, lists) and `phone/native.ts` (sharing, ticks, movement). The conversation that versions 2 and 3 are built on is `phone/convo.ts` (what is said and what each reply sets off), `phone/Thread.tsx` (its screen) and `phone/Shot.tsx` (a window of the Mac as a screenshot).
+- **A new window**: add it to `os/apps.ts`, write its component in `apps/` and list it in `os/Desktop.tsx`.
+- **The iPhone** is `phone/system.ts` (locked or not, which app is in front, how far into each app, mirrored into history), `phone/Phone.tsx` (the screen: edge to edge on a real phone, in the kit's frame elsewhere), `phone/Springboard.tsx` (the Lock Screen, the Home Screen, apps opening out of their icons, the App Switcher, banners, the home indicator), `phone/ui.tsx` with `styles/ios.css` (what the apps are built from: screens with floating glass buttons and folding large titles, stacks of screens, grouped lists, tab and search bars, menus, sheets), and `phone/apps/` (one file per app; `routes.ts` names the screens inside them).
+- **A new app on the iPhone**: write it in `phone/apps/` from the parts in `phone/ui.tsx`, name it in `phone/apps/index.tsx`, and put its icon on the Home Screen or in the Dock there.
 - **The wallpaper** is a picture, `public/wallpaper.webp`, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
 
@@ -133,5 +132,6 @@ src/
 - The kit's `Thread`, `Bubble`, `Stamp` and `Receipt` draw the conversation, its typing dots and its bubbles leaving the field. `apps/chat-ui.tsx` lets it scroll and keeps it on the newest reply.
 - The kit's `Row` and `Avatar` draw the list of conversations and the monograms.
 - The kit's `Popover` draws the menus and the details. The menu bar adds the items, keyboard and focus handling.
+- The kit's `Phone`, `LockScreen` and `Notification` draw the iPhone's frame, its Lock Screen and its banners, and the kit's `Expand` is the zoom an app opens out of its icon with. `phone/Springboard.tsx` adds the gestures: the swipe that unlocks, the home indicator, the App Switcher.
 
 The app icons, folder, document and wallpaper are drawn for this site; the group chat's icon is drawn after the Messages icon (a white speech bubble on green). No file from an operating system is used. The company logos belong to the companies.

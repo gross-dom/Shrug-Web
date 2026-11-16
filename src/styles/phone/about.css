@@ -1,0 +1,41 @@
+/* About on the phone, as Settings keeps it (src/phone/apps/About.tsx). The
+   shared parts (ios.css) draw the screen and its grouped rows; this is the
+   card at the top. Sizes are iOS points. */
+
+/* Who this is, as Settings heads a page: the mark, the name, a quiet line */
+.about-card {
+  display: grid;
+  justify-items: center;
+  margin: 6px var(--edge) 16px;
+  padding: 24px 20px 20px;
+  border-radius: 26px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.about-card__name {
+  margin-top: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  line-height: 28px;
+}
+
+.about-card__mark {
+  margin-top: 2px;
+  color: var(--label-2);
+  font-size: 15px;
+  letter-spacing: 0;
+  line-height: 20px;
+}
+
+/* Rows of figures line their numbers up */
+.about-screen .ios-cell__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.about-out {
+  flex: none;
+  margin-right: -3px;
+  color: var(--label-3);
+}

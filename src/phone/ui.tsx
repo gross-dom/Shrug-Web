@@ -1,121 +1,495 @@
-import { createContext, useContext, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { ChevronLeft, Search, X } from 'lucide-react'
-import { GROUP_NAME } from '../apps/chat-ui'
-import { closeApp, closeSheet } from './nav'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react'
+import { Check, ChevronLeft, ChevronRight, Mic, Search, X } from 'lucide-react'
+import { Popover } from '../kit/motion/Popover'
+import { useStore } from '../os/store'
+import { setTone } from './chrome'
+import { closeSheet, pop, sys, type PhoneApp } from './system'
 
-// The parts of the phone's screens other than the conversation itself: a page
-// with a back button and a large title that moves into the bar as it scrolls,
-// a search field, grouped lists, and a sheet that can be dragged away. The
-// phone's own status bar and home indicator are the real ones.
+// The parts every app on the phone is built from, drawn the way the current
+// iOS draws them: a screen with its floating glass buttons and a large title
+// that folds into the bar, a stack of such screens that push and pop, grouped
+// lists, the bars that float at the foot of a screen (search, tabs), sheets
+// and menus. Sizes are iOS points; inside the phone a point is a pixel.
 
-/** Whether a screen is the one in front, with nothing over it. */
-export const ViewContext = createContext<{ active: boolean }>({ active: true })
-export const useView = () => useContext(ViewContext)
+// ---- Where a part is ----
 
-export interface PageProps {
-  /** The page's name: large at the top of the content, and in the bar once that has scrolled away. */
-  title?: string
-  /** In the bar's middle, in place of the title: a conversation's face and name. */
-  center?: ReactNode
-  trailing?: ReactNode
-  /** plain: white. grouped: the gray that grouped lists sit on. */
-  tone?: 'plain' | 'grouped'
-  /** The content manages its own scrolling (a conversation): the page doesn't scroll. */
-  fixed?: boolean
+/** The app a part belongs to, and whether that app is the one in front. */
+export const AppContext = createContext<{ app: PhoneApp; active: boolean }>({ app: 'messages', active: true })
+export const useApp = () => useContext(AppContext)
+
+/** How deep in its app a screen is: 0 for the first. */
+const DepthContext = createContext(0)
+
+/** Whether a screen is the one on top of its app's stack. */
+const TopContext = createContext(true)
+
+/** How much the phone is scaled on the page: 1 on a real phone, less where it
+ * is drawn inside a frame. Anything that turns a finger's movement into a
+ * distance on the screen divides by it. */
+export const scaleOf = (el: Element | null) => {
+  const node = el as HTMLElement | null
+  return node && node.offsetWidth ? node.getBoundingClientRect().width / node.offsetWidth || 1 : 1
+}
+
+// ---- Glass buttons ----
+
+export interface GlassButtonProps {
+  /** What it does, for assistive tech (and all it says, when it is only an icon). */
+  label: string
+  onClick?: () => void
+  /** Words beside or instead of the icon make it a capsule. */
+  wide?: boolean
+  /** Blue ink: the screen's own action. */
+  tint?: boolean
+  /** A filled blue button: the one that finishes the task. */
+  prominent?: boolean
+  disabled?: boolean
+  pressed?: boolean
   className?: string
   children: ReactNode
 }
 
-/** Something opened out of the conversation: a bar whose back button returns to it, and the content under it. */
-export function Page({ title, center, trailing, tone = 'plain', fixed, className, children }: PageProps) {
-  const scroller = useRef<HTMLDivElement>(null)
+/** The round glass button iOS floats over a screen: Back, Compose, More. */
+export function GlassButton({ label, onClick, wide, tint, prominent, disabled, pressed, className, children }: GlassButtonProps) {
+  return (
+    <button type="button" className={`ios-glass ios-button${className ? ` ${className}` : ''}`} data-wide={wide || undefined} data-tint={tint || undefined} data-prominent={prominent || undefined} aria-label={label} aria-pressed={pressed} aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}>
+      {children}
+    </button>
+  )
+}
+
+/** Two or three buttons sharing one piece of glass. */
+export function GlassGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <span className="ios-glass ios-group" role="group" aria-label={label}>
+      {children}
+    </span>
+  )
+}
+
+export function GroupButton({ label, onClick, tint, disabled, children }: { label: string; onClick?: () => void; tint?: boolean; disabled?: boolean; children: ReactNode }) {
+  return (
+    <button type="button" className="ios-group__part" data-tint={tint || undefined} aria-label={label} aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}>
+      {children}
+    </button>
+  )
+}
+
+/** Back a screen: the chevron in its glass circle. */
+export function BackButton({ onClick, label = 'Back' }: { onClick?: () => void; label?: string }) {
+  return (
+    <GlassButton label={label} onClick={onClick ?? pop}>
+      <ChevronLeft size={24} strokeWidth={2.3} aria-hidden style={{ marginLeft: -2 }} />
+    </GlassButton>
+  )
+}
+
+// ---- A screen ----
+
+export interface ScreenProps {
+  /** Its name: the large title, and what the bar says once that has scrolled away. */
+  title: string
+  /** A large title at the top of the page that folds into the bar as the page scrolls. */
+  large?: boolean
+  /** Drawn in the middle of the bar in place of the title (a conversation's avatar and name). */
+  center?: ReactNode
+  /** In the bar's leading corner in place of Back. `null` leaves it empty. */
+  leading?: ReactNode
+  /** The bar's trailing corner: glass buttons. */
+  trailing?: ReactNode
+  /** Under the large title, scrolling with the page: a count, a segmented control. */
+  header?: ReactNode
+  /** Floating at the foot of the screen: a search field, a tab bar, a toolbar. */
+  foot?: ReactNode
+  /** plain: white. grouped: the gray that inset lists sit on. dark: black, with light ink. */
+  tone?: 'plain' | 'grouped' | 'dark'
+  /** The screen lays out and scrolls its own contents (a conversation, a terminal). */
+  fixed?: boolean
+  className?: string
+  scrollRef?: Ref<HTMLDivElement>
+  children: ReactNode
+}
+
+/** One screen of an app. The bar's buttons float over the page; under them the
+ * page fades and blurs as it scrolls past, as iOS's scroll edge does. */
+export function Screen({ title, large, center, leading, trailing, header, foot, tone = 'plain', fixed, className, scrollRef, children }: ScreenProps) {
+  const depth = useContext(DepthContext)
+  const top = useContext(TopContext)
+  const { app } = useApp()
+  const scroller = useRef<HTMLDivElement | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const [scrolled, setScrolled] = useState(false)
-  const large = !!title && !center
+  const [folded, setFolded] = useState(false)
 
-  // The large title has gone under the bar: the bar takes the title
+  const onScroll = () => {
+    const el = scroller.current
+    if (!el) return
+    setScrolled(el.scrollTop > 2)
+    const h = heading.current
+    // Folded once the large title has gone up under the bar
+    if (h) setFolded(el.scrollTop > h.offsetTop + h.offsetHeight - 58)
+  }
+
+  // The status bar over this screen takes its ink from it
   useEffect(() => {
-    const root = scroller.current
-    const el = heading.current
-    if (!root || !el || !large) return
-    const io = new IntersectionObserver(([entry]) => setScrolled(!entry!.isIntersecting), { root, rootMargin: '-56px 0px 0px 0px' })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [large])
+    if (top) setTone(app, tone)
+  }, [top, app, tone])
+
+  const setScroller = (el: HTMLDivElement | null) => {
+    scroller.current = el
+    if (typeof scrollRef === 'function') scrollRef(el)
+    else if (scrollRef) (scrollRef as { current: HTMLDivElement | null }).current = el
+  }
 
   return (
-    <div className={`ph-page${className ? ` ${className}` : ''}`} data-tone={tone} data-fixed={fixed || undefined}>
-      <header className="ph-nav" data-scrolled={scrolled || !large || undefined} data-center={center ? '' : undefined}>
-        <div className="ph-nav__side">
-          <button type="button" className="ph-back" aria-label={`Back to ${GROUP_NAME}`} onClick={closeApp}>
-            <ChevronLeft size={22} strokeWidth={2.4} aria-hidden />
-            <span>{GROUP_NAME}</span>
-          </button>
+    <div className={`ios-screen${className ? ` ${className}` : ''}`} data-tone={tone} data-scrolled={scrolled || undefined} data-folded={folded || !large || undefined} data-foot={foot ? '' : undefined}>
+      {fixed ? (
+        <div className="ios-screen__body">{children}</div>
+      ) : (
+        <div ref={setScroller} className="ios-screen__scroll" data-scroller onScroll={onScroll}>
+          {large && (
+            <h2 ref={heading} className="ios-large">
+              {title}
+            </h2>
+          )}
+          {header}
+          {children}
         </div>
-        <div className="ph-nav__middle">{center}</div>
-        <div className="ph-nav__side ph-nav__side--end">{trailing}</div>
+      )}
+      <header className="ios-bar">
+        <div className="ios-bar__edge" aria-hidden />
+        <div className="ios-bar__side">{leading !== undefined ? leading : depth > 0 && <BackButton />}</div>
+        <div className="ios-bar__title" aria-hidden={large && !folded ? true : undefined}>
+          {center ?? <span className="ios-bar__name">{title}</span>}
+        </div>
+        <div className="ios-bar__side ios-bar__side--end">{trailing}</div>
       </header>
-      <div ref={scroller} className="ph-page__content" data-scroller={fixed ? undefined : ''}>
-        {large && (
-          <h2 ref={heading} className="ph-large-title">
-            {title}
-          </h2>
-        )}
-        {children}
-      </div>
+      {foot && (
+        <div className="ios-foot">
+          <div className="ios-foot__edge" aria-hidden />
+          {foot}
+        </div>
+      )}
     </div>
   )
 }
 
-/** The search field at the top of a list. */
-export function PhoneSearch({ value, onChange, label, placeholder = 'Search' }: { value: string; onChange: (value: string) => void; label: string; placeholder?: string }) {
+// ---- A stack of screens ----
+
+interface Gone {
+  view: string
+  depth: number
+}
+
+/** An app's screens, one on top of another: a new one slides in from the
+ * right over the last, and goes back out that way. `children` draws the screen
+ * for a view (null is the app's first screen). The stack itself is the app's
+ * in `sys`: `push`, `pop`. */
+export function NavStack({ children }: { children: (view: string | null, depth: number) => ReactNode }) {
+  const { app, active } = useApp()
+  const stack = useStore(sys, (s) => s.stacks[app])
+  const motion = useStore(sys, (s) => s.motion)
+  const [seen, setSeen] = useState<{ stack: string[]; gone: Gone[] }>({ stack, gone: [] })
+  // Screens that are there when the app first draws are simply there
+  const first = useRef(true)
+  const fresh = useRef(new Set<string>())
+
+  if (seen.stack !== stack) {
+    let kept = 0
+    while (kept < seen.stack.length && kept < stack.length && seen.stack[kept] === stack[kept]) kept++
+    // The screen on top when the stack got shorter stays drawn until it has slid away
+    const gone = motion && seen.stack.length > kept ? [{ view: seen.stack[seen.stack.length - 1]!, depth: seen.stack.length }] : []
+    for (let i = kept; i < stack.length; i++) if (motion) fresh.current.add(`${i}:${stack[i]}`)
+    setSeen({ stack, gone })
+  }
+
+  useEffect(() => {
+    first.current = false
+  }, [])
+
+  useEffect(() => {
+    if (!seen.gone.length) return
+    const t = setTimeout(() => setSeen((s) => (s.gone.length ? { ...s, gone: [] } : s)), 520)
+    return () => clearTimeout(t)
+  }, [seen.gone])
+
+  const top = stack.length
+  const page = (view: string | null, depth: number, pos: 'top' | 'under' | 'gone') => {
+    const key = depth === 0 ? 'root' : `${depth - 1}:${view}`
+    const enter = depth > 0 && !first.current && fresh.current.has(key)
+    return (
+      <div key={key} className="ios-page" data-pos={pos} data-enter={enter || undefined} data-depth={depth} {...(pos === 'top' && active ? null : ({ inert: '' } as object))} aria-hidden={pos === 'top' ? undefined : true} onAnimationEnd={(e) => e.target === e.currentTarget && fresh.current.delete(key)}>
+        <DepthContext.Provider value={depth}>
+          <TopContext.Provider value={pos === 'top'}>{children(view, depth)}</TopContext.Provider>
+        </DepthContext.Provider>
+      </div>
+    )
+  }
+
   return (
-    <label className="ph-search" data-filled={value ? '' : undefined}>
-      <Search size={17} strokeWidth={2.2} aria-hidden />
-      <input type="text" inputMode="search" enterKeyHint="search" autoComplete="off" autoCorrect="off" spellCheck={false} placeholder={placeholder} aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} />
-      {value && (
-        <button type="button" className="ph-search__clear" aria-label="Clear search" onClick={() => onChange('')}>
-          <X size={11} strokeWidth={3} aria-hidden />
-        </button>
-      )}
-    </label>
+    <div className="ios-nav" data-still={!motion || undefined}>
+      {page(null, 0, top === 0 ? 'top' : 'under')}
+      {stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under'))}
+      {seen.gone.filter((g) => g.depth > top).map((g) => page(g.view, g.depth, 'gone'))}
+    </div>
   )
 }
 
-/** A row of filters that scrolls sideways. */
-export function Chips<T extends string | number | null>({ label, value, options, onChange }: { label: string; value: T; options: { value: T; label: string }[]; onChange: (value: T) => void }) {
+// ---- Lists ----
+
+/** A page of grouped rows: Settings, a contact card, a folder's details. */
+export function List({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={`ios-list${className ? ` ${className}` : ''}`}>{children}</div>
+}
+
+export function Section({ header, footer, children, plain }: { header?: ReactNode; footer?: ReactNode; children: ReactNode; plain?: boolean }) {
   return (
-    <div className="ph-chips" role="group" aria-label={label}>
-      {options.map((option) => (
-        <button key={String(option.value)} type="button" className="ph-chip" aria-pressed={option.value === value} onClick={() => onChange(option.value)}>
-          {option.label}
+    <section className="ios-section" data-plain={plain || undefined}>
+      {header && <h3 className="ios-section__header">{header}</h3>}
+      <div className="ios-section__rows">{children}</div>
+      {footer && <p className="ios-section__footer">{footer}</p>}
+    </section>
+  )
+}
+
+export interface CellProps {
+  /** At the leading edge: an icon tile, an avatar, a thumbnail. */
+  lead?: ReactNode
+  title: ReactNode
+  /** A second, quieter line under the title. */
+  subtitle?: ReactNode
+  /** At the trailing edge, in gray: a value, a count. */
+  value?: ReactNode
+  /** A chevron at the trailing edge: the row goes somewhere. */
+  chevron?: boolean
+  /** Blue: the row is an action. */
+  tint?: boolean
+  /** Red: the row destroys something. */
+  destructive?: boolean
+  onClick?: () => void
+  /** A link out of the site. */
+  href?: string
+  disabled?: boolean
+  /** In place of the value and chevron: a switch, a button. */
+  trailing?: ReactNode
+  label?: string
+  className?: string
+}
+
+/** One row of a grouped list. */
+export function Cell({ lead, title, subtitle, value, chevron, tint, destructive, onClick, href, disabled, trailing, label, className }: CellProps) {
+  const body = (
+    <>
+      {lead && <span className="ios-cell__lead">{lead}</span>}
+      <span className="ios-cell__text">
+        <span className="ios-cell__title">{title}</span>
+        {subtitle && <span className="ios-cell__subtitle">{subtitle}</span>}
+      </span>
+      {value !== undefined && <span className="ios-cell__value">{value}</span>}
+      {trailing}
+      {chevron && <ChevronRight className="ios-cell__chevron" size={17} strokeWidth={2.6} aria-hidden />}
+    </>
+  )
+  const shared = { className: `ios-cell${className ? ` ${className}` : ''}`, 'data-tint': tint || undefined, 'data-destructive': destructive || undefined, 'data-lead': lead ? '' : undefined, 'aria-label': label }
+  if (href)
+    return (
+      <a {...shared} href={href} target="_blank" rel="noreferrer">
+        {body}
+      </a>
+    )
+  if (onClick)
+    return (
+      <button type="button" {...shared} aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}>
+        {body}
+      </button>
+    )
+  return <div {...shared}>{body}</div>
+}
+
+/** The iOS switch: wider than tall, green when on. */
+export function Switch({ on, label, onChange }: { on: boolean; label: string; onChange: (on: boolean) => void }) {
+  return (
+    <button type="button" className="ios-switch" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}>
+      <span className="ios-switch__knob" />
+    </button>
+  )
+}
+
+/** A segmented control: two or three views of the same thing. */
+export function Segments<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { value: T; label: ReactNode }[]; onChange: (value: T) => void }) {
+  const at = Math.max(0, options.findIndex((o) => o.value === value))
+  return (
+    <div className="ios-segments" role="radiogroup" aria-label={label} style={{ '--n': options.length, '--at': at } as CSSProperties}>
+      <span className="ios-segments__thumb" aria-hidden />
+      {options.map((o) => (
+        <button key={o.value} type="button" className="ios-segments__item" role="radio" aria-checked={o.value === value} onClick={() => onChange(o.value)}>
+          {o.label}
         </button>
       ))}
     </div>
   )
 }
 
-/** A grouped list: rounded, inset from the screen's edges, hairlines between its rows. */
-export function Group({ label, footer, children }: { label?: string; footer?: ReactNode; children: ReactNode }) {
+// ---- What floats at the foot of a screen ----
+
+/** The search field iOS floats at the foot of a list: a glass capsule. Give it
+ * the page's own filter; typing filters as it goes. */
+export function SearchBar({ value, onChange, placeholder = 'Search', label, onFocus, onBlur }: { value: string; onChange: (value: string) => void; placeholder?: string; label: string; onFocus?: () => void; onBlur?: () => void }) {
   return (
-    <section className="ph-group">
-      {label && <h3 className="ph-group__label">{label}</h3>}
-      <div className="ph-group__rows">{children}</div>
-      {footer && <p className="ph-group__footer">{footer}</p>}
-    </section>
+    <label className="ios-glass ios-search" data-filled={value ? '' : undefined}>
+      <Search size={18} strokeWidth={2.4} className="ios-search__glass" aria-hidden />
+      <input className="ios-search__input" type="text" inputMode="search" enterKeyHint="search" autoComplete="off" autoCorrect="off" spellCheck={false} placeholder={placeholder} aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} onFocus={onFocus} onBlur={onBlur} />
+      {value ? (
+        <button type="button" className="ios-search__clear" aria-label="Clear search" onClick={() => onChange('')}>
+          <X size={11} strokeWidth={3.2} aria-hidden />
+        </button>
+      ) : (
+        <Mic size={18} strokeWidth={2.1} className="ios-search__mic" aria-hidden />
+      )}
+    </label>
   )
+}
+
+export interface Tab<T extends string> {
+  id: T
+  label: string
+  icon: ReactNode
+}
+
+/** The floating tab bar: a glass capsule, the tab that is showing on a pill of its own. */
+export function TabBar<T extends string>({ label, tabs, value, onChange }: { label: string; tabs: Tab<T>[]; value: T; onChange: (id: T) => void }) {
+  return (
+    <nav className="ios-glass ios-tabs" aria-label={label}>
+      {tabs.map((tab) => (
+        <button key={tab.id} type="button" className="ios-tabs__item" aria-current={tab.id === value ? 'page' : undefined} onClick={() => onChange(tab.id)}>
+          <span className="ios-tabs__icon" aria-hidden>
+            {tab.icon}
+          </span>
+          <span className="ios-tabs__label">{tab.label}</span>
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+// ---- Menus ----
+
+export interface MenuItem {
+  label: string
+  icon?: ReactNode
+  /** A tick beside it: the choice that is on. */
+  checked?: boolean
+  destructive?: boolean
+  disabled?: boolean
+  /** A rule above it: the start of another group. */
+  divided?: boolean
+  onSelect: () => void
+}
+
+/** A glass button that opens a menu under itself, as iOS's pull-down menus do. */
+export function Menu({ label, items, children, tint, wide }: { label: string; items: MenuItem[]; children: ReactNode; tint?: boolean; wide?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const away = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', away, true)
+    window.addEventListener('keydown', key)
+    return () => {
+      document.removeEventListener('pointerdown', away, true)
+      window.removeEventListener('keydown', key)
+    }
+  }, [open])
+  return (
+    <span ref={root} className="ios-menu">
+      <button type="button" className="ios-glass ios-button" data-wide={wide || undefined} data-tint={tint || undefined} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {children}
+      </button>
+      <Popover show={open} origin="top right" className="ios-menu__list" role="menu" aria-label={label} {...(open ? null : ({ inert: '' } as object))}>
+        {items.map((item) => (
+          <button
+            key={item.label}
+            type="button"
+            className="ios-menu__item"
+            role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+            aria-checked={item.checked}
+            aria-disabled={item.disabled || undefined}
+            data-destructive={item.destructive || undefined}
+            data-divided={item.divided || undefined}
+            onClick={() => {
+              if (item.disabled) return
+              setOpen(false)
+              item.onSelect()
+            }}
+          >
+            <span className="ios-menu__tick">{item.checked && <Check size={16} strokeWidth={2.8} aria-hidden />}</span>
+            <span className="ios-menu__label">{item.label}</span>
+            {item.icon && (
+              <span className="ios-menu__icon" aria-hidden>
+                {item.icon}
+              </span>
+            )}
+          </button>
+        ))}
+      </Popover>
+    </span>
+  )
+}
+
+// ---- Sheets ----
+
+const SheetContext = createContext(false)
+
+/** Draws the app's sheet while one is up, and for as long as it takes to go
+ * away. `children` draws the sheet for a name (`sys.sheet`, opened with
+ * `openSheet`); return a `Sheet`. Put one of these in the app, after its stack. */
+export function SheetHost({ children }: { children: (name: string) => ReactNode }) {
+  const { app } = useApp()
+  const name = useStore(sys, (s) => (s.app === app ? s.sheet : null))
+  const motion = useStore(sys, (s) => s.motion)
+  const [shown, setShown] = useState<{ name: string; closing: boolean } | null>(name ? { name, closing: false } : null)
+  if (name && (!shown || shown.name !== name || shown.closing)) setShown({ name, closing: false })
+  else if (!name && shown && !shown.closing) setShown(motion ? { name: shown.name, closing: true } : null)
+  useEffect(() => {
+    if (!shown?.closing) return
+    const t = setTimeout(() => setShown((s) => (s?.closing ? null : s)), 420)
+    return () => clearTimeout(t)
+  }, [shown])
+  if (!shown) return null
+  return <SheetContext.Provider value={shown.closing}>{children(shown.name)}</SheetContext.Provider>
 }
 
 /** How far a sheet must be dragged, or how fast flicked, to go. */
 const AWAY = { distance: 110, speed: 0.55 }
 
-/** A sheet over the app: a grabber to drag it away by, a close button, and what
- * it holds. `leading` goes where a back button would, when the sheet has
- * somewhere to go back to. */
-export function Sheet({ label, closing, leading, children }: { label: string; closing?: boolean; leading?: ReactNode; children: ReactNode }) {
+export interface SheetProps {
+  /** Its name, for assistive tech. */
+  label: string
+  /** In the middle of its bar. */
+  title?: ReactNode
+  /** large: nearly the whole screen. medium: about half of it, floating clear of the edges. */
+  detent?: 'large' | 'medium'
+  /** The bar's leading corner. */
+  leading?: ReactNode
+  /** The bar's trailing corner, in place of the close button. */
+  trailing?: ReactNode
+  tone?: 'plain' | 'grouped'
+  className?: string
+  children: ReactNode
+}
+
+/** A sheet over the app: a grabber to drag it away by, a close button, and what it holds. */
+export function Sheet({ label, title, detent = 'large', leading, trailing, tone = 'grouped', className, children }: SheetProps) {
+  const closing = useContext(SheetContext)
+  const motion = useStore(sys, (s) => s.motion)
   const panel = useRef<HTMLDivElement>(null)
   const shade = useRef<HTMLButtonElement>(null)
-  const drag = useRef<{ y: number; t: number; dy: number; v: number } | null>(null)
+  const drag = useRef<{ y: number; t: number; dy: number; v: number; k: number } | null>(null)
 
   const place = (dy: number, moving: boolean) => {
     const el = panel.current
@@ -130,14 +504,14 @@ export function Sheet({ label, closing, leading, children }: { label: string; cl
 
   const down = (e: ReactPointerEvent) => {
     if (closing || (e.target as HTMLElement).closest('button, a, input')) return
-    drag.current = { y: e.clientY, t: e.timeStamp, dy: 0, v: 0 }
+    drag.current = { y: e.clientY, t: e.timeStamp, dy: 0, v: 0, k: scaleOf(panel.current) }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
 
   const move = (e: ReactPointerEvent) => {
     const d = drag.current
     if (!d) return
-    const dy = Math.max(0, e.clientY - d.y)
+    const dy = Math.max(0, (e.clientY - d.y) / d.k)
     const dt = Math.max(1, e.timeStamp - d.t)
     // The speed of the last stretch of the drag, eased so one jumpy sample doesn't decide it
     d.v = d.v * 0.6 + ((dy - d.dy) / dt) * 0.4
@@ -156,7 +530,7 @@ export function Sheet({ label, closing, leading, children }: { label: string; cl
     if (el && (d.dy > AWAY.distance || (d.dy > 24 && speed > AWAY.speed))) {
       // Let go far enough, or fast enough: it carries on down and is gone
       el.style.transition = 'transform 0.26s cubic-bezier(0.4, 0, 0.9, 0.6)'
-      el.style.transform = 'translateY(110%)'
+      el.style.transform = 'translateY(115%)'
       if (shade.current) {
         shade.current.style.transition = 'opacity 0.26s ease'
         shade.current.style.opacity = '0'
@@ -175,19 +549,48 @@ export function Sheet({ label, closing, leading, children }: { label: string; cl
     return () => window.removeEventListener('keydown', key)
   }, [closing])
 
+  // The keyboard goes to the sheet when it arrives
+  useLayoutEffect(() => {
+    panel.current?.focus({ preventScroll: true })
+  }, [])
+
   return (
-    <div className="ph-sheet" data-closing={closing || undefined} role="dialog" aria-modal="true" aria-label={label} {...(closing ? ({ inert: '' } as object) : null)}>
-      <button ref={shade} type="button" className="ph-sheet__shade" aria-label="Close" tabIndex={-1} onClick={() => closeSheet()} />
-      <div ref={panel} className="ph-sheet__panel">
-        <div className="ph-sheet__bar" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
-          <span className="ph-sheet__grabber" aria-hidden />
-          <span className="ph-sheet__lead">{leading}</span>
-          <button type="button" className="ph-sheet__close" aria-label="Close" onClick={() => closeSheet()}>
-            <X size={16} strokeWidth={2.8} aria-hidden />
-          </button>
+    <div className={`ios-sheet${className ? ` ${className}` : ''}`} data-detent={detent} data-tone={tone} data-closing={closing || undefined} data-still={!motion || undefined} role="dialog" aria-modal="true" aria-label={label} {...(closing ? ({ inert: '' } as object) : null)}>
+      <button ref={shade} type="button" className="ios-sheet__shade" aria-label="Close" tabIndex={-1} onClick={() => closeSheet()} />
+      <div ref={panel} className="ios-sheet__panel" tabIndex={-1}>
+        <div className="ios-sheet__bar" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+          <span className="ios-sheet__grabber" aria-hidden />
+          <span className="ios-sheet__side">{leading}</span>
+          <span className="ios-sheet__title">{title}</span>
+          <span className="ios-sheet__side ios-sheet__side--end">
+            {trailing ?? (
+              <GlassButton label="Close" onClick={() => closeSheet()}>
+                <X size={20} strokeWidth={2.4} aria-hidden />
+              </GlassButton>
+            )}
+          </span>
         </div>
-        <div className="ph-sheet__body">{children}</div>
+        <div className="ios-sheet__body" data-scroller>
+          {children}
+        </div>
       </div>
+    </div>
+  )
+}
+
+// ---- Small things ----
+
+/** What a page says when it has nothing to show: a glyph, a line, a quieter line. */
+export function Empty({ icon, title, children }: { icon?: ReactNode; title: string; children?: ReactNode }) {
+  return (
+    <div className="ios-empty">
+      {icon && (
+        <span className="ios-empty__icon" aria-hidden>
+          {icon}
+        </span>
+      )}
+      <span className="ios-empty__title">{title}</span>
+      {children && <span className="ios-empty__text">{children}</span>}
     </div>
   )
 }

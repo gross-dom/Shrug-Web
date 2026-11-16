@@ -4,9 +4,9 @@
 //   node tools/preview.cjs <out.html>
 //
 // It builds the site, folds the build into one page (the script, the styles,
-// the Latin font, the wallpapers and the logos all inside it) and, while the
-// phone's versions are being chosen, wraps that page in one that can go from
-// version to version. The site itself is untouched: this is only for previews.
+// the Latin font, the wallpapers and the logos all inside it) and wraps that
+// page in one that shows the iPhone on a computer too, with a way over to the
+// desktop. The site itself is untouched: this is only for previews.
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -18,7 +18,7 @@ if (!out) {
   process.exit(1)
 }
 
-/** Builds the site with everything in one script: in the real build each phone version is a file of its own. */
+/** Builds the site with everything in one script and one stylesheet. */
 async function build(dir) {
   const vite = await import('vite')
   await vite.build({
@@ -62,11 +62,12 @@ function fold(dir) {
   return html.replace(/href="[^"]*favicon\.svg"/, () => `href="${data(path.join(dir, 'favicon.svg'), 'image/svg+xml')}"`)
 }
 
-/** Wraps the page in one that shows it in a frame and can swap the frame for
- * another version. A file has no address to reload onto (`?v=3`), and the
- * places a preview gets opened (an app's panel, a sandboxed frame) often can't
- * be navigated at all, so this page holds the site as text and starts it afresh
- * for each version. `src/phone/variants/index.ts` is the other end of it. */
+/** Wraps the page in one that shows it in a frame. On a phone that frame is
+ * the whole screen and nothing else is drawn. On a computer the site would show
+ * its desktop, so the frame is asked for the iPhone instead (the site draws it
+ * in a phone's frame; see `asked` in src/os/wm.ts), with a button under it to
+ * see the desktop. A file has no address to ask with (`?phone`), which is why
+ * the asking is done from here. */
 function wrap(app) {
   if (!/<head[^>]*>/.test(app)) throw new Error('the page has no <head>')
   // As a script's string, with every "<" spelled out so that nothing in it can end the script it sits in
@@ -77,51 +78,46 @@ function wrap(app) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b1150">
-<title>Shrug · the phone versions</title>
+<title>Shrug</title>
 <style>
   html, body { margin: 0; height: 100%; background: #0b1150; overflow: hidden; overscroll-behavior: none; }
   iframe { position: fixed; left: 0; top: 0; width: 100%; height: 100%; border: 0; display: block; background: #0b1150; }
   p { display: none; }
-  /* On a screen too big to be a phone, the versions are shown at a phone's size */
+  /* On a computer: a strip under the frame to go between the iPhone and the desktop */
   body.wide { background: #05072e; }
-  body.wide iframe { left: 50%; top: calc(50% - 16px); width: 390px; height: min(844px, 100% - 80px); transform: translate(-50%, -50%); border-radius: 40px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.14), 0 30px 80px rgb(0 0 0 / 0.5); }
-  body.wide.desk iframe { left: 0; top: 0; width: 100%; height: calc(100% - 40px); transform: none; border-radius: 0; box-shadow: none; }
-  body.wide p { display: flex; gap: 10px; justify-content: center; align-items: center; position: fixed; left: 0; right: 0; bottom: 0; height: 40px; margin: 0; font: 500 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: rgb(255 255 255 / 0.6); }
-  button { font: inherit; color: #fff; background: rgb(255 255 255 / 0.14); border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  body.wide iframe { height: calc(100% - 44px); }
+  body.wide p { display: flex; gap: 10px; justify-content: center; align-items: center; position: fixed; left: 0; right: 0; bottom: 0; height: 44px; margin: 0; font: 500 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: rgb(255 255 255 / 0.6); }
+  button { font: inherit; color: #fff; background: rgb(255 255 255 / 0.14); border: 0; border-radius: 999px; padding: 6px 13px; cursor: pointer; }
   button:hover { background: rgb(255 255 255 / 0.22); }
 </style>
 </head>
 <body>
-<p><span>The phone versions, at a phone’s size.</span><button type="button">See the desktop</button></p>
+<p><span>The site as it is on an iPhone.</span><button type="button">See the desktop</button></p>
 <script>
 const APP = ${text};
-let frame = null, version = 0;
-// What the site in the frame is given: the version to show, and a way to ask for another
-const hook = (v) => '\\u003cscript>window.__shrugHost={v:' + v + ',go:function(id){parent.postMessage({shrugVersion:id},"*")}}\\u003c/script>';
-function show(v) {
-  version = v;
+let frame = null, desk = false;
+// A computer's screen, by the site's own rule for what is a phone (src/os/wm.ts)
+const wide = () => innerWidth >= 760 && innerHeight >= 480;
+const says = document.querySelector('span'), button = document.querySelector('button');
+// What the site in the frame is told: whether to be the iPhone whatever the frame's size
+const hook = (phone) => '\\u003cscript>window.__shrugHost={phone:' + phone + '}\\u003c/script>';
+function show() {
   const next = document.createElement('iframe');
   next.title = 'Shrug';
-  next.allow = 'accelerometer; gyroscope; magnetometer; camera; web-share; clipboard-write';
-  next.srcdoc = APP.replace(/<head[^>]*>/, (head) => head + hook(v));
+  next.allow = 'web-share; clipboard-write';
+  next.srcdoc = APP.replace(/<head[^>]*>/, (head) => head + hook(wide() && !desk));
   if (frame) frame.remove();
   document.body.append(next);
   frame = next;
   fit();
 }
-addEventListener('message', (e) => {
-  const v = e.data && e.data.shrugVersion;
-  if (frame && e.source === frame.contentWindow && Number.isInteger(v) && v >= 0 && v <= 10) show(v);
-});
-// What counts as a phone is the site's own rule (src/os/wm.ts)
-const size = () => document.body.classList.toggle('wide', innerWidth >= 760 && innerHeight >= 480);
-const says = document.querySelector('span'), button = document.querySelector('button');
 button.addEventListener('click', () => {
-  const desk = document.body.classList.toggle('desk');
-  says.hidden = desk;
-  button.textContent = desk ? 'Back to the phone versions' : 'See the desktop';
-  show(version);
+  desk = !desk;
+  says.textContent = desk ? 'The site as it is on a computer.' : 'The site as it is on an iPhone.';
+  button.textContent = desk ? 'See the iPhone' : 'See the desktop';
+  show();
 });
+const size = () => document.body.classList.toggle('wide', wide());
 // The keyboard takes the bottom of the screen: the frame keeps to what is left above it
 const vv = window.visualViewport;
 function fit() {
@@ -134,7 +130,7 @@ function fit() {
 addEventListener('resize', () => { size(); fit(); });
 if (vv) { vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
 size();
-show(0);
+show();
 </script>
 </body>
 </html>

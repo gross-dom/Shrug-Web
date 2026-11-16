@@ -1,55 +1,56 @@
-import { Suspense, useEffect, useLayoutEffect, useRef } from 'react'
-import { APPS } from '../os/apps'
+import { useEffect, useRef } from 'react'
+import { Phone as Device } from '../kit/phone'
 import { useStore } from '../os/store'
-import { AppScreen, SheetScreen } from './apps'
-import type { ShotApp } from './convo'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Chooser } from './Chooser'
-import { phone } from './nav'
-import { ViewContext } from './ui'
-import { goToVariant, variantFromUrl, VARIANTS } from './variants'
+import { wm } from '../os/wm'
+import { COLOR, WALLPAPER_TOP, carried, chrome } from './chrome'
+import { Springboard } from './Springboard'
+import { sys } from './system'
+import { clockOf, useNow } from './time'
 
-// The site on a phone. While the phone's design is being chosen there are ten
-// versions of it (src/phone/variants): the address picks one (`?v=3`), and with
-// none it shows the list. A version is the phone's home; the pages and sheets
-// that can open over it are shared. It is drawn edge to edge and leaves the
-// status bar and the home indicator to the real phone.
+// The site as an iPhone. On a real phone the phone itself is the frame: the
+// screen is drawn edge to edge, under the phone's own status bar, and the
+// browser's bars are painted to match what is showing. Anywhere else (a narrow
+// window on a computer, or `?phone`) it is drawn inside the kit's iPhone, at
+// the real proportions, with the status bar and the island the kit draws.
 
-/** The version this page is showing: fixed for the life of the page. */
-const PICKED = variantFromUrl()
+/** The kit's iPhone, frame and all, in points. */
+const DEVICE = { w: 428, h: 900 }
 
-/** What a screenshot opens into: full screen, out of the bubble it was sent in and back into it. */
-function Opened({ app, state, still, active }: { app: ShotApp; state: 'open' | 'closing'; still: boolean; active: boolean }) {
-  const ref = useRef<HTMLElement>(null)
-  // Where its bubble is from here: the move it makes on the way in and on the way out
-  useLayoutEffect(() => {
-    const el = ref.current
-    const box = el?.parentElement?.getBoundingClientRect()
-    const shots = document.querySelectorAll<HTMLElement>(`[data-shot="${app}"]`)
-    const shot = shots[shots.length - 1]?.getBoundingClientRect()
-    if (!el || !box || !box.width) return
-    // No bubble to come from (a link straight to it): it rises a little, from where it is
-    el.style.setProperty('--dx', shot ? `${(shot.left + shot.width / 2 - (box.left + box.width / 2)).toFixed(1)}px` : '0px')
-    el.style.setProperty('--dy', shot ? `${(shot.top + shot.height / 2 - (box.top + box.height / 2)).toFixed(1)}px` : '48px')
-    el.style.setProperty('--k', shot ? (shot.width / box.width).toFixed(4) : '0.94')
-  }, [app, state])
-  return (
-    <section ref={ref} className="ph-app" data-app={app} data-state={state} data-still={still || undefined} aria-label={APPS[app].name} {...(active ? null : ({ inert: '' } as object))}>
-      <ViewContext.Provider value={{ active }}>
-        <AppScreen app={app} />
-      </ViewContext.Provider>
-    </section>
-  )
+/** Whether this is a phone in the hand: a touch screen about a phone's width. */
+const inHand = (w: number, h: number) => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches && Math.min(w, h) <= 500
+
+/** Whether the status bar's ink is light: over the wallpaper, or over a dark app. */
+function useDark() {
+  const tones = useStore(chrome, (s) => s)
+  const lifted = useStore(carried, (s) => s)
+  const app = useStore(sys, (s) => (s.locked || s.switcher || s.spotlight ? null : s.app))
+  return { dark: !app || lifted || tones[app] === 'dark', color: app && !lifted ? COLOR[tones[app]] : WALLPAPER_TOP }
 }
 
 export function Phone() {
-  const { app, sheet, leaving, closing, motion } = useStore(phone, (s) => s)
+  const viewport = useStore(wm, (s) => s.viewport)
+  const { dark, color } = useDark()
+  const now = useNow()
   const root = useRef<HTMLDivElement>(null)
+  const bleed = inHand(viewport.w, viewport.h)
+
+  // A real phone: the browser's own bars take the colour of what is under them
+  useEffect(() => {
+    if (!bleed) return
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const before = { meta: meta?.content, body: document.body.style.backgroundColor }
+    if (meta) meta.content = color
+    document.body.style.backgroundColor = color
+    return () => {
+      if (meta && before.meta) meta.content = before.meta
+      document.body.style.backgroundColor = before.body
+    }
+  }, [bleed, color])
 
   useEffect(() => {
     const el = root.current
     const vv = window.visualViewport
-    if (!el) return
+    if (!el || !bleed) return
     // Lets :active show under a finger in Safari, which otherwise waits for a listener
     const touch = () => {}
     document.addEventListener('touchstart', touch, { passive: true })
@@ -77,51 +78,24 @@ export function Phone() {
       vv?.removeEventListener('resize', fit)
       vv?.removeEventListener('scroll', fit)
     }
-  }, [])
+  }, [bleed])
 
-  const opened = app && app !== 'messages' ? app : null
-  const going = leaving && leaving !== 'messages' && leaving !== opened ? leaving : null
-  const over = sheet ?? closing
-  const variant = VARIANTS[PICKED - 1]
-
-  if (!variant)
+  if (bleed)
     return (
-      <div ref={root} className="ph">
-        <Chooser />
+      <div ref={root} className="ph ph--bleed" data-dark={dark || undefined}>
+        <Springboard framed={false} />
       </div>
     )
 
-  const Home = variant.Home
+  // As large as the window allows, and never larger than life
+  const width = Math.max(220, Math.floor(Math.min(DEVICE.w, viewport.w - 32, ((viewport.h - 40) * DEVICE.w) / DEVICE.h)))
   return (
-    <div ref={root} className="ph" data-v={variant.id}>
-      {/* Scaffolding for choosing between the versions: not part of any of them */}
-      <nav className="ph-proto" aria-label="Versions">
-        <button type="button" className="ph-proto__all" onClick={() => goToVariant(0)}>
-          <ChevronLeft size={15} strokeWidth={2.6} aria-hidden />
-          All
-        </button>
-        <span className="ph-proto__name">
-          {variant.id} · {variant.name}
-        </span>
-        <span className="ph-proto__step">
-          <button type="button" aria-label="Previous version" disabled={variant.id === 1} onClick={() => goToVariant(variant.id - 1)}>
-            <ChevronLeft size={16} strokeWidth={2.6} aria-hidden />
-          </button>
-          <button type="button" aria-label="Next version" disabled={variant.id === VARIANTS.length} onClick={() => goToVariant(variant.id + 1)}>
-            <ChevronRight size={16} strokeWidth={2.6} aria-hidden />
-          </button>
-        </span>
-      </nav>
-      <div className="ph-stage">
-        <div className="ph-under" data-covered={opened ? '' : undefined} {...(opened || sheet ? ({ inert: '' } as object) : null)}>
-          <Suspense fallback={null}>
-            <Home active={!opened && !sheet} />
-          </Suspense>
+    <div className="ph-desk">
+      <Device width={width} time={clockOf(now)} dark={dark} wallpaper="#000" className="ph-device">
+        <div ref={root} className="ph ph--framed" data-dark={dark || undefined}>
+          <Springboard framed />
         </div>
-        {going && <Opened key={going} app={going} state="closing" still={!motion} active={false} />}
-        {opened && <Opened key={opened} app={opened} state="open" still={!motion} active={!sheet} />}
-        {over && <SheetScreen key={over} sheet={over} closing={!sheet} />}
-      </div>
+      </Device>
     </div>
   )
 }

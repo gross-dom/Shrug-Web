@@ -1,0 +1,358 @@
+/* Portfolio on the phone, as the Files app (src/phone/apps/Files.tsx): a
+   folder's contents in icons or a list, Browse's grouped rows, search, and the
+   card a company opens as. The bars, lists and sheets are ios.css's; this is
+   what is Files' own. Sizes are iOS points. */
+
+.files-app {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- What floats at the foot ---- */
+
+/* The tab bar is as wide as its two tabs, and search keeps to the far corner, as iOS sets a short tab bar */
+.files-app .ios-tabs {
+  flex: none;
+}
+
+.files-app .ios-tabs__item {
+  flex: none;
+  width: 96px;
+}
+
+.files-app .files-gap {
+  flex: 1;
+  pointer-events: none;
+}
+
+.files-search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.files-search > .ios-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+}
+
+/* The field takes the tab bar's place: it grows out of the corner search was in */
+.files-search {
+  transform-origin: 100% 50%;
+  animation: files-search-in 0.32s var(--ui);
+}
+
+@keyframes files-search-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0.86);
+  }
+}
+
+/* A field being typed in shows its caret, not a ring. (ios.css's search field should say this itself.) */
+.files-app .ios-search__input:focus-visible {
+  outline: none;
+}
+
+/* An open menu takes touches. (The kit's popover is a picture of one and takes none; until
+   ios.css says this for every menu, Files says it for its own.) */
+.files-app .ios-menu__list[data-show] {
+  pointer-events: auto;
+}
+
+/* ---- A folder's contents ---- */
+
+/* A folder opened from Browse has no large title to sit under: its first row keeps clear of the bar */
+.files-screen--folder > .ios-screen__scroll {
+  padding-top: calc(var(--status) + var(--bar) + 10px);
+}
+
+/* Use Groups: a heading for each vertical, and how many are in it */
+.files-group {
+  margin-top: 20px;
+}
+
+/* The first heading keeps a little way under the large title; with no title over it, it starts the page */
+.ios-large + .files-group {
+  margin-top: 12px;
+}
+
+.files-group:first-child {
+  margin-top: 6px;
+}
+
+.files-group__name {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 0 20px 4px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+}
+
+.files-group__name > span {
+  color: var(--label-2);
+  font-size: 15px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Icons: three across, each a thumbnail with its name and a gray line under it */
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  row-gap: 4px;
+  padding: 0 10px;
+}
+
+.files-item {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  width: 100%;
+  padding: 9px 5px 7px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.files-item:active {
+  background: var(--fill);
+}
+
+/* A file's thumbnail: the logo with a hairline round it, no lift */
+.files-item > .logo {
+  --thumb: clamp(64px, 19.4cqw, 80px);
+  width: var(--thumb) !important;
+  height: var(--thumb) !important;
+  margin-bottom: 7px;
+  box-shadow: none;
+}
+
+.files-item__name {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.files-item__where {
+  max-width: 100%;
+  min-height: 14px;
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--label-2);
+  font-size: 11.5px;
+  letter-spacing: 0;
+  line-height: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* List: a small thumbnail, the name, and the gray line; hairlines from where the words start */
+.files-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 16px 8px 20px;
+  text-align: left;
+}
+
+.files-rows > li + li > .files-row::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 76px;
+  height: 0.5px;
+  background: var(--sep);
+  content: '';
+}
+
+.files-row:active {
+  background: var(--fill);
+}
+
+.files-row > .logo {
+  box-shadow: none;
+}
+
+.files-row__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.files-row__name {
+  overflow: hidden;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.files-row__where {
+  overflow: hidden;
+  color: var(--label-2);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  line-height: 17px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* How many, at the end of a folder, as Files counts its items */
+.files-count {
+  margin: 22px 20px 2px;
+  color: var(--label-2);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* ---- Browse ---- */
+
+.files-browse {
+  --cell-inset: 56px;
+  padding-top: 6px;
+}
+
+/* Files heads Browse's sections in bold, as titles */
+.files-browse .ios-section__header {
+  margin: 0 4px 9px;
+  color: var(--label);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 28px;
+}
+
+.files-browse .ios-cell__lead {
+  width: 28px;
+}
+
+.files-browse__glyph {
+  color: var(--blue);
+}
+
+.files-browse .ios-cell__value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- A company ---- */
+
+.files-card {
+  display: grid;
+  justify-items: center;
+  padding: 0 24px 8px;
+  text-align: center;
+}
+
+.files-card > .logo {
+  margin-bottom: 14px;
+}
+
+.files-card__name {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 29px;
+}
+
+.files-card__kind {
+  margin-top: 2px;
+  color: var(--label-2);
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.files-card__blurb {
+  max-width: 32ch;
+  margin-top: 12px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  text-wrap: balance;
+}
+
+.files-card__actions {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin-top: 22px;
+}
+
+.files-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 25px;
+  background: var(--fill);
+  color: var(--blue);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition: opacity 0.15s ease;
+}
+
+.files-action--main {
+  background: var(--blue);
+  color: #fff;
+}
+
+.files-action:active {
+  opacity: 0.6;
+  transition: none;
+}
+
+/* In the sheet the card starts beside the close button, not under it: the bar lies over the top of the card */
+.files-sheet .ios-sheet__bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.files-sheet .ios-sheet__body {
+  padding-top: 34px;
+  padding-bottom: 22px;
+}
+
+/* On a screen of its own, on the gray that grouped rows sit on */
+.files-screen--company > .ios-screen__scroll {
+  padding-top: calc(var(--status) + var(--bar) + 18px);
+}
+
+.files-screen--company .files-action:not(.files-action--main) {
+  background: var(--surface);
+}
+
+.files-info {
+  padding-top: 26px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .files-action {
+    transition: none;
+  }
+
+  .files-search {
+    animation: none;
+  }
+}

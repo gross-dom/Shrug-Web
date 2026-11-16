@@ -1,0 +1,467 @@
+/* VIP on the phone (src/phone/apps/Photos.tsx): the Photos app. The grid is
+   the page and runs edge to edge; the glass floats over it. Sizes are iOS
+   points. */
+
+/* ---- A picture, or the slot one will go in ---- */
+
+.photos-pic {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  background: #e9e9ee;
+}
+
+.photos-pic__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A slot is its drop's colour, let down nearly to paper, with a faint weave
+   so it reads as a place kept and not as a picture that failed to load */
+.photos-pic__slot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 5px;
+  padding: 6px 8px 8px;
+  background-color: color-mix(in srgb, var(--hue) 15%, #f5f5f8);
+  background-image: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--hue) 9%, transparent) 9px 10px);
+  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
+  text-align: center;
+}
+
+/* A video's slot is the same colour in the dark, as a video's poster usually is */
+.photos-pic[data-kind='video'] > .photos-pic__slot {
+  background-color: color-mix(in srgb, var(--hue) 34%, #1b1b22);
+  background-image: none;
+  color: rgb(255 255 255 / 0.86);
+}
+
+.photos-pic__name {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 13px;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* What Photos puts on a video where its length goes, and on a favorite */
+.photos-pic__play,
+.photos-pic__heart {
+  position: absolute;
+  bottom: 6px;
+  color: #fff;
+  filter: drop-shadow(0 0 2px rgb(0 0 0 / 0.5));
+}
+
+.photos-pic__play {
+  right: 6px;
+}
+
+.photos-pic__heart {
+  left: 6px;
+}
+
+/* On a photo's pale slot a white heart would be lost: it takes the slot's own ink */
+.photos-pic[data-kind='photo'][data-empty] > .photos-pic__heart {
+  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
+  filter: none;
+}
+
+/* ---- The grid ---- */
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.photos-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  transition: filter 0.2s ease;
+}
+
+.photos-tile:active {
+  filter: brightness(0.84);
+  transition: none;
+}
+
+/* The ring is drawn inside the square: the grid has no room around it */
+.photos-tile:focus-visible {
+  z-index: 1;
+  outline-offset: -3px;
+}
+
+.photos-sub {
+  margin: -4px 20px 12px;
+  color: var(--label-2);
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+}
+
+/* The count at the end of a grid, as Photos ends its library */
+.photos-note {
+  padding: 22px 24px 10px;
+  color: var(--label-2);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  line-height: 18px;
+  text-align: center;
+}
+
+.photos-note::first-line {
+  color: var(--label);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ---- The tabs ---- */
+
+.photos-tab {
+  position: absolute;
+  inset: 0;
+}
+
+.photos-tab:not([data-on]) {
+  visibility: hidden;
+}
+
+/* A tab that has just been turned to comes up quickly out of nothing */
+.photos-tab[data-on][data-swapped] {
+  animation: photos-tab-in 0.22s ease;
+}
+
+@keyframes photos-tab-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* What floats at the foot: the kind switch over the tab bar, each hugging its own width */
+.ios-foot > .photos-foot {
+  display: grid;
+  flex: 1;
+  justify-items: center;
+  gap: 10px;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.photos-foot > * {
+  pointer-events: auto;
+}
+
+.photos-foot > .ios-tabs {
+  flex: none;
+  width: min(100%, 250px);
+}
+
+.photos-seg {
+  width: min(100%, 250px);
+  padding: 4px;
+  border-radius: 22px;
+}
+
+.photos-seg > .ios-segments {
+  background: none;
+}
+
+/* Room at the end of the library to bring the last row clear of both */
+.ios-screen.photos-library[data-foot] > .ios-screen__scroll {
+  padding-bottom: calc(var(--foot-gap) + 62px + 10px + 44px + 14px);
+}
+
+/* The picture grid shows through under the glass; only its very foot is let down */
+:is(.photos-library, .photos-album-screen) > .ios-foot > .ios-foot__edge {
+  opacity: 0.55;
+}
+
+/* ---- Collections ---- */
+
+.photos-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 12px 20px 10px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 28px;
+}
+
+.photos-head > span {
+  color: var(--label-2);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.photos-albums {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 12px;
+  padding: 0 var(--edge) 14px;
+}
+
+.photos-album {
+  display: grid;
+  width: 100%;
+  text-align: left;
+}
+
+.photos-album__cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--fill);
+  transition: filter 0.2s ease;
+}
+
+.photos-album:active .photos-album__cover {
+  filter: brightness(0.84);
+  transition: none;
+}
+
+/* A cover is the same slot, drawn larger; its name is under it, so not on it too */
+.photos-album__cover .photos-pic__slot > svg {
+  width: 30px;
+  height: 30px;
+}
+
+.photos-album__name {
+  overflow: hidden;
+  margin-top: 7px;
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.photos-album__count {
+  color: var(--label-2);
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+}
+
+/* Media Types: a short list on the white page, on the gray Photos gives it */
+.photos-types {
+  --cell-inset: 50px;
+  padding-top: 0;
+}
+
+.photos-types .ios-section__rows {
+  background: var(--grouped);
+}
+
+.photos-types .ios-cell__lead {
+  color: var(--blue);
+}
+
+/* ---- The viewer ---- */
+
+.photos-pager {
+  display: flex;
+  flex: 1;
+  gap: 16px;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.photos-pager::-webkit-scrollbar {
+  display: none;
+}
+
+.photos-page {
+  display: grid;
+  flex: 0 0 100%;
+  place-items: center;
+  min-width: 0;
+  /* The picture is centred on the whole screen; a tall one stops short of the bars */
+  padding: calc(var(--status) + var(--bar) + 6px) 0 calc(var(--foot-gap) + 48px + 16px);
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+.photos-page__media {
+  display: block;
+  width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* A slot, full width: a photo's stands as a phone takes one, a video's lies as one is shot */
+.photos-big {
+  position: relative;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  max-height: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--hue) 15%, #f5f5f8);
+  background-image: repeating-linear-gradient(135deg, transparent 0 13px, color-mix(in srgb, var(--hue) 9%, transparent) 13px 14px);
+  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
+  text-align: center;
+}
+
+.photos-big[data-kind='video'] {
+  aspect-ratio: 16 / 10;
+  background-color: color-mix(in srgb, var(--hue) 34%, #1b1b22);
+  background-image: none;
+  color: rgb(255 255 255 / 0.86);
+}
+
+.photos-big > b {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 16px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.photos-big > span {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 25px;
+}
+
+.photos-big > .photos-pic__play {
+  right: 12px;
+  bottom: 12px;
+}
+
+/* The top of the viewer: what it is, in two small lines */
+.photos-viewer__title {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  max-width: 100%;
+  color: #fff;
+  pointer-events: none;
+}
+
+.photos-viewer__title > b {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 19px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.photos-viewer__title > span {
+  color: var(--label-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+/* The toolbar: one piece of glass, a little larger than a bar's buttons */
+.ios-foot > .photos-tools {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.photos-tools > .ios-group {
+  height: 48px;
+  padding: 0 6px;
+  border-radius: 24px;
+  pointer-events: auto;
+}
+
+.photos-tools .ios-group__part {
+  width: 52px;
+  height: 48px;
+}
+
+.photos-heart {
+  transition:
+    color 0.2s ease,
+    transform 0.3s var(--ui);
+}
+
+.photos-heart[data-on] {
+  color: #ff375f;
+  transform: scale(1.08);
+}
+
+/* A tap on the picture puts the buttons away, as it does in Photos */
+.photos-viewer > .ios-bar,
+.photos-viewer > .ios-foot {
+  transition:
+    opacity 0.25s ease,
+    visibility 0s;
+}
+
+.photos-viewer--bare > .ios-bar,
+.photos-viewer--bare > .ios-foot {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s 0.25s;
+}
+
+/* A menu over a dark screen is dark glass */
+.photos-viewer .ios-menu__list {
+  --ss-popover-bg: rgb(44 44 46 / 0.86);
+  --ss-popover-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 14px 44px rgb(0 0 0 / 0.5);
+  min-width: 250px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Open, it takes touches (the kit's popover lets them through until told otherwise) */
+.photos-viewer .ios-menu__list[data-show] {
+  pointer-events: auto;
+}
+
+.photos-viewer .ios-menu__item:active {
+  background: rgb(255 255 255 / 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photos-tab[data-on][data-swapped] {
+    animation: none;
+  }
+
+  .photos-heart,
+  .photos-viewer > .ios-bar,
+  .photos-viewer > .ios-foot {
+    transition: none;
+  }
+}

@@ -1,0 +1,520 @@
+/* Messages on the phone (src/phone/apps/Messages.tsx): the list of
+   conversations, a conversation with its floating header and message field,
+   and the details sheet. The bubbles are the kit's and the thread is the
+   desktop's (styles/apps.css, .chat__*); what differs on an iPhone is set
+   here, under this app's own classes. Sizes are iOS points. */
+
+/* ---- The list of conversations ---- */
+
+.msg-rows {
+  padding-top: 2px;
+}
+
+/* The kit's row, at Messages' geometry: a column kept for the unread dot, a
+   46pt face, the name over two lines of what was said, the time and a chevron */
+.msg-row.ss-row {
+  --ss-row-title: 17px;
+  --ss-row-subtitle: 15px;
+  --ss-row-meta: 15px;
+  --ss-row-line: 22px;
+  --ss-row-line-2: 20px;
+  --ss-row-gap: 0px;
+  --ss-row-dot: 10px;
+  --ss-text-strong: var(--label);
+  --ss-text: var(--label-2);
+  --ss-text-faint: var(--label-2);
+  column-gap: 11px;
+  padding: 7px 16px 7px 28px;
+  border-radius: 0;
+  will-change: auto;
+  transition: none;
+}
+
+.msg-row.ss-row:active {
+  background: rgb(0 0 0 / 0.08);
+}
+
+.msg-row.ss-row:focus-visible {
+  outline-offset: -3px;
+}
+
+.msg-row .ss-row__dot {
+  left: calc(-8px - var(--ss-row-dot));
+  background: var(--blue);
+}
+
+.msg-row .ss-row__title {
+  letter-spacing: -0.022em;
+}
+
+.msg-row .ss-row__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+.msg-row .ss-row__meta > svg {
+  margin-right: -4px;
+  color: var(--label-3);
+}
+
+.msg-row .ss-row__preview[data-text] {
+  /* Two lines' room even when less was said, so every row is one height */
+  min-height: calc(var(--ss-row-line-2) * 2);
+  padding-right: 12px;
+  letter-spacing: -0.015em;
+}
+
+/* The filter menu takes touches while it is open (the kit's popover, made for
+   drawn demos, lets them fall through) */
+.msg-list .ios-menu__list[data-show] {
+  pointer-events: auto;
+}
+
+/* The search field shows its caret, not a ring, as an iOS field does */
+.msg-list .ios-search__input:focus-visible {
+  outline: none;
+}
+
+/* A hairline under each row, from where the name starts */
+.msg-row::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 85px;
+  height: 0.5px;
+  background: var(--sep);
+  content: '';
+}
+
+.msg-rows > .msg-row:last-child::after {
+  content: none;
+}
+
+/* ---- A conversation ---- */
+
+/* The header hangs from the top of the bar: the face, then the name on its piece of glass */
+.msg-convo > .ios-bar > .ios-bar__title {
+  align-self: start;
+  padding-top: 8px;
+}
+
+.msg-head {
+  display: grid;
+  justify-items: center;
+  transition: opacity 0.15s ease;
+}
+
+.msg-head:active {
+  opacity: 0.55;
+}
+
+.msg-head:focus-visible {
+  border-radius: 16px;
+  outline-offset: 3px;
+}
+
+.msg-head__face {
+  display: block;
+  border-radius: 50%;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.1);
+}
+
+.msg-head__face > * {
+  display: grid;
+}
+
+.msg-head__name {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  max-width: 190px;
+  height: 24px;
+  margin-top: -5px;
+  padding: 0 7px 0 10px;
+  border-radius: 12px;
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.msg-head__name > svg {
+  flex: none;
+  color: var(--label-3);
+}
+
+/* Back, with the count of what is still unread beside the chevron */
+.msg-back[data-count] {
+  grid-auto-flow: column;
+  gap: 1px;
+  width: auto;
+  padding: 0 13px 0 7px;
+}
+
+.msg-back > svg {
+  margin-left: -2px;
+}
+
+.msg-back[data-count] > svg {
+  margin-left: 0;
+}
+
+.msg-back__count {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* What has scrolled up under the header: out of focus, and fading */
+.msg-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  height: calc(var(--status) + 120px);
+  background: linear-gradient(rgb(255 255 255 / 0.94) 0%, rgb(255 255 255 / 0.84) 52%, rgb(255 255 255 / 0) 100%);
+  -webkit-backdrop-filter: blur(9px);
+  backdrop-filter: blur(9px);
+  -webkit-mask-image: linear-gradient(#000 58%, transparent);
+  mask-image: linear-gradient(#000 58%, transparent);
+  pointer-events: none;
+}
+
+/* The thread runs the whole height of the screen, under the header and the field */
+.msg-convo .chat__scroll {
+  -webkit-mask-image: none;
+  mask-image: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.msg-convo .chat__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.msg-convo .chat__flow {
+  padding: calc(var(--status) + 100px) 16px calc(var(--foot-gap) + 44px + 18px) 10px;
+}
+
+/* Bubbles at the size iOS sets them */
+.msg-convo .chat__thread {
+  --ss-thread-size: 17px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.msg-convo .chat__thread .ss-bubble {
+  max-width: 76%;
+}
+
+/* A person's own conversation has no faces beside the bubbles: it sits in from the edge as iOS sets it */
+.msg-convo--person .chat__flow {
+  padding-left: 16px;
+}
+
+.msg-convo .chat-stamp.ss-stamp {
+  margin: 0 0 9px;
+  color: #8e8e93;
+  line-height: 15px;
+}
+
+.msg-convo .chat-note.ss-stamp {
+  margin: 0 0 14px;
+  color: #8e8e93;
+}
+
+/* Who is speaking: in line with the words in their bubble */
+.msg-convo .chat-who {
+  margin: 8px 0 2px 49px;
+}
+
+.msg-convo .chat__thread .ss-receipt {
+  color: #8e8e93;
+  font-weight: 500;
+}
+
+.msg-convo .chat-failed::after {
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  font-size: 13px;
+}
+
+.msg-convo .chat-undelivered {
+  margin-right: 28px;
+}
+
+/* Back to the newest: a piece of glass over the field */
+.msg-convo .chat__new {
+  bottom: calc(var(--foot-gap) + 44px + 18px);
+  gap: 5px;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: 17px;
+  background: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 4px 14px -4px rgb(0 0 0 / 0.18),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.9);
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  z-index: 4;
+}
+
+.msg-convo .chat__new > svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---- The message field ---- */
+
+.msg-convo > .ios-foot {
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.msg-more {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.msg-more__button > svg {
+  transition: transform 0.3s var(--ui);
+}
+
+.msg-more__button[aria-expanded='true'] > svg {
+  transform: rotate(45deg);
+}
+
+/* The menu rises out of the plus */
+.msg-more__list.ss-popover {
+  top: auto;
+  right: auto;
+  bottom: calc(100% + 10px);
+  left: 0;
+  min-width: 226px;
+}
+
+.msg-more__list[data-show] {
+  pointer-events: auto;
+}
+
+.msg-more__item {
+  gap: 12px;
+  min-height: 50px;
+  padding: 0 20px 0 14px;
+}
+
+.msg-more__icon {
+  display: block;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.14));
+}
+
+.msg-field {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  height: 44px;
+  padding: 0 6px 0 16px;
+  border-radius: 22px;
+}
+
+/* Where the field's words begin: a sent bubble forms out of this spot */
+.msg-field__origin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 16px;
+  width: 0;
+  color: var(--label);
+}
+
+.msg-field__input,
+.msg-field__ghost {
+  color: var(--label);
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.msg-field__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  caret-color: var(--blue);
+}
+
+.msg-field__input::placeholder {
+  color: rgb(60 60 67 / 0.34);
+  opacity: 1;
+}
+
+.msg-field__input:focus-visible {
+  outline: none;
+}
+
+/* Shrug's own message, being typed into the field before it is sent */
+.msg-field__ghost {
+  position: absolute;
+  top: 50%;
+  right: 44px;
+  left: 16px;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.msg-field__caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  margin-left: 1px;
+  border-radius: 1px;
+  background: var(--blue);
+  vertical-align: -0.22em;
+  animation: msg-caret 1.06s steps(1) infinite;
+}
+
+@keyframes msg-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+.msg-field__mic,
+.msg-field__send {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition:
+    transform 0.28s var(--ui),
+    opacity 0.18s ease;
+}
+
+.msg-field__mic {
+  color: rgb(60 60 67 / 0.5);
+  pointer-events: none;
+}
+
+.msg-field__mic[data-off] {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+/* The send arrow is only there once there is something to send */
+.msg-field__send {
+  background: var(--blue);
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.5);
+  pointer-events: none;
+}
+
+.msg-field__send[data-ready] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.msg-field__send[data-ready]:active {
+  transform: scale(0.9);
+}
+
+/* Room for the arrow once there are words */
+.msg-field:has(.msg-field__send[data-ready]) .msg-field__input {
+  padding-right: 36px;
+}
+
+/* ---- Details ---- */
+
+.msg-card {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 2px 24px 14px;
+  text-align: center;
+}
+
+.msg-card > .ss-avatar,
+.msg-card > .shrug-avatar {
+  margin-bottom: 10px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
+}
+
+.msg-card__name {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 32px;
+}
+
+.msg-card__sub {
+  color: var(--label-2);
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.msg-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.msg-card__tag {
+  padding: 5px 11px;
+  border-radius: 14px;
+  background: var(--fill);
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 16px;
+}
+
+/* A person's row: the hairline starts where the name does, past the 40pt face */
+.msg-details .ios-cell[data-lead] + .ios-cell[data-lead]::before {
+  left: 68px;
+}
+
+.msg-person {
+  min-height: 60px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-field__caret {
+    animation: none;
+  }
+
+  .msg-field__mic,
+  .msg-field__send,
+  .msg-more__button > svg {
+    transition: none;
+  }
+}

@@ -1,0 +1,198 @@
+/* Case Studies on the phone (src/phone/apps/Terminal.tsx): a terminal as a
+   current iPhone would have one. The log, its colours and the line being
+   typed are the desktop terminal's own (.term, .ss-term in apps.css and the
+   kit); this sets them out for a phone and adds the keys at the foot. */
+
+.term-ios {
+  /* The log's type, and how much the line being typed is scaled down to match
+     it: a field's type must be 16px on a phone, or the page zooms on focus */
+  --term-size: 13.5px;
+  --term-k: 0.84375;
+}
+
+/* A narrow phone: a size at which the prompt and its command still fit on one line */
+@container (max-width: 350px) {
+  .term-ios {
+    --term-size: 12px;
+    --term-k: 0.75;
+  }
+}
+
+/* What scrolls up under the title and the menu fades into the black before it gets there */
+.term-ios > .ios-screen__body::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: calc(var(--status) + var(--bar) + 14px);
+  background: linear-gradient(#000 calc(var(--status) + var(--bar) - 10px), transparent);
+  content: '';
+  pointer-events: none;
+}
+
+.term-ios .term-ios-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Clear of the bar above and of the keys floating at the foot */
+  padding: calc(var(--status) + var(--bar) + 6px) var(--edge) calc(var(--foot-gap) + 44px + 28px);
+  font-family: var(--font-mono);
+  font-size: var(--term-size);
+  letter-spacing: 0;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+  scrollbar-width: none;
+}
+
+.term-ios .term-ios-screen::-webkit-scrollbar {
+  display: none;
+}
+
+/* The path, the mark and the command stay together where the line has to break */
+.term-ios .ss-term__prompt {
+  text-wrap: pretty;
+}
+
+/* ---- The line being typed ---- */
+
+.term-ios .term-ios-entry {
+  flex: none;
+  gap: 1ch;
+}
+
+.term-ios-line {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 1.65em;
+}
+
+/* Laid out at 16px and drawn at the log's size */
+.term-ios .term-ios-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--term-k));
+  height: calc(100% / var(--term-k));
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0;
+  transform: scale(var(--term-k));
+  transform-origin: 0 0;
+  /* The keyboard that comes up over a black screen is the dark one */
+  color-scheme: dark;
+}
+
+.term-ios-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  pointer-events: none;
+}
+
+/* Nothing typed and nobody typing: the block cursor waits at the start of the line */
+.term-ios-input:placeholder-shown:not(:focus) ~ .term-ios-cursor {
+  display: block;
+}
+
+/* ---- The keys at the foot ---- */
+
+.term-ios-keys {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  animation: term-ios-keys-in 0.3s var(--glide);
+}
+
+@keyframes term-ios-keys-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.term-ios-keys__gap {
+  flex: 1;
+}
+
+.term-ios-key {
+  display: inline-grid;
+  flex: none;
+  grid-auto-flow: column;
+  place-content: center;
+  place-items: center;
+  gap: 8px;
+  min-width: 50px;
+  height: 44px;
+  padding: 0 15px;
+  border-radius: 22px;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition:
+    transform 0.25s var(--ui),
+    opacity 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.term-ios-key[data-wide] {
+  flex: 1;
+}
+
+/* Return, once there is something to send */
+.term-ios .term-ios-key[data-prominent] {
+  min-width: 64px;
+  background: var(--blue);
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.14),
+    0 4px 14px -4px rgb(10 132 255 / 0.6),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.3);
+  color: #fff;
+}
+
+.term-ios .term-ios-key[aria-disabled='true'] {
+  background: rgb(70 70 76 / 0.55);
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.14),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.16);
+  color: rgb(235 235 245 / 0.3);
+}
+
+.term-ios-key:not([aria-disabled='true']):active {
+  transform: scale(0.94);
+  transition-duration: 0.08s;
+}
+
+/* ---- The menu, over black ---- */
+
+/* The shared menu is drawn for a light screen; here it is the dark glass */
+.term-ios .ios-menu__list {
+  --ss-popover-bg: rgb(44 44 48 / 0.82);
+  --ss-popover-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 14px 44px rgb(0 0 0 / 0.6);
+  color: #fff;
+}
+
+.term-ios .ios-menu__item:active {
+  background: rgb(255 255 255 / 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-ios-keys,
+  .term-ios-key {
+    animation: none;
+    transition: none;
+  }
+}

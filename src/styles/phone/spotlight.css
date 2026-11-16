@@ -1,0 +1,461 @@
+/* Search over the Home Screen (src/phone/Spotlight.tsx), as Spotlight: the
+   wallpaper and the icons fall out of focus behind it, a glass field sits at
+   the foot of the screen, and what is found is listed above it in translucent
+   cards. Over the wallpaper everything is light type on tinted glass. */
+
+.spot {
+  /* The Home Screen's own measures, to sit the field where its Search pill is: just above the Dock */
+  --icon: clamp(54px, 15.3cqw, 68px);
+  --foot: calc(3.3cqw + var(--icon) + 34px + 10px);
+  position: absolute;
+  inset: 0;
+  /* Over the apps, under the Lock Screen and the status bar */
+  z-index: 1;
+  color: #fff;
+}
+
+/* The keyboard is up: the screen is the space above it, and the field sits on its top edge */
+.ph--bleed[data-keyboard] .spot {
+  --foot: 8px;
+}
+
+/* What is behind: out of focus and a shade darker, so white type reads on any part of the wallpaper */
+.spot-away {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgb(14 18 58 / 0.34);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+  backdrop-filter: blur(26px) saturate(1.5);
+  animation: spot-fade 0.3s ease both;
+}
+
+.spot-scroll {
+  position: absolute;
+  top: calc(var(--status) + 2px);
+  right: 0;
+  bottom: calc(var(--foot) + 48px + 10px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px var(--edge) 22px;
+  scrollbar-width: none;
+  /* Results pass out of sight softly at both ends */
+  -webkit-mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 22px), transparent);
+  animation: spot-rise 0.4s var(--glide) both;
+}
+
+.spot-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.spot-found {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---- The field ---- */
+
+.spot-foot {
+  position: absolute;
+  right: var(--edge);
+  bottom: var(--foot);
+  left: var(--edge);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* It grows out of the Home Screen's Search pill */
+  animation: spot-grow 0.42s var(--glide) both;
+  transition: bottom 0.3s var(--glide);
+}
+
+.spot-field,
+.spot-close {
+  background: rgb(255 255 255 / 0.22);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.3),
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 8px 24px rgb(0 0 0 / 0.16);
+}
+
+.spot-field {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 48px;
+  padding: 0 13px 0 15px;
+  border-radius: 24px;
+  cursor: text;
+}
+
+.spot-field__glass {
+  flex: none;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.spot-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  color: #fff;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  caret-color: #fff;
+}
+
+.spot-input::placeholder {
+  color: rgb(255 255 255 / 0.62);
+  opacity: 1;
+}
+
+.spot-input:focus-visible {
+  outline: none;
+}
+
+.spot-field:focus-within {
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.44),
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 8px 24px rgb(0 0 0 / 0.16);
+}
+
+.spot-field__clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.34);
+  color: rgb(20 24 60 / 0.9);
+}
+
+.spot-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  transition: transform 0.25s var(--ui);
+}
+
+.spot-close:active {
+  transform: scale(0.92);
+  transition-duration: 0.08s;
+}
+
+/* ---- Groups of results ---- */
+
+.spot-group {
+  display: grid;
+  flex: none;
+  gap: 8px;
+}
+
+.spot-group__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 6px;
+  color: rgb(255 255 255 / 0.92);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 20px;
+}
+
+.spot-group__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+
+.spot-card {
+  overflow: hidden;
+  border-radius: 24px;
+  background: rgb(255 255 255 / 0.16);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.2);
+}
+
+.spot-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 9px 14px;
+  text-align: left;
+}
+
+/* A hairline over every row but the first, from where the words start */
+.spot-row + .spot-row::before {
+  position: absolute;
+  top: 0;
+  right: 14px;
+  left: 66px;
+  height: 0.5px;
+  background: rgb(255 255 255 / 0.2);
+  content: '';
+}
+
+.spot-row:active,
+.spot-app:active {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.spot-row__lead {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+}
+
+.spot-row__text {
+  display: grid;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+
+.spot-row__title {
+  overflow: hidden;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.spot-row__sub {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgb(255 255 255 / 0.64);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  line-height: 18px;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* What was typed, picked out where it was found */
+.spot-row__title b {
+  font-weight: 700;
+}
+
+.spot-row__sub b {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* The best match, larger */
+.spot-row[data-top] {
+  gap: 14px;
+  min-height: 78px;
+  padding: 13px 16px;
+}
+
+.spot-row[data-top] .spot-row__lead {
+  width: 52px;
+}
+
+.spot-row[data-top] .spot-row__title {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 25px;
+}
+
+.spot-row[data-top] .spot-row__sub {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.spot-tile {
+  display: block;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.18));
+}
+
+/* A person's monogram and a company's tile keep their own shapes; on glass they lose their page shadow */
+.spot-row .logo {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+/* ---- Before anything is typed ---- */
+
+.spot-apps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 6px;
+  padding: 10px 6px;
+}
+
+.spot-app {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 2px 7px;
+  border-radius: 18px;
+}
+
+.spot-app__icon {
+  display: block;
+  width: clamp(50px, 14.4cqw, 62px);
+  aspect-ratio: 1;
+  filter: drop-shadow(0 2px 5px rgb(0 0 0 / 0.18));
+}
+
+.spot-app__name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.spot-row--try {
+  min-height: 52px;
+  padding: 7px 14px;
+}
+
+.spot-row--try + .spot-row--try::before {
+  left: 58px;
+}
+
+.spot-row--try .spot-row__lead {
+  width: 32px;
+}
+
+.spot-glyph {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.18);
+}
+
+.spot-row__fill {
+  flex: none;
+  color: rgb(255 255 255 / 0.5);
+}
+
+.spot-none {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 22cqh 24px 0;
+  text-align: center;
+}
+
+.spot-none b {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.spot-none span {
+  max-width: 100%;
+  overflow: hidden;
+  color: rgb(255 255 255 / 0.64);
+  font-size: 15px;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The keyboard's ring, where the keyboard is how it is being used */
+.spot :is(.spot-row, .spot-app, .spot-close, .spot-field__clear):focus-visible {
+  outline: 3px solid rgb(255 255 255 / 0.7);
+  outline-offset: -3px;
+}
+
+/* ---- Coming and going: the same motion both ways ---- */
+
+.spot[data-leaving] {
+  pointer-events: none;
+}
+
+.spot[data-leaving] .spot-away {
+  animation: spot-fade-out 0.28s ease both;
+}
+
+.spot[data-leaving] .spot-scroll {
+  animation: spot-fall 0.26s ease both;
+}
+
+.spot[data-leaving] .spot-foot {
+  animation: spot-shrink 0.28s cubic-bezier(0.4, 0, 0.8, 0.5) both;
+}
+
+@keyframes spot-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes spot-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes spot-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+@keyframes spot-fall {
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+@keyframes spot-grow {
+  from {
+    opacity: 0;
+    transform: scale(0.34, 0.62);
+  }
+}
+
+@keyframes spot-shrink {
+  to {
+    opacity: 0;
+    transform: scale(0.34, 0.62);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spot-away,
+  .spot-scroll,
+  .spot-foot,
+  .spot[data-leaving] .spot-away,
+  .spot[data-leaving] .spot-scroll,
+  .spot[data-leaving] .spot-foot {
+    animation: none;
+    transition: none;
+  }
+
+  .spot[data-leaving] {
+    opacity: 0;
+  }
+}

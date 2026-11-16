@@ -7,7 +7,7 @@ import { NotesApp } from '../apps/Notes'
 import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
 import { SITE } from '../data/site'
-import { arriveIn, PHONE_APPS, startNav, watchHistory, type PhoneApp } from '../phone/nav'
+import { arriveIn, startSystem, watchHistory } from '../phone/system'
 import { Phone } from '../phone/Phone'
 import { APP_IDS, type AppId } from './apps'
 import { Dock } from './Dock'
@@ -23,8 +23,9 @@ import { WindowFrame } from './WindowFrame'
 // The desktop: wallpaper, the menu bar, a few things left out on the desk, the
 // windows, the Dock, and the screen saver over all of it. The root carries the
 // kit's stage class, so every kit part inside reads the same look.
-// On a phone-sized screen the same root holds a phone instead: a Home Screen
-// of the same apps, each full screen.
+// On a phone-sized screen (or when the address asks, with `?phone`) the same
+// root holds an iPhone instead: the same apps, each redrawn as its iOS
+// counterpart (src/phone).
 
 const WINDOWS: Record<AppId, () => JSX.Element> = {
   finder: FinderApp,
@@ -116,36 +117,8 @@ function TilePreview() {
   return <div className="tile-preview" data-show={preview ? '' : undefined} style={r ? { left: r.x, top: r.y, width: r.w, height: r.h, zIndex: 9 + front } : undefined} aria-hidden />
 }
 
-/** Everything on the desktop but its wallpaper: the menu bar, the things left
- * out on the desk, the windows and the Dock. The desktop draws it across the
- * screen; the phone's "window" version draws it at desktop size and looks at
- * it through the phone. */
-export function DesktopSurface() {
-  return (
-    <>
-      <MenuBar />
-      <DeskIcons />
-      <main className="os__windows">
-        <TilePreview />
-        {APP_IDS.map((id) => {
-          const Body = WINDOWS[id]
-          return (
-            <WindowFrame key={id} id={id}>
-              <Body />
-            </WindowFrame>
-          )
-        })}
-      </main>
-      <Dock />
-    </>
-  )
-}
-
 export function Desktop() {
   const saving = useStore(saver, (s) => s.on)
-  /** The screen is a phone's: the phone layout is what shows. */
-  const phone = useStore(wm, (s) => s.phone)
-  /** The desk the windows are on is too small for them (it is the screen's, on a phone). */
   const compact = useStore(wm, (s) => s.compact)
   const [booted, setBooted] = useState(false)
   /** The opening has played: the chat is open and under way. */
@@ -169,22 +142,23 @@ export function Desktop() {
       .map((name) => ALIASES[name.trim().toLowerCase()] ?? name)
       .filter((id): id is AppId => (APP_IDS as string[]).includes(id))
     const quiet = query.has('still')
-    const resumed = startNav()
+    // A phone picks up where a reload left it; a new visit starts on its Lock Screen
+    const resumed = startSystem()
     const t1 = setTimeout(() => setBooted(true), 60)
     const t2 = setTimeout(
       () => {
         started.current = true
         if (wm.get().compact) {
-          // A phone is the conversation, with at most one thing open out of it:
-          // the last one a link asked for. After a reload it is where it was left.
-          const asked = extra.filter((id): id is PhoneApp => (PHONE_APPS as string[]).includes(id)).pop()
+          // A link that names an app arrives with it open (the last one named), and the phone unlocked
+          const asked = extra.pop()
           if (!resumed && asked) arriveIn(asked)
         } else {
           if (!query.has('empty')) openApp('messages', dockPoint('messages'))
           extra.forEach((id) => openApp(id, dockPoint(id)))
-          startChat()
         }
-        if (query.has('saver') && !wm.get().phone) startSaver()
+        // The group chat plays whichever is showing: on a phone its replies arrive as notifications
+        startChat()
+        if (query.has('saver') && !wm.get().compact) startSaver()
       },
       quiet ? 0 : 520,
     )
@@ -204,14 +178,32 @@ export function Desktop() {
   }, [compact])
 
   return (
-    <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={phone || undefined}>
+    <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={compact || undefined}>
       <div className="os__wallpaper" aria-hidden>
         <div className="os__grain" />
       </div>
       <h1 className="sr-only">Shrug: what people say, the portfolio, FAQs and drops</h1>
-      {phone ? <Phone /> : <DesktopSurface />}
-      {/* A phone has no screen saver, whatever desk its windows are on */}
-      {!phone && <ScreenSaver />}
+      {compact ? (
+        <Phone />
+      ) : (
+        <>
+          <MenuBar />
+          <DeskIcons />
+          <main className="os__windows">
+            <TilePreview />
+            {APP_IDS.map((id) => {
+              const Body = WINDOWS[id]
+              return (
+                <WindowFrame key={id} id={id}>
+                  <Body />
+                </WindowFrame>
+              )
+            })}
+          </main>
+          <Dock />
+        </>
+      )}
+      <ScreenSaver />
     </div>
   )
 }
