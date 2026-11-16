@@ -25,8 +25,8 @@ import { openApp, openSheet, type PhoneApp } from '../nav'
 // a few rounds push apart whatever overlaps (the lighter one further) and back
 // inside the walls, and where each ended up says how fast it is now going. A
 // grid of cells finds who could be touching without asking everyone about
-// everyone. Nothing in here reads the page: it is all numbers, and the only
-// thing written is each body's transform.
+// everyone. Nothing in the loop reads the page: it is all numbers, and the
+// only thing written is the transform of each body that has moved.
 
 /** How hard down pulls, in px/s²: far less than the world's, so a pour can be watched. */
 const GRAVITY = 2300
@@ -204,12 +204,12 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     heads.fill(-1)
     for (let i = 0; i < n; i++) {
       if (!inside[i]) continue
-      const cx = clamp(Math.floor(x[i]! / cell) + 1, 0, cols - 1)
-      const cy = clamp(Math.floor(y[i]! / cell) + 2, 0, rows - 1)
+      const cx = clamp(Math.floor(x[i] / cell) + 1, 0, cols - 1)
+      const cy = clamp(Math.floor(y[i] / cell) + 2, 0, rows - 1)
       const c = cy * cols + cx
       cellX[i] = cx
       cellY[i] = cy
-      chain[i] = heads[c]!
+      chain[i] = heads[c]
       heads[c] = i
     }
   }
@@ -218,22 +218,22 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
   function round(first: boolean) {
     for (let i = 0; i < n; i++) {
       if (!inside[i]) continue
-      const cx = cellX[i]!
-      const cy = cellY[i]!
+      const cx = cellX[i]
+      const cy = cellY[i]
       for (let gy = cy - 1; gy <= cy + 1; gy++) {
         if (gy < 0 || gy >= rows) continue
         for (let gx = cx - 1; gx <= cx + 1; gx++) {
           if (gx < 0 || gx >= cols) continue
-          for (let j = heads[gy * cols + gx]!; j !== -1; j = chain[j]!) {
+          for (let j = heads[gy * cols + gx]; j !== -1; j = chain[j]) {
             if (j <= i) continue
-            const dx = x[j]! - x[i]!
-            const dy = y[j]! - y[i]!
-            const reach = rad[i]! + rad[j]!
+            const dx = x[j] - x[i]
+            const dy = y[j] - y[i]
+            const reach = rad[i] + rad[j]
             const d2 = dx * dx + dy * dy
             if (d2 >= reach * reach) continue
             // One under a finger doesn't give way
-            const wi = held[i] ? 0 : light[i]!
-            const wj = held[j] ? 0 : light[j]!
+            const wi = held[i] ? 0 : light[i]
+            const wj = held[j] ? 0 : light[j]
             const both = wi + wj
             if (!both) continue
             let d = Math.sqrt(d2)
@@ -250,7 +250,7 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
             y[j] += ny * push * wj
             touching[i] = touching[j] = 1
             if (first && knocks < KNOCKS) {
-              const closing = (ux[j]! - ux[i]!) * nx + (uy[j]! - uy[i]!) * ny
+              const closing = (ux[j] - ux[i]) * nx + (uy[j] - uy[i]) * ny
               if (closing < -KNOCK) {
                 knockI[knocks] = i
                 knockJ[knocks] = j
@@ -264,25 +264,25 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
         }
       }
       if (held[i]) continue
-      const r = rad[i]!
-      if (x[i]! < r) {
+      const r = rad[i]
+      if (x[i] < r) {
         x[i] = r
         hitX[i] = -1
         touching[i] = 1
-      } else if (x[i]! > W - r) {
+      } else if (x[i] > W - r) {
         x[i] = W - r
         hitX[i] = 1
         touching[i] = 1
       }
-      if (y[i]! > H - r) {
+      if (y[i] > H - r) {
         y[i] = H - r
         hitY[i] = 1
         touching[i] = 1
-      } else if (inside[i] === 2 && y[i]! < r) {
+      } else if (inside[i] === 2 && y[i] < r) {
         y[i] = r
         hitY[i] = -1
         touching[i] = 1
-      } else if (y[i]! < -3 * r) y[i] = -3 * r
+      } else if (y[i] < -3 * r) y[i] = -3 * r
     }
   }
 
@@ -291,12 +291,12 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     const ay = downY * GRAVITY * STEP
     for (let i = 0; i < n; i++) {
       if (!inside[i]) continue
-      px[i] = x[i]!
-      py[i] = y[i]!
+      px[i] = x[i]
+      py[i] = y[i]
       if (!held[i]) {
         const keep = touching[i] ? RUB : AIR
-        let sx = (vx[i]! + ax) * keep
-        let sy = (vy[i]! + ay) * keep
+        let sx = (vx[i] + ax) * keep
+        let sy = (vy[i] + ay) * keep
         const s2 = sx * sx + sy * sy
         if (s2 > TOP_SPEED * TOP_SPEED) {
           const f = TOP_SPEED / Math.sqrt(s2)
@@ -315,10 +315,10 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     // One under a finger goes to the finger: most of the way each step, so it is carried, not jumped
     for (const h of holds.values()) {
       if (h.i < 0) continue
-      x[h.i] += (h.tx - x[h.i]!) * 0.45
-      y[h.i] += (h.ty - y[h.i]!) * 0.45
-      ux[h.i] = (x[h.i]! - px[h.i]!) / STEP
-      uy[h.i] = (y[h.i]! - py[h.i]!) / STEP
+      x[h.i] += (h.tx - x[h.i]) * 0.45
+      y[h.i] += (h.ty - y[h.i]) * 0.45
+      ux[h.i] = (x[h.i] - px[h.i]) / STEP
+      uy[h.i] = (y[h.i] - py[h.i]) / STEP
     }
     sort()
     knocks = 0
@@ -326,25 +326,25 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     // Where each ended up is how fast it is going; what hit the glass hard comes back off it
     for (let i = 0; i < n; i++) {
       if (!inside[i] || held[i]) continue
-      let sx = (x[i]! - px[i]!) / STEP
-      let sy = (y[i]! - py[i]!) / STEP
-      if (hitX[i] && ux[i]! * hitX[i]! > KNOCK) sx = -ux[i]! * WALL_BOUNCE
-      if (hitY[i] && uy[i]! * hitY[i]! > KNOCK) sy = -uy[i]! * WALL_BOUNCE
+      let sx = (x[i] - px[i]) / STEP
+      let sy = (y[i] - py[i]) / STEP
+      if (hitX[i] && ux[i] * hitX[i] > KNOCK) sx = -ux[i] * WALL_BOUNCE
+      if (hitY[i] && uy[i] * hitY[i] > KNOCK) sy = -uy[i] * WALL_BOUNCE
       vx[i] = sx
       vy[i] = sy
-      if (inside[i] === 1 && y[i]! > rad[i]! + 1) inside[i] = 2
+      if (inside[i] === 1 && y[i] > rad[i] + 1) inside[i] = 2
     }
     // And what hit each other hard comes back off each other
     for (let k = 0; k < knocks; k++) {
-      const i = knockI[k]!
-      const j = knockJ[k]!
-      const wi = held[i] ? 0 : light[i]!
-      const wj = held[j] ? 0 : light[j]!
+      const i = knockI[k]
+      const j = knockJ[k]
+      const wi = held[i] ? 0 : light[i]
+      const wj = held[j] ? 0 : light[j]
       if (!(wi + wj)) continue
-      const nx = knockX[k]!
-      const ny = knockY[k]!
-      const parting = (vx[j]! - vx[i]!) * nx + (vy[j]! - vy[i]!) * ny
-      const more = -BOUNCE * knockV[k]! - parting
+      const nx = knockX[k]
+      const ny = knockY[k]
+      const parting = (vx[j] - vx[i]) * nx + (vy[j] - vy[i]) * ny
+      const more = -BOUNCE * knockV[k] - parting
       if (more <= 0) continue
       const share = more / (wi + wj)
       vx[i] -= nx * share * wi
@@ -353,7 +353,7 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
       vy[j] += ny * share * wj
     }
     for (let i = 0; i < n; i++) {
-      if (touching[i] && !held[i] && vx[i]! * vx[i]! + vy[i]! * vy[i]! < REST * REST) {
+      if (touching[i] && !held[i] && vx[i] * vx[i] + vy[i] * vy[i] < REST * REST) {
         vx[i] = 0
         vy[i] = 0
       }
@@ -364,19 +364,19 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
   function draw() {
     for (let i = 0; i < n; i++) {
       if (!inside[i]) continue
-      const dx = x[i]! - drawnX[i]!
-      const dy = y[i]! - drawnY[i]!
-      if (dx * dx + dy * dy <= 0.012 && Math.abs(ang[i]! - drawnA[i]!) <= 0.004) continue
-      els[i]!.style.transform = `translate3d(${x[i]!.toFixed(1)}px,${y[i]!.toFixed(1)}px,0) rotate(${ang[i]!.toFixed(3)}rad)`
-      drawnX[i] = x[i]!
-      drawnY[i] = y[i]!
-      drawnA[i] = ang[i]!
+      const dx = x[i] - drawnX[i]
+      const dy = y[i] - drawnY[i]
+      if (dx * dx + dy * dy <= 0.012 && Math.abs(ang[i] - drawnA[i]) <= 0.004) continue
+      els[i]!.style.transform = `translate3d(${x[i].toFixed(1)}px,${y[i].toFixed(1)}px,0) rotate(${ang[i].toFixed(3)}rad)`
+      drawnX[i] = x[i]
+      drawnY[i] = y[i]
+      drawnA[i] = ang[i]
     }
     // The name of the one in hand rides just clear of the finger: above it, or under it at the very top
     if (named < 0) return
-    const r = rad[named]!
-    const atX = clamp(x[named]!, Math.min(104, W / 2), Math.max(W - 104, W / 2))
-    const atY = y[named]! - r - 40 < 56 ? y[named]! + r + 44 : y[named]! - r - 40
+    const r = rad[named]
+    const atX = clamp(x[named], Math.min(104, W / 2), Math.max(W - 104, W / 2))
+    const atY = y[named] - r - 40 < 56 ? y[named] + r + 44 : y[named] - r - 40
     if (Math.abs(atX - tagX) + Math.abs(atY - tagY) < 0.3) return
     tag.style.transform = `translate3d(${atX.toFixed(1)}px,${atY.toFixed(1)}px,0)`
     tagX = atX
@@ -402,7 +402,7 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
   /** The next one, over the rim: the spout wanders from side to side as it pours. */
   function drop() {
     const i = poured++
-    const r = rad[i]!
+    const r = rad[i]
     const at = clamp(W * (0.5 + 0.33 * Math.sin(i * 0.9)) + (Math.random() - 0.5) * 36, r + 2, W - r - 2)
     if (downY > 0.2) {
       enter(i, at, -r - 2, 1)
@@ -417,7 +417,7 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
   function settle() {
     if (!W || !H || !n) return
     let widest = 0
-    for (let i = 0; i < n; i++) widest = Math.max(widest, rad[i]!)
+    for (let i = 0; i < n; i++) widest = Math.max(widest, rad[i])
     let k = 0
     for (let row = 0; k < n; row++) {
       for (let at = widest + (row % 2 ? widest : 0); at <= W - widest + 0.5 && k < n; at += widest * 2.04) {
@@ -456,9 +456,9 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     let busiest = 0
     for (let i = 0; i < n; i++) {
       if (!inside[i]) continue
-      ang[i] = (ang[i]! + ((x[i]! - frameX[i]!) / rad[i]!) * 0.35) * 0.93
-      frameX[i] = x[i]!
-      busiest = Math.max(busiest, vx[i]! * vx[i]! + vy[i]! * vy[i]!, ang[i]! * ang[i]! * 4e4)
+      ang[i] = (ang[i] + ((x[i] - frameX[i]) / rad[i]) * 0.35) * 0.93
+      frameX[i] = x[i]
+      busiest = Math.max(busiest, vx[i] * vx[i] + vy[i] * vy[i], ang[i] * ang[i] * 4e4)
     }
     draw()
     // Everyone in, nobody held, nothing moving and down where it was: it sleeps until something changes
@@ -501,8 +501,8 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     const reach = Math.max(96, W * 0.3)
     for (let i = 0; i < n; i++) {
       if (!inside[i] || held[i]) continue
-      const dx = x[i]! - atX
-      const dy = y[i]! - atY
+      const dx = x[i] - atX
+      const dy = y[i] - atY
       const d = Math.hypot(dx, dy)
       if (d >= reach) continue
       const hard = (1 - d / reach) * 1500
@@ -526,13 +526,13 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     let nearest = 9
     for (let i = 0; i < n; i++) {
       if (!inside[i] || held[i]) continue
-      const off = Math.hypot(x[i]! - mx, y[i]! - my) - rad[i]!
+      const off = Math.hypot(x[i] - mx, y[i] - my) - rad[i]
       if (off < nearest) {
         nearest = off
         got = i
       }
     }
-    holds.set(e.pointerId, { i: got, ox: got < 0 ? 0 : x[got]! - mx, oy: got < 0 ? 0 : y[got]! - my, tx: got < 0 ? 0 : x[got]!, ty: got < 0 ? 0 : y[got]!, x0: mx, y0: my, at: e.timeStamp, far: false, trail: [e.timeStamp, mx, my], left: box.left, top: box.top })
+    holds.set(e.pointerId, { i: got, ox: got < 0 ? 0 : x[got] - mx, oy: got < 0 ? 0 : y[got] - my, tx: got < 0 ? 0 : x[got], ty: got < 0 ? 0 : y[got], x0: mx, y0: my, at: e.timeStamp, far: false, trail: [e.timeStamp, mx, my], left: box.left, top: box.top })
     try {
       host.setPointerCapture(e.pointerId)
     } catch {
@@ -558,7 +558,7 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
     h.trail.push(e.timeStamp, mx, my)
     if (h.trail.length > 30) h.trail.splice(0, 3)
     if (h.i >= 0) {
-      const r = rad[h.i]!
+      const r = rad[h.i]
       h.tx = clamp(mx + h.ox, r, W - r)
       h.ty = clamp(my + h.oy, r, H - r)
     }
@@ -600,11 +600,11 @@ function createJar(host: HTMLElement, tag: HTMLElement, tell: Telling, still: bo
         const t = h.trail
         const end = t.length - 3
         let from = end
-        while (from >= 3 && e.timeStamp - t[from - 3]! <= 100) from -= 3
-        const took = (t[end]! - t[from]!) / 1000
-        if (lifted && took > 0.012 && e.timeStamp - t[end]! < 90) {
-          let sx = (t[end + 1]! - t[from + 1]!) / took
-          let sy = (t[end + 2]! - t[from + 2]!) / took
+        while (from >= 3 && e.timeStamp - t[from - 3] <= 100) from -= 3
+        const took = (t[end] - t[from]) / 1000
+        if (lifted && took > 0.012 && e.timeStamp - t[end] < 90) {
+          let sx = (t[end + 1] - t[from + 1]) / took
+          let sy = (t[end + 2] - t[from + 2]) / took
           const s = Math.hypot(sx, sy)
           if (s > TOP_SPEED) {
             sx *= TOP_SPEED / s
@@ -979,7 +979,7 @@ export default function V8({ active }: { active: boolean }) {
         </p>
         <p className="v8__hint">
           {mode === 'people' ? 'Tap someone for what they said.' : 'Tap a logo for the company.'}
-          {still ? '' : motion === 'on' ? ' Tip your phone and they slide.' : ' Drag one to throw it.'}
+          {still ? '' : motion === 'on' ? ' Tip the phone to tip them.' : ' Drag one to throw it.'}
         </p>
         {mode === 'people' && (
           <ul className="v8__key" aria-label="What the colours mean: pick one out">

@@ -201,6 +201,45 @@ function useSheet() {
     return () => ro.disconnect()
   }, [apply])
 
+  // Lifted, the conversation's first messages sit above the top of the screen,
+  // where no scrolling can bring them. A reader who scrolls back that far has
+  // come for the conversation: the sheet gets out of its way.
+  useEffect(() => {
+    const scroller = pane.current?.querySelector<HTMLElement>('.chat__scroll')
+    if (!scroller) return
+    let last = scroller.scrollTop
+    let touching = false
+    let let_go = 0
+    const scrolled = () => {
+      const s = m.current
+      const top = scroller.scrollTop
+      const back = top < last
+      last = top
+      if (!back || s.to === 0 || s.drag) return
+      // Only the reader's own scrolling, or what it coasts on to: never the conversation following itself
+      if (!touching && performance.now() - let_go > 1500) return
+      const [peek, half] = s.stops
+      if (top < Math.max(0, Math.min(s.h, half) - peek - s.slack)) go(0)
+    }
+    const down = () => (touching = true)
+    const up = () => {
+      touching = false
+      let_go = performance.now()
+    }
+    scroller.addEventListener('scroll', scrolled, { passive: true })
+    scroller.addEventListener('touchstart', down, { passive: true })
+    scroller.addEventListener('touchend', up, { passive: true })
+    scroller.addEventListener('touchcancel', up, { passive: true })
+    scroller.addEventListener('wheel', up, { passive: true })
+    return () => {
+      scroller.removeEventListener('scroll', scrolled)
+      scroller.removeEventListener('touchstart', down)
+      scroller.removeEventListener('touchend', up)
+      scroller.removeEventListener('touchcancel', up)
+      scroller.removeEventListener('wheel', up)
+    }
+  }, [go])
+
   // Once, soon after arriving: the sheet gives a small lift, to say it can be
   useEffect(() => {
     const timer = setTimeout(() => {

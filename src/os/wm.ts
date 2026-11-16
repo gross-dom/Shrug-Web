@@ -84,7 +84,7 @@ const blank = (id: AppId): Win => ({
 const initialViewport = viewportNow()
 
 /** The screen's own size, as last reported. */
-let screen: Size = initialViewport
+let screenSize: Size = initialViewport
 /** A desk lent in place of the screen's, and how a point on the screen falls on it. */
 let lent: { size: Size; onto: (point: Point) => Point } | null = null
 
@@ -296,7 +296,7 @@ const refitAll = (wins: Record<AppId, Win>, viewport: Size) => Object.fromEntrie
 
 /** The screen changed size. */
 export function setViewport(viewport: Size) {
-  screen = viewport
+  screenSize = viewport
   wm.set((s) => {
     const phone = isCompact(viewport)
     // On a lent desk the windows stay where they are: only what the screen is has changed
@@ -319,8 +319,8 @@ export function lendDesk(size: Size, onto: (point: Point) => Point): () => void 
   return () => {
     if (lent !== mine) return
     lent = null
-    const phone = isCompact(screen)
-    wm.set((s) => ({ ...s, viewport: screen, compact: phone, phone, wins: phone ? s.wins : refitAll(s.wins, screen), preview: null }))
+    const phone = isCompact(screenSize)
+    wm.set((s) => ({ ...s, viewport: screenSize, compact: phone, phone, wins: phone ? s.wins : refitAll(s.wins, screenSize), preview: null }))
   }
 }
 

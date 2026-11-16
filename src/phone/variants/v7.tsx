@@ -15,6 +15,10 @@ import { openApp, openSheet, type PhoneApp } from '../nav'
 // tossed away and somebody else's answer drops in. The backdrop is the
 // wallpaper's sheets of colour, and they lean with the phone, so it feels like
 // holding the thing. Without the sensors a tap on the card does all of it.
+//
+// The lean is written straight onto the few things that lean (the sheets, the
+// card, its sheen), as transforms and nothing else. Handing it down as a
+// variable from the top would have every button on the page restyled each frame.
 
 /** One answer on the table: who, and which toss dealt it (the first is 0). */
 interface Deal {
@@ -46,21 +50,34 @@ function Card({ deal, state, side }: { deal: Deal; state: 'rest' | 'in' | 'out';
   const words = person.quote ?? person.role
 
   // The quote is set as large as its card allows; one too long even at the
-  // smallest size is cut short, and the corner opens the whole of it
+  // smallest size is cut short, and the corner opens the whole of it. It is
+  // set again whenever the card changes size (the phone turned, a bar gone).
   useLayoutEffect(() => {
     const el = quote.current
     if (!el) return
-    let fits = false
-    for (const size of SIZES) {
-      el.style.fontSize = `${size}px`
-      // A few words are set like a headline; a long answer like a paragraph
-      el.dataset.set = size >= 24 ? 'large' : size >= 18 ? 'medium' : 'small'
-      if (el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1) {
-        fits = true
-        break
+    let width = 0
+    let height = 0
+    const fit = () => {
+      width = el.clientWidth
+      height = el.clientHeight
+      let fits = false
+      for (const size of SIZES) {
+        el.style.fontSize = `${size}px`
+        // A few words are set like a headline; a long answer like a paragraph
+        el.dataset.set = size >= 24 ? 'large' : size >= 18 ? 'medium' : 'small'
+        if (el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1) {
+          fits = true
+          break
+        }
       }
+      setClipped(!fits)
     }
-    setClipped(!fits)
+    fit()
+    const watch = new ResizeObserver(() => {
+      if (el.clientWidth !== width || el.clientHeight !== height) fit()
+    })
+    watch.observe(el)
+    return () => watch.disconnect()
   }, [words])
 
   const open = () => openSheet(`person:${deal.index}`)
@@ -68,6 +85,7 @@ function Card({ deal, state, side }: { deal: Deal; state: 'rest' | 'in' | 'out';
   return (
     <article className="v7__card" data-state={state} style={{ '--side': side } as CSSProperties} aria-label={`${person.name}, ${person.role}`} {...(state === 'out' ? ({ inert: '', 'aria-hidden': true } as object) : null)}>
       <div className="v7__lean">
+        <i className="v7__sheen" aria-hidden />
         <header className="v7__who">
           <PersonAvatar index={deal.index} size={46} />
           <div className="v7__name">
@@ -125,6 +143,8 @@ export default function V7({ active }: { active: boolean }) {
   dealt.current = now
   /** How the phone is held, as last reported: null until it has said anything. */
   const held = useRef<{ x: number; y: number } | null>(null)
+  /** How far everything is leaning now (-1 to 1 each way): it eases toward how the phone is held. */
+  const lean = useRef({ x: 0, y: 0 })
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const still = prefersReducedMotion()
 
@@ -173,19 +193,36 @@ export default function V7({ active }: { active: boolean }) {
   useEffect(() => {
     const el = root.current
     if (!el || !active || still) return
+    // Each sheet's depth is in the stylesheet: how far it slides and turns for a full lean
+    const sheets = [...el.querySelectorAll<HTMLElement>('.v7__sheet')].map((sheet) => {
+      const style = getComputedStyle(sheet)
+      const of = (name: string) => parseFloat(style.getPropertyValue(name)) || 0
+      return { sheet, turn: of('--r'), slideX: of('--mx'), slideY: of('--my'), turns: of('--mr') }
+    })
+    const glow = el.querySelector<HTMLElement>('.v7__glow')
+    // The cards on the table change with every shrug: these two lists keep up by themselves
+    const cards = el.getElementsByClassName('v7__lean') as HTMLCollectionOf<HTMLElement>
+    const sheens = el.getElementsByClassName('v7__sheen') as HTMLCollectionOf<HTMLElement>
+    const written = new WeakMap<HTMLElement, string>()
+    const write = (to: HTMLElement, transform: string) => {
+      if (written.get(to) === transform) return
+      to.style.transform = transform
+      written.set(to, transform)
+    }
     let frame = 0
-    let x = 0
-    let y = 0
-    let wrote = { x: NaN, y: NaN }
     const tick = (t: number) => {
+      const at = lean.current
       const to = held.current ?? { x: Math.sin(t / 2700) * 0.32, y: Math.cos(t / 3500) * 0.26 }
-      x += (to.x - x) * 0.085
-      y += (to.y - y) * 0.085
-      if (Math.abs(x - wrote.x) > 0.0015 || Math.abs(y - wrote.y) > 0.0015 || Number.isNaN(wrote.x)) {
-        el.style.setProperty('--tx', x.toFixed(4))
-        el.style.setProperty('--ty', y.toFixed(4))
-        wrote = { x, y }
-      }
+      at.x += (to.x - at.x) * 0.085
+      at.y += (to.y - at.y) * 0.085
+      // To a hundredth of a lean: finer than can be seen, and a phone lying still writes nothing
+      const x = Math.round(at.x * 400) / 400
+      const y = Math.round(at.y * 400) / 400
+      for (const s of sheets) write(s.sheet, `translate3d(${(x * s.slideX).toFixed(1)}px,${(y * s.slideY).toFixed(1)}px,0) rotate(${(s.turn + x * s.turns).toFixed(2)}deg)`)
+      if (glow) write(glow, `translate3d(${(x * -22).toFixed(1)}px,${(y * -16).toFixed(1)}px,0)`)
+      // The perspective is the card's own, so the lean is flattened onto the page and a finger finds its buttons at any angle
+      for (const card of cards) write(card, `perspective(1100px) rotateY(${(x * 10).toFixed(2)}deg) rotateX(${(y * -8).toFixed(2)}deg) translate3d(${(x * 5).toFixed(1)}px,${(y * 4).toFixed(1)}px,0)`)
+      for (const sheen of sheens) write(sheen, `translate3d(${(x * 46).toFixed(1)}%,${(y * 12).toFixed(1)}%,0)`)
       frame = requestAnimationFrame(tick)
     }
     const seen = () => {

@@ -317,6 +317,8 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
   let pinch: { gap: number; k: number; px: number; py: number } | null = null
   /** A click before this moment is the end of a drag or of a double tap: not a press. */
   let swallow = 0
+  /** The finger came down while the view was gliding somewhere: what was under it was on the move. */
+  let adrift = false
   let lastTap: { x: number; y: number; t: number } | null = null
 
   const at = (e: { clientX: number; clientY: number }): Point => ({ x: e.clientX - box.left, y: e.clientY - box.top })
@@ -338,6 +340,7 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
     const [a, b] = [...pts.values()] as [Point, Point]
     const mx = (a.x + b.x) / 2
     const my = (a.y + b.y) / 2
+    glide = null
     pinch = { gap: Math.max(24, Math.hypot(a.x - b.x, a.y - b.y)), k: cam.k, px: (mx - cam.x) / cam.k, py: (my - cam.y) / cam.k }
     mode = 'pinch'
     roll = null
@@ -359,9 +362,9 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
     box = view.getBoundingClientRect()
     pts.set(e.pointerId, at(e))
     touched = true
-    // A finger down stops whatever it was doing, where it is. One that stops a flick is only that: not a press on what it lands on.
-    const stopping = Math.hypot(vel.x, vel.y) > 90 || !!coast || !!glide
-    glide = null
+    // A finger down stops a flick where it is, and one that does is only that: not a press on what it lands on.
+    // A glide carries on under it until it moves (a second double tap can come while the first is still going).
+    const stopping = Math.hypot(vel.x, vel.y) > 90 || !!coast
     vel = { x: 0, y: 0 }
     coast = null
     if (pts.size === 1) {
@@ -370,6 +373,7 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
       start = { ...p, t: performance.now(), target: e.target as Element }
       trail = [{ ...p, t: performance.now() }]
       swallow = stopping ? Infinity : 0
+      adrift = !!glide
       if (stopping) lastTap = null
       mac.setAttribute('data-moving', '')
     } else beginPinch()
@@ -409,6 +413,7 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
       const el = scrollerFor(start.target, axis, (axis === 'y' ? dy : dx) > 0 ? -1 : 1)
       roll = el ? { el, axis, at: axis === 'y' ? el.scrollTop : el.scrollLeft } : null
       mode = el ? 'roll' : 'pan'
+      glide = null
       raw = unbanded(cam)
       // It begins where the finger left its slop: nothing of the move is lost, and nothing jumps
       was = { x: start.x + (dx * slop) / d, y: start.y + (dy * slop) / d }
@@ -515,8 +520,11 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
     if (pts.size > 0) return
     const was = mode
     mode = 'none'
-    if (was === 'press' && swallow !== Infinity) tap(e)
-    else swallow = performance.now() + 380
+    if (was === 'press' && swallow !== Infinity) {
+      tap(e)
+      // What it landed on was moving: it can be half of a double tap, but not a press
+      if (adrift && performance.now() >= swallow) swallow = performance.now() + 380
+    } else swallow = performance.now() + 380
     if (was === 'pan' && e.type !== 'pointercancel' && !still) vel = flick()
     if (was === 'roll' && roll && e.type !== 'pointercancel') {
       const v = flick()
@@ -603,6 +611,44 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
     // Once the keyboard has come up and the view has taken its new size
     revealing = setTimeout(() => reveal(el), 360)
   }
+
+  // "Show in group chat" brings a reply into view by measuring the page, which
+  // comes out right only when the Mac is drawn at life size. At any other, once
+  // the chat has finished its own move, the reply is put where it was meant to be.
+  let mending: ReturnType<typeof setTimeout> | undefined
+  const mend = (bubble: Element) => {
+    const list = bubble.closest<HTMLElement>('.chat__scroll')
+    if (!list || !bubble.hasAttribute('data-flash') || pts.size) return
+    const frameBox = list.getBoundingClientRect()
+    const b = bubble.getBoundingClientRect()
+    const k = frameBox.width / list.offsetWidth
+    if (!k || Math.abs(k - 1) < 0.02) return
+    const from = list.scrollTop
+    // A long reply is shown from its top; a short one sits in the middle (as the chat itself has it)
+    const to = clamp(from + (b.top - frameBox.top) / k - Math.max(28, (list.clientHeight - b.height / k) / 2), 0, list.scrollHeight - list.clientHeight)
+    if (Math.abs(to - from) < 2) return
+    if (still) {
+      list.scrollTop = to
+      return
+    }
+    const t0 = performance.now()
+    const ease = (t: number) => {
+      const p = clamp((t - t0) / 340, 0, 1)
+      list.scrollTop = from + (to - from) * settleOut(p)
+      if (p < 1 && on && !pts.size) requestAnimationFrame(ease)
+    }
+    requestAnimationFrame(ease)
+  }
+  const flashes = new MutationObserver((records) => {
+    for (const record of records) {
+      const bubble = record.target as Element
+      if (!bubble.hasAttribute('data-flash')) continue
+      clearTimeout(mending)
+      // The chat's own move takes a little over half a second
+      mending = setTimeout(() => mend(bubble), still ? 60 : 680)
+    }
+  })
+  flashes.observe(mac, { attributes: true, attributeFilter: ['data-flash'], subtree: true })
 
   const quiet = (e: Event) => e.preventDefault()
 
@@ -725,6 +771,8 @@ function makeLens(view: HTMLElement, mac: HTMLElement, parts: { frame: () => HTM
       on = false
       cancelAnimationFrame(frame)
       clearTimeout(revealing)
+      clearTimeout(mending)
+      flashes.disconnect()
       view.removeEventListener('pointerdown', down)
       view.removeEventListener('pointermove', move)
       view.removeEventListener('pointerup', up)
