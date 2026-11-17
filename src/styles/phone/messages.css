@@ -91,6 +91,16 @@
   content: none;
 }
 
+/* Found while searching: the people in the group, under the conversations,
+   headed the way Messages heads a kind of result */
+.msg-found__label {
+  margin: 22px 20px 4px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 25px;
+}
+
 /* ---- A conversation ---- */
 
 /* The header hangs from the top of the bar: the face, then the name on its piece of glass */
@@ -144,6 +154,15 @@
 .msg-head__name > svg {
   flex: none;
   color: var(--label-3);
+}
+
+/* One of the other conversations: its name is only a name, with nothing behind it to press */
+.msg-head--plain:active {
+  opacity: 1;
+}
+
+.msg-head--plain .msg-head__name {
+  padding: 0 10px;
 }
 
 /* Back, with the count of what is still unread beside the chevron */
@@ -501,6 +520,15 @@
   font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 16px;
+}
+
+/* Someone whose reply hasn't come in yet: there is nowhere to show them */
+.msg-card__note {
+  margin: 2px 24px 0;
+  color: var(--label-2);
+  font-size: 15px;
+  line-height: 20px;
+  text-align: center;
 }
 
 /* Nothing left to pause once everyone has replied */

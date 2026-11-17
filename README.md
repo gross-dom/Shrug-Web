@@ -18,7 +18,7 @@ Node 20.19 or newer.
 | Window | In the Dock as | What it holds |
 | --- | --- | --- |
 | Group chat | Group chat | Shrug's own Messages. Shrug asks the group what it's like to work with them, and ninety people reply. |
-| Portfolio | Portfolio | Every company under its logo, by vertical, as icons or a list, with search, Back/Forward and a preview of the one selected. |
+| Portfolio | Portfolio | Every company under its logo, in Shrug's own order or by vertical, as icons or a list, with search, Back/Forward and a preview of the one selected. |
 | FAQs | FAQs | Each question as a note. |
 | Case Studies | Case Studies | A terminal that lists the case studies and takes an access request. |
 | VIP | VIP | Photos and videos from the drops, with each drop as an album. |
@@ -32,9 +32,10 @@ It is laid out as an iMessage group conversation, seen from Shrug's side:
 
 - Shrug's messages are the blue bubbles on the right. The script types them into the message field and sends them, so each bubble leaves the field the way a sent message does, and "Delivered" sits under the last one.
 - Everyone else is gray on the left, with their name and role over the bubble and their initials beside it.
-- The sidebar is the list of conversations: the group (“Shrug Family”), then everyone's own message, all there from the start and unread until opened, so they can be read through while the group plays out beside them. A person's own conversation shows the question and their reply.
+- The sidebar is the list of conversations: the group (“Shrug Family”) and, under it, a handful of easter eggs. The ninety replies are in the group and nowhere else. Away from the group its row is marked when replies come in, and the Dock's badge counts them until it is opened again. Search finds the conversations, and the people in the group by name, role or what they said; a person found goes to their reply.
 - In the group, every reply keeps the same time: its typing dots, the message, a breath, the next. It never speeds up. The pace is `WRITING` and `BETWEEN` in `src/apps/chat.ts`.
-- The name in the bar, or the Details button, opens the details: pause the replies, show them all, play it again, and everyone in the group.
+- The name in the bar, or the Details button, opens the details: pause the replies, show them all, play it again, and everyone in the group. A person there opens their card, with Show in Shrug Family.
+- The easter eggs are short conversations of Shrug's own (a founder at an odd hour, an unknown number, Mom, a drop on its way, a verification code), in `src/data/eggs.ts`. They were written for this site as placeholders: edit them, add to them or take them out there.
 - The plus beside the field opens the rest of the site.
 - Anything a visitor types is shown as Not Delivered, as Messages marks a message that didn't go. Nothing is sent and nobody replies.
 
@@ -45,9 +46,9 @@ Below 760px wide (or 480px tall) the site is an iPhone, in the look of the curre
 | On the desktop | On the iPhone |
 | --- | --- |
 | The screen saver | **The Lock Screen.** The time and date, and the group's replies arriving as notifications, stacked as iOS stacks a conversation's. Swipe up to open it, or tap a notification to go straight to the conversation. Left alone for two minutes the phone locks again (Settings › Display & Brightness › Auto-Lock changes that). |
-| The desk, its icons and the Dock | **The Home Screen.** Three widgets (the newest reply in Messages, the Portfolio folder in Files, the FAQs folder in Notes), the icons (Case Studies, the one-pager, Settings and VIP), a Dock of Messages, Files and Notes, and Search. The badge on Messages counts the replies as they come in. |
-| Group chat | **Messages.** The list of conversations (Shrug Family, then everyone's own, each marked as new once that person's reply has come in), a conversation with its floating header and the message field, and the details sheet with Pause Replies, Show Every Reply and Play From the Start. |
-| Portfolio (a Finder window) | **Files.** It opens inside the Portfolio folder: every company under its logo, grouped by vertical, as icons or a list. Back leads out to Browse, where Portfolio is a location and the verticals are tags. A company opens as a sheet over the folder, with its link. Recents keeps the companies that have been looked at; Shared holds the one-pager. |
+| The desk, its icons and the Dock | **The Home Screen.** The newest reply as a Messages widget; two folders, Portfolio and FAQs, as an iPhone has folders (frosted glass with a little of what is inside showing through, the name underneath); the icons (Case Studies, the one-pager, Settings and VIP); a Dock of Messages, Files and Notes; and Search. The badge on Messages counts the replies as they come in. |
+| Group chat | **Messages.** The list of conversations (Shrug Family, then the easter eggs), a conversation with its floating header and the message field, and the group's details sheet with Pause Replies, Show Every Reply, Play From the Start and everyone in it. |
+| Portfolio (a Finder window) | **Files.** It opens inside the Portfolio folder: every company under its logo, in Shrug's own order (or grouped by vertical, from the menu), as icons or a list. Back leads out to Browse, where Portfolio is a location and the verticals are tags. A company opens as a sheet over the folder, with its link. Recents keeps the companies that have been looked at; Shared holds the one-pager. |
 | FAQs (Notes) | **Notes.** It opens inside the FAQs folder: the questions as notes, grouped by date the way Notes groups them, each opening on its own page. Back leads out to Folders. Search is at the foot, and the compose button starts a note of the visitor's own, which is kept for the visit and sent nowhere. |
 | Case Studies (Terminal) | **A terminal**, with keys over the keyboard so nobody has to type to ask for access. |
 | VIP (Photos) | **VIP.** An app of its own beside Settings, under the star it has on the desktop, and laid out the way Photos is: the Library as a grid, with Photos' Sort and Filter menu; Collections, with the drops as albums, Favorites, Media Types and Recently Viewed; search; and a full-screen viewer to swipe through. |
@@ -57,8 +58,9 @@ Below 760px wide (or 480px tall) the site is an iPhone, in the look of the curre
 
 - **On a real phone the phone is the frame.** The screen is drawn edge to edge under the phone's own status bar, and the browser's bars are painted to match what is showing. The home indicator at the foot is the site's own: the phone's is below the browser, and leaves it.
 - **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed.
-- **The badge on Messages counts what is new.** It starts at nothing, ticks up with each reply that comes in, and is cleared by reading Shrug Family (or, one at a time, by opening a person's own conversation), as a badge is on an iPhone. The number beside Back inside a conversation is the same count (`src/phone/unread.ts`). The desktop's Dock counts differently: there every person's own message is unread from the start, and the badge counts down as they are opened.
+- **The badge on Messages counts what is new.** It starts at nothing, ticks up with each reply that comes in to Shrug Family, and is cleared by reading the conversation, as a badge is on an iPhone. The number beside Back inside an easter egg is the same count (`useNewReplies` in `src/apps/state.ts`; the desktop's Dock counts the same way).
 - **Out of the conversation, the replies come a little quicker**: one every 1.9 seconds in place of 2.8, and the first of them sooner. On the Lock Screen and the Home Screen a reply is a notification or a line in the widget, with no message field to watch being typed into and no dots to watch being written, so those waits are cut short (`UNSEEN` in `src/apps/chat.ts`). Open the conversation and it keeps the desktop's time.
+- **A folder opens where it is**, as one does on an iPhone: the Home Screen falls out of focus behind it and it grows into a larger piece of glass with its name over it. Portfolio shows the companies nine to a page, each under its logo the way a folder holds apps, and turns sideways; FAQs lists the questions. Picking one opens it in its app (a company in Files, a question in Notes), and a tap outside, the home bar or the browser's back closes the folder (`src/phone/Folder.tsx`). On a screen too short for them the folders are left off: Files and Notes are in the Dock.
 - **Every move is a step in the browser's history.** Safari's swipe from the left edge (or an Android back button) is the phone's Back: it goes back a screen inside an app, closes a sheet, and leaves an app for the Home Screen. A reload comes back to where it was, unlocked.
 - **Apps open where an iPhone would have left them**: Files inside the Portfolio folder and Notes inside FAQs, each one step in from its first screen, with Back leading out. After that they stay as they were left, as they do on an iPhone, until they are flicked out of the App Switcher. An app that fails does what one does on an iPhone: it closes to the Home Screen and starts afresh next time; the rest of the phone carries on.
 - **Turned on its side**, the apps reflow as apps do. A real iPhone keeps its Lock Screen and Home Screen upright; a page turns with the browser, so those two are laid out for the width instead, with the Dock down the trailing edge.
@@ -83,7 +85,8 @@ Everything on the site comes from `src/data/`.
 | File | What it holds | Where it came from |
 | --- | --- | --- |
 | `people.ts` | The ninety people, their roles and their quotes | Names and roles from the design; each quote is that person's testimonial as published on shrug.vc |
-| `portfolio.ts` | The companies by vertical, with a link, a one-line description and a logo | Names and verticals from the design; links and descriptions from shrug.vc's portfolio page |
+| `eggs.ts` | The easter-egg conversations in Messages | Written for this site, as placeholders |
+| `portfolio.ts` | The companies, in Shrug's own order, each with its vertical, a link, a one-line description and a logo | The names and their order are Shrug's list; verticals from the design; links and descriptions from shrug.vc's portfolio page |
 | `public/logos/` | One 144px tile per company | Each company's own site icon |
 | `faqs.ts` | The seven questions | The design |
 | `drops.ts` | The drops | The design |
@@ -93,12 +96,13 @@ Still to come, and marked as such on screen:
 | File | Missing | What shows until then |
 | --- | --- | --- |
 | `faqs.ts` | All seven answers (`answer: null`) | The bracketed slot from the design |
+| `eggs.ts` | Shrug's own words for the easter eggs | Five short conversations written as placeholders |
 | `drops.ts` | Every photo and video (`src`, `from`) | "Photo slot" and "Video slot" tiles |
-| `portfolio.ts` | 15 logos (`logo: null`) | The company's initial on a gray tile |
+| `portfolio.ts` | 10 logos (`logo: null`) | The company's initial on a gray tile |
 
 Fill in a field and the real thing replaces its placeholder; nothing else needs to change. To add a logo, put a square image in `public/logos/` and name it in the company's entry.
 
-The 15 companies without a logo are Senra, Mona Lee Solar, Homemade, BloxSnacks, Loyal, Supergreat, Drumroll, Lula, Seis, RTFKT, Once Upon, Diagram, Tome, Opal and Poparazzi: their sites had no icon or served one that isn't their logo (a host's default, a parked page, another product's, a placeholder), and no site could be confirmed for Drumroll or Lula. About a quarter of the other logos come from small icons (32 to 48px) and are soft at the preview's size; a proper logo file replaces any of them the same way.
+The 10 companies without a logo are RTFKT, Cloud23, Opal, Mona Lee Solar, BloxSnacks, Loyal, Drumroll, Poparazzi, YOLO and Sprinter: their sites have no icon the two icon services could find, or serve one that isn't their logo (a host's default, a parked page, an emoji, a placeholder), and no site could be confirmed for Drumroll. Lula's is the icon of lula.com, which a funding profile gives as its address; the Shrug page links only to its case study. About a quarter of the other logos come from small icons (32 to 48px) and are soft at the preview's size; a proper logo file replaces any of them the same way.
 
 Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal are shown on screen and go nowhere, on the desktop and on the iPhone alike. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`): the iPhone's Messages and terminal call the same two. The iPhone's Settings › Privacy & Security says that nothing is sent, stored or loaded from elsewhere, which is true of the code as it stands; change what it says (`PRIVACY` in `src/phone/apps/Settings.tsx`) when that stops being so, analytics added by a host included.
 
@@ -129,7 +133,7 @@ src/
 - **A new window**: add it to `os/apps.ts`, write its component in `apps/` and list it in `os/Surface.tsx`.
 - **The iPhone** is `phone/system.ts` (locked or not, which app is in front, how far into each app, mirrored into history), `phone/Phone.tsx` (the screen: edge to edge on a real phone, in the kit's frame elsewhere), `phone/Springboard.tsx` (the Lock Screen, the Home Screen, apps opening out of their icons, the App Switcher, banners, the home indicator), `phone/ui.tsx` with `styles/ios.css` (what the apps are built from: screens with floating glass buttons and folding large titles, stacks of screens, grouped lists, tab and search bars, menus, sheets), `phone/apps/` (one file per app; `routes.ts` names the screens inside them), `phone/icons.tsx` (the app icons) and `phone/settings.ts` (what the Settings app can change, read by the rest of the phone).
 - **A new app on the iPhone**: write it in `phone/apps/` from the parts in `phone/ui.tsx`, name it in `phone/apps/index.tsx`, draw its icon in `phone/icons.tsx`, and put it on the Home Screen or in the Dock (`DOCKED`, `ON_HOME`).
-- **The wallpaper** is a picture, `public/wallpaper.webp`, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
+- **The wallpaper** is a picture, `public/wallpaper.webp` for the desktop and `public/wallpaper-phone.webp` for the iPhone, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86 glass` and `… public/wallpaper-phone.webp 900 1560 86 glass`; it needs numpy and Pillow), so the colours and shapes can be changed there. It can draw four: `glass` (the one in use: a deep blue ground crossed by petals of light), `sheets`, `dusk` and `present` (the one the site had before). The colours that follow the wallpaper are the fallbacks under it in `os.css` and `phone.css`, `WALLPAPER_TOP` in `src/phone/chrome.ts` (what the Lock Screen and Home Screen tint the browser's bar with), and `theme-color` in `index.html`. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
 
 ## The kit

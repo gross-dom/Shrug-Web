@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useUnread } from '../apps/state'
+import { useNewReplies } from '../apps/state'
 import { SITE } from '../data/site'
 import { APPS, DOCK_APPS, type AppId } from './apps'
 import { dockPoint } from './dom'
@@ -9,8 +9,8 @@ import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 
 // The Dock: one icon per app, a dot under the ones that are open, a hop when
 // one launches, and icons that swell under the pointer. Minimised windows go
-// back into their app's icon, and the group chat's icon counts the
-// conversations with a reply nobody has opened.
+// back into their app's icon, and the group chat's icon counts the replies
+// that came in while the conversation wasn't showing.
 
 /** How much the icon under the pointer grows, and how far the swell reaches. */
 const SWELL = 0.55
@@ -20,7 +20,7 @@ export function Dock() {
   const compact = useStore(wm, (s) => s.compact)
   const openApps = useStore(wm, (s) => DOCK_APPS.filter((id) => s.wins[id].open).join(' '))
   const active = useStore(wm, activeApp)
-  const unread = useUnread()
+  const unread = useNewReplies()
   const shelf = useRef<HTMLDivElement>(null)
   const [hopping, setHopping] = useState<AppId | null>(null)
   const frame = useRef(0)

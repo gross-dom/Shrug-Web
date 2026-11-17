@@ -31,8 +31,8 @@ export interface Chat {
   /** When the conversation began, and when each person replied (0 until they do). */
   startedAt: number
   repliedAt: number[]
-  /** What the visitor has typed to one person, by that person's index. */
-  direct: Record<number, { key: string; text: string }[]>
+  /** What the visitor has typed into one of the other conversations, by its id. */
+  direct: Record<string, { key: string; text: string }[]>
 }
 
 export const TOTAL = PEOPLE.length
@@ -79,17 +79,6 @@ function everything(from: Chat): Chat {
 }
 
 export const chat = createStore<Chat>(fresh())
-
-/** How long before the conversation began each person's own message reached
- * Shrug: the first a few minutes before, the last a couple of days. Made from
- * their place in the list, so it is the same on every visit. */
-const AGO = (() => {
-  let minutes = 0
-  return PEOPLE.map((_, i) => (minutes += 7 + ((i * 37 + 11) % 43)) * 60_000)
-})()
-
-/** When a person's own message to Shrug is dated. */
-export const sentAt = (index: number, startedAt: number) => startedAt - AGO[index]!
 
 // ---- The clock ----
 
@@ -249,10 +238,10 @@ export function finishChat() {
 
 let sent = 0
 
-/** Something the visitor typed, to the group or to one person. Nothing leaves
- * the page: the bubble is marked Not Delivered, as Messages marks a message
- * that didn't go. */
-export function sendMessage(text: string, to: 'group' | number = 'group') {
+/** Something the visitor typed, into the group or into one of the other
+ * conversations (by its id). Nothing leaves the page: the bubble is marked
+ * Not Delivered, as Messages marks a message that didn't go. */
+export function sendMessage(text: string, to = 'group') {
   const body = text.trim()
   if (!body) return
   const key = `me-${++sent}`

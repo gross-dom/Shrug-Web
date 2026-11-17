@@ -78,14 +78,14 @@ function wrap(app) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0b1150">
+<meta name="theme-color" content="#040618">
 <title>Shrug</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0b1150; overflow: hidden; overscroll-behavior: none; }
-  iframe { position: fixed; left: 0; top: 0; width: 100%; height: 100%; border: 0; display: block; background: #0b1150; }
+  html, body { margin: 0; height: 100%; background: #040618; overflow: hidden; overscroll-behavior: none; }
+  iframe { position: fixed; left: 0; top: 0; width: 100%; height: 100%; border: 0; display: block; background: #040618; }
   p { display: none; }
   /* On a computer: a strip under the frame to go between the iPhone and the desktop */
-  body.wide { background: #05072e; }
+  body.wide { background: #02030d; }
   body.wide iframe { height: calc(100% - 44px); }
   body.wide p { display: flex; gap: 10px; justify-content: center; align-items: center; position: fixed; left: 0; right: 0; bottom: 0; height: 44px; margin: 0; font: 500 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: rgb(255 255 255 / 0.6); }
   button { font: inherit; color: #fff; background: rgb(255 255 255 / 0.14); border: 0; border-radius: 999px; padding: 6px 13px; cursor: pointer; }

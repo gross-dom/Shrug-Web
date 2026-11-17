@@ -8,6 +8,13 @@
   inset: 0;
 }
 
+/* A tag's name can be too long for one line of a large title (“Social is
+   Hard” — Evan): where it breaks, the last line is not left with one word on
+   its own */
+.files-screen .ios-large {
+  text-wrap: pretty;
+}
+
 /* ---- What floats at the foot ---- */
 
 /* Three tabs take the bar as far as search, which keeps to the far corner */

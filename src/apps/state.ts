@@ -1,5 +1,5 @@
 import { createStore, useStore } from '../os/store'
-import { chat, TOTAL } from './chat'
+import { chat } from './chat'
 
 // What each app is showing. Kept outside the windows so the menu bar's View
 // menu can change it, and so a closed window comes back the way it was left.
@@ -14,7 +14,7 @@ export interface FinderState {
   /** Where Back and Forward go. */
   trail: number[]
   at: number
-  /** The company picked in the list, by name. */
+  /** The company picked in the list, by its key. */
   picked: string | null
 }
 
@@ -64,36 +64,23 @@ export const setNotesQuery = (query: string) => notes.set((s) => ({ ...s, query 
 
 // ---- Group chat (the messages window) ----
 
-/** The group conversation, or one person's own, by their index. */
-export type Conversation = 'group' | number
+/** A conversation: `group` is Shrug Family, where every reply is; any other is
+ * one of the easter eggs, by its id (src/data/eggs.ts). */
+export type Conversation = string
 
 export interface Inbox {
   /** The conversation that is showing. */
   open: Conversation
-  /** People whose own conversation has been opened: their unread dot is gone. */
-  read: number[]
-  /** How many replies had landed when the group conversation was last on screen. */
+  /** How many replies had come in when the group conversation was last on screen. */
   groupSeen: number
   query: string
   /** A reply to bring into view in the group conversation. */
   jump: number | null
 }
 
-export const inbox = createStore<Inbox>({ open: 'group', read: [], groupSeen: 0, query: '', jump: null })
+export const inbox = createStore<Inbox>({ open: 'group', groupSeen: 0, query: '', jump: null })
 
-export function openConversation(open: Conversation) {
-  inbox.set((s) => {
-    const replied = chat.get().replied
-    return {
-      ...s,
-      open,
-      jump: null,
-      // Leaving the group: remember how far it had got, so later replies read as new
-      groupSeen: s.open === 'group' ? replied : s.groupSeen,
-      read: typeof open === 'number' && !s.read.includes(open) ? [...s.read, open] : s.read,
-    }
-  })
-}
+export const openConversation = (open: Conversation) => inbox.set((s) => (s.open === open && s.jump === null ? s : { ...s, open, jump: null }))
 
 /** Goes to the group conversation and brings one person's reply into view. */
 export function showInGroup(index: number) {
@@ -103,5 +90,25 @@ export function showInGroup(index: number) {
 export const clearJump = () => inbox.set((s) => (s.jump === null ? s : { ...s, jump: null }))
 export const setInboxQuery = (query: string) => inbox.set((s) => ({ ...s, query }))
 
-/** People whose message hasn't been opened yet: what the desktop Dock's badge counts. */
-export const useUnread = () => TOTAL - useStore(inbox, (s) => s.read.length)
+// What is new, by one rule everywhere: the replies that have come in to the
+// group and not been seen there yet. Whatever is showing the group (the
+// desktop's window, the phone's screen) says so as each reply lands.
+
+/** The group conversation is on screen: everything in it so far has been seen. */
+export function seeGroup() {
+  const replied = chat.get().replied
+  inbox.set((s) => (s.groupSeen === replied ? s : { ...s, groupSeen: replied }))
+}
+
+// Played again from the start, nothing has been seen
+chat.subscribe(() => {
+  const replied = chat.get().replied
+  if (replied < inbox.get().groupSeen) inbox.set((s) => ({ ...s, groupSeen: replied }))
+})
+
+/** How many replies are new: what the badge on Messages says, in the desktop's Dock and on the phone's icon. */
+export function useNewReplies() {
+  const replied = useStore(chat, (s) => s.replied)
+  const seen = useStore(inbox, (s) => s.groupSeen)
+  return Math.max(0, replied - seen)
+}

@@ -22,7 +22,7 @@ export interface Place {
   app: PhoneApp | null
   /** What each app has open beyond its first screen, innermost last: `['c:group']`, `['f:2', 'c:Anduril']`. */
   stacks: Record<PhoneApp, string[]>
-  /** The sheet over the app in front: `details`, `request`. */
+  /** The sheet over the app in front: `details`, `request`. On the Home Screen (no app), the folder that is open: `folder:portfolio`. */
   sheet: string | null
 }
 
@@ -163,6 +163,8 @@ export function launchAt(app: PhoneApp, stack: string[], origin: string | null =
 /** Back to the Home Screen. The app stays as it is. */
 export function goHome() {
   const s = sys.get()
+  // Already there, with a folder open over it: the folder closes
+  if (!s.app && s.sheet) return closeSheet()
   if (!s.app) return sys.set((now) => (now.switcher || now.spotlight ? { ...now, switcher: false, spotlight: false, motion: true } : now))
   back({ app: null, stacks: s.stacks, sheet: null })
 }

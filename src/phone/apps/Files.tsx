@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { ArrowUpRight, Check, ChevronDown, Clock, Ellipsis, Folder, LayoutGrid, List as ListIcon, Search, Share, Trash2, X } from 'lucide-react'
-import { ALL, companiesIn, companyNamed, CompanyLogo, hostOf, visitLabel, type Listed } from '../../apps/portfolio-ui'
+import { ALL, companiesIn, companyKeyed, CompanyLogo, hostOf, visitLabel, type Listed } from '../../apps/portfolio-ui'
 import { finder, setFinderQuery, setFinderView } from '../../apps/state'
 import { VERTICALS } from '../../data/portfolio'
 import { SITE } from '../../data/site'
@@ -18,14 +18,16 @@ import '../../styles/phone/files.css'
 // foot with search beside them. Browse lists where there is to look: Portfolio
 // under Locations, and the verticals under Tags, each with a coloured dot, the
 // way Files lists tags. The app opens inside the Portfolio folder: every
-// company as a file under its logo, in icons or a list, grouped by vertical as
-// Files groups a folder by kind. Recents is what has been opened this visit,
-// Shared is the one-pager, and a company opens over the folder as the card
-// Files shows for a file.
+// company as a file under its logo, in icons or a list, in the order Shrug
+// lists them. Use Groups puts them under their verticals instead, as Files
+// groups a folder. Recents is what has been opened this visit, Shared is the
+// one-pager, and a company opens over the folder as the card Files shows for
+// a file.
 
 type TabId = 'recents' | 'shared' | 'browse'
 
-/** How a folder's contents are put in order. Kind is the vertical, in the order the portfolio lists them. */
+/** How a folder's contents are put in order. They are all one kind of thing,
+ * so by kind they stay as the portfolio lists them: Shrug's own order. */
 type Sort = 'name' | 'kind'
 
 /** The sections of Browse, each of which folds away under its heading. */
@@ -84,30 +86,33 @@ function Dot({ vertical }: { vertical: number }) {
 
 // ---- Recents ----
 
-/** The companies opened this visit, by name, the latest first. It lasts as long as the page does. */
+/** The companies opened this visit, by their keys, the latest first. It lasts as long as the page does. */
 const recents = createStore<string[]>([])
 
 const RECENTS = 12
 
-const noteOpened = (name: string) => recents.set((names) => (names[0] === name ? names : [name, ...names.filter((n) => n !== name)].slice(0, RECENTS)))
+const noteOpened = (key: string) => recents.set((keys) => (keys[0] === key ? keys : [key, ...keys.filter((k) => k !== key)].slice(0, RECENTS)))
 
 // ---- A company, as a file ----
 
 /** Where a company lives, as the gray line under a file says where or when: its site's address. */
 const whereOf = (company: Listed) => (!company.url ? '' : /notion\.site/.test(company.url) ? 'Case study' : hostOf(company.url))
 
-const open = (company: Listed) => openSheet(companySheet(company.name))
+const open = (company: Listed) => openSheet(companySheet(company.key))
 
-/** What a company's sheet is called begins with this: the rest is the company's name. */
+/** What a company's sheet is called begins with this: the rest is the company's key. */
 const COMPANY_SHEET = companySheet('')
 
 const byName = (a: Listed, b: Listed) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+
+/** Two companies can have one name. Where a line under a company would say the same for both, its address goes there instead. */
+const namesake = (company: Listed) => ALL.some((other) => other !== company && other.name === company.name)
 
 function Icons({ companies }: { companies: Listed[] }) {
   return (
     <ul className="files-grid">
       {companies.map((company) => (
-        <li key={company.name}>
+        <li key={company.key}>
           <button type="button" className="files-item" onClick={() => open(company)}>
             <CompanyLogo company={company} size={76} />
             <span className="files-item__name">{company.name}</span>
@@ -123,7 +128,7 @@ function Rows({ companies, detail = whereOf }: { companies: Listed[]; detail?: (
   return (
     <ul className="files-rows">
       {companies.map((company) => (
-        <li key={company.name}>
+        <li key={company.key}>
           <button type="button" className="files-row" onClick={() => open(company)}>
             <CompanyLogo company={company} size={40} />
             <span className="files-row__text">
@@ -142,7 +147,7 @@ function Companies({ companies, groups }: { companies: Listed[]; groups: boolean
   const view = useStore(finder, (s) => s.view)
   const { grouped, sort } = useFiles()
   const Shown = view === 'icons' ? Icons : Rows
-  // By kind is the order the portfolio keeps them in: vertical by vertical, each as it is listed
+  // By kind is the order the portfolio keeps them in; under their verticals, each vertical's are in that order too
   const sorted = (list: Listed[]) => (sort === 'name' ? [...list].sort(byName) : list)
   if (!groups || !grouped) return <Shown companies={sorted(companies)} />
   return (
@@ -360,8 +365,8 @@ function DeletedScreen() {
 /** What has been opened this visit, the latest first. */
 function RecentsScreen() {
   const { scroll, foot } = useTabRoot('recents')
-  const names = useStore(recents, (s) => s)
-  const companies = useMemo(() => names.map(companyNamed).filter((c): c is Listed => !!c), [names])
+  const keys = useStore(recents, (s) => s)
+  const companies = useMemo(() => keys.map(companyKeyed).filter((c): c is Listed => !!c), [keys])
   return (
     <Screen title="Recents" large className={`files-screen${companies.length ? '' : ' files-screen--void'}`} scrollRef={scroll} foot={foot}>
       {companies.length ? (
@@ -443,7 +448,7 @@ function SearchScreen() {
         </Empty>
       ) : found.length ? (
         <>
-          <Rows companies={found} detail={(company) => `Portfolio — ${company.vertical}`} />
+          <Rows companies={found} detail={(company) => `Portfolio — ${namesake(company) && company.url ? whereOf(company) : company.vertical}`} />
           <p className="files-count">{countOf(found.length)}</p>
         </>
       ) : (
@@ -459,13 +464,13 @@ function SearchScreen() {
 
 /** A company, looked at the way Files looks at a file: what it is, large, with
  * the one thing to do with it, and what is known about it underneath. */
-function CompanySheet({ name }: { name: string }) {
-  const company = companyNamed(name)
+function CompanySheet({ id }: { id: string }) {
+  const company = companyKeyed(id)
   const [copied, setCopied] = useState(false)
 
   // Looked at is opened: it goes to the front of Recents
   useEffect(() => {
-    if (company) noteOpened(company.name)
+    if (company) noteOpened(company.key)
   }, [company])
 
   useEffect(() => {
@@ -478,7 +483,7 @@ function CompanySheet({ name }: { name: string }) {
     return (
       <Sheet label="Not in the Portfolio" tone="plain" className="files-sheet">
         <Empty icon={<Folder size={44} strokeWidth={1.8} />} title="Not in the Portfolio">
-          There is no company here called “{name}”.
+          There is no company here called “{id}”.
         </Empty>
       </Sheet>
     )
@@ -570,7 +575,8 @@ export function FilesApp() {
   const [seen, setSeen] = useState(depth)
   const [searching, setSearching] = useState(false)
   const [sort, setSort] = useState<Sort>('kind')
-  const [grouped, setGrouped] = useState(true)
+  // The folder opens as one run, in Shrug's order; Use Groups is there for whoever wants the verticals
+  const [grouped, setGrouped] = useState(false)
   const [folded, setFolded] = useState<Record<SideId, boolean>>({ locations: false, tags: false })
   const tops = useRef(new Map<string, number>()).current
 
@@ -614,7 +620,7 @@ export function FilesApp() {
     <div ref={root} className="files-app">
       <FilesContext.Provider value={state}>
         <NavStack>{(view) => <Page view={view} />}</NavStack>
-        <SheetHost>{(name) => (name.startsWith(COMPANY_SHEET) ? <CompanySheet name={name.slice(COMPANY_SHEET.length)} /> : null)}</SheetHost>
+        <SheetHost>{(name) => (name.startsWith(COMPANY_SHEET) ? <CompanySheet id={name.slice(COMPANY_SHEET.length)} /> : null)}</SheetHost>
       </FilesContext.Provider>
     </div>
   )

@@ -4,7 +4,7 @@ import type { Conversation } from '../../apps/state'
 // stack (`sys.stacks`). They are written here so that what opens an app at a
 // place (a notification, a widget, search) and the app itself agree on them.
 
-/** Messages: a conversation. `c:group` is Shrug Family; `c:12` is the thirteenth person's own. */
+/** Messages: a conversation. `c:group` is Shrug Family; `c:mom` is one of the others, by its id. */
 export const conversationView = (conversation: Conversation) => `c:${conversation}`
 export const GROUP_VIEW = conversationView('group')
 
@@ -12,8 +12,9 @@ export const GROUP_VIEW = conversationView('group')
 export const folderView = (vertical: number | 'all') => `f:${vertical}`
 /** The folder Files opens in: Portfolio. */
 export const PORTFOLIO_FOLDER = folderView('all')
-/** Files: a company, looked at over whatever folder is showing. A sheet (`sys.sheet`), not a screen. */
-export const companySheet = (name: string) => `company:${name}`
+/** Files: a company, looked at over whatever folder is showing. A sheet (`sys.sheet`), not a screen.
+ * It is named by the company's key: its name, for all but the one that shares a name (`company:Anduril`). */
+export const companySheet = (key: string) => `company:${key}`
 
 /** Notes: the folder the questions are kept in, and one of them as a note inside it (`['f:faqs', 'n:3']`). */
 export const FAQS_FOLDER = 'f:faqs'

@@ -10,9 +10,10 @@ import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 
 // The portfolio as a Finder window: verticals down the sidebar, and the
 // companies in the one that's picked, each under its own logo, in icons or a
-// list. One is always selected, and the preview beside them says what it does
-// and links to it. Back and Forward retrace the verticals visited; the search
-// narrows whatever is showing.
+// list. All is every company in the order Shrug lists them. One is always
+// selected, and the preview beside them says what it does and links to it.
+// Back and Forward retrace the verticals visited; the search narrows whatever
+// is showing.
 
 // lucide for the sidebar and toolbar glyphs, as the kit's own Finder does:
 // one family, one stroke
@@ -63,7 +64,7 @@ export function FinderApp() {
   const name = vertical === -1 ? 'All' : VERTICALS[vertical]!.name
   const shown = useMemo(() => companiesIn(vertical, query), [vertical, query])
   // Something is always selected: the one that was picked, or the first showing
-  const chosen = shown.find((c) => c.name === picked) ?? shown[0] ?? null
+  const chosen = shown.find((c) => c.key === picked) ?? shown[0] ?? null
   const count = `${shown.length} ${shown.length === 1 ? 'company' : 'companies'}`
   const files = useRef<HTMLDivElement>(null)
 
@@ -82,7 +83,7 @@ export function FinderApp() {
     e.preventDefault()
     const next = here + step
     if (next < 0 || next >= shown.length) return
-    pickCompany(shown[next]!.name)
+    pickCompany(shown[next]!.key)
     tiles[next]?.focus()
   }
 
@@ -90,7 +91,8 @@ export function FinderApp() {
     <Window
       className="app pf"
       sidebar={<Sidebar />}
-      sidebarWidth={212}
+      // Wide enough for the longest vertical's name (“Social is Hard” — Evan) beside its count
+      sidebarWidth={226}
       sidebarStyle="floating"
       lightsSize="large"
       barSize="tall"
@@ -148,15 +150,15 @@ export function FinderApp() {
               const on = c === chosen
               return (
                 <button
-                  key={c.name}
+                  key={c.key}
                   type="button"
                   className="pf-file"
                   role="option"
                   aria-selected={on}
                   tabIndex={on ? 0 : -1}
-                  data-company={c.name}
-                  title={c.blurb ? `${c.name}: ${c.blurb}` : c.name}
-                  onClick={() => pickCompany(c.name)}
+                  data-company={c.key}
+                  title={c.blurb ? `${c.name}: ${c.blurb}` : c.url ? `${c.name}: ${hostOf(c.url)}` : c.name}
+                  onClick={() => pickCompany(c.key)}
                   onDoubleClick={() => openCompany(c)}
                 >
                   <span className="pf-file__icon">
@@ -177,7 +179,7 @@ export function FinderApp() {
             {shown.map((c) => {
               const on = c === chosen
               return (
-                <button key={c.name} type="button" className="pf-row" role="option" aria-selected={on} tabIndex={on ? 0 : -1} data-company={c.name} onClick={() => pickCompany(c.name)} onDoubleClick={() => openCompany(c)}>
+                <button key={c.key} type="button" className="pf-row" role="option" aria-selected={on} tabIndex={on ? 0 : -1} data-company={c.key} onClick={() => pickCompany(c.key)} onDoubleClick={() => openCompany(c)}>
                   <span className="pf-row__name">
                     <CompanyLogo company={c} size={18} />
                     <span>{c.name}</span>

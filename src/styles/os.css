@@ -35,16 +35,17 @@
   --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.09), inset 0 0.5px 0 rgba(255, 255, 255, 1), 0 1px 2px rgba(20, 30, 60, 0.06), 0 5px 16px rgba(20, 30, 60, 0.09);
 }
 
-/* ---- Wallpaper: sheets of colour rising across one another with a light
-   coming up behind them. It is a picture (public/wallpaper.webp), drawn by
-   tools/wallpaper.py; the gradient under it is its colours, roughly, for the
-   moment before it arrives ---- */
+/* ---- Wallpaper: a deep blue ground crossed by a few large petals of light,
+   each a sheet of glass lit along its edge. It is a picture
+   (public/wallpaper.webp), drawn by tools/wallpaper.py (its "glass" style);
+   the gradient under it is its colours, roughly, for the moment before it
+   arrives ---- */
 
 .os__wallpaper {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(180deg, #0b1150 0%, #2b55cf 30%, #7a5ae0 56%, #d85cb4 74%, #1b1f86 100%);
+  background: linear-gradient(180deg, #040618 0%, #142a6c 42%, #2a50ad 78%, #17296b 100%);
 }
 
 .os__wallpaper::before {

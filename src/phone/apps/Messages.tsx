@@ -1,8 +1,9 @@
-import { memo, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUp, ChevronLeft, ChevronRight, ListFilter, Mic, Plus, SquarePen, Video } from 'lucide-react'
-import { chat, finishChat, replayChat, sendMessage, sentAt, toggleChat, TOTAL } from '../../apps/chat'
-import { clock, ConversationAvatar, conversationName, GROUP_NAME, relationsOf, rowTime, Transcript } from '../../apps/chat-ui'
-import { inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
+import { chat, finishChat, replayChat, sendMessage, toggleChat, TOTAL } from '../../apps/chat'
+import { ConversationAvatar, conversationName, GROUP_NAME, PersonAvatar, relationsOf, Transcript, useConversationRows, type ListRow } from '../../apps/chat-ui'
+import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
+import { eggOf } from '../../data/eggs'
 import { PEOPLE } from '../../data/people'
 import { SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
@@ -12,25 +13,28 @@ import { prefersReducedMotion } from '../../os/dom'
 import { useStore } from '../../os/store'
 import { OnePagerIcon, PhoneIcon } from '../icons'
 import { closeSheet, launch, launchAt, openSheet, pop, push, sys, topOf } from '../system'
-import { isNew, seen, useNewCount } from '../unread'
-import { Cell, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
+import { useNewCount } from '../unread'
+import { BackButton, Cell, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 import { conversationView, GROUP_VIEW } from './routes'
 import '../../styles/phone/messages.css'
 
 // Messages, as the iPhone has it. It is Shrug's own phone, as the desktop is
-// Shrug's own Mac: the list of conversations (Shrug Family, then everyone's
-// own message), a conversation with its header floating over the thread and
-// the message field at its foot, and the details sheet behind the name.
+// Shrug's own Mac: the list of conversations (Shrug Family, where every reply
+// is, and then a handful of others to find, from src/data/eggs.ts), a
+// conversation with its header floating over the thread and the message field
+// at its foot, and the group's details sheet behind its name.
 // The conversation itself, its bubbles and the script that plays it are the
 // desktop's (src/apps/chat.ts, chat-ui.tsx); the chrome here is iOS's.
 
 // ---- Which conversation is which ----
 
-/** The conversation a screen's name stands for: `c:group`, `c:12`. */
+/** The conversation a screen's name stands for: `c:group` is Shrug Family and
+ * `c:mom` one of the others. Any other name (a person's own thread, from when
+ * there were such things) is the group too: that is where their reply is. */
 function conversationOf(view: string | null): Conversation | null {
-  if (view === GROUP_VIEW) return 'group'
-  const index = view?.startsWith('c:') ? Number(view.slice(2)) : NaN
-  return Number.isInteger(index) && index >= 0 && index < TOTAL ? index : null
+  if (!view?.startsWith('c:')) return null
+  const id = view.slice(2)
+  return eggOf(id) ? id : 'group'
 }
 
 // ---- The keyboard, on a phone ----
@@ -64,28 +68,24 @@ function dropPrimer() {
 
 // ---- The list of conversations ----
 
-interface ListRow {
-  conversation: Conversation
-  name: string
-  preview: ReactNode
-  /** When it last heard something, as the row says it. */
-  when: string
-  unread: boolean
-}
-
 const ConversationRow = memo(
   function ConversationRow({ row, picked }: { row: ListRow; picked: boolean }) {
-    const open = () => push(conversationView(row.conversation))
+    const open = () => {
+      // Someone found in the group: the group opens on their reply
+      if (row.person !== undefined) showInGroup(row.person)
+      push(conversationView(row.conversation))
+    }
     return (
       <Row
         className="msg-row"
         role="button"
         tabIndex={0}
-        data-conversation={row.conversation}
+        data-row={row.key}
+        data-conversation={row.person === undefined ? row.conversation : undefined}
         // The row that was tapped stays lit while its conversation is open, and fades on the way back
         data-picked={picked || undefined}
         unread={row.unread}
-        lead={<ConversationAvatar conversation={row.conversation} size={46} />}
+        lead={row.person === undefined ? <ConversationAvatar conversation={row.conversation} size={46} /> : <PersonAvatar index={row.person} size={46} />}
         title={
           <>
             {row.name}
@@ -108,7 +108,7 @@ const ConversationRow = memo(
       />
     )
   },
-  (a, b) => a.picked === b.picked && a.row.conversation === b.row.conversation && a.row.unread === b.row.unread && a.row.when === b.row.when && a.row.preview === b.row.preview,
+  (a, b) => a.picked === b.picked && a.row.key === b.row.key && a.row.unread === b.row.unread && a.row.when === b.row.when && a.row.preview === b.row.preview,
 )
 
 type Filter = 'all' | 'unread'
@@ -116,38 +116,15 @@ type Filter = 'all' | 'unread'
 function ListScreen() {
   const [filter, setFilter] = useState<Filter>('all')
   const query = useStore(inbox, (s) => s.query)
-  const read = useStore(inbox, (s) => s.read)
-  const replied = useStore(chat, (s) => s.replied)
-  const repliedAt = useStore(chat, (s) => s.repliedAt)
-  const startedAt = useStore(chat, (s) => s.startedAt)
-  const groupSeen = useStore(seen, (s) => s.group)
+  const all = useConversationRows()
+  // Only Shrug Family is ever unread: the others were read long ago
+  const rows = filter === 'unread' ? all.filter((row) => row.unread) : all
   /** The conversation that is open over the list, if one is. */
   const picked = useStore(sys, (s) => s.stacks.messages[0] ?? null)
-  // The newest thing said in the group: its row's preview
-  const last = useStore(chat, (s) => {
-    for (let i = s.items.length - 1; i >= 0; i--) {
-      const item = s.items[i]!
-      if (item.kind === 'me') return item.text
-      if (!item.typing) return PEOPLE[item.index]!.quote ?? ''
-    }
-    return ''
-  })
-  const q = query.trim().toLowerCase()
-
-  const rows = useMemo(() => {
-    const out: ListRow[] = []
-    const groupUnread = replied > groupSeen
-    if ((!q || GROUP_NAME.toLowerCase().includes(q)) && (filter === 'all' || groupUnread))
-      out.push({ conversation: 'group', name: GROUP_NAME, preview: last || ' ', when: clock(replied ? repliedAt[replied - 1]! : startedAt), unread: groupUnread })
-    PEOPLE.forEach((person, i) => {
-      // Everyone is listed from the start; a row is marked once that person's reply has come in, until it has been seen
-      const unread = isNew(i, replied, groupSeen, read)
-      if (filter === 'unread' && !unread) return
-      if (q && !person.name.toLowerCase().includes(q) && !person.role.toLowerCase().includes(q) && !(person.quote ?? '').toLowerCase().includes(q)) return
-      out.push({ conversation: i, name: person.name, preview: person.quote ?? [150, 96], when: rowTime(sentAt(i, startedAt)), unread })
-    })
-    return out
-  }, [q, filter, last, replied, repliedAt, startedAt, read, groupSeen])
+  const q = query.trim()
+  const talks = rows.filter((row) => row.person === undefined)
+  // While something is being looked for: the people in the group it finds
+  const people = rows.filter((row) => row.person !== undefined)
 
   return (
     <Screen
@@ -182,11 +159,21 @@ function ListScreen() {
       }
     >
       <div className="msg-rows">
-        {rows.map((row) => (
-          <ConversationRow key={row.conversation} row={row} picked={picked === conversationView(row.conversation)} />
+        {talks.map((row) => (
+          <ConversationRow key={row.key} row={row} picked={picked === conversationView(row.conversation)} />
         ))}
       </div>
-      {rows.length === 0 && (q ? <Empty title="No Results">for “{query.trim()}”</Empty> : <Empty title="No Unread Messages" />)}
+      {people.length > 0 && (
+        <section className="msg-found">
+          <h3 className="msg-found__label">In {GROUP_NAME}</h3>
+          <div className="msg-rows">
+            {people.map((row) => (
+              <ConversationRow key={row.key} row={row} picked={false} />
+            ))}
+          </div>
+        </section>
+      )}
+      {rows.length === 0 && (q ? <Empty title="No Results">for “{q}”</Empty> : <Empty title="No Unread Messages" />)}
     </Screen>
   )
 }
@@ -359,45 +346,58 @@ function Thread({ children }: { children: ReactNode }) {
   )
 }
 
-function ConversationScreen({ conversation }: { conversation: Conversation }) {
+/** `view` is the screen's own name in the stack, which for an old address may not be the conversation's. */
+function ConversationScreen({ conversation, view }: { conversation: Conversation; view: string }) {
   const { active } = useApp()
-  const view = conversationView(conversation)
   const onTop = useStore(sys, (s) => topOf(s, 'messages') === view)
   const showing = active && onTop
   const replied = useStore(chat, (s) => s.replied)
   const target = `msg-field-${useId().replace(/:/g, '')}`
   const name = conversationName(conversation)
+  const group = conversation === 'group'
 
-  // On screen, a conversation is read: a person's dot goes, and the group has been seen this far
+  // On screen, the group has been seen as far as it has got: nothing in it is new
   useEffect(() => {
     if (!showing) return
     if (inbox.get().open !== conversation) openConversation(conversation)
-    if (conversation === 'group') seen.set((s) => (s.group === replied ? s : { group: replied }))
-  }, [showing, conversation, replied])
+    if (group) seeGroup()
+  }, [showing, conversation, group, replied])
 
   return (
     <Screen
       title={name}
       fixed
-      className={typeof conversation === 'number' ? 'msg-convo msg-convo--person' : 'msg-convo'}
+      className={group ? 'msg-convo' : 'msg-convo msg-convo--person'}
       leading={<Back />}
       center={
-        <button type="button" className="msg-head" aria-haspopup="dialog" onClick={() => openSheet('details')}>
-          {/* The face is a picture of the name beside it: the name is what is read out */}
-          <span className="msg-head__face" aria-hidden>
-            <ConversationAvatar conversation={conversation} size={50} />
+        group ? (
+          <button type="button" className="msg-head" aria-haspopup="dialog" onClick={() => openSheet('details')}>
+            {/* The face is a picture of the name beside it: the name is what is read out */}
+            <span className="msg-head__face" aria-hidden>
+              <ConversationAvatar conversation={conversation} size={50} />
+            </span>
+            <span className="ios-glass msg-head__name">
+              {name}
+              <span className="sr-only">. Details</span>
+              <ChevronRight size={11} strokeWidth={3} aria-hidden />
+            </span>
+          </button>
+        ) : (
+          // One of the others: who it is with, and nothing behind the name
+          <span className="msg-head msg-head--plain">
+            <span className="msg-head__face" aria-hidden>
+              <ConversationAvatar conversation={conversation} size={50} />
+            </span>
+            <span className="ios-glass msg-head__name">{name}</span>
           </span>
-          <span className="ios-glass msg-head__name">
-            {name}
-            <span className="sr-only">. Details</span>
-            <ChevronRight size={11} strokeWidth={3} aria-hidden />
-          </span>
-        </button>
+        )
       }
       trailing={
-        <GlassButton label={`${name}: details`} onClick={() => openSheet('details')}>
-          <Video size={23} strokeWidth={2} aria-hidden />
-        </GlassButton>
+        group ? (
+          <GlassButton label={`${name}: details`} onClick={() => openSheet('details')}>
+            <Video size={23} strokeWidth={2} aria-hidden />
+          </GlassButton>
+        ) : undefined
       }
       foot={<Field conversation={conversation} target={target} showing={showing} />}
     >
@@ -412,97 +412,120 @@ function ConversationScreen({ conversation }: { conversation: Conversation }) {
 
 // ---- Details ----
 
-/** What is behind a conversation's name: for the group, the replies' own
- * controls and everyone in it; for a person, who they are and the way to
- * their reply in the group. */
+/** What is behind the group's name: the replies' own controls and everyone in
+ * it. A person there opens their card inside the sheet: who they are, and the
+ * way to their reply in the conversation. */
 function DetailsSheet() {
-  // The conversation it was opened over, however the screens move while it closes
-  const [conversation] = useState<Conversation>(() => conversationOf(topOf(sys.get(), 'messages')) ?? 'group')
   const paused = useStore(chat, (s) => s.paused)
   const done = useStore(chat, (s) => s.done)
   const replied = useStore(chat, (s) => s.replied)
+  const [person, setPerson] = useState<number | null>(null)
+  const inner = useRef<HTMLDivElement>(null)
+  /** How far down the list of people was, and whose row was pressed, to come back to. */
+  const place = useRef({ top: 0, row: -1 })
 
-  if (typeof conversation === 'number') {
-    const person = PEOPLE[conversation]!
-    const tags = relationsOf(conversation)
+  // The card starts at its top; the list comes back where it was left, and the keyboard goes with each
+  useLayoutEffect(() => {
+    const el = inner.current
+    const body = el?.closest<HTMLElement>('.ios-sheet__body')
+    if (!el || !body) return
+    body.scrollTop = person === null ? place.current.top : 0
+    if (place.current.row < 0 || document.activeElement !== document.body) return
+    const next = person === null ? el.querySelectorAll<HTMLElement>('.msg-person')[place.current.row] : el.closest('.ios-sheet')?.querySelector<HTMLElement>('.ios-sheet__side button')
+    next?.focus({ preventScroll: true })
+  }, [person])
+
+  if (person !== null) {
+    const who = PEOPLE[person]!
+    const tags = relationsOf(person)
+    const first = who.name.split(' ')[0]
     return (
-      <Sheet label={`${person.name}: details`} className="msg-details">
-        <div className="msg-card">
-          <ConversationAvatar conversation={conversation} size={96} />
-          <div className="msg-card__name">{person.name}</div>
-          {person.role && <div className="msg-card__sub">{person.role}</div>}
-          {tags.length > 0 && (
-            <div className="msg-card__tags">
-              {tags.map((tag) => (
-                <span key={tag} className="msg-card__tag">
-                  {tag}
-                </span>
-              ))}
-            </div>
+      <Sheet label={`${who.name}: details`} className="msg-details" leading={<BackButton label={`Back to ${GROUP_NAME}`} onClick={() => setPerson(null)} />}>
+        <div ref={inner}>
+          <div className="msg-card">
+            <PersonAvatar index={person} size={96} />
+            <div className="msg-card__name">{who.name}</div>
+            {who.role && <div className="msg-card__sub">{who.role}</div>}
+            {tags.length > 0 && (
+              <div className="msg-card__tags">
+                {tags.map((tag) => (
+                  <span key={tag} className="msg-card__tag">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          {person < replied ? (
+            <List>
+              <Section footer={`${first} replied in the group. This goes to that reply.`}>
+                <Cell
+                  title={`Show in ${GROUP_NAME}`}
+                  tint
+                  onClick={() => {
+                    // The sheet goes, and the conversation behind it is on their reply
+                    showInGroup(person)
+                    closeSheet()
+                  }}
+                />
+              </Section>
+            </List>
+          ) : (
+            <p className="msg-card__note">{first} hasn’t replied yet.</p>
           )}
         </div>
-        {conversation < replied && (
-          <List>
-            <Section footer={`${person.name.split(' ')[0]} replied in the group. This goes to that reply.`}>
-              <Cell
-                title={`Show in ${GROUP_NAME}`}
-                tint
-                onClick={() => {
-                  // One move: the sheet goes, and the group arrives on their reply
-                  showInGroup(conversation)
-                  launchAt('messages', [GROUP_VIEW])
-                }}
-              />
-            </Section>
-          </List>
-        )}
       </Sheet>
     )
   }
 
   return (
     <Sheet label={`${GROUP_NAME}: details`} className="msg-details">
-      <div className="msg-card">
-        <ConversationAvatar conversation="group" size={96} />
-        <div className="msg-card__name">{GROUP_NAME}</div>
-        <div className="msg-card__sub">{TOTAL} People</div>
-      </div>
-      <List>
-        <Section footer={done ? 'Everyone has replied.' : `${replied} of ${TOTAL} have replied so far.`}>
-          <Cell title="Pause Replies" className={done ? 'msg-off' : undefined} trailing={<Switch on={paused} label="Pause Replies" onChange={() => !done && toggleChat()} />} />
-          <Cell
-            title="Show Every Reply"
-            tint
-            disabled={done}
-            onClick={() => {
-              finishChat()
-              closeSheet()
-            }}
-          />
-          <Cell
-            title="Play From the Start"
-            tint
-            onClick={() => {
-              replayChat()
-              closeSheet()
-            }}
-          />
-        </Section>
-        <Section header={`${TOTAL} People`}>
-          {PEOPLE.map((person, i) => (
+      <div ref={inner}>
+        <div className="msg-card">
+          <ConversationAvatar conversation="group" size={96} />
+          <div className="msg-card__name">{GROUP_NAME}</div>
+          <div className="msg-card__sub">{TOTAL} People</div>
+        </div>
+        <List>
+          <Section footer={done ? 'Everyone has replied.' : `${replied} of ${TOTAL} have replied so far.`}>
+            <Cell title="Pause Replies" className={done ? 'msg-off' : undefined} trailing={<Switch on={paused} label="Pause Replies" onChange={() => !done && toggleChat()} />} />
             <Cell
-              key={i}
-              className="msg-person"
-              lead={<ConversationAvatar conversation={i} size={40} />}
-              title={person.name}
-              subtitle={person.role || undefined}
-              chevron
-              // The sheet goes, and their own conversation comes in over the group
-              onClick={() => launchAt('messages', [GROUP_VIEW, conversationView(i)])}
+              title="Show Every Reply"
+              tint
+              disabled={done}
+              onClick={() => {
+                finishChat()
+                closeSheet()
+              }}
             />
-          ))}
-        </Section>
-      </List>
+            <Cell
+              title="Play From the Start"
+              tint
+              onClick={() => {
+                replayChat()
+                closeSheet()
+              }}
+            />
+          </Section>
+          <Section header={`${TOTAL} People`}>
+            {PEOPLE.map((who, i) => (
+              <Cell
+                key={i}
+                className="msg-person"
+                lead={<PersonAvatar index={i} size={40} />}
+                title={who.name}
+                subtitle={who.role || undefined}
+                chevron
+                // Their card comes in, in the sheet's place
+                onClick={() => {
+                  place.current = { top: inner.current?.closest<HTMLElement>('.ios-sheet__body')?.scrollTop ?? 0, row: i }
+                  setPerson(i)
+                }}
+              />
+            ))}
+          </Section>
+        </List>
+      </div>
     </Sheet>
   )
 }
@@ -515,7 +538,7 @@ export function MessagesApp() {
       <NavStack>
         {(view) => {
           const conversation = conversationOf(view)
-          return conversation === null ? <ListScreen /> : <ConversationScreen conversation={conversation} />
+          return view === null || conversation === null ? <ListScreen /> : <ConversationScreen conversation={conversation} view={view} />
         }}
       </NavStack>
       <SheetHost>{(name) => (name === 'details' ? <DetailsSheet /> : null)}</SheetHost>

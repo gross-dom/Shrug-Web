@@ -1,17 +1,18 @@
-import { VERTICALS, type Company } from '../data/portfolio'
+import { COMPANIES, VERTICALS, type Company } from '../data/portfolio'
 
 // What the Portfolio window and the phone's Portfolio screen share: every
-// company with its vertical, its logo as an icon, and where its icon opens.
+// company in Shrug's order, its logo as an icon, and where its icon opens.
 
-export interface Listed extends Company {
-  vertical: string
-}
+/** A company as the windows list it: every company carries its vertical, so it is the company itself. */
+export type Listed = Company
 
-export const ALL: Listed[] = VERTICALS.flatMap((v) => v.companies.map((c) => ({ ...c, vertical: v.name })))
+/** Every company, in the order Shrug lists them. */
+export const ALL: Listed[] = COMPANIES
 
-export const companyNamed = (name: string | null) => ALL.find((c) => c.name === name) ?? null
+/** The company with this key. A key is the company's name, except where two companies share a name (see `key` in the data). */
+export const companyKeyed = (key: string | null) => ALL.find((c) => c.key === key) ?? null
 
-/** The companies showing: one vertical or all of them, narrowed by a search. */
+/** The companies showing: one vertical or all of them, narrowed by a search. They stay in the order of the list. */
 export function companiesIn(vertical: number, query: string) {
   const q = query.trim().toLowerCase()
   const base = vertical === -1 ? ALL : ALL.filter((c) => c.vertical === VERTICALS[vertical]!.name)

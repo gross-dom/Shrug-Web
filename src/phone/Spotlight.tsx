@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUpLeft, LayoutGrid, Search, X } from 'lucide-react'
-import { PersonAvatar } from '../apps/chat-ui'
-import { ALL, CompanyLogo } from '../apps/portfolio-ui'
+import { ConversationAvatar, PersonAvatar } from '../apps/chat-ui'
+import { ALL, CompanyLogo, hostOf } from '../apps/portfolio-ui'
+import { showInGroup } from '../apps/state'
 import { DROPS, MEDIA } from '../data/drops'
+import { EGGS, lastWords } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
@@ -10,9 +12,12 @@ import { APPS } from '../os/apps'
 import { useStore } from '../os/store'
 import { PhoneIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { albumView, companySheet, conversationView, FAQS_FOLDER, noteView, PORTFOLIO_FOLDER } from './apps/routes'
+import { albumView, companySheet, conversationView, FAQS_FOLDER, GROUP_VIEW, noteView, PORTFOLIO_FOLDER } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
 import '../styles/phone/spotlight.css'
+
+/** The names more than one company has. */
+const shared = new Set(ALL.map((c) => c.name).filter((name, i, all) => all.indexOf(name) !== i))
 
 // Search, over the Home Screen, as Spotlight: a field at the foot of the
 // screen, the apps suggested before anything is typed, and then everything on
@@ -117,7 +122,25 @@ function find(raw: string): Found {
       title: <Marked text={person.name} q={q} />,
       // What they said, where that is what matched; otherwise who they are
       subtitle: said ? <Marked text={around(person.quote!, q)} q={q} /> : <Marked text={person.role} q={q} />,
-      open: () => launchAt('messages', [conversationView(i)]),
+      // Their reply is in Shrug Family and nowhere else: the group opens on it
+      open: () => {
+        showInGroup(i)
+        launchAt('messages', [GROUP_VIEW])
+      },
+    })
+  })
+  // The other conversations in Messages, by who they are with
+  EGGS.forEach((egg) => {
+    const named = rank(egg.name, q)
+    if (named < 0) return
+    people.push({
+      key: `egg:${egg.id}`,
+      kind: 'person',
+      score: named,
+      lead: (size) => <ConversationAvatar conversation={egg.id} size={size} />,
+      title: <Marked text={egg.name} q={q} />,
+      subtitle: lastWords(egg),
+      open: () => launchAt('messages', [conversationView(egg.id)]),
     })
   })
 
@@ -128,13 +151,14 @@ function find(raw: string): Found {
     const described = named < 0 && field < 0 && !!company.blurb && company.blurb.toLowerCase().includes(q)
     if (named < 0 && field < 0 && !described) return
     companies.push({
-      key: `company:${company.name}`,
+      key: `company:${company.key}`,
       kind: 'company',
       score: named >= 0 ? named : field >= 0 ? 4 + field : 9,
       lead: (size) => <CompanyLogo company={company} size={size} />,
       title: <Marked text={company.name} q={q} />,
-      subtitle: described ? <Marked text={around(company.blurb!, q)} q={q} /> : <Marked text={company.vertical} q={q} />,
-      open: () => launchAt('finder', [PORTFOLIO_FOLDER], null, companySheet(company.name)),
+      // Two companies share a name: for them the line under it is their address, which tells them apart
+      subtitle: described ? <Marked text={around(company.blurb!, q)} q={q} /> : shared.has(company.name) && company.url ? hostOf(company.url) : <Marked text={company.vertical} q={q} />,
+      open: () => launchAt('finder', [PORTFOLIO_FOLDER], null, companySheet(company.key)),
     })
   })
 

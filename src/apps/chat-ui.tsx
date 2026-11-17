@@ -1,5 +1,6 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, Plus, UserRound } from 'lucide-react'
+import { EGGS, eggOf, lastWords, type Egg, type EggLink } from '../data/eggs'
 import { PEOPLE, RELATION_LABEL } from '../data/people'
 import { SITE } from '../data/site'
 import { Badge } from '../kit/controls/Badge'
@@ -13,7 +14,7 @@ import { prefersReducedMotion } from '../os/dom'
 import { AppIcon, DocumentIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
-import { chat, finishChat, QUESTION, replayChat, sendMessage, sentAt, toggleChat, TOTAL, type ChatItem } from './chat'
+import { chat, finishChat, replayChat, sendMessage, toggleChat, TOTAL, type Chat, type ChatItem } from './chat'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
 import { SearchField, ShrugAvatar } from './ui'
 
@@ -41,10 +42,31 @@ export function PersonAvatar({ index, size = 28 }: { index: number; size?: numbe
 /** The group's own photo: Shrug's mark. */
 export const GroupAvatar = ({ size = 28 }: { size?: number }) => <ShrugAvatar size={size} />
 
-export const ConversationAvatar = ({ conversation, size }: { conversation: Conversation; size?: number }) =>
-  conversation === 'group' ? <GroupAvatar size={size} /> : <PersonAvatar index={conversation} size={size} />
+/** The other side of one of the other conversations: a monogram where there is
+ * a name, and where there is only a number the plain face Messages gives a
+ * sender it doesn't know. */
+export function EggAvatar({ egg, size = 28 }: { egg: Egg; size?: number }) {
+  if (/[a-z]/i.test(egg.name)) return <Avatar name={egg.name} tone="ios" size={size} />
+  return (
+    <span className="chat-face" style={{ width: size, height: size }}>
+      <Avatar tone="ios" size={size} />
+      <UserRound className="chat-face__glyph" size={Math.round(size * 0.58)} strokeWidth={0} fill="currentColor" aria-hidden />
+    </span>
+  )
+}
 
-export const conversationName = (conversation: Conversation) => (conversation === 'group' ? GROUP_NAME : PEOPLE[conversation]!.name)
+export function ConversationAvatar({ conversation, size }: { conversation: Conversation; size?: number }) {
+  const egg = conversation === 'group' ? null : eggOf(conversation)
+  return egg ? <EggAvatar egg={egg} size={size} /> : <GroupAvatar size={size} />
+}
+
+export const conversationName = (conversation: Conversation) => (conversation === 'group' ? GROUP_NAME : (eggOf(conversation)?.name ?? GROUP_NAME))
+
+/** When one of the other conversations last heard something: so long before this visit began, so it stays put while the visit lasts. */
+export const eggAt = (egg: Egg, startedAt: number) => startedAt - egg.ago * 60_000
+
+/** The others, the one heard from most lately first. */
+const EGGS_BY_AGE = [...EGGS].sort((a, b) => a.ago - b.ago)
 
 // ---- What people said ----
 
@@ -146,26 +168,38 @@ function groupNodes(items: ChatItem[], asked: boolean, startedAt: number, source
   return nodes
 }
 
-/** One person's own conversation: the question, and what they said to it. It is all there from the start. */
-function personNodes(index: number, at: number, direct: { key: string; text: string }[], source: string) {
+/** What a bubble holds when it goes somewhere: a page in a new tab, or one of the site's own apps. */
+function Linked({ link }: { link: EggLink }) {
+  return 'href' in link ? (
+    <a className="chat-link" href={link.href} target="_blank" rel="noreferrer">
+      {link.label}
+      <span className="sr-only">, in a new tab</span>
+    </a>
+  ) : (
+    <button type="button" className="chat-link" onClick={() => launchApp(link.app)}>
+      {link.label}
+    </button>
+  )
+}
+
+/** One of the other conversations: what was said in it, all there from the
+ * start, and after that whatever the visitor has typed into it. */
+function eggNodes(egg: Egg, at: number, direct: { key: string; text: string }[], source: string) {
   const nodes: ReactElement[] = [stamp(at)]
-  QUESTION.forEach((text, n) =>
+  egg.messages.forEach((message, n) =>
     nodes.push(
-      <Bubble key={`ask-${n}`} from="me">
-        {text}
+      <Bubble key={`said-${n}`} from={message.from}>
+        {'link' in message ? <Linked link={message.link} /> : message.text}
       </Bubble>,
     ),
   )
-  nodes.push(
-    <Receipt key="receipt" show>
-      Delivered
-    </Receipt>,
-  )
-  nodes.push(
-    <Bubble key="reply" from="them" tail>
-      {QUOTES[index]}
-    </Bubble>,
-  )
+  // Under the last message, if it is Shrug's: where Messages keeps "Delivered"
+  if (egg.messages[egg.messages.length - 1]?.from === 'me')
+    nodes.push(
+      <Receipt key="receipt" show>
+        Delivered
+      </Receipt>,
+    )
   for (const message of direct) {
     nodes.push(
       <Bubble key={message.key} from="me" source={source} className="chat-failed">
@@ -381,17 +415,15 @@ export function Scroller({ label, nodes, jump, onJumped, active = true, foot, on
   )
 }
 
-/** One of the desktop's conversations: the group as it plays out, or one person's own. */
+/** A conversation's messages: the group as it plays out, or one of the others. */
 export function Transcript({ conversation, source, active = true }: { conversation: Conversation; source: string; active?: boolean }) {
+  const egg = conversation === 'group' ? null : eggOf(conversation)
   const items = useStore(chat, (s) => s.items)
   const asked = useStore(chat, (s) => s.asked)
   const startedAt = useStore(chat, (s) => s.startedAt)
-  const direct = useStore(chat, (s) => (typeof conversation === 'number' ? (s.direct[conversation] ?? NO_MESSAGES) : NO_MESSAGES))
-  const jump = useStore(inbox, (s) => (conversation === 'group' ? s.jump : null))
-  const nodes = useMemo(
-    () => (conversation === 'group' ? groupNodes(items, asked, startedAt, source) : personNodes(conversation, sentAt(conversation, startedAt), direct, source)),
-    [conversation, items, asked, startedAt, direct, source],
-  )
+  const direct = useStore(chat, (s) => (egg ? (s.direct[egg.id] ?? NO_MESSAGES) : NO_MESSAGES))
+  const jump = useStore(inbox, (s) => (egg ? null : s.jump))
+  const nodes = useMemo(() => (egg ? eggNodes(egg, eggAt(egg, startedAt), direct, source) : groupNodes(items, asked, startedAt, source)), [egg, items, asked, startedAt, direct, source])
   return <Scroller label={conversationName(conversation)} nodes={nodes} jump={jump} onJumped={clearJump} active={active} />
 }
 
@@ -480,8 +512,13 @@ export function Composer({ conversation, target }: { conversation: Conversation;
 
 // ---- The list of conversations ----
 
-interface ListRow {
+export interface ListRow {
+  /** Which row it is: a conversation's id, or `p:<index>` for someone found in the group. */
+  key: string
+  /** The conversation it opens. */
   conversation: Conversation
+  /** For someone found in the group: whose reply to go to there. */
+  person?: number
   name: string
   preview: ReactNode
   /** When it last heard something, as the row says it. */
@@ -489,70 +526,109 @@ interface ListRow {
   unread: boolean
 }
 
-const ConversationRow = memo(function ConversationRow({ row, selected, avatar, onPick }: { row: ListRow; selected: boolean; avatar: number; onPick: (c: Conversation) => void }) {
+/** The newest thing said in the group: its row's preview. */
+const lastSaid = (s: Chat) => {
+  for (let i = s.items.length - 1; i >= 0; i--) {
+    const item = s.items[i]!
+    if (item.kind === 'me') return item.text
+    if (!item.typing) return PEOPLE[item.index]!.quote ?? ''
+  }
+  return ''
+}
+
+/** The rows of the list of conversations: Shrug Family, then the others, the
+ * one heard from most lately first. While something is being looked for
+ * (`inbox.query`), the conversations it is in, and then the people in Shrug
+ * Family it finds, by name, by role or by what they said. A person's reply is
+ * in the group and nowhere else, so that is where their row goes. */
+export function useConversationRows(): ListRow[] {
+  const replied = useStore(chat, (s) => s.replied)
+  const repliedAt = useStore(chat, (s) => s.repliedAt)
+  const startedAt = useStore(chat, (s) => s.startedAt)
+  const last = useStore(chat, lastSaid)
+  const groupSeen = useStore(inbox, (s) => s.groupSeen)
+  const q = useStore(inbox, (s) => s.query).trim().toLowerCase()
+
+  return useMemo(() => {
+    const has = (text: string) => text.toLowerCase().includes(q)
+    const out: ListRow[] = []
+    // New in the group: replies that have come in since it was last on screen
+    if (!q || has(GROUP_NAME)) out.push({ key: 'group', conversation: 'group', name: GROUP_NAME, preview: last || ' ', when: clock(replied ? repliedAt[replied - 1]! : startedAt), unread: replied > groupSeen })
+    for (const egg of EGGS_BY_AGE) {
+      if (q && !has(egg.name) && !egg.messages.some((m) => has('link' in m ? m.link.label : m.text))) continue
+      // The others are old conversations, read long ago
+      out.push({ key: egg.id, conversation: egg.id, name: egg.name, preview: lastWords(egg), when: rowTime(eggAt(egg, startedAt)), unread: false })
+    }
+    if (q)
+      PEOPLE.forEach((person, i) => {
+        const known = has(person.name) || has(person.role)
+        if (!known && !has(person.quote ?? '')) return
+        // What they said, where that is what was found; otherwise who they are
+        out.push({ key: `p:${i}`, conversation: 'group', person: i, name: person.name, preview: known ? person.role : person.quote, when: '', unread: false })
+      })
+    return out
+  }, [q, last, replied, repliedAt, startedAt, groupSeen])
+}
+
+const ConversationRow = memo(function ConversationRow({ row, selected, avatar, onPick }: { row: ListRow; selected: boolean; avatar: number; onPick: (row: ListRow) => void }) {
   return (
     <Row
       className="conv"
       pad={8}
       role="option"
       aria-selected={selected}
-      aria-label={`${row.name}${row.unread ? ', unread' : ''}`}
-      data-conversation={row.conversation}
+      data-row={row.key}
+      data-conversation={row.person === undefined ? row.conversation : undefined}
       unread={row.unread}
       selected={selected}
-      lead={<ConversationAvatar conversation={row.conversation} size={avatar} />}
-      title={row.name}
+      lead={row.person === undefined ? <ConversationAvatar conversation={row.conversation} size={avatar} /> : <PersonAvatar index={row.person} size={avatar} />}
+      // The row is read out as it is written: who, then (the dot, in words) whether there is something new
+      title={
+        <>
+          {row.name}
+          {row.unread && <span className="sr-only">, unread</span>}
+        </>
+      }
       meta={row.when}
       preview={row.preview}
-      onClick={() => onPick(row.conversation)}
+      onClick={() => onPick(row)}
     />
   )
 })
 
-/** Every conversation: the group, then everyone's own message to Shrug, all
- * there from the start, to read through while the group plays out beside them. */
+/** The conversations, down the desktop's sidebar: the group, then the others.
+ * Searching also finds the people in the group; picking one goes to their
+ * reply there. */
 export function ConversationList({ onPick, selectable = true, avatar = 40 }: { onPick?: (c: Conversation) => void; selectable?: boolean; avatar?: number }) {
-  const replied = useStore(chat, (s) => s.replied)
-  const repliedAt = useStore(chat, (s) => s.repliedAt)
-  const startedAt = useStore(chat, (s) => s.startedAt)
-  const last = useStore(chat, (s) => {
-    for (let i = s.items.length - 1; i >= 0; i--) {
-      const item = s.items[i]!
-      if (item.kind === 'me') return item.text
-      if (!item.typing) return PEOPLE[item.index]!.quote ?? ''
-    }
-    return ''
-  })
-  const { open, read, groupSeen, query } = useStore(inbox, (s) => s)
-  const q = query.trim().toLowerCase()
+  const rows = useConversationRows()
+  const open = useStore(inbox, (s) => s.open)
+  const query = useStore(inbox, (s) => s.query)
+  /** The person whose row was picked last, while it is their reply the group is showing. */
+  const [found, setFound] = useState<number | null>(null)
+  useEffect(() => setFound(null), [query])
+  useEffect(() => {
+    if (open !== 'group') setFound(null)
+  }, [open])
 
-  const rows = useMemo(() => {
-    const out: ListRow[] = []
-    if (!q || GROUP_NAME.toLowerCase().includes(q))
-      out.push({ conversation: 'group', name: GROUP_NAME, preview: last || ' ', when: clock(replied ? repliedAt[replied - 1]! : startedAt), unread: open !== 'group' && replied > groupSeen })
-    PEOPLE.forEach((person, i) => {
-      if (q && !person.name.toLowerCase().includes(q) && !person.role.toLowerCase().includes(q) && !(person.quote ?? '').toLowerCase().includes(q)) return
-      out.push({ conversation: i, name: person.name, preview: person.quote ?? [150, 96], when: rowTime(sentAt(i, startedAt)), unread: !read.includes(i) && open !== i })
-    })
-    return out
-  }, [q, last, replied, repliedAt, startedAt, open, read, groupSeen])
-
-  const pick = (c: Conversation) => {
-    openConversation(c)
-    onPick?.(c)
+  const pick = (row: ListRow) => {
+    if (row.person === undefined) openConversation(row.conversation)
+    else showInGroup(row.person)
+    setFound(row.person ?? null)
+    onPick?.(row.conversation)
   }
+  const isSelected = (row: ListRow) => (found !== null ? row.person === found : row.person === undefined && row.conversation === open)
 
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return
     e.preventDefault()
-    const at = rows.findIndex((r) => r.conversation === open)
-    if (e.key === 'Enter') return void (rows[at] && pick(rows[at]!.conversation))
+    const at = rows.findIndex(isSelected)
+    if (e.key === 'Enter') return void (rows[at] && pick(rows[at]!))
     const next = rows[Math.max(0, Math.min(rows.length - 1, at + (e.key === 'ArrowDown' ? 1 : -1)))]
     if (!next) return
-    pick(next.conversation)
+    pick(next)
     // Keeps the row that was picked in view, moving only the list
     const list = e.currentTarget as HTMLElement
-    const row = list.querySelector<HTMLElement>(`[data-conversation="${next.conversation}"]`)
+    const row = list.querySelector<HTMLElement>(`[data-row="${next.key}"]`)
     if (!row) return
     const box = list.getBoundingClientRect()
     const r = row.getBoundingClientRect()
@@ -561,11 +637,21 @@ export function ConversationList({ onPick, selectable = true, avatar = 40 }: { o
     else if (r.bottom > box.bottom) list.scrollTop += (r.bottom - box.bottom) / k + 8
   }
 
+  const talks = rows.filter((row) => row.person === undefined)
+  const people = rows.filter((row) => row.person !== undefined)
+  const draw = (row: ListRow) => <ConversationRow key={row.key} row={row} selected={selectable && isSelected(row)} avatar={avatar} onPick={pick} />
+
   return (
     <div className="conv-list scrolls" role="listbox" aria-label="Conversations" tabIndex={0} onKeyDown={onKey}>
-      {rows.map((row) => (
-        <ConversationRow key={row.conversation} row={row} selected={selectable && row.conversation === open} avatar={avatar} onPick={pick} />
-      ))}
+      {talks.map(draw)}
+      {people.length > 0 && (
+        <div className="conv-found" role="group" aria-label={`In ${GROUP_NAME}`}>
+          <div className="conv-found__label" aria-hidden>
+            In {GROUP_NAME}
+          </div>
+          {people.map(draw)}
+        </div>
+      )}
       {rows.length === 0 && <div className="side-empty">No Results</div>}
     </div>
   )
@@ -589,48 +675,79 @@ export function ConversationPane({ conversation, active = true }: { conversation
 
 // ---- Details ----
 
-/** What the info button opens: who is in the conversation, and the controls
- * for the replies as they play out. Picking a person opens their own conversation. */
-export function Details({ conversation, onPick, onDone }: { conversation: Conversation; onPick?: (c: Conversation) => void; onDone?: () => void }) {
-  const { replied, paused, done } = useStore(chat, (s) => s)
-
-  if (typeof conversation === 'number') {
-    const person = PEOPLE[conversation]!
-    return (
-      <div className="details">
-        <div className="details__head">
-          <PersonAvatar index={conversation} size={64} />
-          <div className="details__name">{person.name}</div>
-          <div className="details__sub">{person.role}</div>
-          {person.relations.length > 0 && (
-            <div className="details__tags">
-              {relationsOf(conversation).map((label) => (
-                <Badge key={label}>{label}</Badge>
-              ))}
-            </div>
-          )}
+/** Someone in the group: who they are, and how they know Shrug. */
+export function PersonCard({ index, size = 64 }: { index: number; size?: number }) {
+  const person = PEOPLE[index]!
+  return (
+    <div className="details__head">
+      <PersonAvatar index={index} size={size} />
+      <div className="details__name">{person.name}</div>
+      <div className="details__sub">{person.role}</div>
+      {person.relations.length > 0 && (
+        <div className="details__tags">
+          {relationsOf(index).map((label) => (
+            <Badge key={label}>{label}</Badge>
+          ))}
         </div>
-        {conversation < replied && (
+      )}
+    </div>
+  )
+}
+
+/** What the info button opens on the group: the controls for the replies as
+ * they play out, and everyone in it. A person there opens their card, with the
+ * way to their reply in the conversation. `shown` is whether it is open: closed,
+ * it goes back to the group for the next time. */
+export function Details({ shown = true, onDone }: { shown?: boolean; onDone?: () => void }) {
+  const { replied, paused, done } = useStore(chat, (s) => s)
+  const [person, setPerson] = useState<number | null>(null)
+  const root = useRef<HTMLDivElement>(null)
+  /** How far down the list of people was, and whose row was pressed, to come back to. */
+  const place = useRef({ top: 0, row: -1 })
+
+  useEffect(() => {
+    if (!shown) setPerson(null)
+  }, [shown])
+
+  // The card starts at its top; the list comes back where it was left, and the keyboard goes with each
+  useLayoutEffect(() => {
+    const el = root.current
+    if (!el) return
+    el.scrollTop = person === null ? place.current.top : 0
+    if (!shown || (document.activeElement !== document.body && !el.contains(document.activeElement))) return
+    const next = person === null ? el.querySelector<HTMLElement>(`[data-person-row="${place.current.row}"]`) : el.querySelector<HTMLElement>('.details__back')
+    next?.focus({ preventScroll: true })
+  }, [person]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (person !== null)
+    return (
+      <div ref={root} className="details">
+        <button type="button" className="details__back" onClick={() => setPerson(null)}>
+          <ChevronLeft size={15} strokeWidth={2.2} aria-hidden />
+          {GROUP_NAME}
+        </button>
+        <PersonCard index={person} />
+        {person < replied ? (
           <div className="details__group">
             <button
               type="button"
               className="details__row details__row--action"
               onClick={() => {
-                showInGroup(conversation)
-                onPick?.('group')
+                showInGroup(person)
                 onDone?.()
               }}
             >
               Show in {GROUP_NAME}
             </button>
           </div>
+        ) : (
+          <p className="details__note">Hasn’t replied yet.</p>
         )}
       </div>
     )
-  }
 
   return (
-    <div className="details">
+    <div ref={root} className="details">
       <div className="details__head">
         <GroupAvatar size={64} />
         <div className="details__name">{GROUP_NAME}</div>
@@ -650,26 +767,24 @@ export function Details({ conversation, onPick, onDone }: { conversation: Conver
       </div>
       <div className="details__label">{TOTAL} People</div>
       <div className="details__group details__people">
-        {PEOPLE.map((person, i) => {
-          return (
-            <button
-              key={i}
-              type="button"
-              className="details__row details__person"
-              onClick={() => {
-                openConversation(i)
-                onPick?.(i)
-                onDone?.()
-              }}
-            >
-              <PersonAvatar index={i} size={30} />
-              <span className="details__who">
-                <span className="details__who-name">{person.name}</span>
-                <span className="details__who-role">{person.role}</span>
-              </span>
-            </button>
-          )
-        })}
+        {PEOPLE.map((person, i) => (
+          <button
+            key={i}
+            type="button"
+            className="details__row details__person"
+            data-person-row={i}
+            onClick={() => {
+              place.current = { top: root.current?.scrollTop ?? 0, row: i }
+              setPerson(i)
+            }}
+          >
+            <PersonAvatar index={i} size={30} />
+            <span className="details__who">
+              <span className="details__who-name">{person.name}</span>
+              <span className="details__who-role">{person.role}</span>
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   )

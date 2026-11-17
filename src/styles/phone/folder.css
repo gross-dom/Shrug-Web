@@ -1,0 +1,337 @@
+/* The folders on the Home Screen (src/phone/Folder.tsx): closed among the
+   icons, and open over them. */
+
+/* ---- Closed ---- */
+
+/* A square of frosted glass, two icons tall, with what is inside showing through it */
+.sb-folder__face {
+  display: grid;
+  width: auto;
+  height: calc(var(--icon) * 2 + 37px);
+  aspect-ratio: 1;
+  border-radius: 23%;
+  background: rgb(255 255 255 / 0.2);
+  -webkit-backdrop-filter: blur(26px) saturate(1.7);
+  backdrop-filter: blur(26px) saturate(1.7);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.3),
+    inset 0 1px 0 rgb(255 255 255 / 0.34),
+    0 6px 18px rgb(0 0 0 / 0.1);
+  color: #fff;
+  text-align: left;
+  transition: filter 0.2s ease;
+}
+
+.sb-folder:active .sb-folder__face {
+  filter: brightness(0.86);
+  transition: none;
+}
+
+/* Portfolio: nine of the companies, as a folder shows nine of its apps */
+.sb-folder__face[data-folder='portfolio'] {
+  grid-template-columns: repeat(3, 1fr);
+  align-content: center;
+  gap: 7.5%;
+  padding: 12%;
+}
+
+.sb-folder__face .logo {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 1;
+  border-radius: 23% !important;
+}
+
+/* FAQs: the first few questions, as the titles of the notes they are */
+.sb-folder__titles {
+  display: flex;
+  flex-flow: column wrap;
+  min-height: 0;
+  padding: 13px 15px 9px;
+  overflow: hidden;
+}
+
+.sb-folder__titles span {
+  display: -webkit-box;
+  flex: none;
+  width: 100%;
+  overflow: hidden;
+  /* The space under a title is outside its box: a clamped line would show through padding there */
+  margin-bottom: 4px;
+  padding-top: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 15px;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.sb-folder__titles span + span {
+  border-top: 0.5px solid rgb(255 255 255 / 0.3);
+}
+
+/* ---- Behind an open folder ---- */
+
+.sb-home[data-folder] {
+  transform: scale(0.97);
+  filter: blur(12px);
+  opacity: 0.82;
+}
+
+/* ---- Open ---- */
+
+.sb-open {
+  --icon: clamp(50px, 15.3cqw, 64px);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.sb-open__away {
+  position: absolute;
+  inset: 0;
+  background: rgb(10 12 50 / 0.14);
+  animation: sb-open-shade 0.3s ease;
+  transition: opacity 0.3s ease;
+}
+
+.sb-open__box {
+  position: relative;
+  width: min(100cqw - 52px, 100cqh - 200px, 344px);
+  margin-top: -4cqh;
+  outline: none;
+  animation: sb-open-in 0.44s var(--glide);
+  transition:
+    transform 0.36s var(--glide),
+    opacity 0.26s ease;
+}
+
+.sb-open[data-folder='faqs'] .sb-open__box {
+  width: min(100cqw - 52px, 344px);
+  margin-top: 0;
+}
+
+/* Out of the folder on the Home Screen, and back into it */
+@keyframes sb-open-in {
+  from {
+    transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(var(--from-k, 0.5));
+    opacity: 0;
+  }
+}
+
+@keyframes sb-open-shade {
+  from {
+    opacity: 0;
+  }
+}
+
+.sb-open[data-closing] .sb-open__box {
+  transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(var(--from-k, 0.5));
+  opacity: 0;
+}
+
+.sb-open[data-closing] .sb-open__away {
+  opacity: 0;
+}
+
+.sb-open[data-still] :is(.sb-open__box, .sb-open__away) {
+  animation: none;
+  transition: none;
+}
+
+/* Its name, over it */
+.sb-open__name {
+  margin: 0 0 12px 24px;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 38px;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.2);
+}
+
+.sb-open__panel {
+  overflow: hidden;
+  border-radius: 44px;
+  background: rgb(255 255 255 / 0.22);
+  -webkit-backdrop-filter: blur(34px) saturate(1.8);
+  backdrop-filter: blur(34px) saturate(1.8);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.3),
+    inset 0 1px 0 rgb(255 255 255 / 0.36),
+    0 20px 60px rgb(0 0 0 / 0.18);
+}
+
+/* Portfolio: pages of nine, turned sideways */
+.sb-open__pages {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.sb-open__pages::-webkit-scrollbar {
+  display: none;
+}
+
+.sb-open__page {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(3, var(--icon));
+  grid-auto-rows: min-content;
+  align-content: start;
+  justify-content: space-evenly;
+  row-gap: 15px;
+  width: 100%;
+  /* Three rows tall, however many the last page has */
+  min-height: calc(var(--icon) * 3 + 136px);
+  padding: 26px 6px 6px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.sb-open__app {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: var(--icon);
+}
+
+.sb-open__icon {
+  display: block;
+  width: var(--icon);
+  height: var(--icon);
+  transition: filter 0.2s ease;
+}
+
+.sb-open__app:active .sb-open__icon {
+  filter: brightness(0.7);
+  transition: none;
+}
+
+.sb-open__icon .logo {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 23% !important;
+}
+
+.sb-open__dots {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0 12px;
+}
+
+.sb-open__dot {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 24px;
+}
+
+.sb-open__dot::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.4);
+  content: '';
+  transition: background-color 0.2s ease;
+}
+
+.sb-open__dot[aria-current]::before {
+  background: #fff;
+}
+
+/* FAQs: the questions, one to a row */
+.sb-open__notes {
+  display: grid;
+  padding: 8px 0;
+}
+
+.sb-open__note {
+  position: relative;
+  padding: 13px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 21px;
+  text-align: left;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
+}
+
+.sb-open__note + .sb-open__note::before {
+  position: absolute;
+  top: 0;
+  right: 24px;
+  left: 24px;
+  height: 0.5px;
+  background: rgb(255 255 255 / 0.3);
+  content: '';
+}
+
+.sb-open__note:active {
+  background: rgb(255 255 255 / 0.14);
+}
+
+/* On its side the screen is short and wide: an open folder is too. Portfolio's
+   nine go five across, and the questions go in two columns. */
+@container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
+  .sb-open {
+    --icon: clamp(44px, 12.5cqh, 52px);
+  }
+
+  .sb-open__box,
+  .sb-open[data-folder='faqs'] .sb-open__box {
+    width: min(100cqw - 150px, 560px);
+    margin-top: 0;
+  }
+
+  .sb-open__name {
+    margin: 0 0 6px 22px;
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .sb-open__panel {
+    border-radius: 34px;
+  }
+
+  .sb-open__page {
+    grid-template-columns: repeat(5, var(--icon));
+    row-gap: 10px;
+    min-height: calc(var(--icon) * 2 + 78px);
+    padding-top: 18px;
+  }
+
+  .sb-open__dots {
+    padding-bottom: 6px;
+  }
+
+  .sb-open__notes {
+    grid-template-columns: 1fr 1fr;
+    padding: 6px 0;
+  }
+
+  .sb-open__note {
+    padding: 10px 22px;
+    font-size: 15px;
+    line-height: 20px;
+  }
+
+  .sb-open__note:nth-child(2)::before {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-open__box,
+  .sb-open__away {
+    animation: none;
+    transition: none;
+  }
+}

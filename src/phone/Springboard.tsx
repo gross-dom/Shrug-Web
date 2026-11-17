@@ -1,11 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { Folder, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { chat, QUESTION, setChatUnseen, TOTAL } from '../apps/chat'
 import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
-import { ALL, CompanyLogo } from '../apps/portfolio-ui'
-import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
-import { VERTICALS } from '../data/portfolio'
 import { SITE } from '../data/site'
 import type { Rect } from '../kit/measure'
 import { Expand } from '../kit/motion/Expand'
@@ -15,6 +12,7 @@ import { useStore } from '../os/store'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { GROUP_VIEW } from './apps/routes'
 import { COLOR, carried, chrome } from './chrome'
+import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
 import { OnePagerIcon, PhoneIcon } from './icons'
 import { haptic } from './native'
 import { settings } from './settings'
@@ -275,56 +273,13 @@ function ChatWidget() {
   )
 }
 
-const SHOWN = ALL.filter((c) => c.logo).slice(0, 4)
-
-function PortfolioWidget() {
-  return (
-    <button type="button" className="sb-widget" onClick={() => launch('finder', 'widget:portfolio')}>
-      {/* As Files' own widget shows a folder: its name, a few of what is in it, and how much there is */}
-      <span className="sb-widget__face sb-folio" data-origin="widget:portfolio">
-        <span className="sb-folio__head">
-          <Folder size={15} strokeWidth={0} fill="currentColor" aria-hidden />
-          Portfolio
-        </span>
-        <span className="sb-folio__logos">
-          {SHOWN.map((c) => (
-            <CompanyLogo key={c.name} company={c} size={44} />
-          ))}
-        </span>
-        <span className="sb-folio__text">
-          {ALL.length} companies<span className="sr-only">, in {VERTICALS.length} verticals</span>
-        </span>
-      </span>
-      <span className="sb-icon__name">Files</span>
-    </button>
-  )
-}
-
-function FaqWidget() {
-  return (
-    <button type="button" className="sb-widget" onClick={() => launch('notes', 'widget:faqs')}>
-      {/* As Notes' folder widget: the folder's name in Notes' gold, and its first few notes */}
-      <span className="sb-widget__face sb-faq" data-origin="widget:faqs">
-        <span className="sb-faq__head">
-          <Folder size={15} strokeWidth={0} fill="currentColor" aria-hidden />
-          FAQs
-        </span>
-        <span className="sb-faq__list">
-          {FAQS.slice(0, 3).map((f) => (
-            <span key={f.question}>{f.question}</span>
-          ))}
-        </span>
-      </span>
-      <span className="sb-icon__name">Notes</span>
-    </button>
-  )
-}
-
 function Home() {
   const covered = useStore(sys, (s) => s.app !== null || s.switcher)
   const locked = useStore(sys, (s) => s.locked)
   const spotlight = useStore(sys, (s) => s.spotlight)
-  const hidden = covered || locked || spotlight
+  // A folder open over the Home Screen: the icons fall out of focus behind it
+  const folder = useOpenFolder() !== null
+  const hidden = covered || locked || spotlight || folder
   // A pull down on the Home Screen brings up search, as it does on an iPhone
   const pull = useRef<{ x: number; y: number; k: number } | null>(null)
   return (
@@ -333,6 +288,7 @@ function Home() {
       data-covered={covered || undefined}
       data-locked={locked || undefined}
       data-searching={spotlight || undefined}
+      data-folder={folder || undefined}
       onPointerDown={(e) => {
         if (e.pointerType !== 'mouse') pull.current = { x: e.clientX, y: e.clientY, k: scaleOf(e.currentTarget) }
       }}
@@ -352,8 +308,8 @@ function Home() {
     >
       <div className="sb-grid">
         <ChatWidget />
-        <PortfolioWidget />
-        <FaqWidget />
+        <HomeFolder id="portfolio" />
+        <HomeFolder id="faqs" />
         {ON_HOME.slice(0, 1).map((id) => (
           <HomeIcon key={id} id={id} />
         ))}
@@ -786,6 +742,7 @@ export function Springboard({ framed }: { framed: boolean }) {
     <>
       <div className="sb-wall" data-at={at} aria-hidden />
       <Home />
+      <OpenFolder />
       <Apps />
       <Boundary onError={() => showSpotlight(false)}>
         <Spotlight />
