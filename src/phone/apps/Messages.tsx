@@ -2,16 +2,17 @@ import { memo, useEffect, useId, useMemo, useRef, useState, type FormEvent, type
 import { ArrowUp, ChevronLeft, ChevronRight, ListFilter, Mic, Plus, SquarePen, Video } from 'lucide-react'
 import { chat, finishChat, replayChat, sendMessage, sentAt, toggleChat, TOTAL } from '../../apps/chat'
 import { clock, ConversationAvatar, conversationName, GROUP_NAME, relationsOf, rowTime, Transcript } from '../../apps/chat-ui'
-import { inbox, openConversation, setInboxQuery, showInGroup, useUnread, type Conversation } from '../../apps/state'
+import { inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
 import { PEOPLE } from '../../data/people'
 import { SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
 import { APPS, type AppId } from '../../os/apps'
 import { prefersReducedMotion } from '../../os/dom'
-import { createStore, useStore } from '../../os/store'
+import { useStore } from '../../os/store'
 import { OnePagerIcon, PhoneIcon } from '../icons'
 import { closeSheet, launch, launchAt, openSheet, pop, push, sys, topOf } from '../system'
+import { isNew, seen, useNewCount } from '../unread'
 import { Cell, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 import { conversationView, GROUP_VIEW } from './routes'
 import '../../styles/phone/messages.css'
@@ -30,22 +31,6 @@ function conversationOf(view: string | null): Conversation | null {
   if (view === GROUP_VIEW) return 'group'
   const index = view?.startsWith('c:') ? Number(view.slice(2)) : NaN
   return Number.isInteger(index) && index >= 0 && index < TOTAL ? index : null
-}
-
-/** How many replies had landed when Shrug Family was last on screen: later ones make its row unread. */
-const seen = createStore({ group: 0 })
-
-// Played again from the start, nothing has been seen
-chat.subscribe(() => {
-  const replied = chat.get().replied
-  if (replied < seen.get().group) seen.set({ group: replied })
-})
-
-/** Conversations with something unread in them: everyone not yet opened, and the group if it has moved on. */
-function useUnreadCount() {
-  const people = useUnread()
-  const group = useStore(chat, (s) => s.replied) > useStore(seen, (s) => s.group)
-  return people + (group ? 1 : 0)
 }
 
 // ---- The keyboard, on a phone ----
@@ -155,7 +140,8 @@ function ListScreen() {
     if ((!q || GROUP_NAME.toLowerCase().includes(q)) && (filter === 'all' || groupUnread))
       out.push({ conversation: 'group', name: GROUP_NAME, preview: last || ' ', when: clock(replied ? repliedAt[replied - 1]! : startedAt), unread: groupUnread })
     PEOPLE.forEach((person, i) => {
-      const unread = !read.includes(i)
+      // Everyone is listed from the start; a row is marked once that person's reply has come in, until it has been seen
+      const unread = isNew(i, replied, groupSeen, read)
       if (filter === 'unread' && !unread) return
       if (q && !person.name.toLowerCase().includes(q) && !person.role.toLowerCase().includes(q) && !(person.quote ?? '').toLowerCase().includes(q)) return
       out.push({ conversation: i, name: person.name, preview: person.quote ?? [150, 96], when: rowTime(sentAt(i, startedAt)), unread })
@@ -207,9 +193,9 @@ function ListScreen() {
 
 // ---- A conversation ----
 
-/** Back to the list, with how many conversations there still have something unread, as Messages counts them beside the chevron. */
+/** Back to the list, with how many replies there are new, as Messages counts them beside the chevron. */
 function Back() {
-  const count = useUnreadCount()
+  const count = useNewCount()
   return (
     <button type="button" className="ios-glass ios-button msg-back" data-count={count > 0 || undefined} aria-label={count ? `Back. ${count} unread` : 'Back'} onClick={pop}>
       <ChevronLeft size={24} strokeWidth={2.3} aria-hidden />

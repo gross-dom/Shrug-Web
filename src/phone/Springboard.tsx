@@ -3,7 +3,6 @@ import { Folder, Search } from 'lucide-react'
 import { chat, QUESTION, setChatUnseen, TOTAL } from '../apps/chat'
 import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
 import { ALL, CompanyLogo } from '../apps/portfolio-ui'
-import { useUnread } from '../apps/state'
 import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
@@ -22,6 +21,7 @@ import { settings } from './settings'
 import { Spotlight } from './Spotlight'
 import { goHome, launch, launchAt, lock, pop, quit, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp } from './system'
 import { clockOf, dateOf, useNow } from './time'
+import { useNewCount } from './unread'
 import { AppContext, scaleOf } from './ui'
 
 // The phone itself, under and around its apps: the wallpaper, the Lock Screen
@@ -209,8 +209,9 @@ function Lock() {
 // ---- The Home Screen ----
 
 function HomeIcon({ id }: { id: PhoneApp }) {
-  const unread = useUnread()
-  const badge = id === 'messages' ? unread : 0
+  // The badge on Messages: the replies that have come in and not been seen yet. It ticks up as they arrive
+  const unseen = useNewCount()
+  const badge = id === 'messages' ? unseen : 0
   return (
     <button type="button" className="sb-icon" aria-label={`${PHONE[id].label}${badge ? `, ${badge} unread` : ''}`} onClick={() => launch(id)}>
       <span className="sb-icon__tile" data-origin={iconOrigin(id)}>

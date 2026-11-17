@@ -414,6 +414,15 @@
   font-weight: 500;
   letter-spacing: -0.01em;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  /* It pops onto the icon with the first reply, as a badge does */
+  animation: sb-badge-in 0.34s var(--ui);
+}
+
+@keyframes sb-badge-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
 }
 
 /* Widgets: two icons tall; a small one is two wide, a wide one four */
@@ -1050,6 +1059,7 @@
   .sb-banner .ss-notification,
   .sb-stack > .sb-note,
   .sb-chat__reply,
+  .sb-badge,
   .sb-slot[data-slide] > .sb-card {
     animation: none;
     transition: none;
