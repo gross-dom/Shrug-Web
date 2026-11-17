@@ -1,5 +1,6 @@
 import type { AppId } from '../os/apps'
 import { createStore } from '../os/store'
+import { FAQS_FOLDER, PORTFOLIO_FOLDER } from './apps/routes'
 
 // The phone as a system: whether it is locked, which app is in front, how far
 // into each app the visitor has gone, and the sheet over it. An iPhone keeps
@@ -43,7 +44,10 @@ export interface Sys extends Place {
   origin: string | null
 }
 
-const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [], terminal: [], photos: [], about: [] })
+/** Where each app is when it is first opened. An iPhone's apps come back to
+ * where they were last used: Files inside the Portfolio folder and Notes inside
+ * FAQs, each a step in from its first screen, with the way back out showing. */
+const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [PORTFOLIO_FOLDER], notes: [FAQS_FOLDER], terminal: [], photos: [], about: [] })
 
 export const sys = createStore<Sys>({ app: null, stacks: noStacks(), sheet: null, locked: true, recents: [], switcher: false, spotlight: false, motion: false, prev: null, origin: null })
 
@@ -148,11 +152,12 @@ export function launch(app: PhoneApp, origin: string | null = null) {
   go({ app, stacks: s.stacks, sheet: null }, origin)
 }
 
-/** Brings an app to the front at a place inside it: a notification opens its conversation. */
-export function launchAt(app: PhoneApp, stack: string[], origin: string | null = null) {
+/** Brings an app to the front at a place inside it: a notification opens its
+ * conversation. `sheet` is a sheet to have up over that place. */
+export function launchAt(app: PhoneApp, stack: string[], origin: string | null = null, sheet: string | null = null) {
   const s = sys.get()
   if (s.locked) sys.set((now) => ({ ...now, locked: false }))
-  go({ app, stacks: { ...s.stacks, [app]: stack }, sheet: null }, origin)
+  go({ app, stacks: { ...s.stacks, [app]: stack }, sheet }, origin)
 }
 
 /** Back to the Home Screen. The app stays as it is. */
@@ -165,7 +170,7 @@ export function goHome() {
 /** Closes an app for good, as flicking it out of the App Switcher does: it starts over next time. */
 export function quit(app: PhoneApp) {
   const s = sys.get()
-  const place: Place = { app: s.app === app ? null : s.app, stacks: { ...s.stacks, [app]: [] }, sheet: s.app === app ? null : s.sheet }
+  const place: Place = { app: s.app === app ? null : s.app, stacks: { ...s.stacks, [app]: noStacks()[app] }, sheet: s.app === app ? null : s.sheet }
   amend(place)
   sys.set((now) => ({ ...now, ...place, recents: now.recents.filter((id) => id !== app), switcher: now.switcher && now.recents.length > 1 }))
 }

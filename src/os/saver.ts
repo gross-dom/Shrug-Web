@@ -18,8 +18,11 @@ export function wakeSaver() {
   saver.set({ on: false })
 }
 
-/** Seconds of stillness before it starts. `?idle=20` in the address sets it, for trying it out. */
-export function idleSeconds() {
+/** `?idle=20` in the address: the seconds of stillness asked for, for trying it out. */
+export function askedIdle(): number | null {
   const asked = Number(new URLSearchParams(window.location.search).get('idle'))
-  return Number.isFinite(asked) && asked >= 3 ? asked : 150
+  return Number.isFinite(asked) && asked >= 3 ? asked : null
 }
+
+/** Seconds of stillness before it starts. */
+export const idleSeconds = () => askedIdle() ?? 150

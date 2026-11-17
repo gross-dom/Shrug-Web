@@ -7,10 +7,10 @@ import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
 import { APPS } from '../os/apps'
-import { AppIcon } from '../os/icons'
 import { useStore } from '../os/store'
+import { PhoneIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { albumView, companyView, conversationView, noteView } from './apps/routes'
+import { albumView, companySheet, conversationView, FAQS_FOLDER, noteView, PORTFOLIO_FOLDER } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
 import '../styles/phone/spotlight.css'
 
@@ -72,7 +72,7 @@ function around(text: string, q: string) {
 
 const tile = (id: PhoneApp) => (size: number) => (
   <span className="spot-tile" style={{ width: size, height: size }}>
-    <AppIcon id={id} />
+    <PhoneIcon id={id} />
   </span>
 )
 
@@ -134,7 +134,7 @@ function find(raw: string): Found {
       lead: (size) => <CompanyLogo company={company} size={size} />,
       title: <Marked text={company.name} q={q} />,
       subtitle: described ? <Marked text={around(company.blurb!, q)} q={q} /> : <Marked text={company.vertical} q={q} />,
-      open: () => launchAt('finder', [companyView(company.name)]),
+      open: () => launchAt('finder', [PORTFOLIO_FOLDER], null, companySheet(company.name)),
     })
   })
 
@@ -154,7 +154,7 @@ function find(raw: string): Found {
       lead: tile('notes'),
       title: <Marked text={faq.question} q={q} />,
       subtitle: answered ? <Marked text={around(faq.answer!, q)} q={q} /> : 'Note',
-      open: () => launchAt('notes', [noteView(i)]),
+      open: () => launchAt('notes', [FAQS_FOLDER, noteView(i)]),
     })
   })
 
@@ -176,7 +176,7 @@ function find(raw: string): Found {
   }
   const rest = (kind: Kind) => lists[kind].filter((hit) => hit !== top).slice(0, MOST)
 
-  const icon = (id: PhoneApp) => <AppIcon id={id} />
+  const icon = (id: PhoneApp) => <PhoneIcon id={id} />
   const groups: Found['groups'] = [
     { id: 'person' as const, title: PHONE.messages.label, icon: icon('messages'), hits: rest('person') },
     { id: 'company' as const, title: PHONE.finder.label, icon: icon('finder'), hits: rest('company') },
@@ -307,12 +307,12 @@ export function Spotlight() {
       >
         {!typed ? (
           <>
-            <Group title="Suggestions">
+            <Group title="Siri Suggestions">
               <div className="spot-apps">
                 {APP_ORDER.map((id) => (
                   <button key={id} type="button" className="spot-app" data-spot-item onClick={() => launch(id)}>
                     <span className="spot-app__icon">
-                      <AppIcon id={id} />
+                      <PhoneIcon id={id} />
                     </span>
                     <span className="spot-app__name">{PHONE[id].label}</span>
                   </button>

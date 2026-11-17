@@ -91,6 +91,8 @@ export interface ScreenProps {
   title: string
   /** A large title at the top of the page that folds into the bar as the page scrolls. */
   large?: boolean
+  /** A quiet line under the title, large or in the bar: a count ("7 Notes"), when it was last brought up to date. */
+  subtitle?: ReactNode
   /** Drawn in the middle of the bar in place of the title (a conversation's avatar and name). */
   center?: ReactNode
   /** In the bar's leading corner in place of Back. `null` leaves it empty. */
@@ -112,7 +114,7 @@ export interface ScreenProps {
 
 /** One screen of an app. The bar's buttons float over the page; under them the
  * page fades and blurs as it scrolls past, as iOS's scroll edge does. */
-export function Screen({ title, large, center, leading, trailing, header, foot, tone = 'plain', fixed, className, scrollRef, children }: ScreenProps) {
+export function Screen({ title, large, subtitle, center, leading, trailing, header, foot, tone = 'plain', fixed, className, scrollRef, children }: ScreenProps) {
   const depth = useContext(DepthContext)
   const top = useContext(TopContext)
   const { app } = useApp()
@@ -152,6 +154,7 @@ export function Screen({ title, large, center, leading, trailing, header, foot, 
               {title}
             </h2>
           )}
+          {large && subtitle && <p className="ios-large-sub">{subtitle}</p>}
           {header}
           {children}
         </div>
@@ -160,7 +163,12 @@ export function Screen({ title, large, center, leading, trailing, header, foot, 
         <div className="ios-bar__edge" aria-hidden />
         <div className="ios-bar__side">{leading !== undefined ? leading : depth > 0 && <BackButton />}</div>
         <div className="ios-bar__title" aria-hidden={large && !folded ? true : undefined}>
-          {center ?? <span className="ios-bar__name">{title}</span>}
+          {center ?? (
+            <span className="ios-bar__name">
+              {title}
+              {subtitle && <span className="ios-bar__sub">{subtitle}</span>}
+            </span>
+          )}
         </div>
         <div className="ios-bar__side ios-bar__side--end">{trailing}</div>
       </header>
@@ -193,6 +201,7 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
   // Screens that are there when the app first draws are simply there
   const first = useRef(true)
   const fresh = useRef(new Set<string>())
+  const nav = useRef<HTMLDivElement>(null)
 
   if (seen.stack !== stack) {
     let kept = 0
@@ -202,6 +211,16 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
     for (let i = kept; i < stack.length; i++) if (motion) fresh.current.add(`${i}:${stack[i]}`)
     setSeen({ stack, gone })
   }
+
+  // A screen that has just come to the top takes the keyboard, so that keys
+  // and a screen reader carry on from it and not from the screen it covered.
+  // Not when something on it has taken the keyboard already (a field that
+  // opens ready to type), and not for the screens an app first draws with.
+  useEffect(() => {
+    if (first.current || !active) return
+    const page = nav.current?.querySelector<HTMLElement>(':scope > .ios-page[data-pos="top"]')
+    if (page && !page.contains(document.activeElement)) page.focus({ preventScroll: true })
+  }, [stack, active])
 
   useEffect(() => {
     first.current = false
@@ -218,7 +237,7 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
     const key = depth === 0 ? 'root' : `${depth - 1}:${view}`
     const enter = depth > 0 && !first.current && fresh.current.has(key)
     return (
-      <div key={key} className="ios-page" data-pos={pos} data-enter={enter || undefined} data-depth={depth} {...(pos === 'top' && active ? null : ({ inert: '' } as object))} aria-hidden={pos === 'top' ? undefined : true} onAnimationEnd={(e) => e.target === e.currentTarget && fresh.current.delete(key)}>
+      <div key={key} className="ios-page" tabIndex={-1} data-pos={pos} data-enter={enter || undefined} data-depth={depth} {...(pos === 'top' && active ? null : ({ inert: '' } as object))} aria-hidden={pos === 'top' ? undefined : true} onAnimationEnd={(e) => e.target === e.currentTarget && fresh.current.delete(key)}>
         <DepthContext.Provider value={depth}>
           <TopContext.Provider value={pos === 'top'}>{children(view, depth)}</TopContext.Provider>
         </DepthContext.Provider>
@@ -228,7 +247,7 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
 
   // One list, so a screen that is leaving is the same screen it was (its place on the page, what it had scrolled to), not a new one
   return (
-    <div className="ios-nav" data-snap={!motion || undefined}>
+    <div ref={nav} className="ios-nav" data-snap={!motion || undefined}>
       {[
         page(null, 0, top === 0 ? 'top' : 'under'),
         ...stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under')),
@@ -382,6 +401,8 @@ export interface MenuItem {
   icon?: ReactNode
   /** A tick beside it: the choice that is on. */
   checked?: boolean
+  /** It is switched on and off by itself, where a ticked item is otherwise one choice out of several. */
+  toggle?: boolean
   destructive?: boolean
   disabled?: boolean
   /** A rule above it: the start of another group. */
@@ -389,10 +410,14 @@ export interface MenuItem {
   onSelect: () => void
 }
 
-/** A glass button that opens a menu under itself, as iOS's pull-down menus do. */
-export function Menu({ label, items, children, tint, wide }: { label: string; items: MenuItem[]; children: ReactNode; tint?: boolean; wide?: boolean }) {
+/** A glass button that opens a menu under itself, as iOS's pull-down menus do.
+ * `part` makes the button one of a `GlassGroup`'s, sharing that group's glass. */
+export function Menu({ label, items, children, tint, wide, part }: { label: string; items: MenuItem[]; children: ReactNode; tint?: boolean; wide?: boolean; part?: boolean }) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLSpanElement>(null)
+  // A column for ticks only where something can be ticked, and one for glyphs only where something has one
+  const ticks = items.some((item) => item.checked !== undefined)
+  const glyphs = items.some((item) => item.icon)
   useEffect(() => {
     if (!open) return
     const away = (e: PointerEvent) => {
@@ -422,7 +447,7 @@ export function Menu({ label, items, children, tint, wide }: { label: string; it
   }, [open])
   return (
     <span ref={root} className="ios-menu">
-      <button type="button" className="ios-glass ios-button" data-wide={wide || undefined} data-tint={tint || undefined} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className={part ? 'ios-group__part' : 'ios-glass ios-button'} data-wide={wide || undefined} data-tint={tint || undefined} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         {children}
       </button>
       <Popover show={open} origin="top right" className="ios-menu__list" role="menu" aria-label={label} {...(open ? null : ({ inert: '' } as object))}>
@@ -431,7 +456,7 @@ export function Menu({ label, items, children, tint, wide }: { label: string; it
             key={item.label}
             type="button"
             className="ios-menu__item"
-            role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+            role={item.checked === undefined ? 'menuitem' : item.toggle ? 'menuitemcheckbox' : 'menuitemradio'}
             aria-checked={item.checked}
             aria-disabled={item.disabled || undefined}
             data-destructive={item.destructive || undefined}
@@ -442,13 +467,14 @@ export function Menu({ label, items, children, tint, wide }: { label: string; it
               item.onSelect()
             }}
           >
-            <span className="ios-menu__tick">{item.checked && <Check size={16} strokeWidth={2.8} aria-hidden />}</span>
-            <span className="ios-menu__label">{item.label}</span>
-            {item.icon && (
+            {ticks && <span className="ios-menu__tick">{item.checked && <Check size={16} strokeWidth={2.8} aria-hidden />}</span>}
+            {/* The glyph comes before the words, as the current iOS has its menus */}
+            {glyphs && (
               <span className="ios-menu__icon" aria-hidden>
                 {item.icon}
               </span>
             )}
+            <span className="ios-menu__label">{item.label}</span>
           </button>
         ))}
       </Popover>

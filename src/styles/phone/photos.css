@@ -1,6 +1,12 @@
 /* VIP on the phone (src/phone/apps/Photos.tsx): the Photos app. The grid is
-   the page and runs edge to edge; the glass floats over it. Sizes are iOS
+   the page and runs edge to edge; the glass floats over it. The bars, lists
+   and sheets are ios.css's; this is what is Photos' own. Sizes are iOS
    points. */
+
+.photos-app {
+  position: absolute;
+  inset: 0;
+}
 
 /* ---- A picture, or the slot one will go in ---- */
 
@@ -105,12 +111,13 @@
   outline-offset: -3px;
 }
 
-.photos-sub {
-  margin: -4px 20px 12px;
-  color: var(--label-2);
-  font-size: 15px;
-  letter-spacing: -0.015em;
-  line-height: 20px;
+/* A grid runs edge to edge, so what is over it keeps a little further off than it would from a list */
+.photos-library .ios-large {
+  margin-bottom: 12px;
+}
+
+.photos-screen .ios-large-sub {
+  margin-bottom: 14px;
 }
 
 /* The count at the end of a grid, as Photos ends its library */
@@ -151,72 +158,125 @@
   }
 }
 
-/* What floats at the foot: the kind switch over the tab bar, each hugging its own width */
-.ios-foot > .photos-foot {
-  display: grid;
+/* What floats at the foot: the tab bar is as wide as its two tabs, and search
+   keeps to the far corner, as iOS sets a short tab bar */
+.photos-app .ios-tabs {
+  flex: none;
+}
+
+.photos-app .ios-tabs__item {
+  flex: none;
+  width: 96px;
+}
+
+.photos-app .photos-gap {
   flex: 1;
-  justify-items: center;
-  gap: 10px;
-  min-width: 0;
   pointer-events: none;
 }
 
-.photos-foot > * {
-  pointer-events: auto;
+/* Search has the tabs' place: the one button that leads back to them, the field, and the button that puts it away */
+.ios-foot > .photos-searchbar {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  transform-origin: 100% 50%;
 }
 
-.photos-foot > .ios-tabs {
-  flex: none;
-  width: min(100%, 250px);
+/* It is always drawn, so it is on being turned to that it comes in */
+.photos-tab[data-on] .ios-foot > .photos-searchbar {
+  animation: photos-search-in 0.32s var(--ui);
 }
 
-.photos-seg {
-  width: min(100%, 250px);
-  padding: 4px;
-  border-radius: 22px;
+.photos-searchbar .ios-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
 }
 
-.photos-seg > .ios-segments {
-  background: none;
+.photos-searchbar__close {
+  display: contents;
 }
 
-/* Room at the end of the library to bring the last row clear of both */
-.ios-screen.photos-library[data-foot] > .ios-screen__scroll {
-  padding-bottom: calc(var(--foot-gap) + 62px + 10px + 44px + 14px);
-}
-
-/* The grid shows through around the kind switch, as pictures do under Photos'
-   glass; from the gap between the two bars down it is let right down, so no
-   stray line of the page shows between them */
-.ios-screen.photos-library > .ios-foot > .ios-foot__edge {
-  background: linear-gradient(transparent, color-mix(in srgb, var(--surface) 42%, transparent) 30%, color-mix(in srgb, var(--surface) 95%, transparent) 54%);
+/* The field grows out of the corner search was in */
+@keyframes photos-search-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0.86);
+  }
 }
 
 /* ---- Collections ---- */
 
+/* A section's name. In Collections it is a button, with the chevron that says it opens */
 .photos-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 12px 20px 10px;
+  margin: 14px 20px 10px;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 28px;
 }
 
-.photos-head > span {
-  color: var(--label-2);
-  font-size: 17px;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+.photos-head > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  /* As tall as a finger needs, without moving the words */
+  margin: -8px 0;
+  padding: 8px 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  transition: opacity 0.2s ease;
 }
 
+.photos-head > button > svg {
+  flex: none;
+  margin-top: 1px;
+  color: rgb(60 60 67 / 0.45);
+}
+
+.photos-head > button:active {
+  opacity: 0.4;
+  transition: none;
+}
+
+/* Albums, in Collections: one row that runs off the side of the screen */
+.photos-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  padding: 0 0 10px var(--edge);
+  scroll-padding-inline: var(--edge);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.photos-row::-webkit-scrollbar {
+  display: none;
+}
+
+.photos-row > [role='listitem'] {
+  flex: none;
+  width: 160px;
+}
+
+/* The last album stops as far from the edge as the first starts */
+.photos-row::after {
+  flex: none;
+  width: calc(var(--edge) - 12px);
+  content: '';
+}
+
+/* Albums, on their own screen: two across */
 .photos-albums {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 12px;
-  padding: 0 var(--edge) 14px;
+  gap: 18px 12px;
+  padding: 6px var(--edge) 14px;
 }
 
 .photos-album {
@@ -230,7 +290,7 @@
   display: block;
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--fill);
   transition: filter 0.2s ease;
 }
@@ -246,10 +306,32 @@
   height: 30px;
 }
 
+/* Favorites carries a heart in the corner of its cover; with nothing in it yet, the heart is the cover */
+.photos-album__heart {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  color: #fff;
+  filter: drop-shadow(0 0 2px rgb(0 0 0 / 0.5));
+}
+
+.photos-album__cover:has(.photos-pic[data-kind='photo'][data-empty]) > .photos-album__heart {
+  color: color-mix(in srgb, var(--label) 46%, transparent);
+  filter: none;
+}
+
+.photos-album__heart[data-alone] {
+  inset: 0;
+  margin: auto;
+  color: var(--label-3);
+  filter: none;
+}
+
 .photos-album__name {
   overflow: hidden;
   margin-top: 7px;
   font-size: 15px;
+  font-weight: 600;
   letter-spacing: -0.015em;
   line-height: 20px;
   white-space: nowrap;
@@ -263,18 +345,58 @@
   line-height: 20px;
 }
 
-/* Media Types: a short list on the white page, on the gray Photos gives it */
-.photos-types {
-  --cell-inset: 50px;
+/* Media Types, Utilities: a short list on the white page, on the gray Photos gives it */
+.photos-rows {
+  --cell-inset: 51px;
   padding-top: 0;
 }
 
-.photos-types .ios-section__rows {
+.photos-rows .ios-section__rows {
   background: var(--grouped);
 }
 
-.photos-types .ios-cell__lead {
+.photos-rows .ios-cell__lead {
+  width: 23px;
   color: var(--blue);
+}
+
+/* On a screen of its own the list keeps a little clear of the title */
+.photos-screen > .ios-screen__scroll > .photos-rows {
+  padding-top: 6px;
+}
+
+/* ---- Search ---- */
+
+/* An album as a row: its cover, small, at the leading edge */
+.photos-rows--albums {
+  --cell-inset: 68px;
+}
+
+.photos-rows--albums .ios-cell__lead {
+  width: auto;
+}
+
+.photos-thumb {
+  position: relative;
+  display: block;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--fill);
+}
+
+.photos-thumb .photos-pic__slot {
+  padding: 0;
+}
+
+.photos-thumb .photos-pic__slot > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.photos-thumb .photos-pic__play {
+  display: none;
 }
 
 /* ---- The viewer ---- */
@@ -397,7 +519,6 @@ video.photos-page__media {
 .photos-viewer__title > span {
   color: var(--label-2);
   font-size: 12px;
-  font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   line-height: 15px;
   white-space: nowrap;
@@ -451,8 +572,20 @@ video.photos-page__media {
     visibility 0s 0.25s;
 }
 
+/* A phone on its side: more squares across, as Photos fits more of them in */
+@container (min-width: 560px) {
+  .photos-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .photos-albums {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .photos-tab[data-on][data-swapped] {
+  .photos-tab[data-on][data-swapped],
+  .photos-tab[data-on] .ios-foot > .photos-searchbar {
     animation: none;
   }
 

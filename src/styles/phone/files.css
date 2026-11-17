@@ -1,7 +1,7 @@
-/* Portfolio on the phone, as the Files app (src/phone/apps/Files.tsx): a
-   folder's contents in icons or a list, Browse's grouped rows, search, and the
-   card a company opens as. The bars, lists and sheets are ios.css's; this is
-   what is Files' own. Sizes are iOS points. */
+/* Portfolio on the phone, as the Files app (src/phone/apps/Files.tsx): Browse's
+   places and tags, a folder's contents in icons or a list, Recents, Shared,
+   search, and the card a company opens as. The bars, lists and sheets are
+   ios.css's; this is what is Files' own. Sizes are iOS points. */
 
 .files-app {
   position: absolute;
@@ -10,39 +10,22 @@
 
 /* ---- What floats at the foot ---- */
 
-/* The tab bar is as wide as its two tabs, and search keeps to the far corner, as iOS sets a short tab bar */
-.files-app .ios-tabs {
-  flex: none;
-}
-
-.files-app .ios-tabs__item {
-  flex: none;
-  width: 96px;
-}
-
-.files-app .files-gap {
-  flex: 1;
-  pointer-events: none;
-}
-
+/* Three tabs take the bar as far as search, which keeps to the far corner */
 .files-search {
   display: flex;
   flex: 1;
   align-items: center;
   gap: 10px;
   min-width: 0;
+  /* The field takes the tab bar's place: it grows out of the corner search was in */
+  transform-origin: 100% 50%;
+  animation: files-search-in 0.32s var(--ui);
 }
 
 .files-search > .ios-button {
   width: 48px;
   height: 48px;
   border-radius: 24px;
-}
-
-/* The field takes the tab bar's place: it grows out of the corner search was in */
-.files-search {
-  transform-origin: 100% 50%;
-  animation: files-search-in 0.32s var(--ui);
 }
 
 @keyframes files-search-in {
@@ -52,25 +35,135 @@
   }
 }
 
-/* ---- A folder's contents ---- */
+/* ---- Browse ---- */
 
-/* A folder opened from Browse has no large title to sit under: its first row keeps clear of the bar */
-.files-screen--folder > .ios-screen__scroll {
-  padding-top: calc(var(--status) + var(--bar) + 10px);
+/* Files draws Browse as a plain list on white: bold headings that fold their
+   rows away, and rows with no chevron and no count */
+.files-side {
+  margin-top: 14px;
 }
+
+.ios-large + .files-side {
+  margin-top: 2px;
+}
+
+.files-side__head {
+  margin: 0;
+}
+
+.files-side__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 28px;
+  text-align: left;
+}
+
+/* Down while its rows are showing, turned to point at the heading once they are folded away */
+.files-side__chevron {
+  flex: none;
+  color: var(--blue);
+  transition: transform 0.3s var(--ui);
+}
+
+.files-side[data-shut] .files-side__chevron {
+  transform: rotate(-90deg);
+}
+
+.files-side__toggle:active {
+  opacity: 0.5;
+}
+
+.files-side__fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.34s var(--ui);
+}
+
+.files-side[data-shut] > .files-side__fold {
+  grid-template-rows: 0fr;
+}
+
+.files-side__rows {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.files-place {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 20px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  text-align: left;
+}
+
+/* A hairline over every row but the first, from where the words start to the screen's edge */
+.files-side__rows > li + li > .files-place::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 60px;
+  height: 0.5px;
+  background: var(--sep);
+  content: '';
+}
+
+.files-place:active {
+  background: var(--fill);
+}
+
+.files-place__lead {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  color: var(--blue);
+}
+
+.files-place__name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A row that runs to the screen's edges keeps its focus ring inside itself, where it can be seen */
+.files-app :is(.files-side__toggle, .files-place, .files-row):focus-visible {
+  outline-offset: -3px;
+}
+
+/* A tag's dot */
+.files-dot {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+/* ---- A folder's contents ---- */
 
 /* Use Groups: a heading for each vertical, and how many are in it */
 .files-group {
-  margin-top: 20px;
+  margin-top: 22px;
 }
 
-/* The first heading keeps a little way under the large title; with no title over it, it starts the page */
 .ios-large + .files-group {
-  margin-top: 12px;
-}
-
-.files-group:first-child {
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 .files-group__name {
@@ -78,15 +171,15 @@
   align-items: baseline;
   gap: 7px;
   margin: 0 20px 4px;
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 22px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 25px;
 }
 
 .files-group__name > span {
   color: var(--label-2);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
@@ -99,7 +192,16 @@
   padding: 0 10px;
 }
 
+.ios-large + .files-grid {
+  margin-top: 8px;
+}
+
+.ios-large + .files-rows {
+  margin-top: 2px;
+}
+
 .files-item {
+  --thumb: clamp(64px, 19.4cqw, 80px);
   display: grid;
   align-content: start;
   justify-items: center;
@@ -113,12 +215,12 @@
   background: var(--fill);
 }
 
-/* A file's thumbnail: the logo with a hairline round it, no lift */
+/* A file's thumbnail: the logo as a picture, squarer at the corners than an app's icon, with a hairline round it and no lift */
 .files-item > .logo {
-  --thumb: clamp(64px, 19.4cqw, 80px);
   width: var(--thumb) !important;
   height: var(--thumb) !important;
   margin-bottom: 7px;
+  border-radius: 13%;
   box-shadow: none;
 }
 
@@ -127,6 +229,7 @@
   max-width: 100%;
   overflow: hidden;
   font-size: 13px;
+  font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 16px;
   overflow-wrap: anywhere;
@@ -147,6 +250,26 @@
   text-overflow: ellipsis;
 }
 
+/* A document's thumbnail is its first page, as tall as a logo is */
+.files-doc {
+  display: grid;
+  place-items: center;
+  height: var(--thumb);
+  margin-bottom: 7px;
+}
+
+.files-doc > svg {
+  display: block;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.08));
+}
+
+/* Who shared it is said in full, on a second line if it needs one */
+.files-item--shared > .files-item__where {
+  white-space: normal;
+  text-wrap: balance;
+}
+
 /* List: a small thumbnail, the name, and the gray line; hairlines from where the words start */
 .files-row {
   position: relative;
@@ -163,7 +286,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  left: 76px;
+  left: 72px;
   height: 0.5px;
   background: var(--sep);
   content: '';
@@ -174,6 +297,7 @@
 }
 
 .files-row > .logo {
+  border-radius: 13%;
   box-shadow: none;
 }
 
@@ -211,133 +335,148 @@
   text-align: center;
 }
 
-/* ---- Browse ---- */
+/* ---- Nothing to show ---- */
 
-.files-browse {
-  --cell-inset: 56px;
-  padding-top: 6px;
+/* A screen with nothing in it says so in the middle of what is left of the page */
+.files-screen--void > .ios-screen__scroll {
+  display: flex;
+  flex-direction: column;
 }
 
-/* Files heads Browse's sections in bold, as titles */
-.files-browse .ios-section__header {
-  margin: 0 4px 9px;
-  color: var(--label);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 28px;
-}
-
-.files-browse .ios-cell__lead {
-  width: 28px;
-}
-
-.files-browse__glyph {
-  color: var(--blue);
-}
-
-.files-browse .ios-cell__value {
-  font-variant-numeric: tabular-nums;
+.files-screen--void .ios-empty {
+  flex: 1;
+  align-content: center;
+  padding-top: 0;
+  padding-bottom: 56px;
 }
 
 /* ---- A company ---- */
 
-.files-card {
+.files-sheet .ios-sheet__body {
+  padding-bottom: calc(var(--home) + 20px);
+}
+
+.files-sheet .ios-empty {
+  padding-top: 96px;
+}
+
+.files-file {
   display: grid;
   justify-items: center;
-  padding: 0 24px 8px;
+  padding: 18px 24px 0;
   text-align: center;
 }
 
-.files-card > .logo {
-  margin-bottom: 14px;
+/* The file itself, large: a picture lying on the sheet */
+.files-file > .logo {
+  margin-bottom: 20px;
+  border-radius: 13%;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 12px 32px rgb(0 0 0 / 0.1);
 }
 
-.files-card__name {
-  font-size: 24px;
+.files-file__name {
+  font-size: 28px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 29px;
+  letter-spacing: 0.005em;
+  line-height: 34px;
+  overflow-wrap: anywhere;
 }
 
-.files-card__kind {
-  margin-top: 2px;
+.files-file__kind {
+  margin-top: 3px;
   color: var(--label-2);
   font-size: 15px;
+  letter-spacing: -0.015em;
   line-height: 20px;
 }
 
-.files-card__blurb {
+.files-file__blurb {
   max-width: 32ch;
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 17px;
   letter-spacing: -0.02em;
   line-height: 22px;
   text-wrap: balance;
 }
 
-.files-card__actions {
-  display: grid;
-  gap: 10px;
-  width: 100%;
-  margin-top: 22px;
-}
-
-.files-action {
-  display: flex;
+/* The one thing to do with it */
+.files-open {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   min-height: 50px;
-  padding: 0 20px;
+  margin-top: 22px;
+  padding: 0 26px;
   border-radius: 25px;
-  background: var(--fill);
-  color: var(--blue);
+  background: var(--blue);
+  color: #fff;
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.02em;
   transition: opacity 0.15s ease;
 }
 
-.files-action--main {
-  background: var(--blue);
-  color: #fff;
-}
-
-.files-action:active {
+.files-open:active {
   opacity: 0.6;
   transition: none;
 }
 
-/* In the sheet the card starts beside the close button, not under it: the bar lies over the top of the card */
-.files-sheet .ios-sheet__bar {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 1;
-}
-
-.files-sheet .ios-sheet__body {
-  padding-top: 34px;
-  padding-bottom: 22px;
-}
-
-/* On a screen of its own, on the gray that grouped rows sit on */
-.files-screen--company > .ios-screen__scroll {
-  padding-top: calc(var(--status) + var(--bar) + 18px);
-}
-
-.files-screen--company .files-action:not(.files-action--main) {
-  background: var(--surface);
-}
-
+/* What is known about it. On a white sheet the group is the gray, and Files
+   writes what a row is in gray and what it says in ink */
 .files-info {
-  padding-top: 26px;
+  padding-top: 30px;
+}
+
+.files-info .ios-section__header {
+  margin: 0 4px 10px;
+  color: var(--label);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 25px;
+}
+
+.files-info .ios-section__rows {
+  background: var(--grouped);
+}
+
+.files-info .ios-cell__title {
+  color: var(--label-2);
+}
+
+.files-info .ios-cell__text {
+  flex: none;
+}
+
+.files-info .ios-cell__value {
+  flex: 1;
+  max-width: none;
+  color: var(--label);
+  text-align: right;
+}
+
+.files-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+/* A phone on its side has room for twice as many across, as Files fills the width it is given */
+@container (min-width: 600px) {
+  .files-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .files-action {
+  .files-open,
+  .files-side__chevron,
+  .files-side__fold {
     transition: none;
   }
 

@@ -9,6 +9,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  overflow: clip;
   container-type: size;
   color: #000;
   font-family: var(--font-ui);
@@ -116,6 +117,8 @@
 }
 
 .ph-device .ss-phone__screen {
+  /* Clipped, so that nothing can scroll the screen inside its frame */
+  overflow: clip;
   font-family: var(--font-ui);
 }
 
@@ -546,83 +549,89 @@
 }
 
 .sb-folio {
-  display: grid;
-  align-content: space-between;
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 14px 12px;
+}
+
+.sb-folio__head,
+.sb-faq__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 18px;
+}
+
+.sb-folio__head {
+  color: var(--blue);
 }
 
 .sb-folio__logos {
   display: grid;
-  grid-template-columns: repeat(2, 40px);
+  flex: 1;
+  grid-template-columns: repeat(2, 38px);
+  align-content: center;
   gap: 6px;
 }
 
 .sb-folio__logos .logo {
-  width: 40px !important;
-  height: 40px !important;
+  width: 38px !important;
+  height: 38px !important;
 }
 
 .sb-folio__text {
-  display: grid;
-  font-size: 13px;
-  line-height: 16px;
-}
-
-.sb-folio__text b {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 19px;
-}
-
-.sb-folio__text span {
+  flex: none;
   color: var(--label-2);
+  font-size: 12px;
+  line-height: 14px;
 }
 
 .sb-faq {
   display: flex;
   flex-direction: column;
-  background: #fff;
+  gap: 4px;
+  padding: 12px 14px 6px;
 }
 
 .sb-faq__head {
-  display: flex;
-  flex: none;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 11px 14px 9px;
-  background: linear-gradient(#ffd84a, #ffc81f);
-  color: #5c4500;
-  font-size: 13px;
+  color: #dfa200;
 }
 
-.sb-faq__head b {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
+/* A title that doesn't fit whole goes to a second column, out of sight: the widget never shows half of one */
 .sb-faq__list {
-  display: grid;
+  display: flex;
   flex: 1;
-  align-content: start;
+  flex-flow: column wrap;
   min-height: 0;
   overflow: hidden;
-  padding: 2px 14px;
 }
 
 .sb-faq__list span {
+  display: -webkit-box;
   overflow: hidden;
-  padding: 6px 0;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 16px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  flex: none;
+  width: 100%;
+  /* The space under a title is outside its box: a clamped line would show through padding there */
+  margin-bottom: 3px;
+  padding-top: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 15px;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.sb-faq__list span:last-child {
+  margin-bottom: 0;
 }
 
 .sb-faq__list span + span {
-  box-shadow: 0 -0.5px 0 var(--sep);
+  border-top: 0.5px solid var(--sep);
 }
 
 /* The Dock: a strip of glass with the four apps that are always to hand */
@@ -756,6 +765,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  overflow: clip;
   transition:
     transform 0.5s var(--glide),
     border-radius 0.5s var(--glide);
@@ -970,23 +980,24 @@
     -webkit-line-clamp: 2;
   }
 
-  .sb-folio {
-    padding: 11px 12px;
+  .sb-folio,
+  .sb-faq {
+    gap: 5px;
+    padding: 10px 12px 8px;
   }
 
   .sb-folio__logos {
-    grid-template-columns: repeat(2, 32px);
+    grid-template-columns: repeat(4, 26px);
     gap: 5px;
   }
 
   .sb-folio__logos .logo {
-    width: 32px !important;
-    height: 32px !important;
+    width: 26px !important;
+    height: 26px !important;
   }
 
-  .sb-folio__text span,
-  .sb-faq__list span:nth-child(n + 4) {
-    display: none;
+  .sb-faq__list span {
+    -webkit-line-clamp: 1;
   }
 
   .sb-grid {

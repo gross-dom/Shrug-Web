@@ -1,25 +1,161 @@
-/* FAQs on the phone, as the Notes app (src/phone/apps/Notes.tsx): a folder of
-   notes on the gray that grouped lists sit on, and each note on a white page.
-   The shared parts (ios.css) draw the screen, the list and the bars; this is
-   what is Notes' own. Sizes are iOS points. */
+/* Notes on the phone (src/phone/apps/Notes.tsx), laid out as the Notes app is:
+   Folders and a folder's notes on the gray that grouped lists sit on, and each
+   note on a white page. The shared parts (ios.css) draw the screen, the lists
+   and the bars; this is what is Notes' own. Sizes are iOS points. */
 
-.notes-screen {
-  /* Notes' accent is its yellow: deep enough here to read as ink on white */
+.notes-screen,
+.notes-sheet {
+  /* Notes' accent is its yellow, deep enough to be seen on white. The shared
+     parts take their accent from --blue, so here that is the yellow. It is for
+     what Notes colours: folders, the chevron, the caret, the one filled
+     button. The glass buttons' glyphs stay ink, as iOS draws them now. */
   --blue: #dfa200;
 }
 
-/* Every control in Notes is drawn in that yellow */
-.notes-screen :is(.ios-button, .ios-group__part) {
-  color: var(--blue);
+/* The filled button (Done) glows in its own colour */
+:is(.notes-screen, .notes-sheet) .ios-button[data-prominent] {
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 4px 14px -4px rgb(223 162 0 / 0.6),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.4);
 }
 
-.notes-screen .ios-search__input {
+:is(.notes-screen, .notes-sheet) :is(input, textarea) {
   caret-color: var(--blue);
 }
 
-/* ---- The folder ---- */
+/* What is selected is marked in Notes' yellow, in a note and in a field */
+:is(.notes-screen, .notes-sheet) ::selection {
+  background: rgb(255 204 0 / 0.4);
+}
 
-/* A note's row: its title on one line, and under it the date and the start of its text */
+/* A wrapper that is there to listen, not to be a box */
+.notes-contents {
+  display: contents;
+}
+
+/* ---- Folders ---- */
+
+.notes-folders {
+  padding-top: 2px;
+}
+
+/* The account the folders are in: its name, as large as a heading, and the chevron that folds them away */
+.notes-account__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 6px 0 16px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  line-height: 25px;
+  text-align: left;
+}
+
+.notes-account__toggle:active {
+  opacity: 0.5;
+}
+
+.notes-account__chevron {
+  flex: none;
+  color: var(--blue);
+  transition: transform 0.3s var(--ui);
+}
+
+.notes-account[data-collapsed] .notes-account__chevron {
+  transform: rotate(-90deg);
+}
+
+.notes-account__fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 0.35s var(--ui),
+    opacity 0.25s ease;
+}
+
+.notes-account__fold > .ios-section__rows {
+  min-height: 0;
+}
+
+.notes-account[data-collapsed] .notes-account__fold {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+/* A folder's row: Notes' outlined folder, the name, how many notes are in it */
+.notes-folder {
+  --cell-inset: 52px;
+}
+
+.notes-folder .ios-cell__lead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notes-folder__icon {
+  color: var(--blue);
+}
+
+/* While the folders are being edited, each of the visitor's has the red button that deletes it */
+.notes-folder--editing {
+  --cell-inset: 86px;
+}
+
+.notes-minus {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+}
+
+/* As large under a finger as any button */
+.notes-minus::after {
+  position: absolute;
+  inset: -11px;
+  content: '';
+}
+
+.notes-minus:active {
+  filter: brightness(0.82);
+}
+
+.notes-minus-gap {
+  width: 22px;
+}
+
+/* The two folders that come with Notes can't be changed: they are switched
+   off, and the shared list dims them. Nothing happens under a finger. */
+.notes-folder--fixed:active {
+  background: none;
+}
+
+/* ---- A folder's notes ---- */
+
+.notes-list {
+  gap: 20px;
+  padding-top: 12px;
+}
+
+/* Today, Yesterday, Previous 7 Days: over each group, in line with the words in it */
+.notes-group__header {
+  margin: 0 16px 8px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  line-height: 25px;
+}
+
+/* A note's row: its name on one line, and under it the date and how the note starts */
 .notes-row {
   padding-top: 11px;
   padding-bottom: 11px;
@@ -30,14 +166,28 @@
   white-space: nowrap;
 }
 
-.notes-row .ios-cell__subtitle {
+.notes-row__line {
+  display: block;
+  overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .notes-row__when {
   margin-right: 8px;
-  color: var(--label);
-  opacity: 0.62;
+}
+
+/* Found by a search: the folder the note is in */
+.notes-row__where {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.notes-row__where svg {
+  flex: none;
 }
 
 /* What the search matched */
@@ -45,34 +195,16 @@
   margin: 0 -1px;
   padding: 0 1px;
   border-radius: 3px;
-  background: rgb(255 204 0 / 0.42);
+  background: rgb(255 204 0 / 0.45);
   color: inherit;
 }
 
-.notes-found {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.notes-found > :last-child {
-  font-weight: 400;
-}
-
-.notes-count {
-  margin-top: 12px;
-  color: var(--label-2);
-  font-size: 13px;
-  line-height: 18px;
-  text-align: center;
-}
-
-/* The same notes as a gallery: each one's page in small, its title and date under it */
+/* The same notes as a gallery: each one's page in small, its name and date under it */
 .notes-gallery {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px 12px;
-  padding: 10px var(--edge) 8px;
+  gap: 18px 12px;
+  padding: 2px 0 4px;
 }
 
 .notes-tile {
@@ -86,11 +218,11 @@
 .notes-tile__page {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1.1;
+  aspect-ratio: 1 / 1.08;
   margin-bottom: 7px;
   overflow: hidden;
   padding: 10px 10px 0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--surface);
   box-shadow:
     0 0 0 0.5px rgb(0 0 0 / 0.04),
@@ -149,10 +281,7 @@
   user-select: text;
 }
 
-.notes-note ::selection {
-  background: rgb(255 204 0 / 0.4);
-}
-
+/* When it was last touched, small, over the page */
 .notes-note__date {
   margin-bottom: 14px;
   color: var(--label-2);
@@ -192,63 +321,120 @@
   line-height: 21px;
 }
 
-/* Turned to from the note beside it: the page comes in from that side */
-.notes-note[data-turn='on'] {
-  animation: notes-turn-on 0.34s var(--ui);
+/* A note of the visitor's own is typed straight onto the page, which is theirs to its foot */
+.notes-note--own {
+  min-height: 100%;
 }
 
-.notes-note[data-turn='back'] {
-  animation: notes-turn-back 0.34s var(--ui);
+/* The line being typed is kept clear of the bar floating over the foot of the page */
+.notes-screen--note .ios-screen__scroll {
+  scroll-padding-bottom: calc(var(--foot-gap) + 62px + 8px);
 }
 
-@keyframes notes-turn-on {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
+/* A field as tall as what is in it: the same words, unseen, hold the space open */
+.notes-grow {
+  display: grid;
 }
 
-@keyframes notes-turn-back {
-  from {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
+.notes-grow::after {
+  grid-area: 1 / 1;
+  visibility: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  content: attr(data-value) ' ';
+  pointer-events: none;
 }
 
-/* The note's own menu has nothing to tick, so its words start at the menu's edge */
-.notes-more .ios-menu__item {
-  padding-left: 18px;
+.notes-grow > textarea {
+  display: block;
+  grid-area: 1 / 1;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-/* From one question to the next, at the foot: a strip of glass the size of the search field it stands in for */
-.notes-step {
-  margin: 0 auto;
+.notes-grow > textarea:focus-visible {
+  outline: none;
 }
 
-.notes-step .ios-group {
+/* The bar at a note's foot: Notes' tools on one piece of glass in the middle, New Note at the end */
+.notes-screen--note .ios-foot {
+  justify-content: center;
+}
+
+.notes-screen--note .ios-foot > .ios-group {
   height: 48px;
-  padding: 0 6px;
+  padding: 0 7px;
   border-radius: 24px;
 }
 
-.notes-step .ios-group__part {
-  width: 46px;
+.notes-screen--note .ios-foot > .ios-group .ios-group__part {
+  width: 48px;
   height: 48px;
 }
 
-.notes-step__count {
-  min-width: 66px;
-  padding: 0 2px;
+.notes-screen--note .ios-foot > .ios-button {
+  position: absolute;
+  right: var(--edge);
+  bottom: var(--foot-gap);
+}
+
+/* ---- New Folder ---- */
+
+/* The one field: the folder's name, on a row of its own */
+.notes-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  margin: 6px var(--edge) 0;
+  padding: 0 14px 0 16px;
+  border-radius: 26px;
+  background: var(--surface);
+}
+
+.notes-name__input {
+  flex: 1;
+  min-width: 0;
   color: var(--label);
-  font-size: 15px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  text-align: center;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+}
+
+.notes-name__input:focus-visible {
+  outline: none;
+}
+
+.notes-name__input::placeholder {
+  color: var(--label-3);
+  opacity: 1;
+}
+
+.notes-name__clear {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--label-3);
+  color: #fff;
+}
+
+.notes-name__clear::after {
+  position: absolute;
+  inset: -12px;
+  content: '';
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notes-note[data-turn] {
-    animation: none;
+  .notes-account__chevron,
+  .notes-account__fold {
+    transition: none;
   }
 }

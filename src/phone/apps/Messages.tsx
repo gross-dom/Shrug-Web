@@ -9,9 +9,8 @@ import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
 import { APPS, type AppId } from '../../os/apps'
 import { prefersReducedMotion } from '../../os/dom'
-import { AppIcon } from '../../os/icons'
 import { createStore, useStore } from '../../os/store'
-import { OnePagerIcon } from '../icons'
+import { OnePagerIcon, PhoneIcon } from '../icons'
 import { closeSheet, launch, launchAt, openSheet, pop, push, sys, topOf } from '../system'
 import { Cell, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 import { conversationView, GROUP_VIEW } from './routes'
@@ -261,7 +260,7 @@ function More() {
             }}
           >
             <span className="msg-more__icon" aria-hidden>
-              <AppIcon id={id} />
+              <PhoneIcon id={id} />
             </span>
             <span className="ios-menu__label">{APPS[id].name}</span>
           </button>
@@ -397,12 +396,14 @@ function ConversationScreen({ conversation }: { conversation: Conversation }) {
       className={typeof conversation === 'number' ? 'msg-convo msg-convo--person' : 'msg-convo'}
       leading={<Back />}
       center={
-        <button type="button" className="msg-head" aria-label={`${name}. Details`} aria-haspopup="dialog" onClick={() => openSheet('details')}>
-          <span className="msg-head__face">
+        <button type="button" className="msg-head" aria-haspopup="dialog" onClick={() => openSheet('details')}>
+          {/* The face is a picture of the name beside it: the name is what is read out */}
+          <span className="msg-head__face" aria-hidden>
             <ConversationAvatar conversation={conversation} size={50} />
           </span>
           <span className="ios-glass msg-head__name">
             {name}
+            <span className="sr-only">. Details</span>
             <ChevronRight size={11} strokeWidth={3} aria-hidden />
           </span>
         </button>

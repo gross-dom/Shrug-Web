@@ -40,25 +40,25 @@ It is laid out as an iMessage group conversation, seen from Shrug's side:
 
 ### On a phone
 
-Below 760px wide (or 480px tall) the site is an iPhone, in the look of the current iOS. Everything on the desktop is there, redrawn as the thing an iPhone has in its place:
+Below 760px wide (or 480px tall) the site is an iPhone, in the look of the current iOS. Everything on the desktop is there, as the app an iPhone has in its place, under that app's own name and icon and laid out the way that app is:
 
 | On the desktop | On the iPhone |
 | --- | --- |
-| The screen saver | **The Lock Screen.** The time and date, and the group's replies arriving as notifications, stacked as iOS stacks a conversation's. Swipe up to open it, or tap a notification to go straight to the conversation. Left alone for two and a half minutes the phone locks again. |
-| The desk, its icons and the Dock | **The Home Screen.** Three widgets (the newest reply, the portfolio, the FAQs), the icons, a Dock of the four main apps with the unread badge on Messages, and Search. |
+| The screen saver | **The Lock Screen.** The time and date, and the group's replies arriving as notifications, stacked as iOS stacks a conversation's. Swipe up to open it, or tap a notification to go straight to the conversation. Left alone for two minutes the phone locks again (Settings › Display & Brightness › Auto-Lock changes that). |
+| The desk, its icons and the Dock | **The Home Screen.** Three widgets (the newest reply in Messages, the Portfolio folder in Files, the FAQs folder in Notes), the icons, a Dock of Messages, Files, Notes and Photos with the unread badge on Messages, and Search. |
 | Group chat | **Messages.** The list of conversations (Shrug Family, then everyone's own, unread until opened), a conversation with its floating header and the message field, and the details sheet with Pause Replies, Show Every Reply and Play From the Start. |
-| Portfolio (a Finder window) | **Files.** Every company under its logo, grouped by vertical, as icons or a list; a Browse tab of the verticals as folders; search; and a card for each company with its link. |
-| FAQs (Notes) | **Notes.** The questions as a list of notes, and each note on its own page. |
+| Portfolio (a Finder window) | **Files.** It opens inside the Portfolio folder: every company under its logo, grouped by vertical, as icons or a list. Back leads out to Browse, where Portfolio is a location and the verticals are tags. A company opens as a sheet over the folder, with its link. Recents keeps the companies that have been looked at; Shared holds the one-pager. |
+| FAQs (Notes) | **Notes.** It opens inside the FAQs folder: the questions as notes, grouped by date the way Notes groups them, each opening on its own page. Back leads out to Folders. Search is at the foot, and the compose button starts a note of the visitor's own, which is kept for the visit and sent nowhere. |
 | Case Studies (Terminal) | **A terminal**, with keys over the keyboard so nobody has to type to ask for access. |
-| VIP (Photos) | **Photos.** The Library as a grid, the drops as albums under Collections, and a full-screen viewer to swipe through. |
-| About Shrug | **About**, laid out as Settings lays out General › About: the counts, each opening its app. |
+| VIP (Photos) | **Photos.** The Library as a grid, with Photos' Sort and Filter menu; Collections, with the drops as albums, Favorites, Media Types and Recently Viewed; search; and a full-screen viewer to swipe through. |
+| About Shrug | **Settings.** Shrug is where the account would be; General › About has the counts, each opening its app; and the switches work: Notifications (banners, and what they show), Auto-Lock, System Haptics. |
 | Moving, minimising and closing windows | **The home indicator.** Swipe it up to go to the Home Screen; swipe up and pause for the App Switcher, where a tap goes to an app and a flick upward closes it. |
 | A reply landing while another window is in front | **A banner** at the top of the screen. Tap it to open the conversation. |
 
 - **On a real phone the phone is the frame.** The screen is drawn edge to edge under the phone's own status bar, and the browser's bars are painted to match what is showing. The home indicator at the foot is the site's own: the phone's is below the browser, and leaves it.
 - **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed.
 - **Every move is a step in the browser's history.** Safari's swipe from the left edge (or an Android back button) is the phone's Back: it goes back a screen inside an app, closes a sheet, and leaves an app for the Home Screen. A reload comes back to where it was, unlocked.
-- **Apps stay as they were left**, as they do on an iPhone, until they are flicked out of the App Switcher. An app that fails does what one does on an iPhone: it closes to the Home Screen and starts afresh next time; the rest of the phone carries on.
+- **Apps open where an iPhone would have left them**: Files inside the Portfolio folder and Notes inside FAQs, each one step in from its first screen, with Back leading out. After that they stay as they were left, as they do on an iPhone, until they are flicked out of the App Switcher. An app that fails does what one does on an iPhone: it closes to the Home Screen and starts afresh next time; the rest of the phone carries on.
 - **Turned on its side**, the apps reflow as apps do. A real iPhone keeps its Lock Screen and Home Screen upright; a page turns with the browser, so those two are laid out for the width instead, with the Dock down the trailing edge.
 - **Small gray type is a shade darker than iOS's own** (in the conversation on the desktop too), so that it meets the contrast guidance. The blue is iOS's, which on white falls a little short of that guidance for small text, as it does on an iPhone.
 - **Added to a phone's Home Screen** the site has Shrug's icon (`public/apple-touch-icon.png`, drawn by `tools/icons.cjs`) and still opens in the browser. Running it full screen from there is left off (`"display": "browser"` in `public/manifest.webmanifest`): in that mode the phone's status bar keeps one colour of ink, which can't be right over both the wallpaper and a white app. It also hasn't been tried on a real phone.
@@ -70,7 +70,7 @@ To send someone the site as a single file they can open on a phone or in a brows
 
 ### Links
 
-- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, it arrives unlocked with the last one named open). Names: `chat`, `portfolio`, `faqs`, `case-studies`, `vip`.
+- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, it arrives unlocked with the last one named open). Names: `chat`, `portfolio` (or `files`), `faqs` (or `notes`), `case-studies`, `vip` (or `photos`), `about` (or `settings`).
 - `?phone` shows the iPhone whatever the size of the screen, drawn in its frame. `?phone=hand` draws it edge to edge instead, as a real phone gets it, for trying that layout in a browser on a computer.
 - `?saver` starts on the screen saver (desktop only). `?idle=20` sets how many seconds of stillness start it, and lock the phone.
 
@@ -98,7 +98,7 @@ Fill in a field and the real thing replaces its placeholder; nothing else needs 
 
 The 15 companies without a logo are Senra, Mona Lee Solar, Homemade, BloxSnacks, Loyal, Supergreat, Drumroll, Lula, Seis, RTFKT, Once Upon, Diagram, Tome, Opal and Poparazzi: their sites had no icon or served one that isn't their logo (a host's default, a parked page, another product's, a placeholder), and no site could be confirmed for Drumroll or Lula. About a quarter of the other logos come from small icons (32 to 48px) and are soft at the preview's size; a proper logo file replaces any of them the same way.
 
-Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal are shown on screen and go nowhere, on the desktop and on the iPhone alike. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`): the iPhone's Messages and terminal call the same two.
+Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal are shown on screen and go nowhere, on the desktop and on the iPhone alike. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`): the iPhone's Messages and terminal call the same two. The iPhone's Settings › Privacy & Security says that nothing is sent, stored or loaded from elsewhere, which is true of the code as it stands; change what it says (`PRIVACY` in `src/phone/apps/Settings.tsx`) when that stops being so, analytics added by a host included.
 
 ## Where things are
 
@@ -125,8 +125,8 @@ src/
 - **The desktop and the iPhone are separate downloads.** `os/Desktop.tsx` is the root and loads `os/Surface.tsx` (the desktop) or `phone/Phone.tsx` (the iPhone), whichever the screen shows; what they share (the conversation, the data, the kit) is loaded once. `os/Boundary.tsx` keeps a failure inside the window or app it happened in.
 - **Window behaviour** is in `os/wm.ts` (state) and `os/WindowFrame.tsx` (dragging, resizing, the lights).
 - **A new window**: add it to `os/apps.ts`, write its component in `apps/` and list it in `os/Surface.tsx`.
-- **The iPhone** is `phone/system.ts` (locked or not, which app is in front, how far into each app, mirrored into history), `phone/Phone.tsx` (the screen: edge to edge on a real phone, in the kit's frame elsewhere), `phone/Springboard.tsx` (the Lock Screen, the Home Screen, apps opening out of their icons, the App Switcher, banners, the home indicator), `phone/ui.tsx` with `styles/ios.css` (what the apps are built from: screens with floating glass buttons and folding large titles, stacks of screens, grouped lists, tab and search bars, menus, sheets), and `phone/apps/` (one file per app; `routes.ts` names the screens inside them).
-- **A new app on the iPhone**: write it in `phone/apps/` from the parts in `phone/ui.tsx`, name it in `phone/apps/index.tsx`, and put its icon on the Home Screen or in the Dock there.
+- **The iPhone** is `phone/system.ts` (locked or not, which app is in front, how far into each app, mirrored into history), `phone/Phone.tsx` (the screen: edge to edge on a real phone, in the kit's frame elsewhere), `phone/Springboard.tsx` (the Lock Screen, the Home Screen, apps opening out of their icons, the App Switcher, banners, the home indicator), `phone/ui.tsx` with `styles/ios.css` (what the apps are built from: screens with floating glass buttons and folding large titles, stacks of screens, grouped lists, tab and search bars, menus, sheets), `phone/apps/` (one file per app; `routes.ts` names the screens inside them), `phone/icons.tsx` (the app icons) and `phone/settings.ts` (what the Settings app can change, read by the rest of the phone).
+- **A new app on the iPhone**: write it in `phone/apps/` from the parts in `phone/ui.tsx`, name it in `phone/apps/index.tsx`, draw its icon in `phone/icons.tsx`, and put it on the Home Screen or in the Dock (`DOCKED`, `ON_HOME`).
 - **The wallpaper** is a picture, `public/wallpaper.webp`, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86`; it needs numpy and Pillow), so the colours and shapes can be changed there. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
 
@@ -140,4 +140,4 @@ src/
 - The kit's `Popover` draws the menus and the details. The menu bar adds the items, keyboard and focus handling.
 - The kit's `Phone`, `LockScreen` and `Notification` draw the iPhone's frame, its Lock Screen and its banners, and the kit's `Expand` is the zoom an app opens out of its icon with. `phone/Springboard.tsx` adds the gestures: the swipe that unlocks, the home indicator, the App Switcher.
 
-The app icons, folder, document and wallpaper are drawn for this site; the group chat's icon is drawn after the Messages icon (a white speech bubble on green). No file from an operating system is used. The company logos belong to the companies.
+The app icons, folder, document and wallpaper are drawn for this site; the group chat's icon is drawn after the Messages icon (a white speech bubble on green). On the iPhone the icons of Messages, Files, Notes, Photos and Settings are drawn after the iOS icons of those apps (`src/phone/icons.tsx`). No file from an operating system is used. The company logos belong to the companies.

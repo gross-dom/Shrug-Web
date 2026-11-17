@@ -1,14 +1,15 @@
 import type { ComponentType } from 'react'
 import type { PhoneApp } from '../system'
-import { AboutApp } from './About'
 import { FilesApp } from './Files'
 import { MessagesApp } from './Messages'
 import { NotesApp } from './Notes'
 import { PhotosApp } from './Photos'
+import { SettingsApp } from './Settings'
 import { TerminalApp } from './Terminal'
 
-// The apps on the phone: each of the desktop's windows, redrawn as the iPhone
-// app it corresponds to. The names under the icons say what is in them.
+// The apps on the phone: each of the desktop's windows, as the iPhone app it
+// corresponds to, under that app's own name. What is in each (the portfolio,
+// the FAQs, the drops) is named inside it, and on its widget.
 
 export interface PhoneAppSpec {
   /** Under its icon on the Home Screen. */
@@ -18,11 +19,11 @@ export interface PhoneAppSpec {
 
 export const PHONE: Record<PhoneApp, PhoneAppSpec> = {
   messages: { label: 'Messages', Root: MessagesApp },
-  finder: { label: 'Portfolio', Root: FilesApp },
-  notes: { label: 'FAQs', Root: NotesApp },
+  finder: { label: 'Files', Root: FilesApp },
+  notes: { label: 'Notes', Root: NotesApp },
   terminal: { label: 'Case Studies', Root: TerminalApp },
-  photos: { label: 'VIP', Root: PhotosApp },
-  about: { label: 'About', Root: AboutApp },
+  photos: { label: 'Photos', Root: PhotosApp },
+  about: { label: 'Settings', Root: SettingsApp },
 }
 
 /** In the Dock, left to right. */

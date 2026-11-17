@@ -2,19 +2,22 @@
 // the finger. Each does nothing where it isn't there.
 
 import { SITE } from '../data/site'
+import { settings } from './settings'
 
 /** The address to pass on: this page's, or the site's where the page has none of its own (a preview opened from a file). */
 export const pageUrl = () => (/^https?:$/.test(location.protocol) ? `${location.origin}${location.pathname}` : SITE.url)
 
-/** Sends something on through the phone's own share sheet, or copies the address where there is none. */
-export async function share(data: { title?: string; text?: string; url?: string } = {}): Promise<'shared' | 'copied' | 'neither'> {
-  const url = data.url ?? pageUrl()
+/** Sends something on through the phone's own share sheet, or copies it where
+ * there is none. It goes with this page's address unless given another;
+ * `url: null` sends the words alone (a note of the visitor's own). */
+export async function share(data: { title?: string; text?: string; url?: string | null } = {}): Promise<'shared' | 'copied' | 'neither'> {
+  const url = data.url === null ? null : (data.url ?? pageUrl())
   try {
     if (navigator.share) {
-      await navigator.share({ ...data, url })
+      await navigator.share({ title: data.title, text: data.text, ...(url ? { url } : null) })
       return 'shared'
     }
-    await navigator.clipboard.writeText(data.text ? `${data.text} ${url}` : url)
+    await navigator.clipboard.writeText([data.text, url].filter(Boolean).join(' '))
     return 'copied'
   } catch {
     // Dismissed, or not allowed: nothing to say about it
@@ -28,6 +31,7 @@ let ticker: HTMLLabelElement | null = null
  * ticks when a switch is flipped, so one is kept out of sight to flip. Call it
  * from inside a touch handler. */
 export function haptic(ms: number | number[] = 10) {
+  if (!settings.get().haptics) return
   try {
     if (navigator.vibrate?.(ms)) return
     if (!ticker) {

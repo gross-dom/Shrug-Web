@@ -32,6 +32,8 @@ const ALIASES: Record<string, AppId> = {
   chat: 'messages',
   'group-chat': 'messages',
   portfolio: 'finder',
+  files: 'finder',
+  settings: 'about',
   faqs: 'notes',
   faq: 'notes',
   'case-studies': 'terminal',

@@ -1,48 +1,77 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
-import { Check, Ellipsis, Heart, Image as ImageIcon, Images, Info, LayoutGrid, Play, Share, Video } from 'lucide-react'
-import { photos, setMediaFilter, type MediaFilter } from '../../apps/state'
-import { DROPS, MEDIA } from '../../data/drops'
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react'
+import { flushSync } from 'react-dom'
+import { ArrowUpDown, Check, ChevronRight, Clock, Ellipsis, Heart, Image as ImageIcon, Images, Info, Play, Search, Share, Video, X } from 'lucide-react'
+import { DROPS, MEDIA, type MediaKind } from '../../data/drops'
 import { prefersReducedMotion } from '../../os/dom'
 import { createStore, useStore } from '../../os/store'
 import { haptic, share } from '../native'
-import { openSheet, pop, push, swap, sys, topOf } from '../system'
-import { Cell, Empty, GlassGroup, GroupButton, List, Menu, NavStack, Screen, Section, Segments, Sheet, SheetHost, TabBar, scaleOf, useApp, type Tab } from '../ui'
+import { launchAt, openSheet, pop, push, swap, sys, topOf } from '../system'
+import { Cell, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, SearchBar, Section, Sheet, SheetHost, TabBar, scaleOf, useApp, type MenuItem, type Tab } from '../ui'
 import { albumView, mediaView } from './routes'
 import '../../styles/phone/photos.css'
 
-// VIP on the phone: the Photos app. The Library is every photo and video from
-// the people who got a drop, as a grid of squares; Collections has each drop
-// as an album; a tap opens one full screen, to swipe through. None of the
-// media has been supplied yet, so every tile is the slot one will go in: fill
-// in a `src` in src/data/drops.ts and the picture takes its slot's place.
+// VIP on the phone: the Photos app, laid out as iOS lays it out. The Library
+// tab is every photo and video from the people who got a drop, as a grid of
+// squares; Collections has each drop as an album, with the media types and the
+// utilities under them; Search is the round button beside the tabs; a tap on a
+// square opens it full screen, to swipe through. None of the media has been
+// supplied yet, so every tile is the slot one will go in: fill in a `src` in
+// src/data/drops.ts and the picture takes its slot's place. Nothing here has a
+// date, so the parts of Photos that are made of dates (Years, Months, the date
+// over a picture) are left out, not made up.
 
 type TabId = 'library' | 'collections'
 
-/** What the app keeps while it is in the background: the tab that is showing,
- * what has been favorited, and whether the viewer's buttons are put away. */
-const mine = createStore<{ tab: TabId; swapped: boolean; loved: number[]; bare: boolean }>({ tab: 'library', swapped: false, loved: [], bare: false })
+/** What the Library shows: all of it, or what Sort and Filter narrows it to. */
+type Filter = 'all' | 'favorites' | MediaKind
 
-const showTab = (tab: TabId) => mine.set((s) => (s.tab === tab ? s : { ...s, tab, swapped: true }))
+/** Screens of the app's own, beside an album (`a:<drop>`) and the viewer (`m:<i>`). */
+const ALBUMS = 'albums'
+const FAVORITES = 'favorites'
+const VIDEOS_VIEW = 'videos'
+const RECENT = 'recent'
+const TYPES = 'types'
+const UTILITIES = 'utilities'
+
+interface Mine {
+  /** The tab that is showing, or that search was started from. */
+  tab: TabId
+  /** Search is showing, in the tabs' place. */
+  searching: boolean
+  /** A tab has been turned to since the app opened: the next one fades in. */
+  swapped: boolean
+  filter: Filter
+  query: string
+  /** What has been favorited. */
+  loved: number[]
+  /** What has been opened in the viewer this visit, the most recent first. */
+  recent: number[]
+  /** What the viewer swipes through: the grid a picture was opened from, as it was then. */
+  run: number[] | null
+  /** The viewer's buttons are put away. */
+  bare: boolean
+}
+
+/** What the app keeps while it is in the background. It lasts as long as the page does. */
+const mine = createStore<Mine>({ tab: 'library', searching: false, swapped: false, filter: 'all', query: '', loved: [], recent: [], run: null, bare: false })
+
+const showTab = (tab: TabId) => mine.set((s) => (s.tab === tab && !s.searching ? s : { ...s, tab, searching: false, query: '', swapped: true }))
+const leaveSearch = () => mine.set((s) => (s.searching ? { ...s, searching: false, query: '', swapped: true } : s))
+const setFilter = (filter: Filter) => mine.set((s) => (s.filter === filter ? s : { ...s, filter }))
+const setQuery = (query: string) => mine.set((s) => (s.query === query ? s : { ...s, query }))
 const toggleLoved = (index: number) => mine.set((s) => ({ ...s, loved: s.loved.includes(index) ? s.loved.filter((i) => i !== index) : [...s.loved, index] }))
-
-const TABS: Tab<TabId>[] = [
-  { id: 'library', label: 'Library', icon: <Images size={25} strokeWidth={2} /> },
-  { id: 'collections', label: 'Collections', icon: <LayoutGrid size={24} strokeWidth={2} /> },
-]
-
-const FILTERS: { value: MediaFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'photo', label: 'Photos' },
-  { value: 'video', label: 'Videos' },
-]
+const viewed = (index: number) => mine.set((s) => (s.recent[0] === index ? s : { ...s, recent: [index, ...s.recent.filter((i) => i !== index)] }))
 
 /** Every item, by its place in MEDIA. */
 const EVERYTHING = MEDIA.map((_, i) => i)
 const inDrop = (drop: string) => EVERYTHING.filter((i) => MEDIA[i]!.drop === drop)
-const ofKind = (filter: MediaFilter) => (filter === 'all' ? EVERYTHING : EVERYTHING.filter((i) => MEDIA[i]!.kind === filter))
+const ofKind = (kind: MediaKind) => EVERYTHING.filter((i) => MEDIA[i]!.kind === kind)
+/** The favorites, in the library's order. */
+const lovedOf = (loved: number[]) => EVERYTHING.filter((i) => loved.includes(i))
 
-const PHOTOS = ofKind('photo').length
-const VIDEOS = ofKind('video').length
+const ALL_VIDEOS = ofKind('video')
+
+const shownBy = (filter: Filter, loved: number[]) => (filter === 'all' ? EVERYTHING : filter === 'favorites' ? lovedOf(loved) : ofKind(filter))
 
 const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
@@ -58,13 +87,49 @@ function tally(indices: number[]) {
 const HUES = ['#3f8cff', '#8a6dff', '#ff66b8', '#ffa63d', '#2bbfa4', '#ff5a3c', '#2b55cf', '#3fb8e0']
 const hueOf = (drop: string) => HUES[Math.max(0, DROPS.indexOf(drop)) % HUES.length]!
 
+/** The app's own element: what a press outside React's reach (the search field's focus, a tab's scroll to the top) is found in. */
+const RootContext = createContext<RefObject<HTMLDivElement>>({ current: null })
+
+/** Back to the app's first screen, from however deep. One screen in, that is a
+ * step back; from further in it is a step on, as pressing a tab is. */
+const toRoot = () => (sys.get().stacks.photos.length === 1 ? pop() : launchAt('photos', []))
+
+// ---- Glyphs ----
+
+/** The Library tab's: one photo in front of another, solid, as a tab bar's glyphs are. */
+function LibraryGlyph({ size = 27 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden>
+      <path d="M9 6.4V6a2.8 2.8 0 0 1 2.8-2.8h11.4A2.8 2.8 0 0 1 26 6v8.4a2.8 2.8 0 0 1-2.8 2.8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <path fillRule="evenodd" fill="currentColor" d="M4.8 8.6h13.4A2.8 2.8 0 0 1 21 11.4v10.4a2.8 2.8 0 0 1-2.8 2.8H4.8A2.8 2.8 0 0 1 2 21.8V11.4a2.8 2.8 0 0 1 2.8-2.8zM7.6 11.6a1.9 1.9 0 1 0 0 3.8 1.9 1.9 0 0 0 0-3.8zM4.6 21.6l4-4.3 2.5 2.4 3.6-4.5 4.1 6.4z" />
+    </svg>
+  )
+}
+
+/** The Collections tab's: a card with two more behind it. */
+function CollectionsGlyph({ size = 27 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="currentColor" aria-hidden>
+      <rect x="8.5" y="2.6" width="11" height="1.9" rx="0.95" />
+      <rect x="5.5" y="6.4" width="17" height="1.9" rx="0.95" />
+      <rect x="2.5" y="10.4" width="23" height="15" rx="3.4" />
+    </svg>
+  )
+}
+
+const TABS: Tab<TabId>[] = [
+  { id: 'library', label: 'Library', icon: <LibraryGlyph /> },
+  { id: 'collections', label: 'Collections', icon: <CollectionsGlyph /> },
+]
+
 // ---- A tile ----
 
 /** One photo or video as a square: the picture, or the slot it will go in. A
- * video carries a play mark in its corner, as Photos marks one; a favorite, a
- * heart. A slot is named for its drop, except where that is already said: an
- * album's `cover` has the name under it, and `within` an album every slot is
- * from the one drop, so each says what kind of slot it is instead. */
+ * video carries a play mark in its corner, where Photos writes its length; a
+ * favorite, a heart. A slot is named for its drop, except where that is
+ * already said: an album's `cover` has the name under it, and `within` an
+ * album every slot is from the one drop, so each says what kind of slot it is
+ * instead. */
 function Picture({ index, loved, cover, within }: { index: number; loved?: boolean; cover?: boolean; within?: boolean }) {
   const slot = MEDIA[index]!
   const video = slot.kind === 'video'
@@ -88,21 +153,29 @@ function Picture({ index, loved, cover, within }: { index: number; loved?: boole
   )
 }
 
+/** What a tile is, for someone who is told it and not shown it. It holds the
+ * words the tile shows (its drop's name; within an album, "Photo slot"). */
 const describe = (index: number) => {
   const slot = MEDIA[index]!
   const kind = slot.kind === 'video' ? 'Video' : 'Photo'
-  return `${kind} from ${slot.drop}${slot.from ? `, sent by ${slot.from}` : slot.src ? '' : ', not supplied yet'}`
+  return `${kind}${slot.src ? '' : ' slot'} from ${slot.drop}${slot.from ? `, sent by ${slot.from}` : ''}`
+}
+
+/** Opens one in the viewer, to swipe through the rest of the grid it was in. */
+function view(index: number, run: number[]) {
+  mine.set((s) => ({ ...s, run }))
+  push(mediaView(index))
 }
 
 /** Photos' grid: equal squares, three across, edge to edge. */
-function Grid({ indices, album }: { indices: number[]; album?: boolean }) {
+function Grid({ indices, within }: { indices: number[]; within?: boolean }) {
   const loved = useStore(mine, (s) => s.loved)
   return (
     <div className="photos-grid" role="list">
       {indices.map((i) => (
         <div key={i} role="listitem">
-          <button type="button" className="photos-tile" aria-label={describe(i)} onClick={() => push(mediaView(i))}>
-            <Picture index={i} loved={loved.includes(i)} within={album} />
+          <button type="button" className="photos-tile" aria-label={describe(i)} onClick={() => view(i, indices)}>
+            <Picture index={i} loved={loved.includes(i)} within={within} />
           </button>
         </div>
       ))}
@@ -110,49 +183,84 @@ function Grid({ indices, album }: { indices: number[]; album?: boolean }) {
   )
 }
 
-// ---- The tab bar ----
+// ---- What floats at the foot: the tabs, and search beside them ----
 
-/** Library and Collections, floating at the foot. A tab's own button, pressed
- * from deeper in, goes back to its first screen, as a tab bar's does. */
+/** Library and Collections in their short bar, and the round Search button in
+ * the far corner. A tab's own button scrolls its screen back to the top;
+ * pressed from deeper in, it goes back to the tab's first screen. */
 function Tabs({ deep }: { deep?: boolean }) {
   const tab = useStore(mine, (s) => s.tab)
+  const root = useContext(RootContext)
+  const onTab = (id: TabId) => {
+    if (deep) {
+      showTab(id)
+      toRoot()
+    } else if (id === tab) root.current?.querySelector('.photos-tab[data-on] .ios-screen__scroll')?.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    else showTab(id)
+  }
+  const search = () => {
+    // The field is drawn and focused inside the tap itself: a phone only raises its keyboard for that
+    flushSync(() => mine.set((s) => ({ ...s, searching: true, swapped: true })))
+    if (deep) toRoot()
+    else root.current?.querySelector<HTMLInputElement>('.photos-search .ios-search__input')?.focus({ preventScroll: true })
+  }
   return (
-    <TabBar
-      label="Photos"
-      tabs={TABS}
-      value={tab}
-      onChange={(id) => {
-        showTab(id)
-        if (deep) pop()
-      }}
-    />
+    <>
+      <TabBar label="Photos" tabs={TABS} value={tab} onChange={onTab} />
+      <span className="photos-gap" aria-hidden />
+      <GlassButton label="Search" onClick={search}>
+        <Search size={25} strokeWidth={2.2} aria-hidden />
+      </GlassButton>
+    </>
   )
+}
+
+/** The tabs stay at the foot of every screen under them, as a tab bar does. A
+ * screen reached from search has none: its way back is Back. */
+function useTabsFoot() {
+  const searching = useStore(mine, (s) => s.searching)
+  return searching ? undefined : <Tabs deep />
 }
 
 // ---- Library ----
 
+const FILTERS: { value: Filter; label: string; icon: ReactNode }[] = [
+  { value: 'all', label: 'All Items', icon: <Images size={19} strokeWidth={2} /> },
+  { value: 'favorites', label: 'Favorites', icon: <Heart size={19} strokeWidth={2} /> },
+  { value: 'photo', label: 'Photos', icon: <ImageIcon size={19} strokeWidth={2} /> },
+  { value: 'video', label: 'Videos', icon: <Video size={20} strokeWidth={2} /> },
+]
+
+/** What a filter says when nothing passes it. */
+const NOTHING: Record<Exclude<Filter, 'all'>, { icon: ReactNode; title: string; text: string }> = {
+  favorites: { icon: <Heart size={44} strokeWidth={1.5} />, title: 'No Favorites', text: 'Tap the heart on a photo or video to keep it here.' },
+  photo: { icon: <ImageIcon size={44} strokeWidth={1.5} />, title: 'No Photos', text: 'Photos from the drops will show up here.' },
+  video: { icon: <Video size={44} strokeWidth={1.5} />, title: 'No Videos', text: 'Videos from the drops will show up here.' },
+}
+
 function Library() {
-  const filter = useStore(photos, (s) => s.filter)
-  const shown = useMemo(() => ofKind(filter), [filter])
+  const filter = useStore(mine, (s) => s.filter)
+  const loved = useStore(mine, (s) => s.loved)
+  const shown = useMemo(() => shownBy(filter, loved), [filter, loved])
+  const items: MenuItem[] = FILTERS.map((f) => ({ label: f.label, icon: f.icon, checked: f.value === filter, divided: f.value === 'favorites', onSelect: () => setFilter(f.value) }))
+  const none = filter === 'all' ? NOTHING.photo : NOTHING[filter]
   return (
     <Screen
       title="Library"
       large
       className="photos-library"
-      header={<p className="photos-sub">{tally(EVERYTHING)}</p>}
-      foot={
-        <div className="photos-foot">
-          {/* Where Photos keeps Years, Months and All: here it is the kind */}
-          <div className="ios-glass photos-seg">
-            <Segments label="Show" value={filter} options={FILTERS} onChange={setMediaFilter} />
-          </div>
-          <Tabs />
-        </div>
+      trailing={
+        // Blue while it is narrowing the library, as the button is in Photos
+        <Menu label="Sort and Filter" items={items} tint={filter !== 'all'}>
+          <ArrowUpDown size={21} strokeWidth={2.4} aria-hidden />
+        </Menu>
       }
+      foot={<Tabs />}
     >
       {shown.length ? (
         <>
           <Grid indices={shown} />
+          {/* How Photos ends its library: what is in it, and a quieter line under that */}
           <p className="photos-note">
             {tally(shown)}
             <br />
@@ -160,8 +268,8 @@ function Library() {
           </p>
         </>
       ) : (
-        <Empty icon={filter === 'video' ? <Video size={44} strokeWidth={1.5} /> : <ImageIcon size={44} strokeWidth={1.5} />} title={filter === 'video' ? 'No Videos' : 'No Photos'}>
-          {filter === 'video' ? 'Videos' : 'Photos'} from the drops will show up here.
+        <Empty icon={none.icon} title={none.title}>
+          {none.text}
         </Empty>
       )}
     </Screen>
@@ -170,59 +278,312 @@ function Library() {
 
 // ---- Collections ----
 
-function Collections() {
-  const kind = (filter: MediaFilter) => {
-    setMediaFilter(filter)
-    showTab('library')
-  }
+/** A section's name in Collections: pressed, it opens the whole of the section. */
+function Head({ children, onOpen }: { children: string; onOpen: () => void }) {
   return (
-    <Screen
-      title="Collections"
-      large
-      className="photos-collections"
-      foot={
-        <div className="photos-foot">
-          <Tabs />
-        </div>
+    <h3 className="photos-head">
+      <button type="button" onClick={onOpen}>
+        {children}
+        <ChevronRight size={17} strokeWidth={3.2} aria-hidden />
+      </button>
+    </h3>
+  )
+}
+
+interface AlbumSpec {
+  name: string
+  /** The screen it opens. */
+  view: string
+  items: number[]
+  /** Favorites: marked with a heart, as Photos marks it. */
+  heart?: boolean
+}
+
+/** Every album: Favorites first, then one for each drop. */
+function useAlbums(): AlbumSpec[] {
+  const loved = useStore(mine, (s) => s.loved)
+  return useMemo(() => [{ name: 'Favorites', view: FAVORITES, items: lovedOf(loved), heart: true }, ...DROPS.map((drop) => ({ name: drop, view: albumView(drop), items: inDrop(drop) }))], [loved])
+}
+
+/** An album as Photos shows one: its cover, its name, how much is in it. */
+function AlbumCard({ album }: { album: AlbumSpec }) {
+  const n = album.items.length
+  return (
+    <button type="button" className="photos-album" onClick={() => push(album.view)}>
+      <span className="photos-album__cover">
+        {n > 0 && <Picture index={album.items[0]!} cover />}
+        {album.heart && <Heart className="photos-album__heart" data-alone={n === 0 || undefined} size={n ? 15 : 34} strokeWidth={0} fill="currentColor" aria-hidden />}
+      </span>
+      <span className="photos-album__name">{album.name}</span>
+      <span className="photos-album__count">
+        {n}
+        <span className="sr-only"> {n === 1 ? 'item' : 'items'}</span>
+      </span>
+    </button>
+  )
+}
+
+/** A finger scrolls a row sideways by itself. A mouse has no such thing, so it drags the row. */
+function useDragScroll() {
+  const drag = useRef<{ x: number; left: number; k: number; moved: boolean } | null>(null)
+  const dragged = useRef(false)
+  const end = () => {
+    const d = drag.current
+    drag.current = null
+    if (!d?.moved) return
+    // The click that ends a drag is not a press on the album under it
+    dragged.current = true
+    setTimeout(() => (dragged.current = false), 0)
+  }
+  return {
+    onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return
+      drag.current = { x: e.clientX, left: e.currentTarget.scrollLeft, k: scaleOf(e.currentTarget), moved: false }
+    },
+    onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => {
+      const d = drag.current
+      if (!d) return
+      const dx = (e.clientX - d.x) / d.k
+      if (!d.moved) {
+        if (Math.abs(dx) < 5) return
+        d.moved = true
+        e.currentTarget.setPointerCapture(e.pointerId)
       }
-    >
-      <h3 className="photos-head">
-        Drops <span>{DROPS.length}</span>
-      </h3>
-      <div className="photos-albums" role="list">
-        {DROPS.map((drop) => {
-          const items = inDrop(drop)
-          return (
-            <div key={drop} role="listitem">
-              <button type="button" className="photos-album" onClick={() => push(albumView(drop))}>
-                <span className="photos-album__cover">{items.length > 0 && <Picture index={items[0]!} cover />}</span>
-                <span className="photos-album__name">{drop}</span>
-                <span className="photos-album__count">
-                  {items.length}
-                  <span className="sr-only"> {items.length === 1 ? 'item' : 'items'}</span>
-                </span>
-              </button>
-            </div>
-          )
-        })}
+      e.currentTarget.scrollLeft = d.left - dx
+    },
+    onPointerUp: end,
+    onPointerCancel: end,
+    onClickCapture: (e: ReactMouseEvent) => {
+      if (!dragged.current) return
+      e.preventDefault()
+      e.stopPropagation()
+    },
+  }
+}
+
+/** Media Types: the kinds Photos sorts a library into. Here there is one beside photos. */
+function TypeRows() {
+  return (
+    <List className="photos-rows">
+      <Section>
+        <Cell lead={<Video size={23} strokeWidth={2} aria-hidden />} title="Videos" value={ALL_VIDEOS.length} chevron onClick={() => push(VIDEOS_VIEW)} />
+      </Section>
+    </List>
+  )
+}
+
+/** Utilities: what Photos keeps track of by itself. */
+function UtilityRows() {
+  const seen = useStore(mine, (s) => s.recent.length)
+  return (
+    <List className="photos-rows">
+      <Section>
+        <Cell lead={<Clock size={22} strokeWidth={2} aria-hidden />} title="Recently Viewed" value={seen} chevron onClick={() => push(RECENT)} />
+      </Section>
+    </List>
+  )
+}
+
+function Collections() {
+  const albums = useAlbums()
+  const row = useDragScroll()
+  return (
+    <Screen title="Collections" large className="photos-collections" foot={<Tabs />}>
+      <Head onOpen={() => push(ALBUMS)}>Albums</Head>
+      <div className="photos-row" role="list" {...row}>
+        {albums.map((album) => (
+          <div key={album.view} role="listitem">
+            <AlbumCard album={album} />
+          </div>
+        ))}
       </div>
-      <h3 className="photos-head">Media Types</h3>
-      <List className="photos-types">
-        <Section>
-          <Cell lead={<Video size={22} strokeWidth={2} aria-hidden />} title="Videos" value={VIDEOS} chevron onClick={() => kind('video')} />
-          <Cell lead={<ImageIcon size={22} strokeWidth={2} aria-hidden />} title="Photos" value={PHOTOS} chevron onClick={() => kind('photo')} />
-        </Section>
-      </List>
+      <Head onOpen={() => push(TYPES)}>Media Types</Head>
+      <TypeRows />
+      <Head onOpen={() => push(UTILITIES)}>Utilities</Head>
+      <UtilityRows />
     </Screen>
   )
 }
 
-/** The two tabs. Both stay drawn, so each is where it was left when its turn comes round again. */
+/** Every album, two across: what the Albums heading opens. */
+function Albums() {
+  const albums = useAlbums()
+  const foot = useTabsFoot()
+  return (
+    <Screen title="Albums" large className="photos-screen" foot={foot}>
+      <div className="photos-albums" role="list">
+        {albums.map((album) => (
+          <div key={album.view} role="listitem">
+            <AlbumCard album={album} />
+          </div>
+        ))}
+      </div>
+    </Screen>
+  )
+}
+
+/** A section of Collections on a screen of its own: what its heading opens. */
+function RowsScreen({ title, children }: { title: string; children: ReactNode }) {
+  const foot = useTabsFoot()
+  return (
+    <Screen title={title} large className="photos-screen" foot={foot}>
+      {children}
+    </Screen>
+  )
+}
+
+// ---- A grid on a screen of its own: an album, the videos, what was looked at ----
+
+function GridScreen({ title, indices, within, none }: { title: string; indices: number[]; within?: boolean; none: { icon: ReactNode; title: string; text: string } }) {
+  const foot = useTabsFoot()
+  return (
+    <Screen title={title} large subtitle={indices.length ? tally(indices) : undefined} className="photos-screen" foot={foot}>
+      {indices.length ? (
+        <Grid indices={indices} within={within} />
+      ) : (
+        <Empty icon={none.icon} title={none.title}>
+          {none.text}
+        </Empty>
+      )}
+    </Screen>
+  )
+}
+
+function Album({ drop }: { drop: string }) {
+  const items = useMemo(() => inDrop(drop), [drop])
+  return <GridScreen title={drop} indices={items} within none={{ icon: <Images size={44} strokeWidth={1.5} />, title: 'No Photos or Videos', text: 'Nothing from this drop yet.' }} />
+}
+
+function Favorites() {
+  const loved = useStore(mine, (s) => s.loved)
+  const items = useMemo(() => lovedOf(loved), [loved])
+  return <GridScreen title="Favorites" indices={items} none={NOTHING.favorites} />
+}
+
+function RecentlyViewed() {
+  const recent = useStore(mine, (s) => s.recent)
+  return <GridScreen title="Recently Viewed" indices={recent} none={{ icon: <Clock size={44} strokeWidth={1.5} />, title: 'No Photos or Videos', text: 'Photos and videos you open will show up here.' }} />
+}
+
+// ---- Search ----
+
+/** Whether an item is found by what was typed: by its drop, by who sent it, or by what kind of thing it is. */
+function found(index: number, q: string) {
+  const slot = MEDIA[index]!
+  return slot.drop.toLowerCase().includes(q) || (slot.from?.toLowerCase().includes(q) ?? false) || `${slot.kind}s`.startsWith(q)
+}
+
+/** An album as a row: what search lists, to jump to. */
+function AlbumRow({ drop }: { drop: string }) {
+  const items = inDrop(drop)
+  return (
+    <Cell
+      lead={<span className="photos-thumb">{items.length > 0 && <Picture index={items[0]!} cover />}</span>}
+      title={drop}
+      value={
+        <>
+          {items.length}
+          <span className="sr-only"> {items.length === 1 ? 'item' : 'items'}</span>
+        </>
+      }
+      chevron
+      onClick={() => push(albumView(drop))}
+    />
+  )
+}
+
+/** Search, in the tabs' place: the tab bar folds down to the one button that
+ * leads back to it, and the field takes the room, as iOS does it. Until
+ * something is typed it lists the albums; then what matches. */
+function SearchPane() {
+  const query = useStore(mine, (s) => s.query)
+  const tab = useStore(mine, (s) => s.tab)
+  // The field has the keyboard. A field that is covered or put away isn't always told it has lost it, so that is seen to here
+  const [typing, setTyping] = useState(false)
+  const first = useStore(sys, (s) => s.app === 'photos' && !s.stacks.photos.length)
+  const searching = useStore(mine, (s) => s.searching)
+  useEffect(() => {
+    if (!first || !searching) setTyping(false)
+  }, [first, searching])
+  const q = query.trim().toLowerCase()
+  const albums = useMemo(() => (q ? DROPS.filter((drop) => drop.toLowerCase().includes(q)) : DROPS), [q])
+  const tiles = useMemo(() => (q ? EVERYTHING.filter((i) => found(i, q)) : []), [q])
+
+  const onKey = (e: ReactKeyboardEvent) => {
+    // Return in the field puts the keyboard away and leaves what was found
+    if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.target.blur()
+  }
+  const clear = () => {
+    setQuery('')
+    ;(document.activeElement as HTMLElement | null)?.blur?.()
+    setTyping(false)
+  }
+
+  return (
+    <Screen
+      title="Search"
+      large
+      leading={null}
+      className="photos-search"
+      foot={
+        <span className="photos-searchbar" onKeyDown={onKey}>
+          {/* While the field has the keyboard the bar is the field and the button that puts it away;
+              otherwise, the field and the one button the tab bar has folded down to */}
+          {!typing && (
+            <GlassButton label={tab === 'library' ? 'Library' : 'Collections'} onClick={leaveSearch}>
+              {tab === 'library' ? <LibraryGlyph size={25} /> : <CollectionsGlyph size={25} />}
+            </GlassButton>
+          )}
+          <SearchBar value={query} onChange={setQuery} label="Search photos and videos" placeholder="Search" onFocus={() => setTyping(true)} onBlur={() => setTyping(false)} />
+          {typing && (
+            // Pressing it doesn't first take the keyboard from the field: the press is what puts it away
+            <span className="photos-searchbar__close" onMouseDown={(e) => e.preventDefault()}>
+              <GlassButton label="Close search" onClick={clear}>
+                <X size={22} strokeWidth={2.4} aria-hidden />
+              </GlassButton>
+            </span>
+          )}
+        </span>
+      }
+    >
+      {albums.length + tiles.length === 0 ? (
+        <Empty icon={<Search size={44} strokeWidth={1.8} />} title="No Results">
+          Nothing in the library matches “{query.trim()}”. Check the spelling or try a new search.
+        </Empty>
+      ) : (
+        <>
+          {albums.length > 0 && (
+            <>
+              <h3 className="photos-head">Albums</h3>
+              <List className="photos-rows photos-rows--albums">
+                <Section>
+                  {albums.map((drop) => (
+                    <AlbumRow key={drop} drop={drop} />
+                  ))}
+                </Section>
+              </List>
+            </>
+          )}
+          {tiles.length > 0 && (
+            <>
+              <h3 className="photos-head">{tally(tiles)}</h3>
+              <Grid indices={tiles} />
+            </>
+          )}
+        </>
+      )}
+    </Screen>
+  )
+}
+
+/** The two tabs, and search. All three stay drawn, so each is where it was left when its turn comes round again. */
 function Home() {
   const tab = useStore(mine, (s) => s.tab)
+  const searching = useStore(mine, (s) => s.searching)
   const swapped = useStore(mine, (s) => s.swapped)
-  const pane = (id: TabId, body: JSX.Element) => (
-    <div className="photos-tab" data-on={tab === id || undefined} data-swapped={swapped || undefined} {...(tab === id ? null : ({ inert: '' } as object))}>
+  const on = searching ? 'search' : tab
+  const pane = (id: TabId | 'search', body: JSX.Element) => (
+    <div className="photos-tab" data-on={on === id || undefined} data-swapped={swapped || undefined} {...(on === id ? null : ({ inert: '' } as object))}>
       {body}
     </div>
   )
@@ -230,38 +591,8 @@ function Home() {
     <>
       {pane('library', <Library />)}
       {pane('collections', <Collections />)}
+      {pane('search', <SearchPane />)}
     </>
-  )
-}
-
-// ---- An album ----
-
-function Album({ drop, depth }: { drop: string; depth: number }) {
-  const items = useMemo(() => inDrop(drop), [drop])
-  return (
-    <Screen
-      title={drop}
-      className="photos-album-screen"
-      // The tab bar stays through an album opened from Collections, as it does in Photos
-      foot={
-        depth === 1 ? (
-          <div className="photos-foot">
-            <Tabs deep />
-          </div>
-        ) : undefined
-      }
-    >
-      {items.length ? (
-        <>
-          <Grid indices={items} album />
-          <p className="photos-note">{tally(items)}</p>
-        </>
-      ) : (
-        <Empty icon={<Images size={44} strokeWidth={1.5} />} title="No Photos or Videos">
-          Nothing from this drop yet.
-        </Empty>
-      )}
-    </Screen>
   )
 }
 
@@ -273,23 +604,21 @@ const GAP = 16
 /** A menu is open in the app: the keys are the menu's until it closes. */
 const menuOpen = () => !!document.querySelector('.sb-app[data-app="photos"] .ios-menu > [aria-expanded="true"]')
 
-/** What a swipe goes through: the album the item was opened from, or the library as it was filtered. */
-function setFor(index: number, under: string | null, filter: MediaFilter) {
-  const set = under?.startsWith('a:') ? inDrop(under.slice(2)) : ofKind(filter)
-  return set.includes(index) ? set : EVERYTHING
-}
-
 function Viewer({ index, under }: { index: number; under: string | null }) {
   const { active } = useApp()
   const slot = MEDIA[index]!
-  const filter = useStore(photos, (s) => s.filter)
   const loved = useStore(mine, (s) => s.loved.includes(index))
   const bare = useStore(mine, (s) => s.bare)
   const [copied, setCopied] = useState(false)
   const pager = useRef<HTMLDivElement>(null)
   const held = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
-  const set = useMemo(() => setFor(index, under, filter), [index, under, filter])
+  // What a swipe goes through is the grid this was opened from, as it was then:
+  // taking the heart off a favorite doesn't pull the picture from under the finger
+  const [set] = useState(() => {
+    const run = mine.get().run
+    return run?.includes(index) ? run : EVERYTHING
+  })
   const at = set.indexOf(index)
   const video = slot.kind === 'video'
 
@@ -298,6 +627,11 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
     const s = sys.get()
     return s.app === 'photos' && !s.sheet && topOf(s, 'photos') === mediaView(index)
   }
+
+  // Opened is looked at: Recently Viewed keeps it
+  useEffect(() => {
+    viewed(index)
+  }, [index])
 
   // It opens on the one that was tapped, and stays on it when the screen changes size
   useLayoutEffect(() => {
@@ -389,7 +723,21 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
     return () => window.removeEventListener('keydown', key)
   }, [active, at, set]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Where else it is: its drop's album, unless that is the screen underneath; the library, unless it was opened from there
   const album = albumView(slot.drop)
+  const items: MenuItem[] = []
+  if (under !== album) items.push({ label: 'Show in Album', icon: <CollectionsGlyph size={20} />, onSelect: () => push(album) })
+  if (under !== null) {
+    items.push({
+      label: 'Show in Library',
+      icon: <LibraryGlyph size={20} />,
+      onSelect: () => {
+        mine.set((s) => ({ ...s, tab: 'library', searching: false, query: '', filter: 'all' }))
+        launchAt('photos', [])
+      },
+    })
+  }
+
   return (
     <Screen
       title={`${slot.drop}, ${video ? 'video' : 'photo'}`}
@@ -399,20 +747,11 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
       center={
         <span className="photos-viewer__title">
           <b>{slot.drop}</b>
-          <span>
-            {video ? 'Video' : 'Photo'} · {at + 1} of {set.length}
-          </span>
+          <span>{video ? 'Video' : 'Photo'}</span>
         </span>
       }
       trailing={
-        <Menu
-          label="More"
-          items={[
-            // From its own album, that is the screen underneath
-            { label: 'Show in Collections', icon: <LayoutGrid size={19} strokeWidth={2} />, onSelect: () => (under === album ? pop() : push(album)) },
-            { label: loved ? 'Unfavorite' : 'Favorite', icon: <Heart size={19} strokeWidth={2} fill={loved ? 'currentColor' : 'none'} />, onSelect: () => toggleLoved(index) },
-          ]}
-        >
+        <Menu label="More" items={items}>
           <Ellipsis size={24} strokeWidth={2.2} aria-hidden />
         </Menu>
       }
@@ -524,54 +863,86 @@ function InfoSheet() {
 
 // ---- The app ----
 
+/** What a view in the app's stack shows. */
+function Page({ view: name, under }: { view: string | null; under: string | null }) {
+  if (name === null) return <Home />
+  if (name === ALBUMS) return <Albums />
+  if (name === FAVORITES) return <Favorites />
+  if (name === RECENT) return <RecentlyViewed />
+  if (name === VIDEOS_VIEW) return <GridScreen title="Videos" indices={ALL_VIDEOS} none={NOTHING.video} />
+  if (name === TYPES)
+    return (
+      <RowsScreen title="Media Types">
+        <TypeRows />
+      </RowsScreen>
+    )
+  if (name === UTILITIES)
+    return (
+      <RowsScreen title="Utilities">
+        <UtilityRows />
+      </RowsScreen>
+    )
+  if (name.startsWith('a:')) return <Album drop={name.slice(2)} />
+  const index = name.startsWith('m:') ? Number(name.slice(2)) : NaN
+  if (Number.isInteger(index) && MEDIA[index]) return <Viewer index={index} under={under} />
+  return (
+    <Screen title="Not Found" className="photos-screen">
+      <Empty icon={<Images size={44} strokeWidth={1.5} />} title="No Longer Here">
+        That isn’t in the library.
+      </Empty>
+    </Screen>
+  )
+}
+
 export function PhotosApp() {
   const { active } = useApp()
+  const root = useRef<HTMLDivElement>(null)
   const stack = useStore(sys, (s) => s.stacks.photos)
-  const viewing = stack[stack.length - 1]?.startsWith('m:') ?? false
+  const first = stack[0]
+  const viewing = stack.some((name) => name.startsWith('m:'))
 
-  // Escape goes back a screen: out of the viewer, out of an album. A sheet or a menu that is open takes it first.
+  // Escape leaves search: what was typed first, then search itself. It is heard
+  // ahead of the phone's own Escape, which would take that for leaving the app;
+  // a screen deeper in is left to that one, which goes back a screen.
   useEffect(() => {
     if (!active) return
     const key = (e: KeyboardEvent) => {
       const s = sys.get()
-      if (e.key !== 'Escape' || e.defaultPrevented || s.app !== 'photos' || s.sheet || !s.stacks.photos.length || menuOpen()) return
+      const m = mine.get()
+      if (e.key !== 'Escape' || e.defaultPrevented || s.app !== 'photos' || s.locked || s.switcher || s.spotlight || s.sheet || s.stacks.photos.length || !m.searching || menuOpen()) return
       e.preventDefault()
-      pop()
+      if (m.query) setQuery('')
+      else {
+        ;(document.activeElement as HTMLElement | null)?.blur?.()
+        leaveSearch()
+      }
     }
-    window.addEventListener('keydown', key)
-    return () => window.removeEventListener('keydown', key)
+    window.addEventListener('keydown', key, true)
+    return () => window.removeEventListener('keydown', key, true)
   }, [active])
 
-  // Out of the viewer, its buttons are back for next time (once it has slid away)
+  // Out of the viewer (once it has slid away) its buttons are back for next time, and what it swiped through is let go
   useEffect(() => {
     if (viewing) return
-    const t = setTimeout(() => mine.set((s) => (s.bare ? { ...s, bare: false } : s)), 600)
+    const t = setTimeout(() => mine.set((s) => (s.bare || s.run ? { ...s, bare: false, run: null } : s)), 600)
     return () => clearTimeout(t)
   }, [viewing])
 
-  // Come back to (a reload) inside an album: that album is under Collections, so that is the tab Back leads to
+  // An album arrived at from outside (a reload, the Home Screen's search) is under Collections: that is the tab Back leads to
   useEffect(() => {
-    if (sys.get().stacks.photos[0]?.startsWith('a:')) mine.set((s) => (s.tab === 'collections' ? s : { ...s, tab: 'collections' }))
-  }, [])
+    if (first && !first.startsWith('m:')) mine.set((s) => (s.searching || s.tab === 'collections' ? s : { ...s, tab: 'collections' }))
+  }, [first])
+
+  // Closed for good (flicked out of the App Switcher), it starts over on the Library next time.
+  // What was favorited and looked at stays, and the filter, as Photos keeps them.
+  useEffect(() => () => mine.set((s) => ({ ...s, tab: 'library', searching: false, swapped: false, query: '', run: null, bare: false })), [])
 
   return (
-    <>
-      <NavStack>
-        {(view, depth) => {
-          if (view === null) return <Home />
-          if (view.startsWith('a:')) return <Album drop={view.slice(2)} depth={depth} />
-          const index = view.startsWith('m:') ? Number(view.slice(2)) : NaN
-          if (Number.isInteger(index) && MEDIA[index]) return <Viewer index={index} under={depth >= 2 ? (stack[depth - 2] ?? null) : null} />
-          return (
-            <Screen title="Not Found">
-              <Empty icon={<Images size={44} strokeWidth={1.5} />} title="No Longer Here">
-                That photo isn’t in the library.
-              </Empty>
-            </Screen>
-          )
-        }}
-      </NavStack>
-      <SheetHost>{(name) => (name === 'info' ? <InfoSheet /> : null)}</SheetHost>
-    </>
+    <div ref={root} className="photos-app">
+      <RootContext.Provider value={root}>
+        <NavStack>{(name, depth) => <Page view={name} under={depth >= 2 ? (stack[depth - 2] ?? null) : null} />}</NavStack>
+        <SheetHost>{(name) => (name === 'info' ? <InfoSheet /> : null)}</SheetHost>
+      </RootContext.Provider>
+    </div>
   )
 }

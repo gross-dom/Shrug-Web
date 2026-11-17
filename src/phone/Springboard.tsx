@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { Search } from 'lucide-react'
+import { Folder, Search } from 'lucide-react'
 import { chat, QUESTION, TOTAL } from '../apps/chat'
 import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
 import { ALL, CompanyLogo } from '../apps/portfolio-ui'
@@ -12,14 +12,13 @@ import type { Rect } from '../kit/measure'
 import { Expand } from '../kit/motion/Expand'
 import { LockScreen, Notification } from '../kit/phone'
 import { Boundary } from '../os/Boundary'
-import { AppIcon } from '../os/icons'
-import { idleSeconds } from '../os/saver'
 import { useStore } from '../os/store'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { GROUP_VIEW } from './apps/routes'
 import { COLOR, carried, chrome } from './chrome'
-import { OnePagerIcon } from './icons'
+import { OnePagerIcon, PhoneIcon } from './icons'
 import { haptic } from './native'
+import { settings } from './settings'
 import { Spotlight } from './Spotlight'
 import { goHome, launch, launchAt, lock, pop, quit, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp } from './system'
 import { clockOf, dateOf, useNow } from './time'
@@ -64,6 +63,7 @@ const iconOrigin = (id: PhoneApp) => `icon:${id}`
 /** Something opens the conversation: the reply it is about, as a notification shows it. */
 function Reply({ index, banner, origin, onOpen, className }: { index: number; banner?: boolean; origin: string; onOpen: () => void; className?: string }) {
   const person = PEOPLE[index]!
+  const previews = useStore(settings, (s) => s.previews)
   return (
     <Notification
       banner={banner}
@@ -82,17 +82,22 @@ function Reply({ index, banner, origin, onOpen, className }: { index: number; ba
         <span className="sb-note__face">
           <PersonAvatar index={index} size={38} />
           <span className="sb-note__app">
-            <AppIcon id="messages" />
+            <PhoneIcon id="messages" />
           </span>
         </span>
       }
       title={person.name}
       body={
-        <>
-          <b>{GROUP_NAME}</b>
-          <br />
-          {person.quote ?? person.role}
-        </>
+        previews ? (
+          <>
+            <b>{GROUP_NAME}</b>
+            <br />
+            {person.quote ?? person.role}
+          </>
+        ) : (
+          // Previews off: who it is from, and no more, as iOS has it
+          'iMessage'
+        )
       }
     />
   )
@@ -105,6 +110,7 @@ const openGroup = (origin: string) => launchAt('messages', [GROUP_VIEW], origin)
 function Lock() {
   const locked = useStore(sys, (s) => s.locked)
   const replied = useStore(chat, (s) => s.replied)
+  const announced = useStore(settings, (s) => s.notifications)
   const now = useNow()
   const root = useRef<HTMLDivElement>(null)
   const drag = useRef<{ y: number; t: number; dy: number; v: number; k: number; moving: boolean } | null>(null)
@@ -186,7 +192,7 @@ function Lock() {
   return (
     <div ref={root} className="sb-lock" data-leaving={!locked || undefined} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} {...(locked ? null : ({ inert: '' } as object))}>
       <LockScreen date={dateOf(now)} time={clockOf(now)}>
-        {replied > 0 && (
+        {announced && replied > 0 && (
           <div className="sb-stack" data-more={replied > 1 ? (replied > 2 ? 2 : 1) : undefined}>
             <Reply key={replied} index={replied - 1} origin="lock-note" onOpen={() => openGroup('lock-note')} />
           </div>
@@ -208,7 +214,7 @@ function HomeIcon({ id }: { id: PhoneApp }) {
   return (
     <button type="button" className="sb-icon" aria-label={`${PHONE[id].label}${badge ? `, ${badge} unread` : ''}`} onClick={() => launch(id)}>
       <span className="sb-icon__tile" data-origin={iconOrigin(id)}>
-        <AppIcon id={id} />
+        <PhoneIcon id={id} />
         {badge > 0 && (
           <span className="sb-badge" aria-hidden>
             {badge}
@@ -273,18 +279,22 @@ const SHOWN = ALL.filter((c) => c.logo).slice(0, 4)
 function PortfolioWidget() {
   return (
     <button type="button" className="sb-widget" onClick={() => launch('finder', 'widget:portfolio')}>
+      {/* As Files' own widget shows a folder: its name, a few of what is in it, and how much there is */}
       <span className="sb-widget__face sb-folio" data-origin="widget:portfolio">
+        <span className="sb-folio__head">
+          <Folder size={15} strokeWidth={0} fill="currentColor" aria-hidden />
+          Portfolio
+        </span>
         <span className="sb-folio__logos">
           {SHOWN.map((c) => (
             <CompanyLogo key={c.name} company={c} size={44} />
           ))}
         </span>
         <span className="sb-folio__text">
-          <b>{ALL.length} companies</b>
-          <span>{VERTICALS.length} verticals</span>
+          {ALL.length} companies<span className="sr-only">, in {VERTICALS.length} verticals</span>
         </span>
       </span>
-      <span className="sb-icon__name">Portfolio</span>
+      <span className="sb-icon__name">Files</span>
     </button>
   )
 }
@@ -292,18 +302,19 @@ function PortfolioWidget() {
 function FaqWidget() {
   return (
     <button type="button" className="sb-widget" onClick={() => launch('notes', 'widget:faqs')}>
+      {/* As Notes' folder widget: the folder's name in Notes' gold, and its first few notes */}
       <span className="sb-widget__face sb-faq" data-origin="widget:faqs">
         <span className="sb-faq__head">
-          <b>FAQs</b>
-          <span>{FAQS.length}</span>
+          <Folder size={15} strokeWidth={0} fill="currentColor" aria-hidden />
+          FAQs
         </span>
         <span className="sb-faq__list">
-          {FAQS.slice(0, 4).map((f) => (
+          {FAQS.slice(0, 3).map((f) => (
             <span key={f.question}>{f.question}</span>
           ))}
         </span>
       </span>
-      <span className="sb-icon__name">FAQs</span>
+      <span className="sb-icon__name">Notes</span>
     </button>
   )
 }
@@ -440,7 +451,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
     <div className="sb-slot" data-app={id} data-front={front || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order } as CSSProperties}>
       <div className="sb-slot__label" aria-hidden>
         <span className="sb-slot__icon">
-          <AppIcon id={id} />
+          <PhoneIcon id={id} />
         </span>
         {PHONE[id].label}
       </div>
@@ -450,7 +461,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
           from={zoom.from}
           radius={card ? 24 : zoom.from.width * 0.225}
           duration={still ? 0 : undefined}
-          face={card ? <span className="sb-face sb-face--card" /> : <AppIcon id={id} />}
+          face={card ? <span className="sb-face sb-face--card" /> : <PhoneIcon id={id} />}
           className="sb-app"
           data-app={id}
           data-shut={!open || undefined}
@@ -585,7 +596,7 @@ function Banners() {
     if (replied <= before) return
     const s = sys.get()
     // Messages itself is showing: the reply is there to see, in the conversation or in the list
-    if (s.locked || s.switcher || s.app === 'messages' || performance.now() - last.current.at < BANNER.apart) return
+    if (!settings.get().notifications || s.locked || s.switcher || s.app === 'messages' || performance.now() - last.current.at < BANNER.apart) return
     last.current.at = performance.now()
     setShown({ index: replied - 1, leaving: false })
   }, [replied])
@@ -729,9 +740,11 @@ function HomeBar({ drawn }: { drawn: boolean }) {
 
 export function Springboard({ framed }: { framed: boolean }) {
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
-  // Left alone for as long as it takes the desktop's screen saver to start, the phone locks itself
+  // Left alone for as long as Auto-Lock in Settings says, the phone locks itself
+  const autoLock = useStore(settings, (s) => s.autoLock)
   useEffect(() => {
-    const wait = idleSeconds() * 1000
+    if (autoLock === null) return
+    const wait = autoLock * 1000
     let timer: ReturnType<typeof setTimeout>
     const arm = () => {
       clearTimeout(timer)
@@ -747,7 +760,7 @@ export function Springboard({ framed }: { framed: boolean }) {
       clearTimeout(timer)
       events.forEach((name) => window.removeEventListener(name, arm, { capture: true }))
     }
-  }, [])
+  }, [autoLock])
   // Escape steps back out: a sheet (which sees to itself), then a screen, then the app
   useEffect(() => {
     const key = (e: KeyboardEvent) => {

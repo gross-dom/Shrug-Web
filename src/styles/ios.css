@@ -37,23 +37,19 @@
 /* ---- Glass ---- */
 
 .ios-glass {
-  background: rgb(255 255 255 / 0.72);
+  --glass: rgb(255 255 255 / 0.72);
+  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 4px 14px -4px rgb(0 0 0 / 0.18), inset 0 0.5px 0 rgb(255 255 255 / 0.9);
+  background: var(--glass);
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
   backdrop-filter: blur(14px) saturate(1.6);
-  box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 0.06),
-    0 4px 14px -4px rgb(0 0 0 / 0.18),
-    inset 0 0.5px 0 rgb(255 255 255 / 0.9);
+  box-shadow: var(--glass-edge);
   color: #1c1c1e;
 }
 
 .ios-screen[data-tone='dark'] .ios-glass,
 .ios-glass[data-dark] {
-  background: rgb(70 70 76 / 0.55);
-  box-shadow:
-    0 0 0 0.5px rgb(255 255 255 / 0.14),
-    0 4px 14px -4px rgb(0 0 0 / 0.5),
-    inset 0 0.5px 0 rgb(255 255 255 / 0.16);
+  --glass: rgb(70 70 76 / 0.55);
+  --glass-edge: 0 0 0 0.5px rgb(255 255 255 / 0.14), 0 4px 14px -4px rgb(0 0 0 / 0.5), inset 0 0.5px 0 rgb(255 255 255 / 0.16);
   color: #fff;
 }
 
@@ -103,16 +99,37 @@
   opacity: 0.35;
 }
 
+/* A group's glass is a layer of its own behind its buttons. A menu that opens
+   out of one of them is then over the page, with the page to blur, and not
+   inside a piece of glass, where a blur has nothing behind it to work on. */
 .ios-group {
+  position: relative;
   display: inline-flex;
   flex: none;
   align-items: center;
   height: 44px;
   padding: 0 4px;
   border-radius: 22px;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.ios-group::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow: var(--glass-edge);
+  content: '';
+  pointer-events: none;
 }
 
 .ios-group__part {
+  position: relative;
   display: grid;
   place-items: center;
   width: 42px;
@@ -137,7 +154,9 @@
 .ios-screen {
   position: absolute;
   inset: 0;
+  /* Clipped, where that is understood: hidden can still be scrolled by the browser bringing a field into view */
   overflow: hidden;
+  overflow: clip;
   background: var(--surface);
   color: var(--label);
 }
@@ -194,6 +213,15 @@
   letter-spacing: 0.01em;
 }
 
+/* The line under a large title: a count, when it was last updated */
+.ios-large-sub {
+  margin: -5px 20px 8px;
+  color: var(--label-2);
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+}
+
 /* The bar: nothing but its buttons, floating. Touches fall through it to the page */
 .ios-bar {
   position: absolute;
@@ -243,10 +271,23 @@
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.02em;
+  line-height: 20px;
   white-space: nowrap;
   text-overflow: ellipsis;
   pointer-events: none;
   transition: opacity 0.2s ease;
+}
+
+/* The same line, under the title once it is in the bar */
+.ios-bar__sub {
+  display: block;
+  overflow: hidden;
+  color: var(--label-2);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 15px;
+  text-overflow: ellipsis;
 }
 
 /* A large title in the page keeps the bar's own name back until it has scrolled away */
@@ -371,9 +412,16 @@
 .ios-tabs {
   display: flex;
   flex: 1;
+  /* On its side a phone has room to spare: the bar stays the size of its tabs */
+  max-width: 330px;
   height: 62px;
   padding: 4px;
   border-radius: 31px;
+}
+
+/* and what follows it (search) keeps to the far corner */
+.ios-foot > .ios-tabs + * {
+  margin-left: auto;
 }
 
 .ios-tabs__item {
@@ -412,7 +460,14 @@
 .ios-nav {
   position: absolute;
   inset: 0;
+  /* A field given the keyboard while its screen is still sliding in must not scroll the stack sideways to show itself */
   overflow: hidden;
+  overflow: clip;
+}
+
+/* The screen on top takes the keyboard when it arrives; it is not a control, and wears no ring */
+.ios-nav > .ios-page:focus-visible {
+  outline: none;
 }
 
 .ios-page {
@@ -699,9 +754,9 @@
 .ios-menu__item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 46px;
-  padding: 0 18px 0 12px;
+  padding: 0 20px 0 14px;
   font-size: 17px;
   letter-spacing: -0.02em;
   text-align: left;
@@ -727,7 +782,7 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: 22px;
+  width: 20px;
 }
 
 .ios-menu__label {
@@ -739,7 +794,12 @@
   display: grid;
   flex: none;
   place-items: center;
+  width: 24px;
   color: var(--label);
+}
+
+.ios-menu__item[data-destructive] .ios-menu__icon {
+  color: inherit;
 }
 
 /* ---- Sheets ---- */
@@ -782,6 +842,11 @@
 
 .ios-sheet[data-tone='grouped'] .ios-sheet__panel {
   background: var(--grouped);
+}
+
+/* The sheet takes the keyboard when it arrives so that keys go to it; it is not itself a control, and wears no ring */
+.ios-sheet .ios-sheet__panel:focus-visible {
+  outline: none;
 }
 
 /* About half the screen, floating clear of its edges */
