@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Folder, Search } from 'lucide-react'
-import { chat, QUESTION, TOTAL } from '../apps/chat'
+import { chat, QUESTION, setChatUnseen, TOTAL } from '../apps/chat'
 import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
 import { ALL, CompanyLogo } from '../apps/portfolio-ui'
 import { useUnread } from '../apps/state'
@@ -367,7 +367,7 @@ function Home() {
         <Search size={12} strokeWidth={3} aria-hidden />
         Search
       </button>
-      <nav className="sb-dock" aria-label="Dock">
+      <nav className="sb-dock" aria-label="Dock" data-full={DOCKED.length >= 4 || undefined}>
         {DOCKED.map((id) => (
           <HomeIcon key={id} id={id} />
         ))}
@@ -740,6 +740,12 @@ function HomeBar({ drawn }: { drawn: boolean }) {
 
 export function Springboard({ framed }: { framed: boolean }) {
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
+  // Out of the conversation, replies are only news (a notification, the widget), and they come a little quicker
+  const watched = useStore(sys, (s) => !s.locked && !s.switcher && s.app === 'messages' && topOf(s, 'messages') === GROUP_VIEW)
+  useLayoutEffect(() => {
+    setChatUnseen(!watched)
+    return () => setChatUnseen(false)
+  }, [watched])
   // Left alone for as long as Auto-Lock in Settings says, the phone locks itself
   const autoLock = useStore(settings, (s) => s.autoLock)
   useEffect(() => {

@@ -654,6 +654,11 @@
     inset 0 1px 0 rgb(255 255 255 / 0.3);
 }
 
+/* Four apps line up with the columns of icons above them; fewer share the Dock out evenly, as iOS does */
+.sb-dock:not([data-full]) {
+  justify-content: space-evenly;
+}
+
 .sb-dock .sb-icon__name {
   display: none;
 }

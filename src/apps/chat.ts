@@ -137,6 +137,26 @@ if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => (document.hidden ? hold() : release()))
 }
 
+// ---- The pace ----
+
+/** Whether anyone can see the conversation being written. On the desktop it
+ * always can be. On the phone it is out of sight on the Lock Screen, on the
+ * Home Screen and behind another app: there a reply is only news (a
+ * notification, a line in the widget), with no message field to watch being
+ * typed into and no dots to watch being written, so those waits are cut short. */
+let unseen = false
+
+/** How much of a wait is kept while the conversation is out of sight: Shrug's
+ * own typing, which nobody there sees at all, and the time each reply takes. */
+const UNSEEN = { typing: 0.3, replies: 0.68 }
+
+/** Told by the phone when the conversation goes out of sight and comes back. The wait under way keeps its time; the next one has the new pace. */
+export function setChatUnseen(on: boolean) {
+  unseen = on
+}
+
+const paced = (ms: number, part: keyof typeof UNSEEN) => (unseen ? Math.round(ms * UNSEEN[part]) : ms)
+
 // ---- The script ----
 
 /** Types `text` into the message field a character at a time, then sends it. */
@@ -145,33 +165,34 @@ function typeAndSend(text: string, key: string, each: number, then: () => void) 
   const step = () => {
     at++
     chat.set((s) => ({ ...s, draft: text.slice(0, at) }))
-    if (at < text.length) return after(each, step)
-    after(320, () => {
+    if (at < text.length) return after(paced(each, 'typing'), step)
+    after(paced(320, 'typing'), () => {
       chat.set((s) => ({ ...s, draft: null, items: [...s.items, asMine(text, key)] }))
       then()
     })
   }
-  after(each, step)
+  after(paced(each, 'typing'), step)
 }
 
 /** Every reply keeps the same time: its dots show while it is written, it is
- * sent, and there is a breath before the next person starts. It never speeds up. */
+ * sent, and there is a breath before the next person starts. It never speeds
+ * up while it is being watched; out of sight (see above) each is shorter. */
 export const WRITING = 1700
 export const BETWEEN = 1100
 
 function person(index: number) {
-  if (index >= TOTAL) return after(BETWEEN, closing)
+  if (index >= TOTAL) return after(paced(BETWEEN, 'replies'), closing)
   const key = `p-${index}`
   // Being written: their dots
   chat.set((s) => ({ ...s, typing: index, items: [...s.items, { key, kind: 'person', index, typing: true }] }))
-  after(WRITING, () => {
+  after(paced(WRITING, 'replies'), () => {
     // Sent: the dots grow into the message
     chat.set((s) => {
       const repliedAt = s.repliedAt.slice()
       repliedAt[index] = Date.now()
       return { ...s, typing: -1, replied: index + 1, repliedAt, items: s.items.map((item) => (item.key === key && item.kind === 'person' ? { ...item, typing: false } : item)) }
     })
-    after(BETWEEN, () => person(index + 1))
+    after(paced(BETWEEN, 'replies'), () => person(index + 1))
   })
 }
 
@@ -181,10 +202,10 @@ function closing() {
 
 function opening() {
   typeAndSend(QUESTION[0]!, 'ask-0', 46, () =>
-    after(380, () =>
+    after(paced(380, 'typing'), () =>
       typeAndSend(QUESTION[1]!, 'ask-1', 30, () => {
         chat.set((s) => ({ ...s, asked: true }))
-        after(BETWEEN, () => person(0))
+        after(paced(BETWEEN, 'replies'), () => person(0))
       }),
     ),
   )
@@ -197,7 +218,7 @@ export function startChat() {
   if (chat.get().started) return
   if (prefersReducedMotion()) return chat.set(everything(fresh()))
   chat.set((s) => ({ ...s, started: true, startedAt: Date.now() }))
-  after(900, opening)
+  after(paced(900, 'typing'), opening)
 }
 
 export function pauseChat() {
@@ -215,7 +236,7 @@ export const toggleChat = () => (chat.get().paused ? resumeChat() : pauseChat())
 export function replayChat() {
   reset()
   chat.set({ ...fresh(), started: true })
-  after(700, opening)
+  after(paced(700, 'typing'), opening)
 }
 
 /** Everyone replies at once. */

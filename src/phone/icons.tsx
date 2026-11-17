@@ -2,8 +2,9 @@ import { useId, type ReactNode } from 'react'
 import type { PhoneApp } from './system'
 
 // The iPhone's app icons. Each is drawn here, after the icon of the iOS app it
-// stands for (Messages, Files, Notes, Photos, Settings), in the continuous-
-// corner tile iOS cuts its icons to. No file from an operating system is used.
+// stands for (Messages, Files, Notes, Settings), in the continuous-corner tile
+// iOS cuts its icons to; Case Studies and VIP, which are Shrug's own, have
+// icons of their own. No file from an operating system is used.
 
 /** A continuous-corner square (a superellipse), 100 units across. */
 const SQUIRCLE = (() => {
@@ -95,16 +96,11 @@ function Notes() {
   )
 }
 
-/** The petals of the Photos flower, clockwise from the top. */
-const PETALS = ['#fbb034', '#e9dd3b', '#a4d04e', '#4fc3a5', '#55a6e9', '#8d80d8', '#e06aa9', '#f26b4f']
-
-/** Photos: eight overlapping petals on white. */
-function Photos() {
+/** VIP: the star it has on the desktop, white on purple. It is Shrug's own app, so it has no iOS icon to be drawn after. */
+function Vip() {
   return (
-    <Tile from="#ffffff" to="#f7f7fa" sheen={0.9}>
-      {PETALS.map((color, i) => (
-        <rect key={color} x="38.200" y="9.500" width="23.600" height="39" rx="11.800" fill={color} opacity="0.92" transform={`rotate(${i * 45} 50 50)`} style={{ mixBlendMode: 'multiply' }} />
-      ))}
+    <Tile from="#b9a2ff" to="#5a2fd8" sheen={0.4}>
+      <path d="M50 23.5l7.7 16.4 18 2.3-13.2 12.4 3.4 17.8L50 63.7l-15.9 8.7 3.4-17.8-13.2-12.4 18-2.3z" fill="#fff" stroke="#fff" strokeWidth="4" strokeLinejoin="round" />
     </Tile>
   )
 }
@@ -154,7 +150,7 @@ const ICONS: Record<PhoneApp, () => ReactNode> = {
   messages: Messages,
   finder: Files,
   notes: Notes,
-  photos: Photos,
+  photos: Vip,
   terminal: Terminal,
   about: Settings,
 }
