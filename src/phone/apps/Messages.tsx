@@ -10,7 +10,7 @@ import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
 import { APPS, type AppId } from '../../os/apps'
 import { prefersReducedMotion } from '../../os/dom'
-import { useReturnFocus } from '../../os/focus'
+import { focusLost, holdFocus } from '../../os/focus'
 import { useStore } from '../../os/store'
 import { OnePagerIcon, PhoneIcon } from '../icons'
 import { closeSheet, launch, launchAt, openSheet, pop, push, sys, topOf } from '../system'
@@ -563,13 +563,37 @@ function Alert({ name, title, message, actions }: { name: string; title: string;
   const box = useRef<HTMLDivElement>(null)
   const id = useId()
 
-  // The keyboard comes back to what opened it, or to the thread if that has gone (a message deleted from here)
-  useReturnFocus(live, () => box.current?.closest('.sb-slot, .ph')?.querySelector('.ios-page[data-pos="top"] .chat__scroll'))
-  // ...and goes, as it opens, to the button that only closes it
+  /** Gives the keyboard back to what had it when the alert came up. */
+  const giveBack = useRef<ReturnType<typeof holdFocus> | null>(null)
+  /** The app it is drawn in, where the conversation it is over is too. */
+  const host = useRef<HTMLElement | null>(null)
+
+  // As it opens the keyboard goes to the button that only closes it...
   useLayoutEffect(() => {
+    // Once: drawn a second time by React's checks, the keyboard would already be on the alert itself
+    giveBack.current ??= holdFocus()
+    host.current = box.current?.closest<HTMLElement>('.msg-alert')?.parentElement ?? null
     const acts = box.current?.querySelectorAll<HTMLElement>('.msg-alert__act')
     acts?.[acts.length - 1]?.focus({ preventScroll: true })
   }, [])
+  // While it is up the screens behind it are shut off, as they are behind a sheet: an alert is answered first
+  useLayoutEffect(() => {
+    const nav = host.current?.querySelector<HTMLElement>(':scope > .ios-nav')
+    if (!live || !nav || nav.hasAttribute('inert')) return
+    nav.setAttribute('inert', '')
+    return () => nav.removeAttribute('inert')
+  }, [live])
+  // ...and when it closes, the keyboard goes back to what opened it; or to the thread, if that has gone (a
+  // message deleted from here). Asked a frame later, once the screen is open again; by then the screen
+  // itself may have taken the keyboard, which is no better a place for it than nowhere
+  useEffect(() => {
+    if (live) return
+    const frame = requestAnimationFrame(() => {
+      const on = document.activeElement
+      if (focusLost(box.current) || on?.classList.contains('ios-page')) giveBack.current?.(host.current?.querySelector('.ios-page[data-pos="top"] .chat__scroll'))
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [live])
 
   useEffect(() => {
     if (!live) return

@@ -1,16 +1,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUpLeft, LayoutGrid, Search, X } from 'lucide-react'
-import { ConversationAvatar, PersonAvatar } from '../apps/chat-ui'
+import { ArrowUpLeft, AtSign, LayoutGrid, Lightbulb, MessageCircle, Search, X } from 'lucide-react'
+import { ConversationAvatar, GROUP_NAME, PersonAvatar } from '../apps/chat-ui'
 import { ALL, CompanyLogo, hostOf } from '../apps/portfolio-ui'
 import { showInGroup } from '../apps/state'
-import { DROPS, MEDIA } from '../data/drops'
+import { arrived, DROPS } from '../data/drops'
 import { EGGS, lastWords } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
+import { DRAFT, reach, SITE } from '../data/site'
 import { APPS } from '../os/apps'
 import { useStore } from '../os/store'
-import { PhoneIcon } from './icons'
+import { OnePagerIcon, PhoneIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { albumView, companySheet, conversationView, FAQS_FOLDER, GROUP_VIEW, noteView, PORTFOLIO_FOLDER } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
@@ -23,10 +24,17 @@ const shared = new Set(ALL.map((c) => c.name).filter((name, i, all) => all.index
 // screen, the apps suggested before anything is typed, and then everything on
 // the site that matches, grouped by the app it lives in. Choosing a result
 // opens that app at that place.
+//
+// It answers to the site's own nouns and to what a visitor is likely to type:
+// an app by either of its names (Files is the Portfolio, Notes the FAQs) and
+// by the words for what it holds; the pages of Settings; the one-pager; and
+// the words for getting hold of Shrug (contact, email, pitch), which find the
+// way there is (`reach` in src/data/site.ts). A search that finds nothing
+// still leaves two things to press.
 
 // ---- What matches ----
 
-type Kind = 'app' | 'person' | 'company' | 'faq' | 'drop'
+type Kind = 'app' | 'setting' | 'reach' | 'person' | 'company' | 'faq' | 'drop'
 
 interface Hit {
   key: string
@@ -37,7 +45,12 @@ interface Hit {
   lead: (size: number) => ReactNode
   title: ReactNode
   subtitle?: ReactNode
+  /** Opens it: an app at a place, or, for a link out of the site, the link. */
   open: () => void
+  /** Where it goes, if that is out of the site. It is drawn as a link then, and opens as one. */
+  href?: string
+  /** Never the Top Hit while anything else was found: something Shrug has yet to supply. */
+  shy?: boolean
 }
 
 interface Found {
@@ -53,6 +66,9 @@ function rank(text: string, q: string) {
   if (at === 0) return t.length === q.length ? 0 : 1
   return /[^a-z0-9]/.test(t[at - 1]!) ? 2 : 3
 }
+
+/** The best `rank` among several names, or -1 if none answers. */
+const best = (names: string[], q: string) => names.reduce((least, name) => ((r) => (r >= 0 && (least < 0 || r < least) ? r : least))(rank(name, q)), -1)
 
 /** `text` with what was typed picked out in it. */
 function Marked({ text, q }: { text: string; q: string }) {
@@ -81,34 +97,153 @@ const tile = (id: PhoneApp) => (size: number) => (
   </span>
 )
 
-/** How many photos and videos a drop has, in words. */
+/** A glyph on a disc of glass, for a row that is a thing to do and not a place. */
+const glyph = (icon: ReactNode) => (size: number) => (
+  <span className="spot-glyph" style={{ width: size, height: size }}>
+    {icon}
+  </span>
+)
+
+/** What a drop's album holds, in words. Only what has arrived is counted; with the editor's view
+ * (`?draft`) an album with nothing yet says so, and otherwise it is just an album. */
 function mediaOf(drop: string) {
-  const photos = MEDIA.filter((m) => m.drop === drop && m.kind === 'photo').length
-  const videos = MEDIA.filter((m) => m.drop === drop && m.kind === 'video').length
+  const photos = arrived('photo', drop)
+  const videos = arrived('video', drop)
   const said = [photos && `${photos} photo${photos === 1 ? '' : 's'}`, videos && `${videos} video${videos === 1 ? '' : 's'}`].filter(Boolean)
-  return said.length ? said.join(', ') : 'Album'
+  return said.length ? said.join(', ') : DRAFT ? 'Album · nothing supplied yet' : 'Album'
 }
 
 /** The apps, in the order the Home Screen has them: the Dock's, then the rest. */
 const APP_ORDER: PhoneApp[] = [...DOCKED, ...ON_HOME]
 
+/** The site's own word for what an app is, where that is neither of its names (the one here, the one
+ * on the desktop): it counts as a name. Drops are what VIP holds, and the site says "drops" throughout. */
+const NOUN: Partial<Record<PhoneApp, string[]>> = { photos: ['drops'], messages: ['chat'], terminal: ['terminal'] }
+
+/** What else each app answers to, a little less surely: the words for what it holds. */
+const ALSO: Record<PhoneApp, string[]> = {
+  messages: ['group chat', 'testimonials', 'what people say', 'replies', 'texts'],
+  finder: ['portfolio', 'companies', 'backed', 'investments', 'startups'],
+  notes: ['faq', 'faqs', 'questions', 'answers'],
+  photos: ['photos', 'videos', 'merch'],
+  terminal: ['access', 'case study'],
+  about: ['about', 'shrug', 'privacy', 'cookies', 'website'],
+}
+
+/** The pages of Settings a search goes straight to: the name each has there, the screens that lead to
+ * it (as src/phone/apps/Settings.tsx names them), the other names it answers to as if they were its
+ * own, and the words that find it besides. */
+const SETTINGS: { title: string; path: string[]; names: string[]; words: string[] }[] = [
+  { title: SITE.legalName, path: ['account'], names: ['shrug', 'about', 'about shrug'], words: ['website', 'who', 'what is shrug'] },
+  { title: 'About', path: ['general', 'about'], names: [], words: ['counts', 'general', 'how many'] },
+  { title: 'Notifications', path: ['notifications'], names: [], words: ['banners', 'previews', 'alerts', 'pause', 'pause replies'] },
+  { title: 'Display & Brightness', path: ['display'], names: ['brightness'], words: ['auto-lock', 'autolock', 'lock'] },
+  { title: 'Sounds & Haptics', path: ['sounds'], names: ['haptics'], words: ['vibration', 'vibrate'] },
+  { title: 'Privacy & Security', path: ['privacy'], names: ['security'], words: ['cookies', 'tracking', 'data', 'gdpr'] },
+]
+
+/** What the one-pager answers to besides its name. */
+const ONE_PAGER = { names: ['one-pager', 'one pager', 'onepager'], words: ['deck', 'summary', 'overview', 'pdf', 'docsend', 'memo'] }
+
+/** What someone types who wants to get hold of Shrug. */
+const REACH = ['contact', 'get in touch', 'touch', 'email', 'e-mail', 'mail', 'reach', 'reach out', 'pitch', 'apply', 'application', 'intro', 'introduction', 'talk', 'call', 'phone', 'meet', 'meeting', 'hello', 'submit', 'raise', 'raising', 'fundraise', 'fundraising']
+
 /** A group shows this many at most. */
 const MOST = 4
+
+/** Follows a link out of the site: a page in a tab of its own, a mail or a text in the app that sends them. */
+function follow(href: string) {
+  if (/^https?:/i.test(href)) window.open(href, '_blank', 'noopener,noreferrer')
+  else window.location.href = href
+}
+
+const onePager = (key: string, score: number, title: ReactNode): Hit => ({
+  key,
+  kind: 'app',
+  score,
+  lead: (size) => (
+    <span className="spot-tile" style={{ width: size, height: size }}>
+      <OnePagerIcon />
+    </span>
+  ),
+  title,
+  subtitle: hostOf(SITE.onePager),
+  href: SITE.onePager,
+  open: () => follow(SITE.onePager),
+})
+
+/** The way to Shrug there is today (src/data/site.ts): an email, a text, or with neither the one-pager. */
+function toShrug(key: string, score: number): Hit {
+  const way = reach()
+  return {
+    key,
+    kind: 'reach',
+    score,
+    lead: glyph(<AtSign size={18} strokeWidth={2.4} aria-hidden />),
+    title: 'Get in Touch',
+    subtitle: way.kind === 'doc' ? 'Start with the one-pager' : way.label,
+    href: way.href,
+    open: () => follow(way.href),
+  }
+}
+
+const askInMessages = (): Hit => ({
+  key: 'ask',
+  kind: 'person',
+  score: 0,
+  lead: glyph(<MessageCircle size={18} strokeWidth={2.4} aria-hidden />),
+  title: 'Ask in Messages',
+  subtitle: GROUP_NAME,
+  open: () => launchAt('messages', [GROUP_VIEW]),
+})
 
 function find(raw: string): Found {
   const q = raw.trim().toLowerCase()
   if (!q) return { top: null, groups: [] }
   const byScore = (a: Hit, b: Hit) => a.score - b.score
 
+  // An app answers to its name here, to its name on the desktop, to the site's own word for it, and (a little less surely) to the words for what it holds
   const apps: Hit[] = []
   APP_ORDER.forEach((id) => {
-    const named = rank(PHONE[id].label, q)
-    const also = named < 0 ? Math.max(rank(APPS[id].name, q), rank(APPS[id].blurb, q)) : -1
-    if (named < 0 && also < 0) return
-    apps.push({ key: `app:${id}`, kind: 'app', score: named >= 0 ? named : 4 + also, lead: tile(id), title: <Marked text={PHONE[id].label} q={q} />, subtitle: <Marked text={APPS[id].blurb} q={q} />, open: () => launch(id) })
+    const { name, blurb } = APPS[id]
+    const named = best([PHONE[id].label, name, ...(NOUN[id] ?? [])], q)
+    const word = named < 0 && q.length >= 2 ? best(ALSO[id], q) : -1
+    const also = word >= 0 && word <= 2 ? word : -1
+    const said = named < 0 && also < 0 ? rank(blurb, q) : -1
+    if (named < 0 && also < 0 && said < 0) return
+    // Under its name: the name it has on the desktop where that is another one, and what it is
+    const line = name !== PHONE[id].label && name !== blurb ? `${name} · ${blurb}` : blurb
+    apps.push({ key: `app:${id}`, kind: 'app', score: named >= 0 ? named : also >= 0 ? 1.5 + also : 4 + said, lead: tile(id), title: <Marked text={PHONE[id].label} q={q} />, subtitle: <Marked text={line} q={q} />, open: () => launch(id) })
+  })
+  // The one-pager is on the Home Screen among the apps, and is found among them
+  {
+    const named = best(['One-pager', ...ONE_PAGER.names], q)
+    const word = named < 0 && q.length >= 3 ? best(ONE_PAGER.words, q) : -1
+    if (named >= 0 || (word >= 0 && word <= 1)) apps.push(onePager('link:one-pager', named >= 0 ? named : 1.25 + word, <Marked text="One-pager" q={q} />))
+  }
+
+  const settings: Hit[] = []
+  SETTINGS.forEach((page) => {
+    const named = best([page.title, ...page.names], q)
+    const word = named < 0 && q.length >= 3 ? best(page.words, q) : -1
+    if (named < 0 && (word < 0 || word > 2)) return
+    // A word that is exactly one of its own is nearly as good as its name; part of one only lists it
+    settings.push({ key: `setting:${page.path.join('/')}`, kind: 'setting', score: named >= 0 ? named : word === 0 ? 1.25 : 4 + word, lead: tile('about'), title: <Marked text={page.title} q={q} />, subtitle: PHONE.about.label, open: () => launchAt('about', page.path) })
   })
 
+  // The words for getting hold of Shrug: the whole of one, or (four letters in) the start of one
+  const reaching: Hit[] = []
+  {
+    const word = best(REACH, q)
+    if (word === 0 || (word === 1 && q.length >= 4)) reaching.push(toShrug('reach', word === 0 ? 0.75 : 2.25))
+  }
+
   const people: Hit[] = []
+  // The conversation everyone is in
+  {
+    const named = rank(GROUP_NAME, q)
+    if (named >= 0) people.push({ key: 'group', kind: 'person', score: named, lead: (size) => <ConversationAvatar conversation="group" size={size} />, title: <Marked text={GROUP_NAME} q={q} />, subtitle: `${PEOPLE.length} people`, open: () => launchAt('messages', [GROUP_VIEW]) })
+  }
   PEOPLE.forEach((person, i) => {
     const named = rank(person.name, q)
     const role = named < 0 ? rank(person.role, q) : -1
@@ -187,26 +322,31 @@ function find(raw: string): Found {
   DROPS.forEach((drop) => {
     const named = rank(drop, q)
     if (named < 0 && !anyDrop) return
-    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), open: () => launchAt('photos', [albumView(drop)]) })
+    // An album nothing has arrived for yet is found, but is not what search puts first
+    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, shy: arrived(undefined, drop) === 0, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), open: () => launchAt('photos', [albumView(drop)]) })
   })
 
-  const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore), drop: drops.sort(byScore) }
+  const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), setting: settings.sort(byScore), reach: reaching, person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore), drop: drops.sort(byScore) }
+  const all = Object.values(lists).flat()
 
-  // The best of them all, if it is a name that what was typed begins (or begins a word of)
+  // The best of them all, if it is a name that what was typed begins (or begins a word of). Level, the
+  // site's own things come first: an app, a page of Settings, the way to Shrug, then what is in the apps
   let top: Hit | null = null
-  for (const kind of ['app', 'person', 'company', 'faq', 'drop'] as Kind[]) {
-    const best = lists[kind][0]
-    if (best && best.score <= 2 && (!top || best.score < top.score)) top = best
+  for (const kind of ['app', 'setting', 'reach', 'person', 'company', 'faq', 'drop'] as Kind[]) {
+    const eligible = lists[kind].find((hit) => !(hit.shy && all.some((other) => !other.shy)))
+    if (eligible && eligible.score <= 2 && (!top || eligible.score < top.score)) top = eligible
   }
   const rest = (kind: Kind) => lists[kind].filter((hit) => hit !== top).slice(0, MOST)
 
   const icon = (id: PhoneApp) => <PhoneIcon id={id} />
   const groups: Found['groups'] = [
+    { id: 'app' as const, title: 'Apps', icon: <LayoutGrid size={16} strokeWidth={2.4} />, hits: rest('app') },
+    { id: 'setting' as const, title: PHONE.about.label, icon: icon('about'), hits: rest('setting') },
+    { id: 'reach' as const, title: 'Suggestions', icon: <Lightbulb size={16} strokeWidth={2.4} />, hits: rest('reach') },
     { id: 'person' as const, title: PHONE.messages.label, icon: icon('messages'), hits: rest('person') },
     { id: 'company' as const, title: PHONE.finder.label, icon: icon('finder'), hits: rest('company') },
     { id: 'faq' as const, title: PHONE.notes.label, icon: icon('notes'), hits: rest('faq') },
     { id: 'drop' as const, title: PHONE.photos.label, icon: icon('photos'), hits: rest('drop') },
-    { id: 'app' as const, title: 'Apps', icon: <LayoutGrid size={16} strokeWidth={2.4} />, hits: rest('app') },
   ].filter((group) => group.hits.length > 0)
   return { top, groups }
 }
@@ -214,33 +354,52 @@ function find(raw: string): Found {
 /** Things to type, to see what search finds: a person, a company, a vertical and a word from a question. */
 const TRY = [PEOPLE[0]!.name, (ALL.find((c) => c.name === 'Anduril') ?? ALL[0]!).name, VERTICALS[0]!.name, 'drops']
 
+/** What is still there to press when a search finds nothing: the short version of Shrug, and the conversation. */
+const INSTEAD: Hit[] = [onePager('instead:one-pager', 0, 'One-pager'), askInMessages()]
+
 // ---- What it looks like ----
 
-function Row({ hit, top }: { hit: Hit; top?: boolean }) {
-  return (
-    <button type="button" className="spot-row" data-top={top || undefined} data-spot-item onClick={hit.open}>
+/** One thing found. The keyboard stays in the field (the arrow keys walk these from there), so a row
+ * is an option of the field's list and not a stop of its own for Tab. */
+function Row({ hit, top, onLeave }: { hit: Hit; top?: boolean; onLeave: () => void }) {
+  const inside = (
+    <>
       <span className="spot-row__lead">{hit.lead(top ? 52 : 40)}</span>
       <span className="spot-row__text">
         <span className="spot-row__title">{hit.title}</span>
         {hit.subtitle && <span className="spot-row__sub">{hit.subtitle}</span>}
       </span>
+    </>
+  )
+  if (hit.href) {
+    const page = /^https?:/i.test(hit.href)
+    return (
+      // A link out of the site is a link: it can be opened in a tab of its own, copied, or followed. Search closes behind it
+      <a className="spot-row" role="option" aria-selected={false} tabIndex={-1} data-top={top || undefined} data-spot-item href={hit.href} {...(page ? { target: '_blank', rel: 'noopener noreferrer' } : null)} onClick={onLeave}>
+        {inside}
+        {page && <span className="sr-only">, opens in a new tab</span>}
+      </a>
+    )
+  }
+  return (
+    <button type="button" className="spot-row" role="option" aria-selected={false} tabIndex={-1} data-top={top || undefined} data-spot-item onClick={hit.open}>
+      {inside}
     </button>
   )
 }
 
 function Group({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
   return (
-    <section className="spot-group" aria-label={title}>
-      <h2 className="spot-group__head">
-        {icon && (
-          <span className="spot-group__icon" aria-hidden>
-            {icon}
-          </span>
-        )}
+    <div className="spot-group" role="group" aria-label={title}>
+      {/* The group is named for a screen reader by its label; this is that name for the eye */}
+      <div className="spot-group__head" aria-hidden>
+        {icon && <span className="spot-group__icon">{icon}</span>}
         {title}
-      </h2>
-      <div className="spot-card">{children}</div>
-    </section>
+      </div>
+      <div className="spot-card" role="presentation">
+        {children}
+      </div>
+    </div>
   )
 }
 
@@ -278,6 +437,8 @@ export function Spotlight() {
   const found = useMemo(() => find(query), [query])
   const typed = query.trim().length > 0
   const first = found.top ?? found.groups[0]?.hits[0] ?? null
+  /** How many things were found, as the list shows them. */
+  const count = (found.top ? 1 : 0) + found.groups.reduce((sum, group) => sum + group.hits.length, 0)
   const close = () => showSpotlight(false)
 
   const items = () => [...(root.current?.querySelectorAll<HTMLElement>('[data-spot-item]') ?? [])]
@@ -288,6 +449,7 @@ export function Spotlight() {
     list.forEach((el, i) => {
       el.id = `spot-item-${i}`
       el.toggleAttribute('data-active', i === at)
+      el.setAttribute('aria-selected', String(i === at))
     })
     if (at >= 0 && list[at]) {
       input.current?.setAttribute('aria-activedescendant', list[at]!.id)
@@ -307,7 +469,11 @@ export function Spotlight() {
       if (!picked && !(typed && first)) return
       e.preventDefault()
       if (picked) picked.click()
-      else first!.open()
+      else {
+        first!.open()
+        // A link has gone to a tab of its own: search has done its work here
+        if (first!.href) close()
+      }
     }
   }
 
@@ -325,72 +491,90 @@ export function Spotlight() {
       <div
         className="spot-scroll"
         // A tap on the bare ground between results closes it, as a tap on the wallpaper does
-        onClick={(e) => e.target === e.currentTarget && close()}
+        onClick={(e) => (e.target === e.currentTarget || (e.target as HTMLElement).id === 'spot-list') && close()}
         // Reaching for the results puts the keyboard away
         onTouchMove={() => document.activeElement === input.current && input.current?.blur()}
       >
-        {!typed ? (
-          <>
-            <Group title="Siri Suggestions">
-              <div className="spot-apps">
-                {APP_ORDER.map((id) => (
-                  <button key={id} type="button" className="spot-app" data-spot-item onClick={() => launch(id)}>
-                    <span className="spot-app__icon">
-                      <PhoneIcon id={id} />
-                    </span>
-                    <span className="spot-app__name">{PHONE[id].label}</span>
-                  </button>
-                ))}
-              </div>
-            </Group>
-            <Group title="Try Searching For">
-              {TRY.map((text) => (
-                <button
-                  key={text}
-                  type="button"
-                  className="spot-row spot-row--try"
-                  data-spot-item
-                  aria-label={`Search for ${text}`}
-                  onClick={() => {
-                    setQuery(text)
-                    setAt(-1)
-                    input.current?.focus({ preventScroll: true })
-                  }}
-                >
-                  <span className="spot-row__lead">
-                    <span className="spot-glyph">
-                      <Search size={16} strokeWidth={2.6} aria-hidden />
-                    </span>
-                  </span>
-                  <span className="spot-row__text">
-                    <span className="spot-row__title">{text}</span>
-                  </span>
-                  <ArrowUpLeft className="spot-row__fill" size={18} strokeWidth={2.2} aria-hidden />
-                </button>
-              ))}
-            </Group>
-          </>
-        ) : first ? (
-          <div className="spot-found" role="region" aria-label="Results" aria-live="polite">
-            {found.top && (
-              <Group title="Top Hit">
-                <Row hit={found.top} top />
-              </Group>
-            )}
-            {found.groups.map((group) => (
-              <Group key={group.id} title={group.title} icon={group.icon}>
-                {group.hits.map((hit) => (
-                  <Row key={hit.key} hit={hit} />
-                ))}
-              </Group>
-            ))}
-          </div>
-        ) : (
-          <div className="spot-none" role="status">
+        {typed && !first && (
+          <div className="spot-none">
             <b>No Results</b>
             <span>for “{query.trim()}”</span>
           </div>
         )}
+        {/* Everything there is to choose, as the list the field belongs to: suggestions before anything is typed, then what was found */}
+        <div id="spot-list" className="spot-found" role="listbox" aria-label={typed && first ? 'Results' : 'Suggestions'}>
+          {!typed ? (
+            <>
+              <Group title="Siri Suggestions">
+                <div className="spot-apps" role="presentation">
+                  {APP_ORDER.map((id) => (
+                    <button key={id} type="button" className="spot-app" role="option" aria-selected={false} tabIndex={-1} data-spot-item onClick={() => launch(id)}>
+                      <span className="spot-app__icon">
+                        <PhoneIcon id={id} />
+                      </span>
+                      <span className="spot-app__name">{PHONE[id].label}</span>
+                    </button>
+                  ))}
+                </div>
+              </Group>
+              <Group title="Try Searching For">
+                {TRY.map((text) => (
+                  <button
+                    key={text}
+                    type="button"
+                    className="spot-row spot-row--try"
+                    role="option"
+                    aria-selected={false}
+                    tabIndex={-1}
+                    data-spot-item
+                    aria-label={`Search for ${text}`}
+                    onClick={() => {
+                      setQuery(text)
+                      setAt(-1)
+                      input.current?.focus({ preventScroll: true })
+                    }}
+                  >
+                    <span className="spot-row__lead">
+                      <span className="spot-glyph">
+                        <Search size={16} strokeWidth={2.6} aria-hidden />
+                      </span>
+                    </span>
+                    <span className="spot-row__text">
+                      <span className="spot-row__title">{text}</span>
+                    </span>
+                    <ArrowUpLeft className="spot-row__fill" size={18} strokeWidth={2.2} aria-hidden />
+                  </button>
+                ))}
+              </Group>
+            </>
+          ) : first ? (
+            <>
+              {found.top && (
+                <Group title="Top Hit">
+                  <Row hit={found.top} top onLeave={close} />
+                </Group>
+              )}
+              {found.groups.map((group) => (
+                <Group key={group.id} title={group.title} icon={group.icon}>
+                  {group.hits.map((hit) => (
+                    <Row key={hit.key} hit={hit} onLeave={close} />
+                  ))}
+                </Group>
+              ))}
+            </>
+          ) : (
+            // Nothing found is not the end of the road: the short version of Shrug, and the conversation
+            <Group title="Suggestions" icon={<Lightbulb size={16} strokeWidth={2.4} />}>
+              {INSTEAD.map((hit) => (
+                <Row key={hit.key} hit={hit} onLeave={close} />
+              ))}
+            </Group>
+          )}
+        </div>
+      </div>
+      {/* What a screen reader is told as the list changes: how much was found, not all of it over again */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {!typed ? '' : !first ? `No results for ${query.trim()}` : `${count} result${count === 1 ? '' : 's'}`}
       </div>
       <div className="spot-foot">
         <label className="spot-field">
@@ -399,6 +583,10 @@ export function Spotlight() {
             ref={input}
             className="spot-input"
             type="text"
+            role="combobox"
+            aria-expanded
+            aria-controls="spot-list"
+            aria-autocomplete="list"
             inputMode="search"
             enterKeyHint="search"
             autoComplete="off"

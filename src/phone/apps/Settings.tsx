@@ -147,10 +147,15 @@ function Tile({ id, big }: { id: TopId; big?: boolean }) {
 
 // ---- Parts the pages share ----
 
-/** A row that leaves the site says so with an arrow, where a row that stays has a chevron. */
-const out = <ArrowUpRight className="settings-out" size={18} strokeWidth={2.4} aria-hidden />
-/** The same, for someone who is told the row and not shown it. */
-const inNewTab = <span className="sr-only">, opens in a new tab</span>
+/** A row that leaves the site says so with an arrow, where a row that stays has a chevron; and in
+ * words, after everything else the row says, for someone who is told the row and not shown it. */
+const leaves = (where: string) => (
+  <>
+    <ArrowUpRight className="settings-out" size={18} strokeWidth={2.4} aria-hidden />
+    <span className="sr-only">, {where}</span>
+  </>
+)
+const out = leaves('opens in a new tab')
 
 /** The site is being read at the address Settings would send a visitor to: there is nowhere else to send them. */
 const atHome = () => {
@@ -343,21 +348,10 @@ function Account() {
     >
       <List>
         <Section>
-          {way && (
-            <Cell
-              title={
-                <>
-                  {way.label}
-                  <span className="sr-only">{way.kind === 'email' ? ', opens your mail app' : ', opens your messages app'}</span>
-                </>
-              }
-              href={way.href}
-              trailing={out}
-            />
-          )}
-          <Cell title={<>One-pager{inNewTab}</>} href={SITE.onePager} trailing={out} />
+          {way && <Cell title={way.label} href={way.href} trailing={leaves(way.kind === 'email' ? 'opens your mail app' : 'opens your messages app')} />}
+          <Cell title="One-pager" href={SITE.onePager} trailing={out} />
           {/* Not when this is that website: the row would open the page it is on */}
-          {!atHome() && <Cell title={<>Website{inNewTab}</>} value={hostOf(SITE.url)} href={SITE.url} trailing={out} />}
+          {!atHome() && <Cell title="Website" value={hostOf(SITE.url)} href={SITE.url} trailing={out} />}
         </Section>
       </List>
     </Headed>

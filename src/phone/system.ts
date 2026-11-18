@@ -25,7 +25,12 @@ export interface Place {
   stacks: Record<PhoneApp, string[]>
   /** The sheet over the app in front: `details`, `request`. On the Home Screen (no app), the folder that is open: `folder:portfolio`. */
   sheet: string | null
+  /** What is up over all of that: search, or the App Switcher. Each is a step of its own, so that the
+   * browser's Back puts it away (and never leaves the site instead). */
+  over?: Over
 }
+
+export type Over = 'search' | 'switcher' | null
 
 export interface Sys extends Place {
   locked: boolean
@@ -71,12 +76,13 @@ function read(state: unknown): Entry | null {
     const stack = (place.stacks as Partial<Record<PhoneApp, unknown>> | undefined)?.[id]
     if (Array.isArray(stack)) stacks[id] = stack.filter((view): view is string => typeof view === 'string')
   }
-  return { shrug: { app: isApp(place.app) ? place.app : null, stacks, sheet: typeof place.sheet === 'string' ? place.sheet : null }, n: typeof entry?.n === 'number' ? entry.n : 0 }
+  const over: Over = place.over === 'search' || place.over === 'switcher' ? place.over : null
+  return { shrug: { app: isApp(place.app) ? place.app : null, stacks, sheet: typeof place.sheet === 'string' ? place.sheet : null, over }, n: typeof entry?.n === 'number' ? entry.n : 0 }
 }
 
-const placeOf = (s: Place): Place => ({ app: s.app, stacks: s.stacks, sheet: s.sheet })
+const placeOf = (s: Sys): Place => ({ app: s.app, stacks: s.stacks, sheet: s.sheet, over: s.spotlight ? 'search' : s.switcher ? 'switcher' : null })
 
-const same = (a: Place, b: Place) => a.app === b.app && a.sheet === b.sheet && PHONE_APPS.every((id) => a.stacks[id].join('\n') === b.stacks[id].join('\n'))
+const same = (a: Place, b: Place) => a.app === b.app && a.sheet === b.sheet && (a.over ?? null) === (b.over ?? null) && PHONE_APPS.every((id) => a.stacks[id].join('\n') === b.stacks[id].join('\n'))
 
 const here = (): Entry => read(history.state) ?? { shrug: placeOf(sys.get()), n: 0 }
 
@@ -88,60 +94,100 @@ let expected: boolean | null = null
 let overdue: ReturnType<typeof setTimeout> | undefined
 
 function apply(place: Place, motion: boolean, origin: string | null = null) {
-  sys.set((s) => ({
-    ...s,
-    ...place,
-    motion,
-    prev: s.app,
-    // What an app opened out of matters while it is opening; one already in front keeps its own
-    origin: !place.app ? null : place.app === s.app ? s.origin : origin,
-    recents: place.app ? [place.app, ...s.recents.filter((id) => id !== place.app)] : s.recents,
-    switcher: false,
-    spotlight: false,
-  }))
+  sys.set((s) => {
+    const recents = place.app ? [place.app, ...s.recents.filter((id) => id !== place.app)] : s.recents
+    return {
+      ...s,
+      app: place.app,
+      stacks: place.stacks,
+      sheet: place.sheet,
+      motion,
+      prev: s.app,
+      // What an app opened out of matters while it is opening; one already in front keeps its own
+      origin: !place.app ? null : place.app === s.app ? s.origin : origin,
+      recents,
+      // The switcher has nothing to show with no app open (a step forward to it after they were all closed)
+      switcher: place.over === 'switcher' && recents.length > 0,
+      spotlight: place.over === 'search',
+    }
+  })
 }
 
-/** A move the visitor made: a new step in history. */
-function go(place: Place, origin: string | null = null) {
-  if (same(placeOf(sys.get()), place)) return
-  const n = here().n + 1
-  history.pushState({ shrug: place, n } satisfies Entry, '')
+// ---- One press, one move ----
+
+/** How long a move takes to draw, give or take: for that long after one, the screens under the visitor's
+ * finger take no presses. */
+const MOVE = 400
+
+/** A move is being drawn. While it is, what is arriving or leaving takes no presses (src/styles/phone.css):
+ * a second tap, or a third, lands on nothing instead of on whatever has just come under the finger, so
+ * two taps do what one does. An iPhone does the same. */
+export const moving = createStore(false)
+
+let settling: ReturnType<typeof setTimeout> | undefined
+
+function moved() {
+  moving.set(true)
+  clearTimeout(settling)
+  settling = setTimeout(() => moving.set(false), MOVE)
+}
+
+/** Writes the step the phone is on, or the one after it. */
+function write(place: Place, n: number, push: boolean) {
+  const entry = { shrug: place, n } satisfies Entry
+  if (push) history.pushState(entry, '')
+  else history.replaceState(entry, '')
   steps.set(n, place)
+}
+
+/** A move the visitor made: a new step in history. Search and the App Switcher are steps too, but ones
+ * that are passed through, not stopped at: whatever is gone to from one (an app picked in it) takes its
+ * step, so that Back from there is where the visitor was before, not search again. */
+function go(place: Place, origin: string | null = null) {
+  // A step back is on its way and the browser has not answered yet: one move at a time
+  if (expected !== null) return
+  if (same(placeOf(sys.get()), place)) return
+  moved()
+  const entry = here()
+  if (entry.shrug.over) write(place, entry.n, false)
+  else write(place, entry.n + 1, true)
   apply(place, true, origin)
 }
 
 /** A move that undoes the last one. Where the step before is the place it
  * leads to, it is a step back; otherwise it is one more step forward. */
 function back(place: Place, motion = true) {
+  // The browser has not answered the last step back yet: a second one now would go two steps, or out of the site
+  if (expected !== null) return
   if (same(placeOf(sys.get()), place)) return
+  moved()
   const entry = here()
   const before = steps.get(entry.n - 1)
-  if (entry.n > 0 && before && same(before, place)) {
-    expected = motion
-    history.back()
-    // A page held inside another (a preview) may never hear its own step back
-    clearTimeout(overdue)
-    overdue = setTimeout(() => {
-      if (expected === null) return
-      expected = null
-      history.replaceState({ shrug: place, n: entry.n } satisfies Entry, '')
-      steps.set(entry.n, place)
-      apply(place, motion)
-    }, 400)
-    return
-  }
-  const n = entry.n + 1
-  history.pushState({ shrug: place, n } satisfies Entry, '')
-  steps.set(n, place)
+  if (entry.n > 0 && before && same(before, place)) return rewind(-1, place, motion)
+  // Out of search or the switcher to somewhere that is not the step under it: that somewhere takes its step
+  if (entry.shrug.over) write(place, entry.n, false)
+  else write(place, entry.n + 1, true)
   apply(place, motion)
 }
 
-/** Rewrites the step the phone is on, without taking one. */
-function amend(place: Place) {
-  const n = here().n
-  history.replaceState({ shrug: place, n } satisfies Entry, '')
-  steps.set(n, place)
+/** Steps back through history to a step that is `place`. The browser answers in its own time (`watchHistory`
+ * draws it then); a page held inside another (a preview) may never hear the answer, so if none has come
+ * shortly, the step the phone is on is rewritten instead. */
+function rewind(by: number, place: Place, motion: boolean) {
+  const entry = here()
+  expected = motion
+  history.go(by)
+  clearTimeout(overdue)
+  overdue = setTimeout(() => {
+    if (expected === null) return
+    expected = null
+    write(place, entry.n, false)
+    apply(place, motion)
+  }, 400)
 }
+
+/** Rewrites the step the phone is on, without taking one. */
+const amend = (place: Place) => write(place, here().n, false)
 
 // ---- Apps ----
 
@@ -149,7 +195,8 @@ function amend(place: Place) {
 export function launch(app: PhoneApp, origin: string | null = null) {
   const s = sys.get()
   if (s.locked) sys.set((now) => ({ ...now, locked: false }))
-  if (s.app === app && !s.sheet) return sys.set((now) => (now.switcher || now.spotlight ? { ...now, switcher: false, spotlight: false, motion: true } : now))
+  // Already in front: only what is over it (the switcher) goes
+  if (s.app === app && !s.sheet) return s.switcher || s.spotlight ? back({ app, stacks: s.stacks, sheet: null, over: null }) : undefined
   go({ app, stacks: s.stacks, sheet: null }, origin)
 }
 
@@ -164,18 +211,31 @@ export function launchAt(app: PhoneApp, stack: string[], origin: string | null =
 /** Back to the Home Screen. The app stays as it is. */
 export function goHome() {
   const s = sys.get()
+  // Already there, with search or the switcher over it: that goes
+  if (!s.app && (s.switcher || s.spotlight)) return back({ app: null, stacks: s.stacks, sheet: s.sheet, over: null })
   // Already there, with a folder open over it: the folder closes
   if (!s.app && s.sheet) return closeSheet()
-  if (!s.app) return sys.set((now) => (now.switcher || now.spotlight ? { ...now, switcher: false, spotlight: false, motion: true } : now))
+  if (!s.app) return
   back({ app: null, stacks: s.stacks, sheet: null })
 }
 
 /** Closes an app for good, as flicking it out of the App Switcher does: it starts over next time. */
 export function quit(app: PhoneApp) {
   const s = sys.get()
-  const place: Place = { app: s.app === app ? null : s.app, stacks: { ...s.stacks, [app]: noStacks()[app] }, sheet: s.app === app ? null : s.sheet }
-  amend(place)
-  sys.set((now) => ({ ...now, ...place, recents: now.recents.filter((id) => id !== app), switcher: now.switcher && now.recents.length > 1 }))
+  const recents = s.recents.filter((id) => id !== app)
+  // The switcher stays up while there is another card in it
+  const showing = s.switcher && recents.length > 0
+  const place: Place = { app: s.app === app ? null : s.app, stacks: { ...s.stacks, [app]: noStacks()[app] }, sheet: s.app === app ? null : s.sheet, over: showing ? 'switcher' : null }
+  moved()
+  // It was the last one, and the phone is on its Home Screen again. If an earlier step is that very Home
+  // Screen (the one the app was opened from), the phone steps back to it, which leaves the browser's Back
+  // nothing that changes nothing; otherwise the step it is on becomes it
+  const n = here().n
+  let earlier = -1
+  if (!place.app && !place.over && expected === null) for (let k = n - 1; k >= 0 && k >= n - 12 && earlier < 0; k--) if (steps.has(k) && same(steps.get(k)!, place)) earlier = k
+  if (earlier >= 0) rewind(earlier - n, place, false)
+  else amend(place)
+  sys.set((now) => ({ ...now, app: place.app, stacks: place.stacks, sheet: place.sheet, recents, switcher: showing }))
 }
 
 // ---- Inside an app ----
@@ -222,13 +282,25 @@ export function closeSheet(motion = true) {
 let held: ReturnType<typeof holdFocus> | null = null
 
 export function lock() {
-  if (sys.get().locked) return
+  const s = sys.get()
+  if (s.locked) return
   // Before anything is drawn locked: what is under the Lock Screen is about to be shut off, and the keyboard with it
   held = holdFocus()
-  sys.set((s) => ({ ...s, locked: true, switcher: false, spotlight: false, motion: true }))
+  // Search or the switcher was up: it goes, and its step with it
+  const under: Place = { app: s.app, stacks: s.stacks, sheet: s.sheet, over: null }
+  sys.set((now) => ({ ...now, locked: true, switcher: false, spotlight: false, motion: true }))
+  const entry = here()
+  if (!entry.shrug.over || expected !== null) return
+  const before = steps.get(entry.n - 1)
+  if (entry.n > 0 && before && same(before, under)) rewind(-1, under, false)
+  else amend(under)
 }
 
-export const unlock = () => sys.set((s) => (s.locked ? { ...s, locked: false, motion: true } : s))
+export function unlock() {
+  if (!sys.get().locked) return
+  moved()
+  sys.set((s) => ({ ...s, locked: false, motion: true }))
+}
 
 /** Puts the keyboard somewhere real after the screen has changed under it: back on what had it when the
  * phone locked, if that is still there to take it, and otherwise on the first of `otherwise` that can. */
@@ -238,8 +310,23 @@ export function refocus(...otherwise: (Element | null | undefined)[]) {
   return give ? give(...otherwise) : focusFirst(...otherwise)
 }
 
-export const showSwitcher = (on: boolean) => sys.set((s) => (s.switcher === on || (on && !s.recents.length) ? s : { ...s, switcher: on, spotlight: false, motion: true }))
-export const showSpotlight = (on: boolean) => sys.set((s) => (s.spotlight === on ? s : { ...s, spotlight: on, switcher: false, motion: true }))
+/** Brings the App Switcher up over wherever the phone is, or puts it away. A step in history, as search is. */
+export function showSwitcher(on: boolean) {
+  const s = sys.get()
+  if (s.switcher === on || (on && !s.recents.length)) return
+  const under: Place = { app: s.app, stacks: s.stacks, sheet: s.sheet, over: null }
+  if (on) go({ ...under, over: 'switcher' })
+  else back(under)
+}
+
+/** Brings search up over the Home Screen, or puts it away. */
+export function showSpotlight(on: boolean) {
+  const s = sys.get()
+  if (s.spotlight === on) return
+  const under: Place = { app: s.app, stacks: s.stacks, sheet: s.sheet, over: null }
+  if (on) go({ ...under, over: 'search' })
+  else back(under)
+}
 
 // ---- Start-up ----
 
@@ -253,11 +340,33 @@ export function startSystem(): boolean {
   const entry = read(history.state)
   resumed = !!entry
   if (entry) {
-    steps.set(entry.n, entry.shrug)
-    apply(entry.shrug, false)
+    // What was up over the place (search, the switcher) is not come back to: the place itself is
+    const place: Place = { ...entry.shrug, over: null }
+    write(place, entry.n, false)
+    apply(place, false)
     sys.set((s) => ({ ...s, locked: false }))
   } else amend(placeOf(sys.get()))
   return resumed
+}
+
+/** Takes out of every app's place the screens that name something no longer there, and everything
+ * beyond them: a note or a folder the visitor made, which a reload may not have kept. The phone lands on
+ * the screen those were opened from. `lost` says which. The step the phone is on is rewritten to match. */
+export function dropLost(lost: (app: PhoneApp, view: string) => boolean) {
+  const s = sys.get()
+  let changed = false
+  const stacks = { ...s.stacks }
+  for (const app of PHONE_APPS) {
+    const at = stacks[app].findIndex((view) => lost(app, view))
+    if (at < 0) continue
+    stacks[app] = stacks[app].slice(0, at)
+    changed = true
+  }
+  if (!changed) return
+  // A sheet that was over a screen that has gone has nothing left to be over
+  const sheet = s.app && stacks[s.app] !== s.stacks[s.app] ? null : s.sheet
+  sys.set((now) => ({ ...now, stacks, sheet, motion: false }))
+  amend(placeOf(sys.get()))
 }
 
 /** A link that names an app (`?open=portfolio`) arrives with it open and the
@@ -281,6 +390,8 @@ export function watchHistory() {
     clearTimeout(overdue)
     const entry = read(e.state)
     if (entry) steps.set(entry.n, entry.shrug)
+    // The browser's own Back or Forward is a move as much as a tap is
+    moved()
     apply(entry?.shrug ?? { app: null, stacks: sys.get().stacks, sheet: null }, motion)
   }
   window.addEventListener('popstate', onPop)

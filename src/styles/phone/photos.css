@@ -183,9 +183,10 @@
   min-width: 0;
 }
 
+/* (A width, not a flex basis: the bar's own width is worked out from its tabs' widths) */
 .photos-app .ios-tabs__item {
-  flex: 0 1 96px;
-  width: auto;
+  flex: 0 1 auto;
+  width: 96px;
   min-width: 0;
 }
 

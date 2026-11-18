@@ -1050,7 +1050,6 @@
 @container (max-height: 220px) {
   .ios-screen {
     --bar: 42px;
-    --foot-gap: 6px;
   }
 
   .ios-large {

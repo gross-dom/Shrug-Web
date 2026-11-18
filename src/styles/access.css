@@ -477,9 +477,24 @@
     outline-color: Highlight;
   }
 
-  /* The App Switcher: each app's card has an edge */
+  /* The keyboard drawn under a field, where the iPhone is in its frame: keys with edges */
+  .ss-kb {
+    outline: 1px solid CanvasText;
+  }
+
+  .ss-kb__key {
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
+  }
+
+  /* The App Switcher: each app's card has an edge, and so does the button that closes it */
   .sb-apps[data-switcher] .sb-card {
     outline: 2px solid CanvasText;
+  }
+
+  .sb-slot__close {
+    background-color: Canvas;
+    outline: 1px solid ButtonText;
   }
 
   /* Search: the field with the caret in it, and the result the arrows are on */

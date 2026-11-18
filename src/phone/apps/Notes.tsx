@@ -170,20 +170,10 @@ function useSearching(): Searching {
   }
 }
 
-/** The search field at the foot of a list. Escape empties it, then lets go of it, before it means Back:
- * the shared search bar sees to that itself, and this only stands in where the bar has not answered. */
+/** The search field at the foot of a list. Escape is the shared search bar's to answer, as in every
+ * app: it empties the field, then lets go of it, and only then means Back. */
 function SearchField({ search }: { search: Searching }) {
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== 'Escape' || e.defaultPrevented) return
-    e.preventDefault()
-    if (search.query) search.setQuery('')
-    else if (e.target instanceof HTMLElement) e.target.blur()
-  }
-  return (
-    <span className="notes-contents" onKeyDown={onKeyDown}>
-      <SearchBar value={search.query} onChange={search.setQuery} label="Search" onFocus={search.onFocus} onBlur={search.onBlur} />
-    </span>
-  )
+  return <SearchBar value={search.query} onChange={search.setQuery} label="Search" onFocus={search.onFocus} onBlur={search.onBlur} />
 }
 
 /** What the trailing end of a list's foot holds: New Note, or the button that ends a search. */

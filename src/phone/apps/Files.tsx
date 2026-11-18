@@ -424,20 +424,16 @@ function SearchScreen() {
   }
 
   // Escape, as in every search on the phone: it empties the field, then lets go of it (the shared search
-  // bar sees to both), and then it is the way back. Back from here is out of search, to the screen search
-  // was opened over, not out of the folder under it. Heard on the document, so after the field has had
-  // its say and before the phone takes Escape for its own Back.
+  // bar sees to both, and keeps them to itself), and after that it is the way back. Back from here is
+  // out of search, to the screen it was opened over, not out of the folder under that. Heard on the
+  // document: after the field has had its say, and before the phone takes Escape for its own Back.
   useEffect(() => {
     const key = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
       const s = sys.get()
       if (s.app !== 'finder' || s.locked || s.sheet || s.switcher || s.spotlight) return
       e.preventDefault()
-      // A field that did not answer for itself is answered for: emptied, then let go
-      const field = e.target instanceof HTMLInputElement && e.target.classList.contains('ios-search__input') ? e.target : null
-      if (field?.value) setFinderQuery('')
-      else if (field) field.blur()
-      else closeSearch()
+      closeSearch()
     }
     document.addEventListener('keydown', key)
     return () => document.removeEventListener('keydown', key)

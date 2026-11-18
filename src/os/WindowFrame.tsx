@@ -246,7 +246,8 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
       e,
       (dx, dy) => resized(start, edge, dx, dy, spec.min, vp, bar),
       (last) => {
-        if (last) placeApp(id, last)
+        // A press on a grip that sized nothing leaves the window as it was (tiled, if it was)
+        if (last && (last.x !== start.x || last.y !== start.y || last.w !== start.w || last.h !== start.h)) placeApp(id, last)
       },
     )
   }

@@ -7,11 +7,30 @@
   /* The Home Screen's own measures, to sit the field where its Search pill is: just above the Dock */
   --icon: clamp(54px, 15.3cqw, 68px);
   --foot: calc(3.3cqw + var(--icon) + 34px + 10px + var(--below, 0px));
+  /* Over the wallpaper the keyboard's ring is white: the accent would not show */
+  --ring: #fff;
   position: absolute;
   inset: 0;
   /* Over the apps, under the Lock Screen and the status bar */
   z-index: 1;
   color: #fff;
+}
+
+/* Where there is no Dock under the field, the field sits at the foot, just
+   clear of the strip that takes the swipe home: on a phone on its side (its
+   Dock is down the edge), and on a screen so short that a keyboard must have
+   most of it (a browser that shortens the page for its keyboard, as older
+   Android ones do, where the rule below does not hear of it). */
+@container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
+  .spot {
+    --foot: calc(var(--foot-gap, 21px) + 4px);
+  }
+}
+
+@container (max-height: 420px) {
+  .spot {
+    --foot: calc(var(--foot-gap, 21px) + 4px);
+  }
 }
 
 /* The keyboard is up (a phone's own, or the one drawn in a frame): the screen
@@ -58,8 +77,10 @@
   display: none;
 }
 
+/* The list the field belongs to: the suggestions, then what was found */
 .spot-found {
   display: flex;
+  flex: none;
   flex-direction: column;
   gap: 20px;
 }
@@ -132,6 +153,7 @@
 }
 
 .spot-field__clear {
+  position: relative;
   display: grid;
   flex: none;
   place-items: center;
@@ -140,6 +162,13 @@
   border-radius: 50%;
   background: rgb(255 255 255 / 0.34);
   color: rgb(20 24 60 / 0.9);
+}
+
+/* A finger's worth round it: 44 points, most of it over the end of the field */
+.spot-field__clear::after {
+  position: absolute;
+  inset: -11px;
+  content: '';
 }
 
 .spot-close {
@@ -361,11 +390,13 @@
   color: rgb(255 255 255 / 0.5);
 }
 
+/* Nothing found: said in the middle of what room there is, with the two things still to press under it */
 .spot-none {
   display: grid;
+  flex: none;
   justify-items: center;
   gap: 4px;
-  padding: 22cqh 24px 0;
+  padding: min(16cqh, 120px) 24px 8px;
   text-align: center;
 }
 

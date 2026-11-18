@@ -22,7 +22,8 @@ import { LockGlyph, OnePagerIcon, PhoneIcon } from './icons'
 import { haptic } from './native'
 import { settings } from './settings'
 import { Spotlight } from './Spotlight'
-import { goHome, launch, launchAt, lock, pop, quit, refocus, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp, type Sys } from './system'
+import { book, isFolder } from './apps/notes-store'
+import { dropLost, goHome, launch, launchAt, lock, pop, quit, refocus, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp, type Sys } from './system'
 import { clockOf, dateOf, useNow } from './time'
 import { useNewCount } from './unread'
 import { AppContext, scaleOf } from './ui'
@@ -308,7 +309,7 @@ function HomeIcon({ id }: { id: PhoneApp }) {
 /** A link dressed as an app: the one-pager opens in the browser. */
 function LinkIcon({ name, href, children }: { name: string; href: string; children: ReactNode }) {
   return (
-    <a className="sb-icon" href={href} target="_blank" rel="noreferrer">
+    <a className="sb-icon" href={href} target="_blank" rel="noreferrer" draggable={false}>
       <span className="sb-icon__tile">{children}</span>
       <span className="sb-icon__name">
         {name}
@@ -462,6 +463,10 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const [slide, setSlide] = useState<'in' | 'under' | null>(null)
   const wasSwitcher = useRef(switcher)
   const slot = useRef<HTMLDivElement>(null)
+  /** Ends `lingering`. Kept here, not in the effect that starts it: that effect's own cleanup runs when
+   * the app is left again a moment later, and would take the timer with it and leave the mark on for good. */
+  const settle = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(settle.current), [])
   const Root = PHONE[id].Root
 
   // What it opened out of, for the keyboard to go back to when it is put away
@@ -475,13 +480,16 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
     const left = wasSwitcher.current && !switcher
     wasSwitcher.current = switcher
     if (switcher) return
+    clearTimeout(settle.current)
     if (left) {
       // Out of the switcher: the card that was picked grows to the screen, the others slide off
       setZoom((z) => ({ ...z, open: front, still: true }))
       setLingering(true)
-      const t = setTimeout(() => setLingering(false), SETTLE)
-      return () => clearTimeout(t)
+      settle.current = setTimeout(() => setLingering(false), SETTLE)
+      return
     }
+    // Anything else that happens to it (it is left again before the cards have gone) ends that at once
+    setLingering(false)
     const now = sys.get()
     if (!front) {
       if (now.app && motion && now.prev === id) {
@@ -576,6 +584,16 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
 const strip = () => document.querySelector<HTMLElement>('.sb-apps')
 const slotOf = (el: Element) => el.closest<HTMLElement>('.sb-slot')
 
+/** How far apart the App Switcher's cards are, as a share of the screen's width. */
+const STRIDE = 0.76
+
+/** Rests the App Switcher on one of its cards (0 is the app last in front). The card is remembered, not
+ * the distance: when the screen turns, the distance is worked out again for the new width. */
+function restOn(apps: HTMLElement, at: number) {
+  apps.dataset.at = String(at)
+  apps.style.setProperty('--pan', `${at * apps.offsetWidth * STRIDE}px`)
+}
+
 /** Closes an app from the App Switcher: its card flies off the top, the others close up, and the keyboard
  * goes to the card that is left in its place. With none left, it is the Home Screen. */
 function throwAway(id: PhoneApp, el: HTMLElement, apps: HTMLElement) {
@@ -585,9 +603,7 @@ function throwAway(id: PhoneApp, el: HTMLElement, apps: HTMLElement) {
     const keyboard = el.contains(document.activeElement)
     quit(id)
     const left = sys.get().recents.length
-    const stride = apps.offsetWidth * 0.76
-    const pan = parseFloat(apps.style.getPropertyValue('--pan') || '0')
-    apps.style.setProperty('--pan', `${Math.min(pan, Math.max(0, left - 1) * stride)}px`)
+    restOn(apps, Math.min(Number(apps.dataset.at ?? 0), Math.max(0, left - 1)))
     if (!left) return goHome()
     if (keyboard) requestAnimationFrame(() => focusFirst(apps.querySelector('.sb-card__hit')))
   }, 240)
@@ -614,11 +630,14 @@ function CardClose({ id }: { id: PhoneApp }) {
 /** A card in the App Switcher: tap it to go to the app, flick it up to close it (or press its close button, or Delete). The row of cards pans under a sideways drag. */
 function CardHandle({ id }: { id: PhoneApp }) {
   const drag = useRef<{ x: number; y: number; t: number; dx: number; dy: number; vy: number; k: number; axis: 'x' | 'y' | null; pan: number } | null>(null)
+  /** The press that is ending was a drag (a pan, a flick): the click that follows it picks nothing. */
+  const dragged = useRef(false)
   const slot = slotOf
 
   const down = (e: ReactPointerEvent) => {
     const apps = strip()
     drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dx: 0, dy: 0, vy: 0, k: scaleOf(apps), axis: null, pan: parseFloat(apps?.style.getPropertyValue('--pan') || '0') }
+    dragged.current = false
     e.currentTarget.setPointerCapture(e.pointerId)
   }
 
@@ -629,7 +648,10 @@ function CardHandle({ id }: { id: PhoneApp }) {
     if (!d || !apps || !el) return
     const dx = (e.clientX - d.x) / d.k
     const dy = (e.clientY - d.y) / d.k
-    if (!d.axis && Math.hypot(dx, dy) > 8) d.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+    if (!d.axis && Math.hypot(dx, dy) > 8) {
+      d.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+      dragged.current = true
+    }
     const dt = Math.max(1, e.timeStamp - d.t)
     d.vy = d.vy * 0.6 + ((dy - d.dy) / dt) * 0.4
     d.dx = dx
@@ -652,14 +674,13 @@ function CardHandle({ id }: { id: PhoneApp }) {
     if (!d || !apps || !el) return
     apps.removeAttribute('data-panning')
     el.removeAttribute('data-lifting')
-    if (!d.axis) return launch(id)
+    // A tap: the click that follows it picks the app. Picking it here, as the finger lifts, would put the
+    // app in front before that click is sent, and the click would land on whatever in it was under the finger
+    if (!d.axis) return
     if (d.axis === 'x') {
       // Comes to rest on the nearest card
-      const stride = apps.offsetWidth * 0.76
       const count = sys.get().recents.length
-      const at = Math.max(0, Math.min(count - 1, Math.round((d.pan + d.dx) / stride)))
-      apps.style.setProperty('--pan', `${at * stride}px`)
-      return
+      return restOn(apps, Math.max(0, Math.min(count - 1, Math.round((d.pan + d.dx) / (apps.offsetWidth * STRIDE)))))
     }
     const speed = e.timeStamp - d.t > 90 ? 0 : d.vy
     // Flicked away: the app is closed
@@ -676,14 +697,16 @@ function CardHandle({ id }: { id: PhoneApp }) {
       onPointerMove={move}
       onPointerUp={up}
       onPointerCancel={up}
+      onClick={() => {
+        if (!dragged.current) launch(id)
+      }}
       // A card off to the side that takes the keyboard is brought to the middle
       onFocus={(e) => {
         const apps = strip()
         const at = sys.get().recents.indexOf(id)
-        if (apps && at >= 0 && e.currentTarget.matches(':focus-visible')) apps.style.setProperty('--pan', `${at * apps.offsetWidth * 0.76}px`)
+        if (apps && at >= 0 && e.currentTarget.matches(':focus-visible')) restOn(apps, at)
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') return launch(id)
         if (e.key !== 'Delete' && e.key !== 'Backspace') return
         e.preventDefault()
         const apps = strip()
@@ -704,9 +727,14 @@ function Apps() {
   const next = [...mounted.filter((id) => recents.includes(id)), ...recents.filter((id) => !mounted.includes(id))]
   if (next.length !== mounted.length || next.some((id, i) => id !== mounted[i])) setMounted(next)
 
-  // The switcher opens on the app that was last in front
+  // The switcher opens on the app that was last in front, and stays on the card it is panned to when the screen turns
   useLayoutEffect(() => {
-    if (switcher) root.current?.style.setProperty('--pan', '0px')
+    const el = root.current
+    if (!switcher || !el) return
+    restOn(el, 0)
+    const turned = () => restOn(el, Number(el.dataset.at ?? 0))
+    window.addEventListener('resize', turned)
+    return () => window.removeEventListener('resize', turned)
   }, [switcher])
 
   // Opened from the keyboard, the keyboard goes to the first card
@@ -732,14 +760,18 @@ function Apps() {
 
 // ---- Banners ----
 
-/** How long a banner stays, and the least time between two. */
-const BANNER = { stay: 4600, apart: 20_000 }
+/** How long a banner stays, the least time between two, and how long one has been down before it takes a
+ * press (it drops over the top bar, where Back and Cancel are: a finger already on its way to one of those
+ * should not open the conversation instead). */
+const BANNER = { stay: 4600, apart: 20_000, live: 300 }
 
 /** A reply landing while something other than Messages is showing drops in at the top of the screen. */
 function Banners() {
   const replied = useStore(chat, (s) => s.replied)
   const [shown, setShown] = useState<{ index: number; leaving: boolean } | null>(null)
-  const last = useRef({ replied, at: 0 })
+  // When the last one dropped. There has been none yet, so the first reply to land while something else is
+  // showing gets one, however early in the visit that is
+  const last = useRef({ replied, at: -Infinity })
   const drag = useRef<{ y: number; dy: number; k: number } | null>(null)
 
   useEffect(() => {
@@ -782,7 +814,15 @@ function Banners() {
         drag.current = null
       }}
     >
-      <Reply index={shown.index} banner origin="banner" onOpen={() => (drag.current && drag.current.dy < -14 ? undefined : openGroup('banner'))} />
+      <Reply
+        index={shown.index}
+        banner
+        origin="banner"
+        onOpen={() => {
+          if (performance.now() - last.current.at < BANNER.live) return
+          if (!(drag.current && drag.current.dy < -14)) openGroup('banner')
+        }}
+      />
     </div>
   )
 }
@@ -795,7 +835,8 @@ function Banners() {
  * where the phone's frame draws the bar itself. */
 function HomeBar({ drawn }: { drawn: boolean }) {
   const root = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ x: number; y: number; t: number; dy: number; dx: number; v: number; k: number; h: number; el: HTMLElement | null } | null>(null)
+  /** `reach` is the farthest the finger has been from where it came down, whichever way. */
+  const drag = useRef<{ x: number; y: number; t: number; dy: number; dx: number; v: number; k: number; h: number; reach: number; el: HTMLElement | null } | null>(null)
   const hold = useRef<ReturnType<typeof setTimeout>>()
   const press = useRef<ReturnType<typeof setTimeout>>()
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
@@ -824,14 +865,14 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     const screen = root.current?.closest<HTMLElement>('.ph')
     if (!screen || at === 'lock') return
     const el = at === 'app' ? screen.querySelector<HTMLElement>('.sb-slot[data-front] .sb-drag') : null
-    drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dy: 0, dx: 0, v: 0, k: scaleOf(screen), h: screen.offsetHeight, el }
+    drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dy: 0, dx: 0, v: 0, k: scaleOf(screen), h: screen.offsetHeight, reach: 0, el }
     e.currentTarget.setPointerCapture(e.pointerId)
     // Pressed and held where it is, it asks for the App Switcher too: for a hand that cannot drag, and for a mouse
     clearTimeout(press.current)
     if (at !== 'switcher' && sys.get().recents.length)
       press.current = setTimeout(() => {
         const d = drag.current
-        if (!d || Math.abs(d.dy) > 6 || Math.abs(d.dx) > 6) return
+        if (!d || d.reach > 6) return
         drag.current = null
         settle(d.el)
         haptic()
@@ -857,7 +898,8 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     const dt = Math.max(1, e.timeStamp - d.t)
     const v = (dy - d.dy) / dt
     d.v = d.v * 0.6 + v * 0.4
-    if (Math.abs(dy) > 6 || Math.abs(dx) > 6) clearTimeout(press.current)
+    d.reach = Math.max(d.reach, Math.abs((e.clientY - d.y) / d.k), Math.abs(dx))
+    if (d.reach > 6) clearTimeout(press.current)
     // Holding still is how the switcher is asked for: the wait starts over each time the finger moves in earnest
     if (Math.abs(dy - d.dy) > 1.5 || Math.abs(dx - d.dx) > 1.5) {
       clearTimeout(hold.current)
@@ -882,12 +924,17 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     const speed = e.timeStamp - d.t > 90 ? 0 : d.v
     const far = -d.dy / d.h
     settle(d.el)
-    if (at === 'switcher') return goHome()
-    // On the Home Screen there is nothing to carry off: only the hold means anything
-    if (at === 'home') return
+    // A tap is a press that never went anywhere: a swipe that was taken back to where it began, or went
+    // along the bar, is neither a tap nor a swipe up, and does nothing
+    const tap = d.reach < 6
+    const flick = d.dy <= -6 && (far > 0.22 || speed < -0.4)
+    if (at === 'switcher') return tap || flick ? goHome() : undefined
+    // On the bare Home Screen there is nothing to carry off: only the hold means anything. With a folder
+    // open over it, or search, a tap or a flick up puts that away
+    if (at === 'home') return away && (tap || flick) ? goHome() : undefined
     // A tap on the bar goes home too: a mouse has no swipe to speak of
-    if (d.dy > -6) return goHome()
-    if (far > 0.22 || speed < -0.4) {
+    if (tap) return goHome()
+    if (flick) {
       haptic()
       return goHome()
     }
@@ -980,6 +1027,17 @@ export function Springboard({ framed }: { framed: boolean }) {
       window.removeEventListener('pageshow', arm)
     }
   }, [autoLock])
+  // A reload comes back to where the phone was. A screen that names something the visitor made (a note,
+  // a folder of theirs) is only there to come back to if that was kept: where it was not, the phone lands
+  // on the screen it was opened from
+  useLayoutEffect(() => {
+    dropLost((app, view) => {
+      if (app !== 'notes') return false
+      const { notes, folders } = book.get()
+      if (view.startsWith('u:')) return !notes.some((note) => note.id === view.slice(2))
+      return view.startsWith('f:') && !isFolder(folders, view.slice(2))
+    })
+  }, [])
   // The page's title names the place: a tab, a screen reader and the browser's history all read it
   const place = useStore(sys, placeName)
   useEffect(() => {

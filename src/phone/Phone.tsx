@@ -5,7 +5,7 @@ import { PHONE_UNDER, wm } from '../os/wm'
 import { COLOR, WALLPAPER_TOP, carried, chrome } from './chrome'
 import { SoftKeyboard } from './Keyboard'
 import { Springboard } from './Springboard'
-import { sys } from './system'
+import { moving, sys } from './system'
 import { clockOf, useNow } from './time'
 
 // The site as an iPhone. On a real phone the phone itself is the frame: the
@@ -60,6 +60,13 @@ export function Phone() {
   const now = useNow()
   const root = useRef<HTMLDivElement>(null)
   const bleed = inHand(viewport.w, viewport.h) || !framable(viewport.w, viewport.h)
+  // A move is being drawn: the screens take no presses until it has been (phone.css)
+  const busy = useStore(moving, (on) => on)
+
+  // The frame's signal, Wi-Fi and battery are pictures of a status bar, not readings: nothing for a screen reader
+  useEffect(() => {
+    if (!bleed) document.querySelector('.ph-device .ss-phone__glyphs')?.setAttribute('aria-hidden', 'true')
+  }, [bleed])
 
   // A real phone: the browser's own bars take the colour of what is under them
   useEffect(() => {
@@ -109,7 +116,7 @@ export function Phone() {
 
   if (bleed)
     return (
-      <div ref={root} className="ph ph--bleed" data-dark={dark || undefined}>
+      <div ref={root} className="ph ph--bleed" data-dark={dark || undefined} data-moving={busy || undefined}>
         <Springboard framed={false} />
       </div>
     )
@@ -118,7 +125,7 @@ export function Phone() {
   return (
     <div className="ph-desk">
       <Device width={width} time={clockOf(now)} dark={dark} wallpaper="#000" className="ph-device">
-        <div ref={root} className="ph ph--framed" data-dark={dark || undefined}>
+        <div ref={root} className="ph ph--framed" data-dark={dark || undefined} data-moving={busy || undefined}>
           <Springboard framed />
         </div>
         <SoftKeyboard screen={root} />

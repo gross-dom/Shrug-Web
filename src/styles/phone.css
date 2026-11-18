@@ -28,6 +28,16 @@
   user-select: text;
 }
 
+/* One press, one move. While a move is being drawn (src/phone/system.ts marks
+   it, for about as long as it takes), what is arriving and what is leaving take
+   no presses: a second tap lands on nothing, not on whatever has just come
+   under the finger. Not the home indicator, which is how to change one's mind;
+   and with motion turned down too, where the second tap would land all the same */
+.ph[data-moving] :is(.sb-home, .sb-open, .sb-apps),
+.ph[data-moving] :is(.sb-home, .sb-open, .sb-apps) * {
+  pointer-events: none !important;
+}
+
 /* On a real phone the screen is the page. Where the page runs under the
    phone's own home indicator (added to the Home Screen, it does), the site's
    indicator and everything that floats at the foot keep above it */
