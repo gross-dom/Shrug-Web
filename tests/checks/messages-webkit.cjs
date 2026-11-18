@@ -3,7 +3,7 @@ const wk = require('./webkit.cjs')
 const path = require('path')
 const BASE = process.argv[2] || 'http://127.0.0.1:5173/'
 ;(async () => {
-  const out = (n) => path.join(__dirname, '..', 'fixm', `wk-${n}.png`)
+  const out = (n) => path.join(__dirname, '..', 'audit', 'shots', `wk-${n}.png`)
   let b = await wk.start({ width: 500, height: 860 })
   await b.go(BASE + '?phone=hand&still')
   await b.js(`window.__errs = []; window.addEventListener('error', (e) => window.__errs.push(String(e.message))); return 1`)

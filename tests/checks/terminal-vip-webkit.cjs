@@ -3,7 +3,7 @@
 const wk = require('./webkit.cjs')
 const path = require('path')
 const BASE = process.argv[2] || 'http://127.0.0.1:5173/'
-const out = (n) => path.join(__dirname, '..', 'fix', 'T', `wk-${n}.png`)
+const out = (n) => path.join(__dirname, '..', 'audit', 'shots', `wk-${n}.png`)
 ;(async () => {
   let b = await wk.start({ width: 447, height: 800 })
   await b.go(BASE + '?phone=hand&still&open=vip')

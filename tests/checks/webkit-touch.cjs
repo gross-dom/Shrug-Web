@@ -22,7 +22,7 @@ exports.start = async ({ width = 390, height = 844 } = {}) => {
   const api = {
     go: (url) => call('POST', `${s}/url`, { url }),
     js: (script, args = []) => call('POST', `${s}/execute/sync`, { script, args }),
-    shot: async (file) => fs.writeFileSync(file, Buffer.from(await call('GET', `${s}/screenshot`), 'base64')),
+    shot: async (file) => (fs.mkdirSync(require('path').dirname(file), { recursive: true }), fs.writeFileSync(file, Buffer.from(await call('GET', `${s}/screenshot`), 'base64'))),
     back: () => call('POST', `${s}/back`, {}),
     forward: () => call('POST', `${s}/forward`, {}),
     // fit the window so the page's own viewport is the size asked for

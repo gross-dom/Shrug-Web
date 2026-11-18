@@ -4,7 +4,7 @@ const { chromium } = require('playwright')
 const path = require('path')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
 const only = process.argv[3]
-const out = path.join(__dirname, '..', 'ios')
+const out = path.join(__dirname, '..', 'audit', 'shots')
 ;(async () => {
   const browser = await chromium.launch()
   const W = 393, H = 760

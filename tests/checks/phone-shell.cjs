@@ -8,7 +8,7 @@ const A = require('./lib.cjs')
 const path = require('path')
 const BASE = process.argv[2] && /^https?:/.test(process.argv[2]) ? process.argv[2] : process.env.BASE || 'http://127.0.0.1:5173/'
 const ONLY = (process.argv[3] || (process.argv[2] && !/^https?:/.test(process.argv[2]) ? process.argv[2] : '')).toUpperCase()
-const OUT = path.join(A.S, 'fix', 's1')
+const OUT = A.OUT
 require('fs').mkdirSync(OUT, { recursive: true })
 
 let failed = 0

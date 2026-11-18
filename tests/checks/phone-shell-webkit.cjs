@@ -4,7 +4,7 @@
 const wk = require('./webkit.cjs')
 const path = require('path')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
-const out = (n) => path.join(__dirname, '..', 'fix', 's1', `wk-${n}.png`)
+const out = (n) => path.join(__dirname, '..', 'audit', 'shots', `wk-${n}.png`)
 let failed = 0
 const say = (ok, name, detail = '') => { if (!ok) failed++; console.log((ok ? 'ok   ' : 'FAIL ') + name + (detail ? '  ' + String(detail).slice(0, 240) : '')) }
 ;(async () => {

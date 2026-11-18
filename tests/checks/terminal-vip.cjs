@@ -8,7 +8,7 @@ const path = require('path')
 const BASE = process.argv[2] || 'http://127.0.0.1:5173/'
 const ONLY = process.argv[3]
 const DEV = /:5173\//.test(BASE)
-const OUT = path.join(A.S, 'fix', 'T')
+const OUT = A.OUT
 require('fs').mkdirSync(OUT, { recursive: true })
 
 let failed = 0

@@ -21,7 +21,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator('.sb-lock__hint').tap(); await sleep(900)
   let s = await state()
   say(s.badge === null && s.widget === 0, 'before anyone has replied, Messages has no badge', JSON.stringify(s))
-  await page.screenshot({ path: path.join(__dirname, '..', 'vip', 'badge-0.png') })
+  await page.screenshot({ path: path.join(__dirname, '..', 'audit', 'shots', 'badge-0.png') })
   // Watch it tick: sample the badge beside the widget's count for a while
   const samples = []
   for (let i = 0; i < 70; i++) { samples.push(await state()); await sleep(150) }
@@ -29,12 +29,12 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   say(pairs.length >= 4 && pairs.every(([w, b]) => String(w) === b), 'then it counts each reply as it comes in, in step with the widget', pairs.map(([w, b]) => `${w}:${b}`).join(' '))
   s = await state()
   say(/^Messages, \d+ unread$/.test(s.label || ''), 'and says so to a screen reader', s.label)
-  await page.screenshot({ path: path.join(__dirname, '..', 'vip', 'badge-n.png') })
+  await page.screenshot({ path: path.join(__dirname, '..', 'audit', 'shots', 'badge-n.png') })
   // The list marks the people whose replies are in, and nobody else
   await page.locator('.sb-icon[aria-label^="Messages"]').first().tap(); await sleep(1300)
   const list = await page.evaluate(() => { const rows = [...document.querySelectorAll('.sb-slot[data-front] [data-conversation]')]; return { rows: rows.length, unread: rows.filter((r) => r.querySelector('[class*="unread"], .msg-row__dot, [data-unread]') || r.hasAttribute('data-unread')).length, widget: +(document.querySelector('.sb-chat__count')?.textContent?.match(/^(\d+)/)?.[1] ?? -1) } })
   console.log('      list:', JSON.stringify(list))
-  await page.screenshot({ path: path.join(__dirname, '..', 'vip', 'badge-list.png') })
+  await page.screenshot({ path: path.join(__dirname, '..', 'audit', 'shots', 'badge-list.png') })
   // Reading the conversation clears it
   await page.locator('.sb-slot[data-front] [data-conversation="group"]').tap(); await sleep(1500)
   await home()

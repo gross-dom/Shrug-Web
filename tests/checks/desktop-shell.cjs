@@ -5,7 +5,7 @@ const { A, mid, tap, tapAt, swipe, press, windows, win, until, pick, openMenu, m
 const path = require('path')
 const BASE = process.argv[2] || process.env.BASE || 'http://127.0.0.1:5173/'
 const only = process.argv[3]
-const OUT = path.join(A.S, 'fixd')
+const OUT = A.OUT
 require('fs').mkdirSync(OUT, { recursive: true })
 
 let failed = 0

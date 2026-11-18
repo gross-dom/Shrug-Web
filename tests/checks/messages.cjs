@@ -6,7 +6,7 @@ const path = require('path')
 const fs = require('fs')
 const BASE = process.argv[2] && /^https?:/.test(process.argv[2]) ? process.argv[2] : process.env.BASE || 'http://127.0.0.1:5173/'
 const ONLY = process.argv.slice(2).find((a) => !/^https?:/.test(a))
-const OUT = path.join(A.S, 'fixm')
+const OUT = A.OUT
 fs.mkdirSync(OUT, { recursive: true })
 
 let failed = 0

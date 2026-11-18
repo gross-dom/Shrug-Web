@@ -13,7 +13,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   page.on('pageerror', (e) => errors.push(String(e)))
   const sleep = (ms) => page.waitForTimeout(ms)
   const st = () => page.evaluate(() => history.state?.shrug)
-  const out = (n) => path.join(__dirname, '..', 'fold', `flow-${n}.png`)
+  const out = (n) => path.join(__dirname, '..', 'audit', 'shots', `flow-${n}.png`)
   await page.goto(base + '?still'); await sleep(1500)
   await page.keyboard.press('Enter'); await sleep(1100)
   const tiles = await page.evaluate(() => [...document.querySelectorAll('.sb-folder')].map((b) => ({ name: b.textContent.trim(), logos: b.querySelectorAll('.logo').length, titles: b.querySelectorAll('.sb-folder__titles span').length })))

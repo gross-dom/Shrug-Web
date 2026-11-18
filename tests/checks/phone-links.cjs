@@ -26,7 +26,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await search('anduril', 'Anduril')
   let s = await st()
   say(s.app === 'finder' && s.stacks.finder.join() === 'f:all' && s.sheet === 'company:Anduril', 'search opens a company as a sheet over the Portfolio folder', JSON.stringify({ app: s.app, stack: s.stacks.finder, sheet: s.sheet }))
-  await page.screenshot({ path: path.join(__dirname, '..', 'ios', 'links-company.png') })
+  await page.screenshot({ path: path.join(__dirname, '..', 'audit', 'shots', 'links-company.png') })
   await page.locator('.sb-slot[data-front] .ios-sheet button[aria-label="Close"]:not(.ios-sheet__shade)').first().tap(); await sleep(900)
   s = await st()
   say(s.app === 'finder' && s.sheet === null && (await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .ios-large').first().textContent()) === 'Portfolio', 'closing it leaves the folder', JSON.stringify({ app: s.app, sheet: s.sheet }))

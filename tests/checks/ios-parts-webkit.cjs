@@ -2,7 +2,7 @@
 const wk = require('./webkit.cjs')
 const path = require('path')
 ;(async () => {
-  const out = (n) => path.join(__dirname, '..', 'fixI', `wk-${n}.png`)
+  const out = (n) => path.join(__dirname, '..', 'audit', 'shots', `wk-${n}.png`)
   const TOP = '.sb-slot[data-front] .ios-page[data-pos="top"]'
   const run = async (name, width, height) => {
     const b = await wk.start({ width, height })
