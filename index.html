@@ -154,8 +154,14 @@
         var styled = []
         /** The site has drawn itself and is only waiting for its stylesheet before this gives way. */
         var leaving = false
-        function dressed() {
-          if (--waiting > 0) return
+        function dressed(event) {
+          // Once for each stylesheet: Safari says a stylesheet has loaded a second time when it is switched on
+          var sheet = event && event.target
+          if (sheet) {
+            if (sheet.shrugOn) return
+            sheet.shrugOn = true
+          }
+          if (!styled || --waiting > 0) return
           var told = styled
           styled = null
           for (var j = 0; j < told.length; j++) told[j]()

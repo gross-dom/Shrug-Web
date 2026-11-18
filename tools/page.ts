@@ -200,7 +200,7 @@ export function arrival(): Plugin {
         // A stylesheet asked for as if for print is fetched last of all; the preload beside it has it fetched first
         html = html.replace(/<link rel="stylesheet"([^>]*)>/g, (_, rest: string) => {
           const told = rest.replace(/\s*\/$/, '')
-          return `<link rel="preload" as="style"${told}>\n    <link rel="stylesheet"${told} media="print" data-styles onload="this.media='all'">`
+          return `<link rel="preload" as="style"${told}>\n    <link rel="stylesheet"${told} media="print" data-styles onload="this.onload=null;this.media='all'">`
         })
 
         // Each half's files: its own script, the scripts that one imports, and their stylesheets
