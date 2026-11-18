@@ -1,15 +1,16 @@
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUp, ChevronLeft, ChevronRight, ListFilter, Mic, Plus, SquarePen, Video } from 'lucide-react'
-import { chat, finishChat, replayChat, sendMessage, toggleChat, TOTAL } from '../../apps/chat'
-import { ConversationAvatar, conversationName, GROUP_NAME, PersonAvatar, relationsOf, Transcript, useConversationRows, type ListRow } from '../../apps/chat-ui'
+import { chat, deleteMessage, finishChat, replayChat, sendMessage, sentMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
+import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, NOT_DELIVERED, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
 import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
 import { eggOf } from '../../data/eggs'
 import { PEOPLE } from '../../data/people'
-import { SITE } from '../../data/site'
+import { reach, SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
 import { APPS, type AppId } from '../../os/apps'
 import { prefersReducedMotion } from '../../os/dom'
+import { useReturnFocus } from '../../os/focus'
 import { useStore } from '../../os/store'
 import { OnePagerIcon, PhoneIcon } from '../icons'
 import { closeSheet, launch, launchAt, openSheet, pop, push, sys, topOf } from '../system'
@@ -197,6 +198,8 @@ const MORE: AppId[] = ['finder', 'notes', 'terminal', 'photos']
 function More() {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLSpanElement>(null)
+  // The arrows, Home and End move through it and Escape gives the keyboard back to the plus, as in any menu
+  const menu = useMenuKeys(open, setOpen)
   useEffect(() => {
     if (!open) return
     const away = (e: PointerEvent) => {
@@ -217,10 +220,10 @@ function More() {
   }, [open])
   return (
     <span ref={root} className="msg-more">
-      <button type="button" className="ios-glass ios-button msg-more__button" aria-label="More from Shrug" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button ref={menu.button} type="button" className="ios-glass ios-button msg-more__button" aria-label="More from Shrug" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} onKeyDown={menu.onButtonKey}>
         <Plus size={23} strokeWidth={2.2} aria-hidden />
       </button>
-      <Popover show={open} origin="bottom left" className="ios-menu__list msg-more__list" role="menu" aria-label="More from Shrug" {...(open ? null : ({ inert: '' } as object))}>
+      <Popover show={open} origin="bottom left" className="ios-menu__list msg-more__list" role="menu" aria-label="More from Shrug" onKeyDown={menu.onMenuKey} {...(open ? null : ({ inert: '' } as object))}>
         {MORE.map((id) => (
           <button
             key={id}
@@ -242,7 +245,10 @@ function More() {
           <span className="msg-more__icon" aria-hidden>
             <OnePagerIcon />
           </span>
-          <span className="ios-menu__label">One-pager</span>
+          <span className="ios-menu__label">
+            One-pager
+            <span className="sr-only">, opens in a new tab</span>
+          </span>
         </a>
       </Popover>
     </span>
@@ -252,7 +258,8 @@ function More() {
 /** The message field. The script types Shrug's own messages into it; anything
  * the visitor types is theirs to send, and is marked as not having gone. */
 function Field({ conversation, target, showing }: { conversation: Conversation; target: string; showing: boolean }) {
-  const [text, setText] = useState('')
+  // Kept with the conversation, not in this field: still there after a turn of the screen, or a look at another conversation
+  const text = useStore(unsent, (s) => s[conversation] ?? '')
   const draft = useStore(chat, (s) => (conversation === 'group' ? s.draft : null))
   const input = useRef<HTMLInputElement>(null)
   const ready = text.trim().length > 0
@@ -269,11 +276,11 @@ function Field({ conversation, target, showing }: { conversation: Conversation; 
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!ready) return
-    // A message of your own is always sent from the end of the conversation:
-    // if the reader had scrolled back, the thread goes there first
-    e.currentTarget.closest('.msg-convo')?.querySelector<HTMLButtonElement>('.chat__new[data-show]')?.click()
+    // (A message of your own is sent from the end of the conversation: the thread sees to that itself)
     sendMessage(text, conversation)
-    setText('')
+    setUnsent(conversation, '')
+    // The arrow goes as the field empties: the caret stays in the field, and the keyboard up
+    input.current?.focus({ preventScroll: true })
   }
 
   return (
@@ -288,11 +295,11 @@ function Field({ conversation, target, showing }: { conversation: Conversation; 
             <i className="msg-field__caret" />
           </span>
         )}
-        <input ref={input} className="msg-field__input" type="text" placeholder={ghost ? '' : 'iMessage'} aria-label="iMessage" autoComplete="off" autoCorrect="on" enterKeyHint="send" value={text} onChange={(e) => setText(e.target.value)} />
+        <input ref={input} className="msg-field__input" type="text" dir="auto" placeholder={ghost ? '' : 'iMessage'} aria-label="iMessage" autoComplete="off" autoCorrect="on" enterKeyHint="send" value={text} onChange={(e) => setUnsent(conversation, e.target.value)} />
         <span className="msg-field__mic" data-off={ready || ghost || undefined} aria-hidden>
           <Mic size={20} strokeWidth={2} />
         </span>
-        <button type="submit" className="msg-field__send" aria-label="Send" data-ready={ready || undefined} aria-disabled={!ready} tabIndex={ready ? 0 : -1}>
+        <button type="submit" className="msg-field__send" aria-label="Send" data-ready={ready || undefined} aria-disabled={!ready} tabIndex={ready ? 0 : -1} {...keepsCaret}>
           <ArrowUp size={19} strokeWidth={3} aria-hidden />
         </button>
       </form>
@@ -393,18 +400,17 @@ function ConversationScreen({ conversation, view }: { conversation: Conversation
         )
       }
       trailing={
-        group ? (
-          <GlassButton label={`${name}: details`} onClick={() => openSheet('details')}>
-            <Video size={23} strokeWidth={2} aria-hidden />
-          </GlassButton>
-        ) : undefined
+        // Where Messages keeps FaceTime. Nobody here is taking calls: it says so (see FaceTime below)
+        <GlassButton label="FaceTime" onClick={() => openSheet(FACETIME)}>
+          <Video size={23} strokeWidth={2} aria-hidden />
+        </GlassButton>
       }
       foot={<Field conversation={conversation} target={target} showing={showing} />}
     >
       {/* Older messages blur and fade as they pass up under the header */}
       <div className="msg-edge" aria-hidden />
       <Thread>
-        <Transcript conversation={conversation} source={target} active={showing} />
+        <Transcript conversation={conversation} source={target} active={showing} onFailed={(key) => openSheet(whyOf(key))} />
       </Thread>
     </Screen>
   )
@@ -440,7 +446,7 @@ function DetailsSheet() {
     const tags = relationsOf(person)
     const first = who.name.split(' ')[0]
     return (
-      <Sheet label={`${who.name}: details`} className="msg-details" leading={<BackButton label={`Back to ${GROUP_NAME}`} onClick={() => setPerson(null)} />}>
+      <Sheet label={`${who.name} details`} className="msg-details" leading={<BackButton label={`Back to ${GROUP_NAME}`} onClick={() => setPerson(null)} />}>
         <div ref={inner}>
           <div className="msg-card">
             <PersonAvatar index={person} size={96} />
@@ -479,7 +485,7 @@ function DetailsSheet() {
   }
 
   return (
-    <Sheet label={`${GROUP_NAME}: details`} className="msg-details">
+    <Sheet label={`${GROUP_NAME} details`} className="msg-details">
       <div ref={inner}>
         <div className="msg-card">
           <ConversationAvatar conversation="group" size={96} />
@@ -487,7 +493,7 @@ function DetailsSheet() {
           <div className="msg-card__sub">{TOTAL} People</div>
         </div>
         <List>
-          <Section footer={done ? 'Everyone has replied.' : `${replied} of ${TOTAL} have replied so far.`}>
+          <Section footer={done ? 'Everyone has replied.' : replied === 0 ? 'No one has replied yet.' : `${replied} of ${TOTAL} ${replied === 1 ? 'has' : 'have'} replied so far.`}>
             <Cell title="Pause Replies" className={done ? 'msg-off' : undefined} trailing={<Switch on={paused} label="Pause Replies" onChange={() => !done && toggleChat()} />} />
             <Cell
               title="Show Every Reply"
@@ -530,9 +536,133 @@ function DetailsSheet() {
   )
 }
 
+// ---- Alerts ----
+
+/** The names two alerts go by in the phone's history, where a sheet's name goes (`sys.sheet`). */
+const FACETIME = 'facetime'
+const whyOf = (key: string) => `undelivered:${key}`
+
+interface AlertAction {
+  label: string
+  /** It goes somewhere: a link. Without one it is a button. */
+  href?: string
+  newTab?: boolean
+  onSelect?: () => void
+  destructive?: boolean
+  /** The one that only closes it: iOS sets it bold. */
+  bold?: boolean
+}
+
+/** An alert, as iOS draws one over whatever is on screen: a title, a line
+ * under it, and what can be done, one under another. It is a step in the
+ * phone's history like a sheet (`name` is its name there), so the browser's
+ * Back closes it too. */
+function Alert({ name, title, message, actions }: { name: string; title: string; message: string; actions: AlertAction[] }) {
+  /** Still up: the host goes on drawing it for a moment after it has closed, while it fades. */
+  const live = useStore(sys, (s) => s.app === 'messages' && s.sheet === name)
+  const box = useRef<HTMLDivElement>(null)
+  const id = useId()
+
+  // The keyboard comes back to what opened it, or to the thread if that has gone (a message deleted from here)
+  useReturnFocus(live, () => box.current?.closest('.sb-slot, .ph')?.querySelector('.ios-page[data-pos="top"] .chat__scroll'))
+  // ...and goes, as it opens, to the button that only closes it
+  useLayoutEffect(() => {
+    const acts = box.current?.querySelectorAll<HTMLElement>('.msg-alert__act')
+    acts?.[acts.length - 1]?.focus({ preventScroll: true })
+  }, [])
+
+  useEffect(() => {
+    if (!live) return
+    const key = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Spent on the alert: nothing behind it hears it
+        e.preventDefault()
+        e.stopPropagation()
+        closeSheet()
+      } else if (e.key === 'Tab') {
+        // Tab stays inside, going round
+        const acts = Array.from(box.current?.querySelectorAll<HTMLElement>('.msg-alert__act') ?? [])
+        const at = acts.indexOf(document.activeElement as HTMLElement)
+        e.preventDefault()
+        acts[(at + (e.shiftKey ? -1 : 1) + acts.length) % acts.length]?.focus()
+      }
+    }
+    window.addEventListener('keydown', key, true)
+    return () => window.removeEventListener('keydown', key, true)
+  }, [live])
+
+  return (
+    <div className="msg-alert" data-closing={!live || undefined} {...(live ? null : ({ inert: '' } as object))}>
+      <div className="msg-alert__shade" onClick={() => closeSheet()} />
+      <div ref={box} className="msg-alert__box" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-say`}>
+        <h2 className="msg-alert__title" id={`${id}-title`}>
+          {title}
+        </h2>
+        <p className="msg-alert__say" id={`${id}-say`}>
+          {message}
+        </p>
+        <div className="msg-alert__acts">
+          {actions.map((action) =>
+            action.href ? (
+              <a key={action.label} className="msg-alert__act" href={action.href} {...(action.newTab ? { target: '_blank', rel: 'noreferrer' } : null)} onClick={() => closeSheet()}>
+                {action.label}
+                {action.newTab && <span className="sr-only">, opens in a new tab</span>}
+              </a>
+            ) : (
+              <button
+                key={action.label}
+                type="button"
+                className="msg-alert__act"
+                data-destructive={action.destructive || undefined}
+                data-bold={action.bold || undefined}
+                onClick={() => {
+                  action.onSelect?.()
+                  closeSheet()
+                }}
+              >
+                {action.label}
+              </button>
+            ),
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** The camera button, answered in character: nobody in this Messages is taking calls. */
+function FaceTime() {
+  const [name] = useState(() => conversationName(conversationOf(topOf(sys.get(), 'messages')) ?? 'group'))
+  return <Alert name={FACETIME} title="FaceTime Unavailable" message={`${name} is not available for FaceTime.`} actions={[{ label: 'OK', bold: true }]} />
+}
+
+/** A message that didn't go, asked why: the truth (nothing typed here leaves
+ * the page), and where to take the words instead: to Shrug for real, when
+ * there is a way (they go along as the message), and to the one-pager. */
+function Undelivered({ name }: { name: string }) {
+  const key = name.slice(whyOf('').length)
+  // Its words, as they were when it opened: deleted from here, it is still what this alert was about while it fades
+  const [message] = useState(() => sentMessage(key))
+  // A message that is no longer there (the page was loaded again) has nothing to say: the alert goes
+  useEffect(() => {
+    if (!message) closeSheet(false)
+  }, [message])
+  if (!message) return null
+  const way = reach(message.text)
+  const actions: AlertAction[] = [
+    ...(way.kind === 'doc' ? [] : [{ label: way.label, href: way.href }]),
+    { label: 'Read the One-pager', href: SITE.onePager, newTab: true },
+    { label: 'Delete Message', destructive: true, onSelect: () => deleteMessage(key) },
+    { label: 'Cancel', bold: true },
+  ]
+  return <Alert name={name} title={NOT_DELIVERED.title} message={NOT_DELIVERED.message} actions={actions} />
+}
+
 // ---- The app ----
 
 export function MessagesApp() {
+  // Flicked out of the App Switcher, the app starts over the next time: nothing is still being looked for
+  useEffect(() => () => setInboxQuery(''), [])
   return (
     <>
       <NavStack>
@@ -541,7 +671,7 @@ export function MessagesApp() {
           return view === null || conversation === null ? <ListScreen /> : <ConversationScreen conversation={conversation} view={view} />
         }}
       </NavStack>
-      <SheetHost>{(name) => (name === 'details' ? <DetailsSheet /> : null)}</SheetHost>
+      <SheetHost>{(name) => (name === 'details' ? <DetailsSheet /> : name === FACETIME ? <FaceTime /> : name.startsWith(whyOf('')) ? <Undelivered key={name} name={name} /> : null)}</SheetHost>
     </>
   )
 }

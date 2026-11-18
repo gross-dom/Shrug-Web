@@ -34,9 +34,19 @@
 .ph--bleed {
   --status: env(safe-area-inset-top, 0px);
   --below: env(safe-area-inset-bottom, 0px);
+  /* On its side, a phone's island and rounded corners take a band at each end of the screen */
+  --side-l: env(safe-area-inset-left, 0px);
+  --side-r: env(safe-area-inset-right, 0px);
   --home: calc(34px + var(--below));
   --foot-gap: calc(21px + var(--below));
   background: #000;
+}
+
+/* Everything that can be pressed keeps inside those bands. The wallpaper runs
+   through them, and so does the ground of an app that is open (below) */
+.ph--bleed > :is(.sb-home, .sb-lock, .sb-apps, .sb-banner, .sb-homebar) {
+  right: var(--side-r);
+  left: var(--side-l);
 }
 
 /* The keyboard is up: the screen is what is left above it, and nothing waits on a home indicator */
@@ -113,7 +123,11 @@
   inset: 0;
   display: grid;
   place-items: center;
+  /* Clipped, not hidden: the phone always fits (Phone.tsx draws it edge to edge
+     where it would not), and nothing, a field taking the keyboard included,
+     can scroll it part-way out of its window */
   overflow: hidden;
+  overflow: clip;
 }
 
 .ph-device .ss-phone__screen {
@@ -188,6 +202,39 @@
   opacity: 0;
 }
 
+/* Tapped where there is nothing to press: it lifts a little and falls back, as
+   an iPhone's does, and the words that say how it opens come up bright */
+.sb-lock[data-nudge] {
+  animation: sb-lock-nudge 0.5s cubic-bezier(0.3, 0, 0.3, 1);
+}
+
+@keyframes sb-lock-nudge {
+  35% {
+    transform: translateY(-16px);
+  }
+
+  72% {
+    transform: translateY(2px);
+  }
+}
+
+.sb-lock[data-nudge] .sb-lock__hint {
+  animation: sb-hint-nudge 0.9s ease;
+}
+
+@keyframes sb-hint-nudge {
+  30% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+/* The clock is as wide as four digits and a colon at any size: on the narrowest
+   phones, and on a screen too short to hold it over the two buttons, it gives way */
+.sb-lock .ss-lock__clock {
+  font-size: min(112px, 30cqw, 30cqh);
+}
+
 /* On a real phone the page starts under the phone's own status bar */
 .ph--bleed .ss-lock__date {
   margin-top: calc(var(--status) + 22px);
@@ -196,7 +243,7 @@
 /* A short screen (a phone's browser, with its bars showing) keeps the clock clear of the notifications */
 @container (max-height: 600px) {
   .sb-lock .ss-lock__clock {
-    font-size: 92px;
+    font-size: min(92px, 30cqw, 30cqh);
   }
 
   .sb-lock .ss-lock__stack {
@@ -204,9 +251,10 @@
   }
 }
 
+/* There from the first moment: it is the one thing on the screen that says what to do */
 .sb-lock__hint {
   position: absolute;
-  bottom: 20px;
+  bottom: calc(20px + var(--below, 0px));
   left: 50%;
   width: 190px;
   margin-left: -95px;
@@ -217,16 +265,80 @@
   letter-spacing: -0.01em;
   text-align: center;
   text-shadow: 0 1px 6px rgb(0 0 0 / 0.25);
-  opacity: 0;
-  transform: translateY(6px);
-  transition:
-    opacity 0.7s ease,
-    transform 0.7s var(--glide);
+  opacity: 0.9;
 }
 
-.sb-lock__hint[data-show] {
-  opacity: 0.9;
-  transform: none;
+/* The torch and the camera. The row itself takes no touches: on a phone on its
+   side the notifications lie between the two buttons, under it */
+.sb-lock__controls {
+  position: absolute;
+  right: 46px;
+  bottom: calc(48px + var(--below, 0px));
+  left: 46px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+/* The Lock Screen's frosted buttons: a dim, blurred disc with a white glyph */
+.sb-lock__control {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgb(10 12 24 / 0.26);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  backdrop-filter: blur(24px) saturate(1.3);
+  color: #fff;
+  pointer-events: auto;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s var(--glide);
+}
+
+.sb-lock__control:active {
+  transform: scale(1.14);
+}
+
+/* On, the torch's button is lit, and its light comes up the screen from it */
+.sb-lock__control[aria-pressed='true'] {
+  background: #fff;
+  color: #1c1c1e;
+}
+
+.sb-lock__beam {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 78% at 71px calc(100% - 73px - var(--below, 0px)), rgb(255 246 222 / 0.5), rgb(255 246 222 / 0.16) 42%, transparent 70%),
+    radial-gradient(90px 90px at 71px calc(100% - 73px - var(--below, 0px)), rgb(255 250 235 / 0.7), transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.sb-lock[data-torch] .sb-lock__beam {
+  opacity: 1;
+}
+
+/* Over the wallpaper the accent does not show: the ring round what has the
+   keyboard is white here, with a line of shade outside it for where the
+   wallpaper is pale */
+.sb-lock,
+.sb-home,
+.sb-apps[data-switcher],
+.sb-homebar {
+  --ring: #fff;
+}
+
+:is(.sb-lock, .sb-home, .sb-apps[data-switcher]) :is(button, a, [tabindex]):focus-visible {
+  box-shadow: 0 0 0 5px rgb(4 6 24 / 0.55);
+}
+
+.sb-home :is(.sb-icon, .sb-widget):focus-visible {
+  border-radius: 18px;
 }
 
 /* The replies so far, as iOS stacks notifications from one conversation: the newest on top, the edges of the others under it */
@@ -302,6 +414,11 @@
 
 .sb-note .ss-notification__body b {
   font-weight: 600;
+}
+
+/* "now", dark enough to read on the glass over any part of the wallpaper */
+.sb-note .ss-notification__time {
+  color: rgb(0 0 0 / 0.64);
 }
 
 .sb-note:active {
@@ -398,6 +515,15 @@
   text-overflow: ellipsis;
 }
 
+/* On the Home Screen a name has that much room and never more than the distance
+   to the next icon: on the narrowest phones it is cut short with an ellipsis
+   instead of running into its neighbour */
+.sb-home .sb-icon__name {
+  --name: min(var(--icon) + 26px, (100cqw - 2 * var(--margin) - var(--icon)) / 3 - 4px);
+  width: var(--name);
+  margin: 0 calc((var(--icon) - var(--name)) / 2);
+}
+
 .sb-badge {
   position: absolute;
   top: -8px;
@@ -460,12 +586,9 @@
   transition: none;
 }
 
-/* A short screen has room for the wide widget only */
-@container (max-height: 659px) {
-  .sb-widget:not(.sb-widget--wide) {
-    display: none;
-  }
-}
+/* How large the two folders are drawn, and whether a short screen has room
+   for them at all, goes by the screen's width and height together:
+   src/styles/phone/folder.css */
 
 .sb-chat {
   display: flex;
@@ -611,6 +734,13 @@
   filter: brightness(0.8);
 }
 
+/* 44 points tall under a finger */
+.sb-search::after {
+  position: absolute;
+  inset: -7px -6px;
+  content: '';
+}
+
 /* ---- Apps ---- */
 
 .sb-apps {
@@ -621,6 +751,19 @@
   z-index: 1;
   isolation: isolate;
   pointer-events: none;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s;
+}
+
+/* Locked with an app open: the Lock Screen is clear glass over the wallpaper, so
+   the app goes out of sight behind it, and comes back as the phone opens */
+.sb-apps[data-locked] {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s 0.3s;
 }
 
 .sb-slot {
@@ -634,6 +777,34 @@
 
 .sb-slot[data-front] {
   z-index: 20;
+}
+
+/* On a phone on its side the app keeps inside the bands at the ends of the
+   screen; once it has opened, its own ground runs out through them (the two
+   strips are all this paints: with no bands it paints nothing) */
+.ph--bleed .sb-slot::before {
+  position: absolute;
+  top: 0;
+  right: calc(-1 * var(--side-r));
+  bottom: 0;
+  left: calc(-1 * var(--side-l));
+  z-index: -1;
+  background:
+    linear-gradient(var(--tone), var(--tone)) left / var(--side-l) 100% no-repeat,
+    linear-gradient(var(--tone), var(--tone)) right / var(--side-r) 100% no-repeat;
+  opacity: 0;
+  content: '';
+}
+
+.ph--bleed .sb-slot[data-open]::before {
+  opacity: 1;
+  transition: opacity 0.15s ease 0.5s;
+}
+
+.ph--bleed .sb-apps[data-switcher] .sb-slot::before,
+.ph--bleed[data-dragging] .sb-slot::before {
+  opacity: 0;
+  transition: none;
 }
 
 .sb-card {
@@ -701,6 +872,11 @@
 
 .ph[data-dragging] .sb-drag {
   transition: none;
+}
+
+/* It takes the keyboard when its app opens and has no screen of its own to give it to: nothing to show for that */
+.ph .sb-drag:focus-visible {
+  outline: none;
 }
 
 .ph[data-dragging] .sb-app {
@@ -784,8 +960,47 @@
   position: absolute;
   inset: 0;
   z-index: 30;
+  /* The ring is drawn inside the card, whose edge clips it */
+  outline-offset: -5px !important;
+  border-radius: 46px;
   pointer-events: auto;
   touch-action: none;
+}
+
+/* Closes the app, for a hand or a pointer that cannot flick its card away: over the card's corner, across from its name */
+.sb-slot__close {
+  position: absolute;
+  top: calc(14cqh - 42px);
+  right: 15.5cqw;
+  z-index: 31;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.24);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.3);
+  color: #fff;
+  pointer-events: auto;
+  animation: sb-close-in 0.3s ease 0.15s backwards;
+}
+
+.sb-slot__close::after {
+  position: absolute;
+  inset: -7px;
+  content: '';
+}
+
+.sb-slot__close:active {
+  filter: brightness(0.8);
+}
+
+@keyframes sb-close-in {
+  from {
+    opacity: 0;
+  }
 }
 
 /* ---- Banners ---- */
@@ -820,9 +1035,46 @@
   bottom: var(--below, 0px);
   left: 0;
   z-index: 2;
-  height: 26px;
+  /* No taller than the gap the screens leave under their foot controls (21
+     points): a press on the lowest edge of a field or a tab is that control's */
+  height: 20px;
   color: #000;
   touch-action: none;
+}
+
+/* The bar's gestures as buttons, for a keyboard or a screen reader. Out of
+   sight (and out of a pointer's way) until one has the keyboard; then it shows
+   over the bar and says what it does */
+.sb-homebar__key {
+  position: absolute !important;
+  bottom: 12px;
+  left: 50%;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  pointer-events: none;
+}
+
+.sb-homebar__key:focus-visible {
+  width: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 8px 15px;
+  clip-path: none !important;
+  border-radius: 17px;
+  background: rgb(28 28 30 / 0.9);
+  box-shadow:
+    0 0 0 5px rgb(4 6 24 / 0.5),
+    0 8px 24px rgb(0 0 0 / 0.3);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 18px;
+  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 .ph[data-dark] .sb-homebar {
@@ -868,7 +1120,7 @@
   }
 
   .sb-lock .ss-lock__clock {
-    font-size: 84px;
+    font-size: min(84px, 30cqw, 30cqh);
   }
 
   .sb-lock .ss-lock__stack {
@@ -877,8 +1129,14 @@
     left: 112px;
   }
 
-  .sb-lock .ss-lock__controls {
+  .sb-lock__controls {
     bottom: calc(42px + var(--below, 0px));
+  }
+
+  .sb-lock__beam {
+    background:
+      radial-gradient(70% 150% at 71px calc(100% - 67px - var(--below, 0px)), rgb(255 246 222 / 0.5), rgb(255 246 222 / 0.16) 42%, transparent 70%),
+      radial-gradient(90px 90px at 71px calc(100% - 67px - var(--below, 0px)), rgb(255 250 235 / 0.7), transparent 70%);
   }
 
   .sb-lock__hint {
@@ -896,6 +1154,10 @@
     width: calc(var(--icon) + 18px);
     margin: 0 -9px;
     font-size: 11px;
+  }
+
+  .sb-home .sb-icon__name {
+    --name: min(var(--icon) + 18px, (100cqw - var(--side-l, 0px) - var(--side-r, 0px) - var(--dock) - 14px - 2 * var(--margin) - var(--icon)) / 7 - 3px);
   }
 
   /* The widgets are shorter here: each says a little less */
@@ -919,13 +1181,10 @@
     grid-column: span 4;
   }
 
-  .sb-widget:not(.sb-widget--wide) {
-    display: grid;
-  }
-
   .sb-dock {
     top: 12px;
-    right: calc(12px + env(safe-area-inset-right, 0px));
+    /* The Home Screen is already inside the band at this end of the screen */
+    right: 12px;
     bottom: calc(12px + var(--below, 0px));
     left: auto;
     flex-direction: column;
@@ -942,6 +1201,63 @@
   }
 }
 
+/* ---- A screen too small for either layout ----
+   A window zoomed to four times its size is 320 by 180; a sliver of a window is
+   no bigger. Neither the upright Home Screen nor the one on its side can be laid
+   out in that, so there it is one column that scrolls: the widget, the folders,
+   the icons, Search and the Dock, all still there and all still pressable. */
+@container (max-height: 249px), (max-width: 259px), ((max-width: 539px) and (max-height: 399px)) {
+  .sb-home {
+    --icon: 48px;
+    --margin: 14px;
+    --dock: 0px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: calc(var(--status) + 12px) var(--margin) calc(30px + var(--below, 0px));
+    touch-action: pan-y;
+  }
+
+  .sb-grid {
+    position: static;
+    flex: none;
+    grid-template-columns: repeat(auto-fill, var(--icon));
+    gap: 14px 10px;
+    padding: 0;
+  }
+
+  .sb-widget--wide {
+    grid-column: 1 / -1;
+  }
+
+  .sb-home .sb-icon__name {
+    --name: calc(var(--icon) + 8px);
+    font-size: 11px;
+  }
+
+  .sb-search {
+    position: static;
+    flex: none;
+    align-self: center;
+    transform: none;
+  }
+
+  .sb-dock {
+    position: static;
+    flex: none;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-evenly;
+    width: auto;
+    height: calc(var(--icon) + 24px);
+    padding: 12px 10px 0;
+    border-radius: 26px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sb-lock,
   .sb-home,
@@ -950,6 +1266,13 @@
   .sb-card,
   .sb-drag,
   .sb-lock__hint,
+  .sb-lock[data-nudge],
+  .sb-lock[data-nudge] .sb-lock__hint,
+  .sb-lock__control,
+  .sb-lock__beam,
+  .sb-apps,
+  .sb-slot__close,
+  .ph--bleed .sb-slot[data-open]::before,
   .sb-banner .ss-notification,
   .sb-stack > .sb-note,
   .sb-chat__reply,

@@ -142,7 +142,10 @@ export function Desktop() {
       <div className="os__wallpaper" aria-hidden>
         <div className="os__grain" />
       </div>
-      <h1 className="sr-only">Shrug: what people say, the portfolio, FAQs and drops</h1>
+      {/* The page's own heading: in a banner, so that nothing on the page sits outside a landmark */}
+      <header className="sr-only">
+        <h1>Shrug: what people say, the portfolio, FAQs and drops</h1>
+      </header>
       {/* One for each: a size change away from the half that failed puts the other back as it was */}
       <Boundary
         key={compact ? 'phone' : 'desk'}

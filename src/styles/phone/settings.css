@@ -149,6 +149,16 @@
   line-height: 22px;
 }
 
+/* Who Shrug is, in a sentence, under its name */
+.settings-id__line {
+  max-width: 300px;
+  margin: 10px 0 0;
+  font-size: 15px;
+  letter-spacing: -0.012em;
+  line-height: 20px;
+  text-wrap: balance;
+}
+
 /* ---- Rows ---- */
 
 /* The tick on the choice that is on */

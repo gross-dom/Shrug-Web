@@ -1,9 +1,10 @@
 import { isOn } from './address'
 import { APPS, APP_IDS, type AppId, type Size } from './apps'
+import { focusFirst, focusLost } from './focus'
 import { createStore } from './store'
 
 // The window manager: which windows are open, where they are, which is in
-// front. Everything a window can do (open from the Dock, close, minimise into
+// front. Everything a window can do (open from the Dock, close, minimize into
 // its icon, zoom, tile to half the screen, be dragged and resized) ends up as
 // one of the functions below.
 
@@ -29,15 +30,20 @@ export interface Win {
   mounted: boolean
   open: boolean
   minimized: boolean
-  /** Its free position and size. */
+  /** Its free position and size, as the visitor left them. */
   rect: Rect
+  /** The size of the screen that rect was set on. On a screen of any other
+   * size the window is drawn fitted to it and the rect is kept, so that when
+   * the room comes back (a browser window grown again, a tablet turned back,
+   * a keyboard put away) the window goes back to where it was put. */
+  fits: Size
   /** Tiled or zoomed: the rect is kept to go back to. */
   tile: Tile | null
   /** opening and closing play once and clear themselves. */
   phase: 'opening' | 'closing' | null
   /** Its geometry is easing to a new place (zoom, tile), not being dragged. */
   glide: boolean
-  /** Where it opens from and minimises to: its Dock icon. */
+  /** Where it opens from and minimizes to: its Dock icon. */
   origin: Point | null
 }
 
@@ -86,6 +92,7 @@ const blank = (id: AppId): Win => ({
   open: false,
   minimized: false,
   rect: { x: 0, y: 0, w: 0, h: 0 },
+  fits: { w: 0, h: 0 },
   tile: null,
   phase: null,
   glide: false,
@@ -123,7 +130,115 @@ export function tileRect(tile: Tile, viewport: Size, compact: boolean): Rect {
 /** Where a window is drawn right now. */
 export function geometry(win: Win, viewport: Size, compact: boolean): Rect {
   if (compact) return APPS[win.id].resizable ? tileRect('fill', viewport, true) : centered(win.id, viewport, true)
-  return win.tile ? tileRect(win.tile, viewport, false) : win.rect
+  return win.tile ? tileRect(win.tile, viewport, false) : freeRect(win, viewport)
+}
+
+/** Where a window sits when it is not tiled: its own rect on the screen that
+ * rect was set on, and on a screen of any other size that rect fitted to it. */
+export function freeRect(win: Win, viewport: Size): Rect {
+  return win.fits.w === viewport.w && win.fits.h === viewport.h ? win.rect : fitted(win.id, win.rect, viewport)
+}
+
+/** The desk less the small margin a window keeps from its edges, as tiles do. */
+function room(viewport: Size): Rect {
+  const d = desk(viewport, false)
+  return { x: d.x + GAP, y: d.y + GAP, w: d.w - GAP * 2, h: d.h - GAP * 2 }
+}
+
+/** A rect as a desk of this size can show it: no bigger than the desk and
+ * wholly on it, with the margin where it fits that way. */
+function fitted(id: AppId, rect: Rect, viewport: Size): Rect {
+  const spec = APPS[id]
+  const d = desk(viewport, false)
+  const box = room(viewport)
+  const w = spec.resizable ? Math.max(Math.min(spec.min.w, d.w), Math.min(rect.w, box.w)) : rect.w
+  const h = spec.resizable ? Math.max(Math.min(spec.min.h, d.h), Math.min(rect.h, box.h)) : Math.min(rect.h, box.h)
+  return inside({ ...rect, w, h }, w <= box.w && h <= box.h ? box : d)
+}
+
+/** How much of two rects is the same ground. */
+function shared(a: Rect, b: Rect) {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+  return w > 0 && h > 0 ? w * h : 0
+}
+
+/** The icons left out on the desk, top right: where they are drawn, or where
+ * the stylesheet puts them if they have not been drawn yet (the first window
+ * can open before the desk has been laid out). */
+function deskIcons(viewport: Size): Rect {
+  const el = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('.desk')
+  const r = el?.getBoundingClientRect()
+  return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: viewport.w - 104, y: 42, w: 92, h: 196 }
+}
+
+/** Where a window opens for the first time: the app's own size for this desk,
+ * in the middle and off it by the app's nudge as far as there is room for
+ * one, never against an edge. Where that would sit on the windows already
+ * open or on the desk's icons, and somewhere else clearly would not (beside
+ * the window in front, to one side of a wide desk, under the icons on a
+ * narrow one), it opens there instead. */
+function placed(id: AppId, s: WM): Rect {
+  const spec = APPS[id]
+  const d = desk(s.viewport, false)
+  const box = room(s.viewport)
+  const size = spec.size({ w: d.w, h: d.h })
+  const w = Math.min(size.w, box.w)
+  const h = Math.min(size.h, box.h)
+  const spare = { x: (box.w - w) / 2, y: (box.h - h) / 2 }
+  // A wide desk has room for a longer lean
+  const reach = Math.min(2.5, Math.max(1, d.w / 1440))
+  const lean = (nudge: number, most: number) => Math.max(-most, Math.min(most, nudge))
+  const home: Rect = {
+    x: Math.round(box.x + spare.x + lean(spec.nudge.x * reach, spare.x)),
+    y: Math.round(box.y + spare.y + lean(spec.nudge.y, spare.y)),
+    w,
+    h,
+  }
+
+  const front = activeApp(s)
+  const others = APP_IDS.filter((other) => other !== id && isShowing(s.wins[other])).map((other) => geometry(s.wins[other], s.viewport, false))
+  const icons = deskIcons(s.viewport)
+  // The icons count for more than a window does: a window can be moved off another, the icons cannot be moved
+  const cost = (r: Rect) => others.reduce((sum, other) => sum + shared(r, other), 0) + shared(r, icons) * 4
+  const least = cost(home)
+  if (least === 0) return home
+
+  const edge = 16
+  const xs = new Set([home.x])
+  if (w + edge * 2 <= box.w) {
+    xs.add(box.x + edge)
+    xs.add(box.x + box.w - edge - w)
+  }
+  if (front && front !== id) {
+    const beside = geometry(s.wins[front], s.viewport, false)
+    if (beside.x + beside.w + edge + w <= box.x + box.w) xs.add(beside.x + beside.w + edge)
+    if (beside.x - edge - w >= box.x) xs.add(beside.x - edge - w)
+  }
+  const rows = [{ y: home.y, h }]
+  if (shared(home, icons) > 0) {
+    // Clear of the icons: to their left, or under them, a little shorter if it
+    // must be (a window that cannot be sized is not shortened)
+    if (icons.x - 12 - w >= box.x) xs.add(Math.round(icons.x - 12 - w))
+    const under = Math.round(icons.y + icons.h + 12)
+    const left = Math.min(h, box.y + box.h - under)
+    if (left === h || (spec.resizable && left >= spec.min.h && left >= h * 0.75)) rows.push({ y: under, h: left })
+  }
+  let best = home
+  let bestScore = least
+  for (const row of rows) {
+    for (const x of xs) {
+      const spot: Rect = { x, y: row.y, w, h: row.h }
+      // Among spots as clear as each other, the one nearest the middle
+      const score = cost(spot) + Math.abs(x - home.x) + Math.abs(row.y - home.y)
+      if (score < bestScore) {
+        best = spot
+        bestScore = score
+      }
+    }
+  }
+  // Only where it is clearly better: on a small desk everything overlaps, and the nudged pile is the tidier one
+  return cost(best) <= least * 0.75 ? best : home
 }
 
 function centered(id: AppId, viewport: Size, compact: boolean): Rect {
@@ -158,19 +273,6 @@ export function clampRect(r: Rect, viewport: Size, compact: boolean): Rect {
   const x = Math.min(viewport.w - keep, Math.max(keep - r.w, r.x))
   const y = Math.min(d.y + d.h - 44, Math.max(d.y, r.y))
   return { x: Math.round(x), y: Math.round(y), w: Math.round(r.w), h: Math.round(r.h) }
-}
-
-/** Brings a window back onto a desk that changed size: no bigger than the
- * desk, and wholly on it. */
-function refit(win: Win, viewport: Size): Win {
-  if (!win.mounted) return win
-  const spec = APPS[win.id]
-  const d = desk(viewport, false)
-  const w = spec.resizable ? Math.max(Math.min(spec.min.w, d.w), Math.min(win.rect.w, d.w)) : win.rect.w
-  const h = spec.resizable ? Math.max(Math.min(spec.min.h, d.h), Math.min(win.rect.h, d.h)) : Math.min(win.rect.h, d.h)
-  const rect = inside({ ...win.rect, w, h }, d)
-  const same = rect.x === win.rect.x && rect.y === win.rect.y && rect.w === win.rect.w && rect.h === win.rect.h
-  return same ? win : { ...win, rect }
 }
 
 // ---- Reading ----
@@ -227,8 +329,10 @@ export function openApp(id: AppId, origin: Point | null = null) {
         mounted: true,
         open: true,
         minimized: false,
-        rect: fresh ? centered(id, s.viewport, s.compact) : s.compact ? win.rect : refit(win, s.viewport).rect,
-        // A minimised window glides back out of its icon; a closed one opens
+        // A window that has been open before comes back where it was left (fitted, if the screen has changed)
+        rect: !fresh ? win.rect : s.compact ? centered(id, s.viewport, true) : placed(id, s),
+        fits: fresh ? s.viewport : win.fits,
+        // A minimized window glides back out of its icon; a closed one opens
         phase: restoring ? null : 'opening',
         origin: origin ?? win.origin,
       },
@@ -241,13 +345,30 @@ export function closeApp(id: AppId) {
   const win = wm.get().wins[id]
   if (!win.open || win.phase === 'closing') return
   patch(id, { phase: 'closing' })
-  later(`close:${id}`, 190, () => patch(id, { open: false, minimized: false, phase: null }))
+  later(`close:${id}`, 190, () => {
+    patch(id, { open: false, minimized: false, phase: null })
+    settleFocus(id)
+  })
 }
 
 export function minimizeApp(id: AppId, origin: Point | null = null) {
   const win = wm.get().wins[id]
   if (!win.open || win.minimized) return
   patch(id, { minimized: true, origin: origin ?? win.origin })
+  settleFocus(id)
+}
+
+/** A window has closed or gone into its Dock icon. If that left the keyboard
+ * with nothing, it goes to the window now in front, and with none left to the
+ * icon the window went into (the mark's menu for About, which has no icon). */
+function settleFocus(id: AppId) {
+  if (typeof document === 'undefined') return
+  requestAnimationFrame(() => {
+    if (!focusLost(document.querySelector(`.wf[data-app="${id}"]`))) return
+    const front = activeApp(wm.get())
+    if (front) return focusWindow(front)
+    focusFirst(document.querySelector(`[data-dock-app="${id}"]`), document.querySelector('[data-menu-title="mark"]'))
+  })
 }
 
 export function focusApp(id: AppId) {
@@ -279,7 +400,7 @@ export function tileApp(id: AppId, tile: Tile | null) {
 /** A drag or resize has ended: this is where the window is now. */
 export function placeApp(id: AppId, rect: Rect) {
   const s = wm.get()
-  patch(id, { rect: clampRect(rect, s.viewport, s.compact), tile: null, glide: false })
+  patch(id, { rect: clampRect(rect, s.viewport, s.compact), fits: s.viewport, tile: null, glide: false })
 }
 
 export function setPreview(preview: Tile | null) {
@@ -300,10 +421,9 @@ export function setViewport(viewport: Size) {
     // screen: while someone is typing, a change of height alone leaves the layout as it is
     const keyboard = viewport.w === s.viewport.w && typing()
     const compact = keyboard ? s.compact : isCompact(viewport)
-    // A phone-sized screen draws its own layout and never reads these rects:
-    // leave them as they are, to come back to
-    const wins = compact ? s.wins : (Object.fromEntries(APP_IDS.map((id) => [id, refit(s.wins[id], viewport)])) as Record<AppId, Win>)
-    return { ...s, viewport, compact, wins, preview: null }
+    // The windows' own rects are left as they are: each is drawn fitted to the
+    // screen there is now (freeRect), and goes back when the room does
+    return { ...s, viewport, compact, preview: null }
   })
 }
 

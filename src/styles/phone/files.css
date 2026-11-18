@@ -431,6 +431,25 @@
   transition: none;
 }
 
+/* A company with no site to visit: the line that stands where the button would be */
+.files-fate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 44px;
+  margin-top: 22px;
+  padding: 10px 22px;
+  border-radius: 22px;
+  background: var(--fill, rgb(120 120 128 / 0.12));
+  color: var(--label-2);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 21px;
+  text-wrap: balance;
+}
+
 /* What is known about it. On a white sheet the group is the gray, and Files
    writes what a row is in gray and what it says in ink */
 .files-info {

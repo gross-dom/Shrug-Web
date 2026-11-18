@@ -2,15 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { useNewReplies } from '../apps/state'
 import { SITE } from '../data/site'
 import { APPS, DOCK_APPS, type AppId } from './apps'
-import { dockPoint } from './dom'
+import { dockPoint, prefersReducedMotion } from './dom'
 import { AppIcon, DocumentIcon } from './icons'
 import { useStore } from './store'
 import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 
 // The Dock: one icon per app, a dot under the ones that are open, a hop when
-// one launches, and icons that swell under the pointer. Minimised windows go
-// back into their app's icon, and the group chat's icon counts the replies
-// that came in while the conversation wasn't showing.
+// one launches, and icons that swell under the pointer (unless the visitor
+// has asked for less motion). Minimized windows go back into their app's
+// icon, and the group chat's icon counts the replies that came in while the
+// conversation wasn't showing.
 
 /** How much the icon under the pointer grows, and how far the swell reaches. */
 const SWELL = 0.55
@@ -63,7 +64,7 @@ export function Dock() {
         ref={shelf}
         className="dock__shelf"
         onPointerMove={(e) => {
-          if (e.pointerType !== 'mouse' || compact || document.documentElement.hasAttribute('data-wm-busy')) return
+          if (e.pointerType !== 'mouse' || compact || prefersReducedMotion() || document.documentElement.hasAttribute('data-wm-busy')) return
           const x = e.clientX
           shelf.current?.removeAttribute('data-settling')
           cancelAnimationFrame(frame.current)
@@ -103,7 +104,7 @@ export function Dock() {
           </button>
         ))}
         <span className="dock__rule" aria-hidden />
-        <a className="dock__item" data-dock-item href={SITE.onePager} target="_blank" rel="noreferrer" aria-label="One-pager (opens in a new tab)">
+        <a className="dock__item" data-dock-item href={SITE.onePager} target="_blank" rel="noreferrer" draggable={false} aria-label="One-pager, opens in a new tab">
           <span className="dock__label" aria-hidden>
             One-pager
           </span>

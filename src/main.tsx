@@ -8,6 +8,7 @@ import './styles/os.css'
 import './styles/apps.css'
 import './styles/ios.css'
 import './styles/phone.css'
+import './styles/access.css'
 import { Desktop } from './os/Desktop'
 
 createRoot(document.getElementById('root')!).render(

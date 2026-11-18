@@ -1,8 +1,17 @@
 import { createStore, useStore } from '../os/store'
-import { chat } from './chat'
+import { chat, keepFor, keptFor } from './chat'
 
 // What each app is showing. Kept outside the windows so the menu bar's View
 // menu can change it, and so a closed window comes back the way it was left.
+
+// ---- Searches (Portfolio, FAQs) ----
+
+/** What was looked for, as a search that found nothing says it back: trimmed, and cut short where
+ * someone has leant on a key (the whole of it would push what there is to say off the screen). */
+export function sought(query: string) {
+  const q = query.trim()
+  return q.length > 40 ? `${q.slice(0, 40)}…` : q
+}
 
 // ---- Portfolio (the Finder window) ----
 
@@ -48,12 +57,16 @@ export interface PhotosState {
   filter: MediaFilter
   /** Only this drop's photos and videos, or every drop. */
   drop: string | null
+  /** The photo or video opened large in the window, by its place in MEDIA; null while the grid is showing. */
+  look: number | null
 }
 
-export const photos = createStore<PhotosState>({ filter: 'all', drop: null })
+export const photos = createStore<PhotosState>({ filter: 'all', drop: null, look: null })
 
-export const setMediaFilter = (filter: MediaFilter) => photos.set((s) => ({ ...s, filter }))
-export const setDrop = (drop: string | null) => photos.set((s) => ({ ...s, drop }))
+// Changing what the grid shows goes back to the grid
+export const setMediaFilter = (filter: MediaFilter) => photos.set((s) => ({ ...s, filter, look: null }))
+export const setDrop = (drop: string | null) => photos.set((s) => ({ ...s, drop, look: null }))
+export const lookAt = (look: number | null) => photos.set((s) => (s.look === look ? s : { ...s, look }))
 
 // ---- FAQs (the notes window) ----
 
@@ -78,7 +91,14 @@ export interface Inbox {
   jump: number | null
 }
 
-export const inbox = createStore<Inbox>({ open: 'group', groupSeen: 0, query: '', jump: null })
+/** How much of the group this tab had seen when it was last open: a reload brings the conversation back as far as it
+ * had got (src/apps/chat.ts), and what had been seen of it is not new again. */
+const seenBefore = () => {
+  const seen = keptFor('seen')
+  return typeof seen === 'number' && Number.isInteger(seen) && seen > 0 ? seen : 0
+}
+
+export const inbox = createStore<Inbox>({ open: 'group', groupSeen: seenBefore(), query: '', jump: null })
 
 export const openConversation = (open: Conversation) => inbox.set((s) => (s.open === open && s.jump === null ? s : { ...s, open, jump: null }))
 
@@ -100,10 +120,20 @@ export function seeGroup() {
   inbox.set((s) => (s.groupSeen === replied ? s : { ...s, groupSeen: replied }))
 }
 
-// Played again from the start, nothing has been seen
+// Played again from the start, nothing has been seen. Begun with everything
+// already said (reduced motion), none of it is news: it is all there to read
 chat.subscribe(() => {
-  const replied = chat.get().replied
-  if (replied < inbox.get().groupSeen) inbox.set((s) => ({ ...s, groupSeen: replied }))
+  const { replied, whole } = chat.get()
+  const seen = inbox.get().groupSeen
+  if (replied < seen || (whole && seen < replied)) inbox.set((s) => ({ ...s, groupSeen: replied }))
+})
+
+let seenKept = inbox.get().groupSeen
+inbox.subscribe(() => {
+  const seen = inbox.get().groupSeen
+  if (seen === seenKept) return
+  seenKept = seen
+  keepFor('seen', seen)
 })
 
 /** How many replies are new: what the badge on Messages says, in the desktop's Dock and on the phone's icon. */

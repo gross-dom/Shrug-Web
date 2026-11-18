@@ -20,6 +20,10 @@ export interface Company {
   blurb: string | null
   /** A file in public/logos. */
   logo: string | null
+  /** For a company with no site to visit: what became of it, in a few words,
+   * said where its link would be ("Acquired by …", "2017 to 2020"). From
+   * NOTES below; null until Shrug has written one. */
+  note: string | null
 }
 
 export interface Vertical {
@@ -35,7 +39,23 @@ const VERTICAL_ORDER = ['Deep tech', 'Climate and energy', 'Creator', 'Health', 
 
 type VerticalName = (typeof VERTICAL_ORDER)[number]
 
-const c = (name: string, vertical: VerticalName, url: string | null, logo: string | null, blurb: string | null = null, key = name): Company => ({ key, name, vertical, url, blurb: blurb && typeset(blurb), logo })
+/** What became of the companies that have no site, by key. Shrug's to write, one line each:
+ *
+ *   Drumroll: 'Acquired by …',
+ *   'HQ Trivia': '2017 to 2020',
+ *
+ * A company with no site and no line here says only that it has no website listed. */
+const NOTES: Record<string, string> = {}
+
+const c = (name: string, vertical: VerticalName, url: string | null, logo: string | null, blurb: string | null = null, key = name): Company => ({
+  key,
+  name,
+  vertical,
+  url,
+  blurb: blurb && typeset(blurb),
+  logo,
+  note: NOTES[key] ? typeset(NOTES[key]) : null,
+})
 
 /** Every company, in Shrug's order. */
 export const COMPANIES: Company[] = [

@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { ALL, CompanyLogo, type Listed } from '../apps/portfolio-ui'
 import { FAQS } from '../data/faqs'
+import { prefersReducedMotion } from '../os/dom'
+import { focusFirst, focusLost } from '../os/focus'
 import { useStore } from '../os/store'
 import { companySheet, FAQS_FOLDER, noteView, PORTFOLIO_FOLDER } from './apps/routes'
 import { closeSheet, launchAt, openSheet, sys } from './system'
@@ -17,6 +19,11 @@ import '../styles/phone/folder.css'
 //
 // An open folder is a step in the phone's history like any other place (it is
 // kept as the sheet over the Home Screen), so the browser's back closes it.
+//
+// How large a closed folder is drawn goes by the room the screen has: two
+// icons tall among the widgets where that fits, an ordinary icon-sized folder
+// among the icons where it does not. That is the stylesheet's doing
+// (src/styles/phone/folder.css); what is drawn here is the same either way.
 
 type FolderId = 'portfolio' | 'faqs'
 
@@ -40,7 +47,7 @@ for (let i = 0; i < ALL.length; i += PER_PAGE) PAGES.push(ALL.slice(i, i + PER_P
 
 // ---- On the Home Screen ----
 
-/** A folder where it sits among the icons: two icons wide, as the widgets beside it are. */
+/** A folder where it sits among the icons: two icons wide, as the widgets beside it are, or one icon's size on a screen too short for that. */
 export function HomeFolder({ id }: { id: FolderId }) {
   return (
     <button type="button" className="sb-widget sb-folder" aria-haspopup="dialog" onClick={() => openSheet(sheetOf(id))}>
@@ -89,6 +96,8 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
   const box = useRef<HTMLDivElement>(null)
   const pages = useRef<HTMLDivElement>(null)
   const [page, setPage] = useState(0)
+  /** A page was turned from the keyboard: when it has turned, the keyboard goes to its first company. */
+  const follow = useRef(false)
   /** Where the folder on the Home Screen is from the open one: it grows out of that, and goes back into it. */
   const [from, setFrom] = useState<CSSProperties | undefined>(undefined)
 
@@ -109,10 +118,30 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
     } as CSSProperties)
   }, [id])
 
-  // The keyboard goes to the folder when it opens; Escape closes it, and the arrows turn its pages
+  /** Closed onto the Home Screen, the keyboard goes back to the folder it came out of. Closed because
+   * something in it was picked, an app is opening and the keyboard is that app's; locked, the Lock Screen's. */
+  const giveBack = () => {
+    const s = sys.get()
+    if (s.app !== null || s.locked) return
+    const tile = document.querySelector(`.sb-folder__face[data-folder="${id}"]`)?.closest<HTMLElement>('.sb-folder')
+    // The Home Screen may still be shut off for the length of this draw: once more when it is not
+    if (!focusFirst(tile)) requestAnimationFrame(() => focusLost() && focusFirst(tile))
+  }
+
+  // The keyboard goes to the folder when it opens and back to its tile when it closes
   useLayoutEffect(() => {
-    if (!closing) box.current?.focus({ preventScroll: true })
-  }, [closing])
+    if (closing) giveBack()
+    else box.current?.focus({ preventScroll: true })
+  }, [closing]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Taken away without closing first (arrived at by the browser's Back, nothing moves): the same
+  useEffect(
+    () => () => {
+      if (focusLost()) giveBack()
+    },
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
+  // Escape closes it, and the arrows turn its pages
   useEffect(() => {
     if (closing) return
     const key = (e: KeyboardEvent) => {
@@ -121,18 +150,28 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
         closeSheet()
       } else if (id === 'portfolio' && (e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !(e.target as HTMLElement).closest?.('input, textarea')) {
         e.preventDefault()
-        turn(page + (e.key === 'ArrowRight' ? 1 : -1))
+        const next = Math.max(0, Math.min(PAGES.length - 1, page + (e.key === 'ArrowRight' ? 1 : -1)))
+        if (next === page) return
+        // The page the keyboard was on is about to be shut off: it goes with the turn, to the new page's first company
+        follow.current = true
+        turn(next)
       }
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
   })
+  useEffect(() => {
+    if (!follow.current) return
+    follow.current = false
+    focusFirst(pages.current?.children[page]?.querySelector('.sb-open__app'))
+  }, [page])
 
   const turn = (to: number) => {
     const el = pages.current
     if (!el) return
     const next = Math.max(0, Math.min(PAGES.length - 1, to))
-    el.scrollTo({ left: next * el.clientWidth, behavior: still ? 'auto' : 'smooth' })
+    // No glide for a visitor who has asked for less motion, nor when nothing else on the phone is moving
+    el.scrollTo({ left: next * el.clientWidth, behavior: still || prefersReducedMotion() ? 'auto' : 'smooth' })
   }
 
   return (
@@ -165,10 +204,19 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
                   </div>
                 ))}
               </div>
-              <div className="sb-open__dots" role="group" aria-label="Pages">
-                {PAGES.map((_, i) => (
-                  <button key={i} type="button" className="sb-open__dot" aria-label={`Page ${i + 1}`} aria-current={i === page ? 'true' : undefined} onClick={() => turn(i)} />
-                ))}
+              {/* The dots are a picture of where the pages are. As on an iPhone, a press on the strip's left
+                  half goes back a page and one on its right half goes on: two targets a finger can find */}
+              <div className="sb-open__turn" role="group" aria-label="Pages">
+                <button type="button" className="sb-open__step" data-way="back" aria-label="Previous page" aria-disabled={page === 0 || undefined} onClick={() => turn(page - 1)} />
+                <button type="button" className="sb-open__step" data-way="on" aria-label="Next page" aria-disabled={page === PAGES.length - 1 || undefined} onClick={() => turn(page + 1)} />
+                <span className="sb-open__dots" aria-hidden>
+                  {PAGES.map((_, i) => (
+                    <span key={i} className="sb-open__dot" data-current={i === page || undefined} />
+                  ))}
+                </span>
+                <span className="sr-only" role="status">
+                  Page {page + 1} of {PAGES.length}
+                </span>
               </div>
             </>
           ) : (

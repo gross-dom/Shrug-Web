@@ -5,18 +5,22 @@ import { FAQS } from '../data/faqs'
 import { SITE } from '../data/site'
 import { Popover } from '../kit/motion/Popover'
 import { APPS, DOCK_APPS, type AppId } from './apps'
-import { dockPoint } from './dom'
-import { startSaver } from './saver'
-import { useStore } from './store'
-import { activeApp, bringAllToFront, closeApp, focusApp, minimizeApp, openApp, tileApp, toggleZoom, wm } from './wm'
 import { formatter } from './dates'
+import { dockPoint } from './dom'
+import { focusLost } from './focus'
+import { askedIdle, saver, setSaverNever, startSaver } from './saver'
+import { useStore } from './store'
+import { activeApp, bringAllToFront, closeApp, focusApp, focusWindow, minimizeApp, openApp, tileApp, toggleZoom, wm } from './wm'
 
 // The menu bar: Shrug's mark where the system menu goes, the front app's name
 // and its menus, and on the right the day and the time. Every item does
 // something; nothing is there for show.
 
 type Item =
-  | { kind: 'item'; label: string; run?: () => void; href?: string; checked?: boolean; disabled?: boolean }
+  /** `says` is the item's name for assistive tech, where its words lean on the heading over it. */
+  | { kind: 'item'; label: string; says?: string; run?: () => void; href?: string; checked?: boolean; disabled?: boolean }
+  /** A line over a set of choices that says what they are choices of. */
+  | { kind: 'heading'; label: string }
   | { kind: 'rule' }
 
 interface MenuDef {
@@ -28,7 +32,7 @@ interface MenuDef {
   items: Item[]
 }
 
-const item = (label: string, run: () => void, more: { checked?: boolean; disabled?: boolean } = {}): Item => ({ kind: 'item', label, run, ...more })
+const item = (label: string, run: () => void, more: { checked?: boolean; disabled?: boolean; says?: string } = {}): Item => ({ kind: 'item', label, run, ...more })
 const rule: Item = { kind: 'rule' }
 
 const launch = (id: AppId) => openApp(id, dockPoint(id))
@@ -43,6 +47,9 @@ function useMenus(): MenuDef[] {
   const view = useStore(finder, (s) => s.view)
   const filter = useStore(photos, (s) => s.filter)
   const note = useStore(notes, (s) => s.note)
+  const never = useStore(saver, (s) => s.never)
+  /** The address sets the screen saver's wait itself (`?idle=20`): that is what it does, whatever was chosen. */
+  const idle = askedIdle()
   const spec = active ? APPS[active] : null
   const sizable = !!spec?.resizable && !compact
 
@@ -70,11 +77,24 @@ function useMenus(): MenuDef[] {
           {SITE.mark}
         </span>
       ),
-      items: [item('About Shrug', () => launch('about')), rule, item('Start Screen Saver', startSaver), rule, { kind: 'item', label: 'One-pager', href: SITE.onePager }],
+      items: [
+        item('About Shrug', () => launch('about')),
+        rule,
+        // The replies can be held from here whatever window is in front, or none
+        item(paused ? 'Resume Replies' : 'Pause Replies', toggleChat, { disabled: done }),
+        rule,
+        item('Start Screen Saver', startSaver),
+        { kind: 'heading', label: 'Screen Saver' },
+        item(idle ? `After ${idle} Seconds` : 'After 2½ Minutes', () => setSaverNever(false), { checked: idle ? true : !never, says: `Screen Saver: ${idle ? `After ${idle} Seconds` : 'After 2½ Minutes'}` }),
+        item('Never', () => setSaverNever(true), { checked: idle ? false : never, disabled: idle !== null, says: 'Screen Saver: Never' }),
+        rule,
+        { kind: 'item', label: 'One-pager', href: SITE.onePager },
+      ],
     },
     {
       id: 'app',
-      label: `${spec?.name ?? SITE.name} menu`,
+      // With no window open this one is the desk's, and the mark's is the only "Shrug menu"
+      label: spec ? `${spec.name} menu` : `${SITE.name} desktop menu`,
       title: spec?.name ?? SITE.name,
       strong: true,
       items: spec && active ? [item(`Hide ${spec.name}`, () => minimizeApp(active, dockPoint(active)), { disabled: !spec.resizable }), item(`Quit ${spec.name}`, () => closeApp(active))] : [item('About Shrug', () => launch('about'))],
@@ -93,7 +113,7 @@ function useMenus(): MenuDef[] {
     label: 'Window menu',
     title: 'Window',
     items: [
-      item('Minimise', () => active && minimizeApp(active, dockPoint(active)), { disabled: !active || !spec?.resizable }),
+      item('Minimize', () => active && minimizeApp(active, dockPoint(active)), { disabled: !active || !spec?.resizable }),
       item(tile ? 'Restore' : 'Zoom', () => active && toggleZoom(active), { disabled: !sizable }),
       rule,
       item('Fill', () => active && tileApp(active, 'fill'), { disabled: !sizable, checked: tile === 'fill' }),
@@ -152,6 +172,19 @@ export function MenuBar() {
   }, [open, width])
 
   const title = (id: string) => bar.current?.querySelector<HTMLElement>(`[data-menu-title="${id}"]`)
+
+  /** A choice has been made and its menu has gone, and the keyboard with it unless the choice put it
+   * somewhere (a window opened, the screen saver came on). Left with nothing, it goes to the window in
+   * front, or back to the menu's title. */
+  const settle = (id: string) =>
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (!focusLost(bar.current?.querySelector(`[data-menu="${id}"] .menu`))) return
+        const front = activeApp(wm.get())
+        if (front) focusWindow(front)
+        else title(id)?.focus({ preventScroll: true })
+      }),
+    )
   const entries = (id: string) => Array.from(bar.current?.querySelectorAll<HTMLElement>(`[data-menu="${id}"] [data-menu-item]:not([aria-disabled="true"])`) ?? [])
 
   /** Opens a menu and, from the keyboard, puts focus on its first or last item. */
@@ -216,7 +249,20 @@ export function MenuBar() {
   }
 
   return (
-    <header ref={bar} className="menubar" data-open={open ? '' : undefined} data-compact={compact || undefined}>
+    <header
+      ref={bar}
+      className="menubar"
+      data-open={open ? '' : undefined}
+      data-compact={compact || undefined}
+      onPointerDown={(e) => {
+        // A press on the bar itself, off the menus (the clock, the gaps), puts an open menu away
+        if (open && !(e.target as HTMLElement).closest('.menubar__menu, .menubar__shade')) setOpen(null)
+      }}
+    >
+      {/* With a menu open, a press anywhere else puts it away and does nothing more: this takes that press,
+          so that nothing under it (a window, a Dock icon) does. It goes on the click, not the press: a
+          finger's click comes after its press, and would land on whatever was underneath by then */}
+      {open && <div className="menubar__shade" aria-hidden onClick={() => setOpen(null)} />}
       <nav className="menubar__menus" aria-label="Menu bar">
         {menus.map((menu) => {
           const shown = open === menu.id
@@ -250,9 +296,16 @@ export function MenuBar() {
               <Popover show={shown} origin="top left" className="menu" role="menu" aria-label={menu.label} onKeyDown={onMenuKey(menu.id)} {...(shown ? null : ({ inert: '' } as object))}>
                 {menu.items.map((entry, i) => {
                   if (entry.kind === 'rule') return <div key={i} className="menu__rule" role="separator" />
+                  if (entry.kind === 'heading')
+                    return (
+                      <div key={i} className="menu__heading" aria-hidden>
+                        {entry.label}
+                      </div>
+                    )
                   const done = () => {
                     setOpen(null)
                     entry.run?.()
+                    settle(menu.id)
                   }
                   const body = (
                     <>
@@ -272,7 +325,21 @@ export function MenuBar() {
                     </>
                   )
                   return entry.href ? (
-                    <a key={i} className="menu__item" data-menu-item role="menuitem" href={entry.href} target="_blank" rel="noreferrer" onClick={() => setOpen(null)}>
+                    <a
+                      key={i}
+                      className="menu__item"
+                      data-menu-item
+                      role="menuitem"
+                      href={entry.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      draggable={false}
+                      aria-label={`${entry.label}, opens in a new tab`}
+                      onClick={() => {
+                        setOpen(null)
+                        settle(menu.id)
+                      }}
+                    >
                       {body}
                     </a>
                   ) : (
@@ -283,6 +350,7 @@ export function MenuBar() {
                       data-menu-item
                       role={entry.checked === undefined ? 'menuitem' : 'menuitemradio'}
                       aria-checked={entry.checked === undefined ? undefined : entry.checked}
+                      aria-label={entry.says}
                       aria-disabled={entry.disabled || undefined}
                       onClick={entry.disabled ? undefined : done}
                     >

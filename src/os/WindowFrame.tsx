@@ -1,14 +1,16 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Popover } from '../kit/motion/Popover'
 import { APPS, type AppId, type Size } from './apps'
 import { dockPoint } from './dom'
 import { useStore } from './store'
-import { activeApp, clampRect, closeApp, focusApp, geometry, metrics, minimizeApp, placeApp, setPreview, tileApp, toggleZoom, wm, type Rect, type Tile } from './wm'
+import { activeApp, clampRect, closeApp, focusApp, freeRect, geometry, metrics, minimizeApp, placeApp, setPreview, tileApp, toggleZoom, wm, type Rect, type Tile } from './wm'
 
 // One window on the desktop. The kit draws the chrome (the bar, the sidebar,
 // the lights' place); this wraps it with everything a real window does: it
 // comes to the front when touched, drags by its bar, resizes from its edges,
-// and its traffic lights close, minimise and zoom it.
+// and its traffic lights close, minimize and zoom it. From the keyboard, with
+// the window focused, Alt and the arrows move it and Alt, Shift and the
+// arrows size it.
 
 /** Where a press starts a drag: the kit's bars, and anything marked data-drag. */
 const DRAG = '.ss-window__bar, .ss-window__side-top, .ss-window__tabs, [data-drag]'
@@ -42,13 +44,19 @@ function resized(start: Rect, edge: Edge, dx: number, dy: number, min: Size, vie
   return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) }
 }
 
-/** The edge a dragged window is being held against, if any. */
-function zone(x: number, y: number, viewport: Size, bar: number): Tile | null {
-  if (x <= 3) return 'left'
-  if (x >= viewport.w - 4) return 'right'
+/** The edge a dragged window is being held against, if any. `reach` is how
+ * near the screen's side counts: a mouse can be put on its last pixel, a
+ * finger cannot. */
+function zone(x: number, y: number, viewport: Size, bar: number, reach: number): Tile | null {
+  if (x <= reach) return 'left'
+  if (x >= viewport.w - reach - 1) return 'right'
   if (y <= bar + 1) return 'fill'
   return null
 }
+
+/** How far one press of an arrow moves or sizes a window. */
+const STEP = 24
+const ARROWS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
 
 export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }) {
   const win = useStore(wm, (s) => s.wins[id])
@@ -64,14 +72,24 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
   live.current = { geo, win, viewport, compact }
 
   // Resting the pointer on the green light offers the ways to tile, as the
-  // system does; a click still just zooms
+  // system does; a click still just zooms. A finger has nowhere to rest:
+  // touching the light and holding it does the same
   const [tiles, setTiles] = useState(false)
   const tileTimer = useRef<ReturnType<typeof setTimeout>>()
+  const holdTimer = useRef<ReturnType<typeof setTimeout>>()
+  /** The choices came up under a held finger: lifting it is not a press. */
+  const held = useRef(false)
   const tilesSoon = (show: boolean, ms: number) => {
     clearTimeout(tileTimer.current)
     tileTimer.current = setTimeout(() => setTiles(show), ms)
   }
-  useEffect(() => () => clearTimeout(tileTimer.current), [])
+  useEffect(
+    () => () => {
+      clearTimeout(tileTimer.current)
+      clearTimeout(holdTimer.current)
+    },
+    [],
+  )
 
   // The window in front takes the keyboard, unless something still showing
   // already has it: a window that opens, one that comes forward when another
@@ -99,14 +117,21 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
     el.style.height = `${geo.h}px`
   })
 
-  // Escape puts the tiling choices away
+  // Escape puts the tiling choices away, and so does a press anywhere else
   useEffect(() => {
     if (!tiles) return
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setTiles(false)
     }
+    const away = (e: PointerEvent) => {
+      if (!(e.target as HTMLElement).closest?.('.tile-menu, .wf__light[data-kind="zoom"]')) setTiles(false)
+    }
     window.addEventListener('keydown', key)
-    return () => window.removeEventListener('keydown', key)
+    document.addEventListener('pointerdown', away, true)
+    return () => {
+      window.removeEventListener('keydown', key)
+      document.removeEventListener('pointerdown', away, true)
+    }
   }, [tiles])
 
   if (!win.mounted) return null
@@ -170,6 +195,8 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
     if (!el) return
     const { geo: start, win: w, viewport: vp } = live.current
     const bar = metrics(false).bar
+    // How near a side of the screen tiles the window there
+    const reach = e.pointerType === 'mouse' ? 3 : 24
     let base = start
     let moved = false
     let snap: Tile | null = null
@@ -183,11 +210,12 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
           document.documentElement.setAttribute('data-wm-busy', 'drag')
           // Pulled out of a tile, it takes its own size back under the pointer
           if (w.tile) {
+            const own = freeRect(w, vp)
             const f = (e.clientX - start.x) / start.w
-            base = { x: Math.round(e.clientX - f * w.rect.w), y: start.y, w: w.rect.w, h: w.rect.h }
+            base = { x: Math.round(e.clientX - f * own.w), y: start.y, w: own.w, h: own.h }
           }
         }
-        snap = spec.resizable ? zone(ev.clientX, ev.clientY, vp, bar) : null
+        snap = spec.resizable ? zone(ev.clientX, ev.clientY, vp, bar, reach) : null
         setPreview(snap)
         return clampRect({ ...base, x: base.x + dx, y: base.y + dy }, vp, false)
       },
@@ -195,9 +223,11 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
         setPreview(null)
         if (!moved || !last) return
         // Held against an edge, it tiles there and keeps the place it was
-        // dragged from to go back to
-        placeApp(id, snap ? (w.tile ? w.rect : start) : last)
-        if (snap) tileApp(id, snap)
+        // dragged from to go back to (a window that was already tiled keeps
+        // the place it had before that)
+        if (!snap) return placeApp(id, last)
+        if (!w.tile) placeApp(id, start)
+        tileApp(id, snap)
       },
     )
   }
@@ -219,6 +249,19 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
         if (last) placeApp(id, last)
       },
     )
+  }
+
+  /** Alt and an arrow move the window; with Shift they size it from its bottom right corner. */
+  const onArrow = (e: ReactKeyboardEvent) => {
+    const by = ARROWS[e.key]
+    if (!by || !e.altKey || e.ctrlKey || e.metaKey || live.current.compact) return
+    // In a field, Alt and an arrow move the caret by a word
+    if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return
+    if (e.shiftKey && !spec.resizable) return
+    e.preventDefault()
+    const { geo: start, viewport: vp } = live.current
+    const [dx, dy] = [by[0] * STEP, by[1] * STEP]
+    placeApp(id, e.shiftKey ? resized(start, 'se', dx, dy, spec.min, vp, metrics(false).bar) : { ...start, x: start.x + dx, y: start.y + dy })
   }
 
   const origin = win.origin ?? { x: viewport.w / 2, y: viewport.h }
@@ -251,6 +294,7 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
       onPointerDownCapture={() => focusApp(id)}
       onFocusCapture={() => focusApp(id)}
       onPointerDown={startDrag}
+      onKeyDown={onArrow}
       onDoubleClick={(e) => {
         const target = e.target as HTMLElement
         if (target.closest(DRAG) && !target.closest(NO_DRAG)) toggleZoom(id)
@@ -263,7 +307,7 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
             <path d="M3.6 3.6l4.8 4.8M8.4 3.6L3.6 8.4" />
           </svg>
         </button>
-        <button type="button" className="wf__light" data-kind="min" aria-label={`Minimise ${spec.name}`} disabled={!spec.resizable} onClick={() => minimizeApp(id, dockPoint(id))}>
+        <button type="button" className="wf__light" data-kind="min" aria-label={`Minimize ${spec.name}`} disabled={!spec.resizable} onClick={() => minimizeApp(id, dockPoint(id))}>
           <svg viewBox="0 0 12 12" aria-hidden>
             <path d="M2.8 6h6.4" />
           </svg>
@@ -277,8 +321,29 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
           onPointerEnter={(e) => {
             if (e.pointerType === 'mouse') tilesSoon(true, 520)
           }}
-          onPointerLeave={() => tilesSoon(false, 240)}
+          onPointerDown={(e) => {
+            held.current = false
+            clearTimeout(holdTimer.current)
+            if (e.pointerType === 'mouse') return
+            holdTimer.current = setTimeout(() => {
+              held.current = true
+              clearTimeout(tileTimer.current)
+              setTiles(true)
+            }, 450)
+          }}
+          onPointerUp={() => clearTimeout(holdTimer.current)}
+          onPointerCancel={() => clearTimeout(holdTimer.current)}
+          onPointerLeave={(e) => {
+            clearTimeout(holdTimer.current)
+            if (e.pointerType === 'mouse') tilesSoon(false, 240)
+          }}
+          // A held finger asks for the tiling choices, not the browser's own menu
+          onContextMenu={(e) => e.preventDefault()}
           onClick={() => {
+            if (held.current) {
+              held.current = false
+              return
+            }
             tilesSoon(false, 0)
             toggleZoom(id)
           }}
@@ -290,7 +355,12 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
       </div>
       <div className="wf__content">{children}</div>
       {!compact && spec.resizable && (
-        <Popover show={tiles} origin="top left" className="tile-menu" role="group" aria-label="Move and resize" onPointerEnter={() => clearTimeout(tileTimer.current)} onPointerLeave={() => tilesSoon(false, 240)} {...(tiles ? null : ({ inert: '' } as object))}>
+        <Popover show={tiles} origin="top left" className="tile-menu" role="group" aria-label="Move and resize" onPointerEnter={() => clearTimeout(tileTimer.current)}
+          onPointerLeave={(e: ReactPointerEvent) => {
+            if (e.pointerType === 'mouse') tilesSoon(false, 240)
+          }}
+          {...(tiles ? null : ({ inert: '' } as object))}
+        >
           <div className="tile-menu__label">Move &amp; Resize</div>
           <div className="tile-menu__row">
             {TILES.map((option) => (

@@ -1,17 +1,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
-import { Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, SquarePen, Trash2, X } from 'lucide-react'
-import { showNote } from '../../apps/state'
-import { ANSWER_PLACEHOLDER, FAQS } from '../../data/faqs'
-import { SITE } from '../../data/site'
+import { ArrowUpRight, Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, SquarePen, Trash2, X } from 'lucide-react'
+import { showNote, sought } from '../../apps/state'
+import { ANSWER_PENDING, ANSWER_PLACEHOLDER, FAQS, waysOn } from '../../data/faqs'
+import { DRAFT, SITE } from '../../data/site'
 import { useStore } from '../../os/store'
 import '../../styles/phone/notes.css'
 import { pageUrl, share } from '../native'
-import { closeSheet, launchAt, openSheet, pop, push, sys } from '../system'
+import { closeSheet, launchAt, openSheet, pop, push, sys, topOf } from '../system'
 import { BackButton, Cell, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, SearchBar, Sheet, SheetHost, type MenuItem } from '../ui'
 import {
   FAQS_ID,
+  NAME_LENGTH,
   NOTES_ID,
-  NO_TEXT,
   addFolder,
   addNote,
   allEntries,
@@ -21,16 +21,18 @@ import {
   editNote,
   entriesIn,
   faqEntry,
-  firstLine,
   folderName,
   folderViewOf,
   found,
   isBlank,
+  isFolder,
   isOwnFolder,
+  nameOnOffer,
   ownView,
   pageDate,
   removeFolder,
   removeNote,
+  restOf,
   rowDate,
   sorted,
   titleOf,
@@ -41,8 +43,9 @@ import {
 // The FAQs as the Notes app, laid out as Notes is: Folders, a folder's notes
 // under the days they were last touched, and a note on a page of its own. The
 // questions are the site's and are there to be read; the answers haven't been
-// written yet, so each note holds the slot for one. Beside them the visitor
-// has what any Notes has: a note of their own to write, and folders to make.
+// written yet, so each note says so and gives the way on (the editor's view,
+// `?draft`, shows the slot the answer goes in). Beside them the visitor has
+// what any Notes has: a note of their own to write, and folders to make.
 
 // ---- Glyphs the icon set has nothing close to ----
 
@@ -122,7 +125,7 @@ function Marked({ text, q }: { text: string; q: string }): ReactNode {
 function lineFor(entry: Entry, q: string) {
   const text = entry.text.replace(/\s+/g, ' ').trim()
   const at = q ? text.toLowerCase().indexOf(q) : -1
-  if (at < 0) return firstLine(entry) || NO_TEXT
+  if (at < 0) return restOf(entry)
   if (at < 26) return text
   const from = text.lastIndexOf(' ', at - 12)
   return `…${text.slice(from < 0 ? at : from + 1)}`
@@ -167,10 +170,11 @@ function useSearching(): Searching {
   }
 }
 
-/** The search field at the foot of a list. Escape empties it, then lets go of it, before it means Back. */
+/** The search field at the foot of a list. Escape empties it, then lets go of it, before it means Back:
+ * the shared search bar sees to that itself, and this only stands in where the bar has not answered. */
 function SearchField({ search }: { search: Searching }) {
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== 'Escape') return
+    if (e.key !== 'Escape' || e.defaultPrevented) return
     e.preventDefault()
     if (search.query) search.setQuery('')
     else if (e.target instanceof HTMLElement) e.target.blur()
@@ -202,16 +206,25 @@ function Row({ entry, q = '', where }: { entry: Entry; q?: string; where?: strin
   return (
     <Cell
       className="notes-row"
-      title={<Marked text={titleOf(entry)} q={q} />}
+      // A title may be in a right-to-left script: it is set in its own direction, whatever is beside it
+      title={
+        <bdi>
+          <Marked text={titleOf(entry)} q={q} />
+        </bdi>
+      }
       subtitle={
         <>
+          {/* The commas are for a screen reader, which would otherwise run a row's parts together: "9:51 PMAnswer on its way" */}
           <span className="notes-row__line">
+            <span className="sr-only">, </span>
             <span className="notes-row__when">{rowDate(entry.edited)}</span>
+            <span className="sr-only">, </span>
             <Marked text={lineFor(entry, q)} q={q} />
           </span>
           {where && (
             <span className="notes-row__where">
               <Folder size={15} strokeWidth={2} aria-hidden />
+              <span className="sr-only">, in </span>
               {where}
             </span>
           )}
@@ -228,9 +241,12 @@ function Tile({ entry }: { entry: Entry }) {
     <button type="button" className="notes-tile" onClick={() => push(entry.view)}>
       <span className="notes-tile__page" aria-hidden>
         <b>{titleOf(entry)}</b>
-        <span>{entry.text || (entry.faq !== null ? ANSWER_PLACEHOLDER : '')}</span>
+        <span>{entry.text || (entry.faq === null ? '' : DRAFT ? ANSWER_PLACEHOLDER : ANSWER_PENDING)}</span>
       </span>
-      <span className="notes-tile__title">{titleOf(entry)}</span>
+      <span className="notes-tile__title" dir="auto">
+        {titleOf(entry)}
+      </span>
+      <span className="sr-only">, </span>
       <span className="notes-tile__when">{rowDate(entry.edited)}</span>
     </button>
   )
@@ -243,7 +259,7 @@ function Results({ search }: { search: Searching }) {
   const hits = useMemo(() => sorted(found(allEntries(notes), search.q), 'edited'), [notes, search.q])
   if (!hits.length)
     return (
-      <Empty icon={<Search size={46} strokeWidth={2.2} />} title={`No Results for “${search.query.trim()}”`}>
+      <Empty icon={<Search size={46} strokeWidth={2.2} />} title={`No Results for “${sought(search.query)}”`}>
         Check the spelling or try a new search.
       </Empty>
     )
@@ -366,7 +382,8 @@ function Folders() {
 
 /** The sheet a new folder is named in. */
 function NewFolder() {
-  const [name, setName] = useState('New Folder')
+  // The name on offer is one no folder has yet: New Folder, New Folder 2, …
+  const [name, setName] = useState(() => nameOnOffer(book.get().folders))
   const input = useRef<HTMLInputElement>(null)
   const ok = name.trim() !== ''
 
@@ -407,6 +424,8 @@ function NewFolder() {
           placeholder="Name"
           autoComplete="off"
           enterKeyHint="done"
+          dir="auto"
+          maxLength={NAME_LENGTH}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -624,7 +643,29 @@ function FaqNote({ index }: { index: number }) {
       <article className="notes-note">
         <p className="notes-note__date">{pageDate(entry.edited)}</p>
         <h2 className="notes-note__title">{faq.question}</h2>
-        {faq.answer ? <p className="notes-note__body">{faq.answer}</p> : <p className="notes-slot">{ANSWER_PLACEHOLDER}</p>}
+        {faq.answer ? (
+          <p className="notes-note__body">{faq.answer}</p>
+        ) : DRAFT ? (
+          <p className="notes-slot">{ANSWER_PLACEHOLDER}</p>
+        ) : (
+          // No answer yet: said to the visitor as it is, with the way on
+          <>
+            <p className="notes-note__body">{ANSWER_PENDING}</p>
+            <p className="notes-ways">
+              {waysOn(faq.question).map((way) => (
+                <a key={way.label} className="notes-way" href={way.href} {...(way.leaves ? { target: '_blank', rel: 'noreferrer' } : null)}>
+                  {way.label}
+                  {way.leaves && (
+                    <>
+                      <ArrowUpRight size={18} strokeWidth={2.6} aria-hidden />
+                      <span className="sr-only">, opens in a new tab</span>
+                    </>
+                  )}
+                </a>
+              ))}
+            </p>
+          </>
+        )}
       </article>
     </NoteScreen>
   )
@@ -709,13 +750,14 @@ function OwnNotePage({ note }: { note: OwnNote }) {
             aria-label="Title"
             autoCapitalize="sentences"
             enterKeyHint="next"
+            dir="auto"
             value={note.title}
             onChange={(e) => onTitle(e.target.value)}
             onKeyDown={onTitleKey}
           />
         </span>
         <span className="notes-grow notes-note__body" data-value={note.body}>
-          <textarea ref={body} rows={1} aria-label="Note" autoCapitalize="sentences" value={note.body} onChange={(e) => editNote(note.id, { body: e.target.value })} onKeyDown={onBodyKey} />
+          <textarea ref={body} rows={1} aria-label="Note" autoCapitalize="sentences" dir="auto" value={note.body} onChange={(e) => editNote(note.id, { body: e.target.value })} onKeyDown={onBodyKey} />
         </span>
       </article>
     </NoteScreen>
@@ -724,18 +766,40 @@ function OwnNotePage({ note }: { note: OwnNote }) {
 
 // ---- The app ----
 
-/** The screen for a view in the app's stack. Anything it doesn't know (an
- * address from an older version of the page, a note since deleted) is an empty
- * folder, which is what Notes would have there. */
+/** A view that names something no longer there: a note since deleted (Forward
+ * can still ask for it), or a note or folder from before a reload on a page that
+ * could not keep them, or an address from an older version of the page. It has
+ * nothing of its own to draw. It is drawn as what it was in, and once it is the
+ * screen in front the phone steps back to that: never an empty "Notes" that
+ * was nobody's. */
+function Gone({ view }: { view: string }) {
+  const stack = useStore(sys, (s) => s.stacks.notes)
+  const front = useStore(sys, (s) => s.app === 'notes' && !s.locked && !s.sheet)
+  const at = stack.lastIndexOf(view)
+  const top = at >= 0 && at === stack.length - 1
+
+  useEffect(() => {
+    if (!front || !top) return
+    // Looked at afresh: where React runs an effect twice to check it, the step back has been taken by the second time
+    const s = sys.get()
+    if (s.app === 'notes' && topOf(s, 'notes') === view) pop()
+  }, [front, top, view])
+
+  // What it was in: the view under it, or, once it has left the stack and is sliding away, the one now in front
+  return <Page view={at > 0 ? stack[at - 1]! : at === 0 ? null : (stack[stack.length - 1] ?? null)} />
+}
+
+/** The screen for a view in the app's stack. */
 function Page({ view }: { view: string | null }) {
   const notes = useStore(book, (s) => s.notes)
+  const folders = useStore(book, (s) => s.folders)
   if (view === null) return <Folders />
   const kind = view.slice(0, 2)
   const name = view.slice(2)
-  if (kind === 'f:') return <NotesList folder={name} />
+  if (kind === 'f:' && isFolder(folders, name)) return <NotesList folder={name} />
   if (kind === 'n:' && /^\d+$/.test(name) && FAQS[Number(name)]) return <FaqNote index={Number(name)} />
   const own = kind === 'u:' ? notes.find((n) => n.id === name) : undefined
-  return own ? <OwnNotePage note={own} /> : <NotesList folder="" />
+  return own ? <OwnNotePage note={own} /> : <Gone view={view} />
 }
 
 export function NotesApp() {

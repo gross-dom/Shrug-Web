@@ -211,6 +211,8 @@
   font-weight: 700;
   line-height: 41px;
   letter-spacing: 0.01em;
+  /* A name with no space in it (a folder someone made) is broken where the screen ends */
+  overflow-wrap: anywhere;
 }
 
 /* The line under a large title: a count, when it was last updated */
@@ -333,7 +335,10 @@
   --control: 62px;
 }
 
-.ios-foot > * {
+/* Only the bar's own controls take touches. The fade above them is paint: a
+   swipe that starts on it scrolls the page, and a row showing through it can
+   be pressed */
+.ios-foot > :not(.ios-foot__edge) {
   pointer-events: auto;
 }
 
@@ -399,6 +404,7 @@
 }
 
 .ios-search__clear {
+  position: relative;
   display: grid;
   flex: none;
   place-items: center;
@@ -407,6 +413,13 @@
   border-radius: 50%;
   background: var(--label-3);
   color: #fff;
+}
+
+/* The cross is small; what takes the press is a finger's size */
+.ios-search__clear::after {
+  position: absolute;
+  inset: -12px;
+  content: '';
 }
 
 .ios-tabs {
@@ -670,6 +683,11 @@
   transform: translateX(21px);
 }
 
+/* There is nothing left for it to switch */
+.ios-switch[aria-disabled='true'] {
+  opacity: 0.4;
+}
+
 .ios-segments {
   position: relative;
   display: grid;
@@ -746,6 +764,28 @@
   pointer-events: auto;
 }
 
+/* A menu hangs from a button in the bar, over everything else on the screen:
+   the bar at the foot too, which it reaches on a phone on its side */
+.ios-bar:has(.ios-menu[data-up]) {
+  z-index: 6;
+}
+
+/* Its rows, which scroll inside it where the screen is too short for all of
+   them: from under the bar it is never taller than the room down to the foot */
+.ios-menu__scroll {
+  display: grid;
+  max-height: calc(100cqh - var(--status) - var(--bar) - 30px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 20px;
+  scrollbar-width: none;
+}
+
+.ios-menu__scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .ios-menu__list::before {
   -webkit-backdrop-filter: blur(30px) saturate(1.8);
   backdrop-filter: blur(30px) saturate(1.8);
@@ -764,6 +804,12 @@
 
 .ios-menu__item[data-divided] {
   box-shadow: 0 -0.5px 0 var(--sep);
+}
+
+/* The keyboard's ring sits inside a row: outside it, the menu's edge would cut it off */
+.ios-menu__item:focus-visible {
+  border-radius: 14px;
+  outline-offset: -4px;
 }
 
 .ios-menu__item:active {
@@ -950,11 +996,19 @@
 
 .ios-empty {
   display: grid;
+  /* One column, as wide as the screen and no wider: a long word quoted back in it breaks, and never
+     pushes the rest off the side */
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   gap: 6px;
   padding: 72px 40px;
   color: var(--label-2);
   text-align: center;
+}
+
+.ios-empty > * {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .ios-empty__icon {
@@ -974,11 +1028,97 @@
   line-height: 20px;
 }
 
+/* ---- Little height ---- */
+
+/* A phone on its side: a menu's rows are a little shorter, so that the whole
+   of it shows between the bars */
+@container (max-height: 400px) {
+  .ios-menu__item {
+    min-height: 40px;
+  }
+}
+
+@container (max-height: 340px) {
+  .ios-menu__item {
+    min-height: 36px;
+  }
+}
+
+/* On its side with the keyboard up there is next to none. The large title
+   folds into the bar (it stays the page's heading, off screen), the bars keep
+   less to themselves, and what was typed for shows between them */
+@container (max-height: 220px) {
+  .ios-screen {
+    --bar: 42px;
+    --foot-gap: 6px;
+  }
+
+  .ios-large {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .ios-large-sub {
+    display: none;
+  }
+
+  .ios-screen:not([data-folded]) .ios-bar__name {
+    opacity: 1;
+  }
+
+  .ios-bar .ios-button,
+  .ios-bar .ios-group,
+  .ios-bar .ios-group__part {
+    height: 36px;
+  }
+
+  .ios-bar .ios-button:not([data-wide]) {
+    width: 36px;
+  }
+
+  .ios-foot {
+    padding-top: 4px;
+    --control: 38px;
+  }
+
+  .ios-foot:has(.ios-tabs) {
+    --control: 46px;
+  }
+
+  .ios-search {
+    height: 38px;
+  }
+
+  .ios-tabs {
+    height: 46px;
+    padding: 3px;
+  }
+
+  .ios-tabs__item {
+    height: 40px;
+  }
+
+  .ios-tabs__icon {
+    height: 22px;
+  }
+
+  .ios-screen[data-foot] > .ios-screen__scroll {
+    padding-bottom: calc(var(--foot-gap) + var(--control, 46px) + 14px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ios-page,
   .ios-page[data-enter],
   .ios-sheet__panel,
-  .ios-sheet__shade {
+  .ios-sheet__shade,
+  .ios-sheet[data-closing] .ios-sheet__panel,
+  .ios-sheet[data-closing] .ios-sheet__shade {
     animation: none;
     transition: none;
   }

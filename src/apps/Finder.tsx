@@ -1,11 +1,11 @@
-import { useMemo, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { ArrowUpRight, ChevronLeft, ChevronRight, Folder, LayoutGrid, List } from 'lucide-react'
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
 import { Window } from '../kit/window'
 import { FolderIcon } from '../os/icons'
 import { useStore } from '../os/store'
-import { companiesIn, CompanyLogo, hostOf, openCompany, visitLabel, type Listed } from './portfolio-ui'
-import { finder, pickCompany, setFinderQuery, setFinderView, showVertical, stepVertical } from './state'
+import { companiesIn, CompanyLogo, fateOf, hostOf, openCompany, tellApart, visitLabel, type Listed } from './portfolio-ui'
+import { finder, pickCompany, setFinderQuery, setFinderView, showVertical, sought, stepVertical } from './state'
 import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 
 // The portfolio as a Finder window: verticals down the sidebar, and the
@@ -13,7 +13,8 @@ import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 // list. All is every company in the order Shrug lists them. One is always
 // selected, and the preview beside them says what it does and links to it.
 // Back and Forward retrace the verticals visited; the search narrows whatever
-// is showing.
+// is showing. A company with no site says so where its link would be, and a
+// double-click on one is answered there rather than by nothing.
 
 // lucide for the sidebar and toolbar glyphs, as the kit's own Finder does:
 // one family, one stroke
@@ -38,23 +39,41 @@ function Sidebar() {
   )
 }
 
-/** The selected company, as a Finder preview shows a file: its icon, what it is, and a way in. */
-function Preview({ company }: { company: Listed }) {
+/** The way in to a company: the link to its site, or, for one with no site, the line that says so.
+ * `nudge` counts the times that company was asked to open with nothing to open: the line stirs each time.
+ * A company's own site is told where a visit came from (`noopener`, not `noreferrer`). */
+function WayIn({ company, at, nudge = 0 }: { company: Listed; at: 'preview' | 'foot'; nudge?: number }) {
   const visit = visitLabel(company)
+  if (company.url && visit)
+    return (
+      <a className={at === 'preview' ? 'pf-preview__visit' : 'pf__foot-visit'} href={company.url} target="_blank" rel="noopener" draggable={false}>
+        <span>{visit}</span>
+        <ArrowUpRight size={at === 'preview' ? 13 : 11} strokeWidth={2.2} aria-hidden />
+        <span className="sr-only">, opens in a new tab</span>
+      </a>
+    )
+  return (
+    <span key={nudge} className={at === 'preview' ? 'pf-preview__fate' : 'pf__foot-fate'} data-nudged={nudge ? '' : undefined}>
+      {fateOf(company)}
+    </span>
+  )
+}
+
+/** The selected company, as a Finder preview shows a file: its icon, what it is, and a way in. */
+function Preview({ company, nudge }: { company: Listed; nudge: number }) {
+  const apart = tellApart(company)
   return (
     <aside className="pf-preview" aria-label={`${company.name}, ${company.vertical}`}>
       <CompanyLogo company={company} size={88} />
       <div className="pf-preview__text">
-        <h3 className="pf-preview__name">{company.name}</h3>
-        <div className="pf-preview__kind">{company.vertical}</div>
+        <h2 className="pf-preview__name">{company.name}</h2>
+        <div className="pf-preview__kind">
+          {company.vertical}
+          {apart && ` · ${apart}`}
+        </div>
         {company.blurb && <p className="pf-preview__blurb">{company.blurb}</p>}
       </div>
-      {company.url && visit && (
-        <a className="pf-preview__visit" href={company.url} target="_blank" rel="noreferrer">
-          <span>{visit}</span>
-          <ArrowUpRight size={13} strokeWidth={2.2} aria-hidden />
-        </a>
-      )}
+      <WayIn company={company} at="preview" nudge={nudge} />
     </aside>
   )
 }
@@ -67,12 +86,33 @@ export function FinderApp() {
   const chosen = shown.find((c) => c.key === picked) ?? shown[0] ?? null
   const count = `${shown.length} ${shown.length === 1 ? 'company' : 'companies'}`
   const files = useRef<HTMLDivElement>(null)
+  /** A company with no site was asked to open: which, and how many times that has happened. */
+  const [asked, setAsked] = useState<{ key: string; times: number } | null>(null)
+  const nudge = chosen && asked?.key === chosen.key ? asked.times : 0
+
+  // What was said about it is said once: a moment later the line is at rest again
+  useEffect(() => {
+    if (!asked) return
+    const t = setTimeout(() => setAsked(null), 2400)
+    return () => clearTimeout(t)
+  }, [asked])
+
+  /** Opens a company's site. One with no site has nothing to open: it is selected, and the line where
+   * its link would be says so (aloud too), so that a double-click or Return is never met with nothing. */
+  const open = (company: Listed) => {
+    if (openCompany(company)) return
+    pickCompany(company.key)
+    setAsked((was) => ({ key: company.key, times: (was?.key === company.key ? was.times : 0) + 1 }))
+  }
+
+  /** From the search field into what it found: the first company showing takes the keyboard. */
+  const intoResults = () => files.current?.querySelector<HTMLElement>('[data-company][tabindex="0"]')?.focus()
 
   /** Arrows walk the companies, the way they walk a Finder window; Return opens the one selected. */
   const onKey = (e: KeyboardEvent) => {
     const box = files.current
     if (!box || !chosen) return
-    if (e.key === 'Enter') return void (e.preventDefault(), openCompany(chosen))
+    if (e.key === 'Enter') return void (e.preventDefault(), open(chosen))
     const tiles = Array.from(box.querySelectorAll<HTMLElement>('[data-company]'))
     const here = shown.indexOf(chosen)
     // How many sit in a row right now: the grid decides that, not us
@@ -120,7 +160,7 @@ export function FinderApp() {
             </ToolSetButton>
           </ToolSet>
           <span className="tool tool--search">
-            <SearchField value={query} onChange={setFinderQuery} label="Search the portfolio" />
+            <SearchField value={query} onChange={setFinderQuery} label="Search the portfolio" onEnter={intoResults} onArrowDown={intoResults} />
             <span className="tool__label" aria-hidden>
               Search
             </span>
@@ -141,13 +181,18 @@ export function FinderApp() {
         ))}
       </div>
 
-      <div className="pf__main">
+      <div className="pf__main" data-view={view}>
         {shown.length === 0 ? (
-          <div className="pf__none">Nothing in the portfolio matches “{query.trim()}”</div>
+          <div className="pf__none" role="status">
+            <b>No Results for “{sought(query)}”</b>
+            <span>Check the spelling or try a new search.</span>
+          </div>
         ) : view === 'icons' ? (
           <div ref={files} className="pf__icons scrolls" role="listbox" aria-label={`${name}: ${count}`} aria-orientation="horizontal" onKeyDown={onKey}>
             {shown.map((c) => {
               const on = c === chosen
+              // Two companies share a name: each carries its address under it
+              const apart = tellApart(c)
               return (
                 <button
                   key={c.key}
@@ -157,14 +202,15 @@ export function FinderApp() {
                   aria-selected={on}
                   tabIndex={on ? 0 : -1}
                   data-company={c.key}
-                  title={c.blurb ? `${c.name}: ${c.blurb}` : c.url ? `${c.name}: ${hostOf(c.url)}` : c.name}
+                  title={`${c.name}: ${c.blurb ?? (c.url ? hostOf(c.url) : fateOf(c))}`}
                   onClick={() => pickCompany(c.key)}
-                  onDoubleClick={() => openCompany(c)}
+                  onDoubleClick={() => open(c)}
                 >
                   <span className="pf-file__icon">
                     <CompanyLogo company={c} size={60} />
                   </span>
                   <span className="pf-file__name">{c.name}</span>
+                  {apart && <span className="pf-file__host">{apart}</span>}
                 </button>
               )
             })}
@@ -173,28 +219,34 @@ export function FinderApp() {
           <div ref={files} className="pf__list scrolls" role="listbox" aria-label={`${name}: ${count}`} onKeyDown={onKey}>
             <div className="pf-row pf-row--head" aria-hidden>
               <span>Name</span>
-              <span>Vertical</span>
+              <span className="pf-row__vertical">Vertical</span>
               <span>About</span>
             </div>
             {shown.map((c) => {
               const on = c === chosen
+              const apart = tellApart(c)
+              // What it does; failing that where it lives; failing that, that it has nowhere
+              const about = c.blurb ?? (c.url ? hostOf(c.url) : fateOf(c)) ?? ''
               return (
-                <button key={c.key} type="button" className="pf-row" role="option" aria-selected={on} tabIndex={on ? 0 : -1} data-company={c.key} onClick={() => pickCompany(c.key)} onDoubleClick={() => openCompany(c)}>
-                  <span className="pf-row__name">
+                <button key={c.key} type="button" className="pf-row" role="option" aria-selected={on} tabIndex={on ? 0 : -1} data-company={c.key} onClick={() => pickCompany(c.key)} onDoubleClick={() => open(c)}>
+                  <span className="pf-row__name" title={apart ? `${c.name} (${apart})` : c.name}>
                     <CompanyLogo company={c} size={18} />
                     <span>{c.name}</span>
+                    {apart && <span className="pf-row__host">{apart}</span>}
                   </span>
-                  <span>{c.vertical}</span>
-                  <span>{c.blurb ?? (c.url ? hostOf(c.url) : '')}</span>
+                  <span className="pf-row__vertical" title={c.vertical}>
+                    {c.vertical}
+                  </span>
+                  <span title={about}>{about}</span>
                 </button>
               )
             })}
           </div>
         )}
-        {chosen && <Preview company={chosen} />}
+        {chosen && <Preview company={chosen} nudge={nudge} />}
       </div>
 
-      <div className="pf__foot">
+      <div className="pf__foot" data-view={view}>
         <span className="pf__path">
           <span className="pf__path-icon">
             <FolderIcon />
@@ -210,8 +262,16 @@ export function FinderApp() {
             </>
           )}
         </span>
-        <span className="pf__count" role="status">
-          {count}
+        <span className="pf__foot-end">
+          {/* In a list too narrow to keep the preview beside it, the way in to the company is here instead */}
+          {chosen && <WayIn company={chosen} at="foot" nudge={nudge} />}
+          <span className="pf__count" role="status">
+            {count}
+          </span>
+        </span>
+        {/* Said aloud when a company with no site is asked to open */}
+        <span className="sr-only" role="status">
+          {chosen && nudge ? `${chosen.name}: ${fateOf(chosen)}.` : ''}
         </span>
       </div>
     </Window>

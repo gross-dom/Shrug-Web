@@ -1,13 +1,17 @@
-import { FAQS } from '../../data/faqs'
+import { ANSWER_PENDING_LINE, FAQS } from '../../data/faqs'
+import { DRAFT } from '../../data/site'
 import { createStore } from '../../os/store'
 import { sys } from '../system'
 import { FAQS_FOLDER, noteView } from './routes'
 import { formatter } from '../../os/dates'
 
 // What Notes holds on the phone. The FAQs are the site's: a folder of seven
-// notes, there to be read. Beside it the visitor has what any Notes has, a
+// notes, there to be read (a question whose answer has not been written says
+// that it is on its way). Beside it the visitor has what any Notes has, a
 // Notes folder of their own, folders they make, and notes they write. Those
-// last as long as the page does: nothing is stored, and nothing is sent.
+// are kept for as long as the tab is, in the tab's own storage, so that a
+// reload (a phone reloads a page it had put away, by itself) brings them back
+// with the place the phone was at. Nothing is sent anywhere.
 
 // ---- Folders ----
 
@@ -48,9 +52,44 @@ export interface Book {
   grouped: boolean
 }
 
-export const book = createStore<Book>({ folders: [], notes: [], gallery: false, sort: 'edited', grouped: true })
+// ---- Kept for the tab ----
+
+/** Where the visitor's notes and folders are kept: the tab's own storage, which goes when the tab does. */
+const KEPT = 'shrug:notes'
+
+const EMPTY: Book = { folders: [], notes: [], gallery: false, sort: 'edited', grouped: true }
+
+const text = (value: unknown): value is string => typeof value === 'string'
+
+/** What was kept the last time this tab had the page, or nothing: a first visit, or a page that is
+ * refused storage (a frame without leave to keep anything), or something in it that is not a Book. */
+function kept(): Book {
+  try {
+    const was = JSON.parse(window.sessionStorage.getItem(KEPT) ?? 'null') as Partial<Book> | null
+    if (!was || !Array.isArray(was.folders) || !Array.isArray(was.notes)) return EMPTY
+    const folders = was.folders.filter((f): f is OwnFolder => !!f && text(f.id) && text(f.name))
+    const notes = was.notes.filter((n): n is OwnNote => !!n && text(n.id) && text(n.folder) && text(n.title) && text(n.body) && typeof n.edited === 'number')
+    return { folders, notes, gallery: was.gallery === true, sort: was.sort === 'title' ? 'title' : 'edited', grouped: was.grouped !== false }
+  } catch {
+    return EMPTY
+  }
+}
+
+export const book = createStore<Book>(kept())
+
+// Every change is kept as it is made. A page that may not keep anything carries on without
+book.subscribe(() => {
+  try {
+    window.sessionStorage.setItem(KEPT, JSON.stringify(book.get()))
+  } catch {
+    // Refused, or full: what was written lasts as long as the page does, as it always did
+  }
+})
 
 export const isOwnFolder = (folders: OwnFolder[], id: string) => folders.some((f) => f.id === id)
+
+/** Whether there is a folder with this id: one of the two Notes comes with, or one the visitor made. */
+export const isFolder = (folders: OwnFolder[], id: string) => id === FAQS_ID || id === NOTES_ID || isOwnFolder(folders, id)
 
 /** A folder's name, or null if there is no such folder. */
 export function folderName(folders: OwnFolder[], id: string): string | null {
@@ -59,11 +98,24 @@ export function folderName(folders: OwnFolder[], id: string): string | null {
   return folders.find((f) => f.id === id)?.name ?? null
 }
 
-let made = 0
+/** How many things the visitor has made: the number in the newest one's id. It carries on from what was kept. */
+let made = [...book.get().folders, ...book.get().notes].reduce((most, { id }) => Math.max(most, Number(id.slice(1)) || 0), 0)
+
+/** The longest a folder's name can be. */
+export const NAME_LENGTH = 100
+
+/** The name a new folder is offered: "New Folder", then "New Folder 2", "New Folder 3", as Notes numbers them. */
+export function nameOnOffer(folders: OwnFolder[]) {
+  const taken = new Set(folders.map((f) => f.name.trim().toLowerCase()))
+  for (let n = 1; ; n++) {
+    const name = n === 1 ? 'New Folder' : `New Folder ${n}`
+    if (!taken.has(name.toLowerCase())) return name
+  }
+}
 
 export function addFolder(name: string) {
   const id = `u${++made}`
-  book.set((s) => ({ ...s, folders: [...s.folders, { id, name }] }))
+  book.set((s) => ({ ...s, folders: [...s.folders, { id, name: name.slice(0, NAME_LENGTH) }] }))
   return id
 }
 
@@ -171,13 +223,18 @@ export const faqEntry = (index: number): Entry | null => FAQ_ENTRIES[index] ?? n
 /** A note's name in a list. One with nothing typed in it yet is "New Note", as Notes has it. */
 export const titleOf = (entry: Entry) => entry.title.trim() || 'New Note'
 
-/** What a list shows under the name: the first line of the rest, or what Notes says of a note that is only a title. */
+/** What Notes says of a note that is only a title. */
 export const NO_TEXT = 'No additional text'
 export const firstLine = (entry: Entry) =>
   entry.text
     .split('\n')
     .map((line) => line.trim())
     .find(Boolean) ?? ''
+
+/** What a list shows under a note's name: the first line of the rest. A question of the site's with
+ * no answer yet says that one is on its way (in the editor's view, `?draft`, it is the bare note it is);
+ * a note of the visitor's that is only a title says what Notes says. */
+export const restOf = (entry: Entry) => firstLine(entry) || (entry.faq !== null && !DRAFT ? ANSWER_PENDING_LINE : NO_TEXT)
 
 export function sorted(entries: Entry[], sort: Book['sort']) {
   const by = sort === 'title' ? (a: Entry, b: Entry) => titleOf(a).localeCompare(titleOf(b)) : (a: Entry, b: Entry) => b.edited - a.edited

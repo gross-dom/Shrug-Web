@@ -25,7 +25,7 @@
 }
 
 .scrolls:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--ss-accent) 55%, transparent);
+  outline: 3px solid var(--ring, #0a6de6);
   outline-offset: -3px;
 }
 
@@ -79,7 +79,7 @@
 }
 
 .tool:focus-visible .tool__cap {
-  outline: 3px solid color-mix(in srgb, var(--ss-accent) 55%, transparent);
+  outline: 3px solid var(--ring, #0a6de6);
   outline-offset: 1px;
 }
 
@@ -185,14 +185,25 @@
 
 .side-label__count {
   font-weight: 500;
-  color: var(--ss-text-faint);
+  color: var(--ss-text);
   font-variant-numeric: tabular-nums;
 }
 
+/* A search that found nothing: what was looked for, and what to try */
 .side-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   padding: 10px 8px;
   font-size: 12px;
-  color: var(--ss-text-faint);
+  line-height: 16px;
+  color: var(--ss-text);
+}
+
+.side-empty > b {
+  font-weight: 600;
+  color: var(--ss-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .shrug-avatar {
@@ -302,8 +313,21 @@
   mask-image: linear-gradient(to bottom, transparent, #000 22px);
 }
 
+/* The thread takes the keyboard so that it can be scrolled with it. Its own
+   edge fades out under the bar, so the ring that says so is drawn on the
+   pane around it, where all of it shows */
 .chat__scroll:focus-visible {
   outline: none;
+}
+
+.chat__pane:has(> .chat__scroll:focus-visible)::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  z-index: 2;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 3px var(--ring, #0a6de6);
+  pointer-events: none;
 }
 
 /* A conversation starts at the top and grows down, as Messages lays one
@@ -424,18 +448,93 @@
   animation: chat-arrive 0.3s ease 0.5s both;
 }
 
+/* The line is a button, and the red mark beside the bubble answers to the
+   same press (chat-ui.tsx): what they open says why, and where to go instead.
+   Its red is darker than Messages' own, which at this size cannot be read
+   on white */
 .chat-undelivered {
   position: relative;
   top: 0;
   flex: none;
+  align-self: flex-end;
   margin: 1px 25px 4px 0;
-  color: #ff3b30;
+  border-radius: 4px;
+  color: #d70015;
   font-size: 11px;
   font-weight: 600;
   line-height: 15px;
   text-align: right;
   transition: top var(--ss-scroll);
   animation: chat-arrive 0.3s ease 0.5s both;
+}
+
+.chat-undelivered:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-undelivered:focus-visible {
+  outline-offset: 2px;
+}
+
+/* Why it didn't go: a small popover by the message, in the conversation's box */
+.chat-why.ss-popover {
+  width: 248px;
+  max-width: calc(100% - 16px);
+  padding: 0;
+  border-radius: 14px;
+}
+
+.chat-why[data-show] {
+  pointer-events: auto;
+}
+
+.chat-why__in {
+  padding: 12px 6px 6px;
+}
+
+.chat-why__title {
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+}
+
+.chat-why__say {
+  margin: 3px 0 8px;
+  padding: 0 8px;
+  color: var(--ss-text);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.chat-why__acts {
+  display: flex;
+  flex-direction: column;
+  padding-top: 5px;
+  box-shadow: inset 0 0.5px 0 rgba(0, 0, 0, 0.12);
+}
+
+.chat-why__act {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--ss-text-strong);
+  font-size: 13px;
+  text-align: left;
+}
+
+.chat-why__act[data-destructive] {
+  color: #d70015;
+}
+
+.chat-why__act:hover,
+.chat-why__act:focus-visible {
+  background: var(--ss-accent);
+  color: #fff;
+  outline: none;
 }
 
 /* A bubble that goes somewhere: its words are the link, underlined, in the
@@ -730,12 +829,33 @@
   padding: 0 8px 10px;
 }
 
+/* The list takes the keyboard as a whole; the row the arrows are on says so,
+   with a white ring inside its blue (a ring of the accent would not show
+   against it). With no row picked, the list itself is ringed */
 .conv-list:focus-visible {
   outline: none;
 }
 
 .conv-list:focus-visible .conv[data-selected] {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ss-accent) 40%, transparent);
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.conv-list:focus-visible:not(:has(.conv[data-selected])) {
+  outline: 3px solid var(--ring, #0a6de6);
+  outline-offset: -3px;
+}
+
+/* A search that found nothing: the list gives way to the line that says so
+   (which is always there, empty, so that it is heard when it is filled) */
+.conv-list[data-empty] {
+  display: none;
+}
+
+.conv-none:not(:empty) {
+  padding: 10px 16px;
+  color: #63646b;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .conv.ss-row {
@@ -953,6 +1073,99 @@
 }
 
 
+/* A narrow window. Half of a small screen (about 630px) still has room for
+   the list beside the conversation, so the chat keeps its sidebar, a little
+   narrower, down to 560px, where every other window has folded its own away.
+   Narrower than that it is one pane, as it is on a phone: the conversation,
+   with the way to the list in its bar, or the list (`data-listing`), which
+   gives way to the conversation that is picked from it. */
+@container win (min-width: 560px) and (max-width: 640px) {
+  .app.chat > .ss-window__side {
+    display: flex;
+    width: 236px !important;
+  }
+
+  .app.chat > .ss-window__main > .ss-window__bar {
+    padding-left: 14px;
+  }
+}
+
+@container win (max-width: 559.98px) {
+  .chat-back {
+    display: grid;
+  }
+
+  .chat-id {
+    max-width: calc(100% - 250px);
+  }
+
+  .app.chat[data-listing] > .ss-window__side {
+    display: flex;
+    flex: 1;
+    width: auto !important;
+    margin-right: var(--ss-side-inset);
+  }
+
+  .app.chat[data-listing] > .ss-window__main {
+    display: none;
+  }
+}
+
+/* Where there is a touch screen (a tablet, or a laptop that has one:
+   `any-pointer`, since there the trackpad is the main pointer), what a finger
+   presses in the conversation is finger-sized */
+@media (any-pointer: coarse) {
+  .composer__field {
+    height: 38px;
+    border-radius: 19px;
+  }
+
+  .composer__plus,
+  .chat-back {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+  }
+
+  /* The arrow keeps to the field; what takes the press is 40px across */
+  .composer__send {
+    position: relative;
+    width: 30px;
+    height: 30px;
+  }
+
+  .composer__send::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+  }
+
+  .composer__app,
+  .chat-why__act,
+  .details__row {
+    min-height: 40px;
+  }
+
+  .composer__app {
+    height: 40px;
+  }
+
+  .chat__new {
+    height: 36px;
+    padding: 0 16px 0 12px;
+    border-radius: 18px;
+    font-size: 13px;
+  }
+
+  /* The line under a message that didn't go is small type: the press it takes is not */
+  .chat-undelivered::after {
+    content: '';
+    position: absolute;
+    inset: -12px -10px;
+  }
+}
+
+
 /* ---- Sidebars and headings the windows share ---- */
 
 .app > .ss-window__main > .ss-window__bar {
@@ -1041,7 +1254,7 @@
 .side-item__count {
   flex: none;
   font-size: 12px;
-  color: var(--ss-text-faint);
+  color: var(--ss-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1195,6 +1408,19 @@
   -webkit-line-clamp: 2;
 }
 
+/* Two companies share a name: each has its address under it */
+.pf-file__host {
+  max-width: 100%;
+  overflow: hidden;
+  margin-top: -3px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  line-height: 13px;
+  color: var(--ss-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .pf-file[aria-selected='true'] .pf-file__icon {
   background: rgba(0, 0, 0, 0.075);
 }
@@ -1216,9 +1442,11 @@
   font-size: 12.5px;
 }
 
+/* A list is where names are read in full: Name keeps room for the longest of
+   them, and the other two columns share what is left */
 .pf-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.7fr);
+  grid-template-columns: minmax(150px, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.7fr);
   align-items: center;
   width: 100%;
   height: 28px;
@@ -1275,10 +1503,17 @@
   gap: 8px;
 }
 
-.pf-row__name > span:last-child {
+.pf-row__name > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* A namesake's address: it gives way before the name does */
+.pf-row__name > .pf-row__host {
+  flex: 0 100 auto;
+  font-size: 11.5px;
+  color: var(--ss-text);
 }
 
 .pf-row .logo,
@@ -1292,8 +1527,10 @@
   color: #fff;
 }
 
-.pf-row[aria-selected='true'] > span:not(:first-child) {
-  color: rgba(255, 255, 255, 0.86);
+/* White on the accent is 4.8:1; anything fainter is under what small type needs */
+.pf-row[aria-selected='true'] > span:not(:first-child),
+.pf-row[aria-selected='true'] .pf-row__host {
+  color: #fff;
 }
 
 .pf-row:focus-visible {
@@ -1376,6 +1613,55 @@
   background: color-mix(in srgb, var(--ss-accent) 88%, #000);
 }
 
+/* A company with no site to visit: the line that stands where its link would be */
+.pf-preview__fate {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 5px 13px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.055);
+  color: var(--ss-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 16px;
+  text-wrap: balance;
+}
+
+/* Asked to open, with nothing to open: the line shakes its head, once */
+.pf-preview__fate[data-nudged],
+.pf__foot-fate[data-nudged] {
+  animation: pf-nudge 0.5s ease;
+}
+
+@keyframes pf-nudge {
+  0% {
+    color: var(--ss-text-strong);
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-5px);
+  }
+
+  40% {
+    transform: translateX(5px);
+  }
+
+  60% {
+    transform: translateX(-3px);
+  }
+
+  80% {
+    transform: translateX(3px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
 .pf__none,
 .vip__none {
   display: flex;
@@ -1388,6 +1674,21 @@
   color: var(--ss-text-faint);
   font-size: 13px;
   text-align: center;
+}
+
+/* A search that found nothing: what was looked for, and what to try */
+.pf__none {
+  gap: 3px;
+  color: var(--ss-text);
+}
+
+.pf__none > b {
+  max-width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--ss-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .pf__foot {
@@ -1432,6 +1733,56 @@
   font-variant-numeric: tabular-nums;
 }
 
+.pf__foot-end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* The way in to the selected company, for a list that has no preview beside it (below) */
+.pf__foot-visit,
+.pf__foot-fate {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  font-weight: 500;
+}
+
+.pf__foot-visit {
+  color: var(--ss-accent);
+}
+
+.pf__foot-visit:hover > span:first-child {
+  text-decoration: underline;
+}
+
+/* A list beside a preview leaves a laptop-sized window no room for names: the
+   preview stands down, the list takes its width, and what the preview offered
+   (the way in to the company) is in the foot */
+@container win (min-width: 641px) and (max-width: 959px) {
+  .pf__main[data-view='list'] > .pf-preview {
+    display: none;
+  }
+
+  .pf__foot[data-view='list'] .pf__foot-visit,
+  .pf__foot[data-view='list'] .pf__foot-fate {
+    display: inline-flex;
+  }
+}
+
+/* The narrowest window: Vertical is the column that goes, so that Name and About stay */
+@container win (max-width: 460px) {
+  .pf-row {
+    grid-template-columns: minmax(130px, 1fr) minmax(0, 1.3fr);
+  }
+
+  .pf-row > .pf-row__vertical {
+    display: none;
+  }
+}
+
 /* ---- FAQs ---- */
 
 .faq-row {
@@ -1454,6 +1805,11 @@
 .faq-row[data-selected]:hover {
   background: #ffdb63;
   --ss-ink-2: rgba(80, 50, 0, 0.16);
+}
+
+/* Grey on the yellow is hard to read (4.3:1): the line under the open question is the yellow's own dark */
+.faq-row[data-selected] .ss-row__preview[data-text] {
+  color: #5e4700;
 }
 
 .faq-row:focus-visible {
@@ -1479,7 +1835,7 @@
 .faq__meta {
   margin-bottom: 22px;
   font-size: 11.5px;
-  color: var(--ss-text-faint);
+  color: var(--ss-text);
   text-align: center;
 }
 
@@ -1497,7 +1853,49 @@
   line-height: 1.5;
 }
 
-/* An answer still to be written: the slot it goes in, as on the canvas */
+/* An answer still to be written, as a visitor meets it: said plainly, with the way on */
+.faq__pending {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.faq__ways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.faq__way {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.065);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.faq__way:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* The first way on is the one to take */
+.faq__way:first-child {
+  background: var(--ss-accent);
+  color: #fff;
+}
+
+.faq__way:first-child:hover {
+  background: color-mix(in srgb, var(--ss-accent) 88%, #000);
+}
+
+/* The same, in the editor's view (?draft): the slot it goes in, as on the canvas */
 .faq__todo {
   padding: 14px 16px;
   border: 1px dashed #a4a5ad;
@@ -1537,9 +1935,21 @@
 
 /* ---- Case studies ---- */
 
+/* A dark window: the shared focus ring is white on it, and an aside (the
+   kit's `dim`) is a grey that can still be read */
+.term {
+  --ring: #fff;
+  --ss-term-dim: #8e8e96;
+}
+
 .term .ss-term {
   padding: 0;
   font-size: 13px;
+}
+
+/* The kit's title is 4:1 on the bar at 11px: a step lighter */
+.term .ss-term__title {
+  color: #8e8e93;
 }
 
 .term__body {
@@ -1604,11 +2014,90 @@
   outline: none;
 }
 
+/* A line that goes somewhere: a case study anyone can read, the one-pager */
+.os .term__link {
+  color: #9ecbff;
+  text-decoration: underline;
+  text-decoration-color: rgb(158 203 255 / 0.55);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.os .term__link:hover {
+  color: #fff;
+  text-decoration-color: currentColor;
+}
+
+.os .term__link:focus-visible {
+  border-radius: 3px;
+  outline-offset: 2px;
+}
+
+/* Keys for a finger, under the line: only where there is a touch screen, so
+   that answering does not mean raising a keyboard first */
+.term__keys {
+  display: none;
+  flex: none;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.os .term__key {
+  display: grid;
+  place-items: center;
+  min-width: 72px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.11);
+  color: #f1f1f3;
+  font-size: 15px;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.os .term__key:active {
+  background: rgb(255 255 255 / 0.2);
+}
+
+@media (any-pointer: coarse) {
+  .term__keys {
+    display: flex;
+  }
+
+  /* A link is a line of its own: tall enough to press */
+  .os .term__link {
+    display: inline-block;
+    padding: 9px 12px 9px 0;
+  }
+}
+
 /* ---- VIP ---- */
 
 .vip__body {
   display: flex;
   flex-direction: column;
+}
+
+/* The drops along the top, the heading and the grid: what a picture opened large takes the place of */
+.vip__browse {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+
+/* Nothing of a kind: the line under it is the grey that reads */
+.vip__none {
+  gap: 4px;
+  color: var(--ss-text);
+}
+
+.vip__none > b {
+  margin-top: 4px;
+  color: var(--ss-text-strong);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .vip__head {
@@ -1723,6 +2212,165 @@
   white-space: nowrap;
 }
 
+/* A slot whose picture has not arrived, as a visitor sees it: the drop's own
+   colour, let down to paper, with its name on it and what kind of thing is
+   coming. A finished tile, not a wireframe; nothing to press, so not a button */
+.vip-tile--quiet {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 13px 14px 12px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 13%, #fff), color-mix(in srgb, var(--hue) 27%, #f3f4f8));
+  color: color-mix(in srgb, var(--hue) 30%, #1c1d24);
+}
+
+.vip-tile--quiet > svg {
+  flex: none;
+  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
+}
+
+/* A video's is the same colour in the dark, as a video's poster usually is */
+.vip-tile--quiet[data-kind='video'] {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 44%, #1d1d22), color-mix(in srgb, var(--hue) 20%, #131317));
+  color: rgb(255 255 255 / 0.94);
+}
+
+.vip-tile--quiet[data-kind='video'] > svg {
+  color: rgb(255 255 255 / 0.8);
+}
+
+.vip-tile__name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* One that has arrived is pressed to see it large */
+.os .vip-tile--open {
+  display: block;
+}
+
+.vip-tile--open:hover .vip-tile__media {
+  filter: brightness(0.94);
+}
+
+.vip-tile--open:focus-visible {
+  outline-offset: 2px;
+}
+
+.vip-tile__play {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #fff;
+  filter: drop-shadow(0 0 3px rgb(0 0 0 / 0.5));
+}
+
+/* ---- A photo or video opened large: it has the grid's place in the window ---- */
+
+.vip__body--look {
+  overflow: hidden;
+}
+
+.vip-look {
+  /* A dark room for the picture: the focus ring is white in it */
+  --ring: #fff;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background: #121215;
+  color: #fff;
+}
+
+.vip-look__bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.vip-look__title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.vip-look__title > b {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vip-look__title > span,
+.vip-look__count {
+  color: rgb(255 255 255 / 0.66);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.os .vip-look__button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+}
+
+.os .vip-look__button:hover {
+  background: rgb(255 255 255 / 0.24);
+}
+
+.os .vip-look__button[aria-disabled='true'] {
+  opacity: 0.3;
+}
+
+.vip-look__stage {
+  position: relative;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 0;
+  padding: 0 14px 14px;
+}
+
+.vip-look__media {
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.os .vip-look__step {
+  position: absolute;
+  top: calc(50% - 22px);
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: rgb(30 30 34 / 0.72);
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.2);
+}
+
+.vip-look__step[data-side='back'] {
+  left: 20px;
+}
+
+.vip-look__step[data-side='on'] {
+  right: 20px;
+}
+
 /* The kit's segmented control, at the tall bar's size and shape */
 .seg {
   flex: none;
@@ -1745,10 +2393,38 @@
   white-space: nowrap;
 }
 
+/* How many of each have arrived: the grey that reads (the fainter one is 3.4:1 here) */
 .seg__count {
-  margin-left: 2px;
-  color: var(--ss-text-faint);
+  color: var(--ss-text);
   font-variant-numeric: tabular-nums;
+}
+
+/* Where there is a touch screen the parts are a finger's size, and so are the picture's buttons */
+@media (any-pointer: coarse) {
+  .seg .ss-seg {
+    --ss-row: 36px;
+    border-radius: 18px;
+  }
+
+  .seg .ss-seg__thumb {
+    border-radius: 16px;
+  }
+
+  .seg .ss-seg__option {
+    min-width: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+
+  .os .vip-look__button {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+  }
+
+  .os .vip-look__step {
+    top: calc(50% - 26px);
+  }
 }
 
 /* ---- About ---- */
@@ -1762,7 +2438,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 20px 16px;
+  padding: 0 20px 12px;
   /* On a short screen the window is cut short: what's in it scrolls */
   overflow-y: auto;
   scrollbar-width: thin;
@@ -1786,15 +2462,19 @@
   letter-spacing: -0.02em;
 }
 
+/* Who Shrug is, in a sentence */
 .about__kind {
-  margin-top: 1px;
+  max-width: 236px;
+  margin-top: 3px;
   font-size: 12.5px;
+  line-height: 1.35;
   color: var(--ss-text);
+  text-wrap: balance;
 }
 
 .about__facts {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 14px;
   overflow: hidden;
 }
 
@@ -1826,11 +2506,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The ways on: a way to write to Shrug, where there is one, and the one-pager */
+.about__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .about__link {
   display: inline-flex;
   align-items: center;
   height: 28px;
-  margin-top: 14px;
   padding: 0 16px;
   border-radius: 14px;
   background: var(--ss-accent);
@@ -1843,11 +2531,59 @@
   background: color-mix(in srgb, var(--ss-accent) 88%, #000);
 }
 
+/* Beside a way to write, the one-pager is the second of the two */
+.about__link[data-quiet] {
+  background: var(--ss-ink-1);
+  color: var(--ss-text-strong, inherit);
+}
+
+.about__link[data-quiet]:hover {
+  background: var(--ss-ink-2, var(--ss-ink-1));
+}
+
+/* The shrug at the foot. Grey enough to read: 5.4:1 on the window */
 .about__mark {
   margin-top: auto;
   padding-top: 12px;
   font-size: 13px;
-  color: var(--ss-text-faint);
+  color: #63646b;
+}
+
+/* On a short desk the window is shorter than what is in it. It gives up what
+   it can spare before it makes anyone scroll: the icon is drawn smaller, and
+   then the shrug at the foot, which is only a flourish, goes */
+.about__body {
+  container: about / size;
+}
+
+@container about (max-height: 387px) {
+  .about__icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .about__name {
+    margin-top: 8px;
+  }
+
+  .about__facts,
+  .about__links {
+    margin-top: 10px;
+  }
+}
+
+@container about (max-height: 353px) {
+  .about__mark {
+    display: none;
+  }
+}
+
+/* And, shorter still, its rows sit a little closer */
+@container about (max-height: 324px) {
+  .about__fact {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
 }
 
 /* ---- Narrow windows: sidebars are folded away, so content takes over ---- */
@@ -1951,14 +2687,6 @@
     padding-inline: 12px;
   }
 
-  /* No sidebar to pick the group from: a way back to it instead */
-  .chat-back {
-    display: grid;
-  }
-
-  .chat-id {
-    max-width: calc(100% - 250px);
-  }
 }
 
 @container win (max-width: 460px) {
@@ -1989,6 +2717,75 @@
   }
 }
 
+/* Where there is a touch screen (a tablet, or a laptop that has one while its
+   trackpad is still its main pointer), what the Portfolio and FAQs windows,
+   the sidebars, the toolbars and the search fields offer a finger is
+   finger-sized */
+@media (any-pointer: coarse) {
+  .tool__cap {
+    min-width: 40px;
+    height: 40px;
+    border-radius: 20px;
+  }
+
+  .tool__part {
+    width: 40px;
+    height: 36px;
+    border-radius: 18px;
+  }
+
+  .search {
+    height: 34px;
+    border-radius: 17px;
+  }
+
+  .pf .tool--search .search {
+    height: 40px;
+    border-radius: 20px;
+  }
+
+  /* The clear button stays its size; what takes the press is 44px across */
+  .search__clear {
+    position: relative;
+  }
+
+  .search__clear::after {
+    content: '';
+    position: absolute;
+    inset: -14.5px;
+  }
+
+  .side-item,
+  .chip {
+    height: 36px;
+  }
+
+  .chip {
+    border-radius: 18px;
+  }
+
+  .pf-row:not(.pf-row--head) {
+    height: 36px;
+  }
+
+  .pf-preview__visit,
+  .pf-preview__fate,
+  .faq__way {
+    height: 36px;
+    min-height: 36px;
+    border-radius: 18px;
+  }
+
+  .pf__foot {
+    height: 36px;
+  }
+
+  .pf__foot-visit {
+    min-height: 36px;
+    padding: 0 4px;
+  }
+}
+
 /* A phone zooms the page when a field's type is under 16px: keep it at 16 */
 @media (pointer: coarse) {
   .composer__input,
@@ -1996,21 +2793,6 @@
   .search__input,
   .term__input {
     font-size: 16px;
-  }
-
-  .composer__field {
-    height: 36px;
-    border-radius: 18px;
-  }
-
-  .composer__plus {
-    width: 34px;
-    height: 34px;
-  }
-
-  .composer__send {
-    width: 28px;
-    height: 28px;
   }
 
   .search {
@@ -2041,5 +2823,19 @@
 
   .faq__note {
     animation: none;
+  }
+
+  /* The line still answers, by darkening for a moment, without the shake */
+  .pf-preview__fate[data-nudged],
+  .pf__foot-fate[data-nudged] {
+    animation-name: pf-nudge-still;
+    animation-duration: 1.2s;
+  }
+}
+
+@keyframes pf-nudge-still {
+  0%,
+  60% {
+    color: var(--ss-text-strong);
   }
 }

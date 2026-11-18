@@ -1,16 +1,20 @@
-import { useMemo } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
-import { ANSWER_PLACEHOLDER, FAQS } from '../data/faqs'
+import { useEffect, useMemo, useRef } from 'react'
+import { ArrowUpRight, ChevronDown, ChevronUp } from 'lucide-react'
+import { ANSWER_PENDING, ANSWER_PENDING_LINE, ANSWER_PLACEHOLDER, FAQS, waysOn } from '../data/faqs'
+import { DRAFT } from '../data/site'
 import { Row } from '../kit/parts/Row'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
-import { notes, setNotesQuery, showNote } from './state'
+import { notes, setNotesQuery, showNote, sought } from './state'
 import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 
 // The FAQs as a notes window: each question is a note. The questions are
-// real; the answers haven't been written, so each note holds the slot for one.
+// real; the answers haven't been written. A visitor is told so, in a line
+// written for them, and given the way on (Shrug itself once there is an
+// address to write to, and the one-pager); the editor's view (`?draft`) shows
+// the slot the answer goes in, as the canvas drew it.
 
-/** How long the stand-in preview line runs under a question with no answer yet. */
+/** The editor's view: how long the stand-in preview line runs under a question with no answer yet. */
 const PREVIEW = [148, 132, 156, 120, 144, 136, 152]
 
 export function NotesApp() {
@@ -20,6 +24,24 @@ export function NotesApp() {
   const shown = useMemo(() => FAQS.map((faq, i) => ({ faq, i })).filter(({ faq }) => !q || faq.question.toLowerCase().includes(q) || (faq.answer ?? '').toLowerCase().includes(q)), [q])
   const current = FAQS[note]!
   const step = (by: number) => showNote((note + by + FAQS.length) % FAQS.length)
+  const list = useRef<HTMLDivElement>(null)
+
+  // The window follows the search as it is typed: when the question that is open
+  // is not among those found, the first of them is shown. (Only a change to
+  // the search does this: Next and Previous still go where they say.)
+  const open = useRef(note)
+  open.current = note
+  useEffect(() => {
+    if (q && shown.length && !shown.some(({ i }) => i === open.current)) showNote(shown[0]!.i)
+  }, [q, shown])
+
+  /** From the search field into what it found: the first question is shown, and its row takes the keyboard. */
+  const intoResults = () => {
+    const first = shown[0]
+    if (!first) return
+    showNote(first.i)
+    list.current?.querySelector<HTMLElement>('.faq-row')?.focus()
+  }
 
   return (
     <Window
@@ -32,10 +54,10 @@ export function NotesApp() {
       sidebar={
         <div className="side side--notes">
           <div className="side__top">
-            <SearchField value={query} onChange={setNotesQuery} label="Search the FAQs" />
+            <SearchField value={query} onChange={setNotesQuery} label="Search the FAQs" onEnter={intoResults} onArrowDown={intoResults} />
           </div>
           <SideLabel count={q ? `${shown.length} of ${FAQS.length}` : FAQS.length}>Questions</SideLabel>
-          <div className="side__list scrolls">
+          <div ref={list} className="side__list scrolls">
             {shown.map(({ faq, i }) => (
               <Row
                 key={i}
@@ -46,7 +68,7 @@ export function NotesApp() {
                 aria-current={i === note || undefined}
                 selected={i === note}
                 title={faq.question}
-                preview={faq.answer ?? [PREVIEW[i % PREVIEW.length]!]}
+                preview={faq.answer ?? (DRAFT ? [PREVIEW[i % PREVIEW.length]!] : ANSWER_PENDING_LINE)}
                 onClick={() => showNote(i)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -61,7 +83,12 @@ export function NotesApp() {
                 }}
               />
             ))}
-            {shown.length === 0 && <div className="side-empty">No question matches</div>}
+            {shown.length === 0 && (
+              <div className="side-empty" role="status">
+                <b>No Results for “{sought(query)}”</b>
+                <span>Check the spelling or try a new search.</span>
+              </div>
+            )}
           </div>
         </div>
       }
@@ -84,7 +111,28 @@ export function NotesApp() {
           Question {note + 1} of {FAQS.length}
         </p>
         <h2 className="faq__title">{current.question}</h2>
-        {current.answer ? <p className="faq__answer">{current.answer}</p> : <p className="faq__todo">{ANSWER_PLACEHOLDER}</p>}
+        {current.answer ? (
+          <p className="faq__answer">{current.answer}</p>
+        ) : DRAFT ? (
+          <p className="faq__todo">{ANSWER_PLACEHOLDER}</p>
+        ) : (
+          <div className="faq__pending">
+            <p>{ANSWER_PENDING}</p>
+            <p className="faq__ways">
+              {waysOn(current.question).map((way) => (
+                <a key={way.label} className="faq__way" href={way.href} draggable={false} {...(way.leaves ? { target: '_blank', rel: 'noreferrer' } : null)}>
+                  {way.label}
+                  {way.leaves && (
+                    <>
+                      <ArrowUpRight size={13} strokeWidth={2.2} aria-hidden />
+                      <span className="sr-only">, opens in a new tab</span>
+                    </>
+                  )}
+                </a>
+              ))}
+            </p>
+          </div>
+        )}
       </article>
       {/* With the sidebar folded away, the questions are listed under the note */}
       <nav className="faq__more" aria-label="More questions">

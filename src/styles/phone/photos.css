@@ -8,7 +8,7 @@
   inset: 0;
 }
 
-/* ---- A picture, or the slot one will go in ---- */
+/* ---- A picture, or the tile that keeps its place ---- */
 
 .photos-pic {
   position: absolute;
@@ -26,8 +26,9 @@
   object-fit: cover;
 }
 
-/* A slot is its drop's colour, let down nearly to paper, with a faint weave
-   so it reads as a place kept and not as a picture that failed to load */
+/* A tile whose picture has not arrived is its drop's colour, let down nearly
+   to paper, with the drop's name on it in an ink that reads: a finished tile,
+   so the grid looks kept and not broken */
 .photos-pic__slot {
   position: absolute;
   inset: 0;
@@ -36,17 +37,28 @@
   justify-items: center;
   gap: 5px;
   padding: 6px 8px 8px;
-  background-color: color-mix(in srgb, var(--hue) 15%, #f5f5f8);
-  background-image: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--hue) 9%, transparent) 9px 10px);
-  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 12%, #fcfcfe), color-mix(in srgb, var(--hue) 26%, #f2f2f6));
+  color: color-mix(in srgb, var(--hue) 30%, #1c1d24);
   text-align: center;
 }
 
-/* A video's slot is the same colour in the dark, as a video's poster usually is */
+.photos-pic__slot > svg {
+  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
+}
+
+/* A video's is the same colour in the dark, as a video's poster usually is */
 .photos-pic[data-kind='video'] > .photos-pic__slot {
-  background-color: color-mix(in srgb, var(--hue) 34%, #1b1b22);
-  background-image: none;
-  color: rgb(255 255 255 / 0.86);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 42%, #1d1d24), color-mix(in srgb, var(--hue) 22%, #141419));
+  color: rgb(255 255 255 / 0.94);
+}
+
+.photos-pic[data-kind='video'] > .photos-pic__slot > svg {
+  color: rgb(255 255 255 / 0.8);
+}
+
+/* The editor's view (`?draft`): a faint weave over it, which says a place is being kept for something */
+.photos-pic[data-draft][data-kind='photo'] > .photos-pic__slot {
+  background: color-mix(in srgb, var(--hue) 15%, #f5f5f8) repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--hue) 9%, transparent) 9px 10px);
 }
 
 .photos-pic__name {
@@ -130,10 +142,15 @@
   text-align: center;
 }
 
-.photos-note::first-line {
+.photos-note:not(.photos-note--plain)::first-line {
   color: var(--label);
   font-size: 15px;
   font-weight: 600;
+}
+
+/* With nothing to count yet it is the quieter line alone, on as many lines as it takes */
+.photos-note--plain {
+  text-wrap: balance;
 }
 
 /* ---- The tabs ---- */
@@ -159,14 +176,21 @@
 }
 
 /* What floats at the foot: the tab bar is as wide as its two tabs, and search
-   keeps to the far corner, as iOS sets a short tab bar */
+   keeps to the far corner, as iOS sets a short tab bar. On the narrowest
+   phones the tabs give up some of their width so that search still fits */
 .photos-app .ios-tabs {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .photos-app .ios-tabs__item {
+  flex: 0 1 96px;
+  width: auto;
+  min-width: 0;
+}
+
+.photos-app .ios-foot > .ios-button {
   flex: none;
-  width: 96px;
 }
 
 .photos-app .photos-gap {
@@ -444,7 +468,7 @@ video.photos-page__media {
   max-height: calc(100% - var(--clear));
 }
 
-/* A slot, full width: a photo's stands as a phone takes one, a video's lies as one is shot */
+/* The same tile, full width: a photo's stands as a phone takes one, a video's lies as one is shot */
 .photos-big {
   position: relative;
   display: grid;
@@ -455,19 +479,31 @@ video.photos-page__media {
   max-height: 100%;
   aspect-ratio: 3 / 4;
   overflow: hidden;
-  background-color: color-mix(in srgb, var(--hue) 15%, #f5f5f8);
-  background-image: repeating-linear-gradient(135deg, transparent 0 13px, color-mix(in srgb, var(--hue) 9%, transparent) 13px 14px);
-  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 12%, #fcfcfe), color-mix(in srgb, var(--hue) 26%, #f2f2f6));
+  color: color-mix(in srgb, var(--hue) 30%, #1c1d24);
   text-align: center;
+}
+
+.photos-big > svg:first-child {
+  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
 }
 
 .photos-big[data-kind='video'] {
   aspect-ratio: 16 / 10;
-  background-color: color-mix(in srgb, var(--hue) 34%, #1b1b22);
-  background-image: none;
-  color: rgb(255 255 255 / 0.86);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 42%, #1d1d24), color-mix(in srgb, var(--hue) 22%, #141419));
+  color: rgb(255 255 255 / 0.94);
 }
 
+.photos-big[data-kind='video'] > svg:first-child {
+  color: rgb(255 255 255 / 0.8);
+}
+
+/* The editor's view: the weave of a place being kept */
+.photos-big[data-draft][data-kind='photo'] {
+  background: color-mix(in srgb, var(--hue) 15%, #f5f5f8) repeating-linear-gradient(135deg, transparent 0 13px, color-mix(in srgb, var(--hue) 9%, transparent) 13px 14px);
+}
+
+/* The small line: "On its way" under the name (to the editor, which slot it is, over it) */
 .photos-big > b {
   margin-top: 8px;
   font-size: 12px;
@@ -475,19 +511,30 @@ video.photos-page__media {
   letter-spacing: 0.06em;
   line-height: 16px;
   text-transform: uppercase;
-  opacity: 0.8;
+  opacity: 0.86;
 }
 
 .photos-big > span {
+  margin-top: 8px;
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 25px;
 }
 
+.photos-big > b + span,
+.photos-big > span + b {
+  margin-top: 0;
+}
+
 .photos-big > .photos-pic__play {
   right: 12px;
   bottom: 12px;
+}
+
+/* A dark room for the picture: the shared focus ring is white in it */
+.photos-viewer {
+  --ring: #fff;
 }
 
 /* A tall picture runs up under the bar: the bar's shade is always there, so its words read over anything */

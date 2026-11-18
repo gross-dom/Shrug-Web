@@ -134,13 +134,13 @@ export const PEOPLE: Person[] = [
   p('Elizabeth Weil', 'Founder of Scribble Ventures', 'LC',
     'Scribble Ventures has been delighted to work with Moshe and Niv through the years. This team has been wonderful to co-invest with, deal swap, spar on company ideas and investments, and extend our network to help founders build awesome companies. I love the momentum they bring to the industry and the drive and push they have to make good decisions and hustle for companies.'),
 
-  p('Veeraj Chugh', 'Co-founder of Opal', 'F',
+  p('Veeraj Chugh', 'Co-Founder of Opal', 'F',
     'Every time I\'ve interacted with Niv, I\'ve been struck by how deeply he gets marketing and the intricacies of consumer behavior. He\'s not just about big shiny ideas; he truly understands the details of how to communicate to investors, customers and other humans. Shrug’s team is incredibly responsive and you leave every conversation with a confidence that these guys will be there for you, come what may. It’s incredibly refreshing to have trusted partners like them in the venture world.'),
 
   p('Sam Corcos', 'Co-Founder and CEO of Levels', 'F',
     'Moshe was the second person to receive the pitch for the company that ultimately became Levels. He\'s incredibly responsive and generous with his time, which is something on which we index heavily when looking for investors. Shrug has also been helpful in spreading the word and generating revenue for us at Levels.'),
 
-  p('Ryan Delk', 'Co-founder of Primer', 'F',
+  p('Ryan Delk', 'Co-Founder of Primer', 'F',
     'Niv has the x-factor that’s hard to find: he does the work.” I briefly asked him for feedback on a deck a few weeks ago and he sent back ~2,000 words of detailed feedback. He’s always willing to roll up his sleeves with the team.'),
 
   p('Matteo Franceschetti', 'Co-Founder of Eight Sleep', 'FC',
@@ -251,7 +251,7 @@ export const PEOPLE: Person[] = [
   p('Andres Ugarte', 'Co-Founder of Copilot', 'F',
     'Niv is a great partner for product-oriented founders. He understands what makes a product special, and how to create a community around it. He’s extremely proactive, and has the best network in the industry. 10/10, would recommend to a friend.'),
 
-  p('Braden Ream', 'Co-Founder of VoiceFlow', 'F',
+  p('Braden Ream', 'Co-Founder of Voiceflow', 'F',
     'Niv and the Shrug team were instrumental to Voiceflow raising our earliest rounds of funding. Niv coached us through the pitch, helped us refine our story, and ultimately made the introductions that led to True Ventures leading our Seed round. I couldn\'t recommend Shrug more highly as a fantastic partner to early stage founders.'),
 
   p('Sean Rose', 'Angel Investor', 'LC',

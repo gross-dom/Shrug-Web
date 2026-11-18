@@ -1,23 +1,28 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { chat, QUESTION, setChatUnseen, TOTAL } from '../apps/chat'
 import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
+import { eggOf } from '../data/eggs'
+import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
+import { COMPANIES } from '../data/portfolio'
 import { SITE } from '../data/site'
 import type { Rect } from '../kit/measure'
 import { Expand } from '../kit/motion/Expand'
 import { LockScreen, Notification } from '../kit/phone'
 import { Boundary } from '../os/Boundary'
+import { firstControl, focusFirst, focusLost } from '../os/focus'
 import { useStore } from '../os/store'
+import { setTitle } from '../os/title'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { GROUP_VIEW } from './apps/routes'
 import { COLOR, carried, chrome } from './chrome'
 import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
-import { OnePagerIcon, PhoneIcon } from './icons'
+import { LockGlyph, OnePagerIcon, PhoneIcon } from './icons'
 import { haptic } from './native'
 import { settings } from './settings'
 import { Spotlight } from './Spotlight'
-import { goHome, launch, launchAt, lock, pop, quit, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp } from './system'
+import { goHome, launch, launchAt, lock, pop, quit, refocus, showSpotlight, showSwitcher, sys, topOf, unlock, type PhoneApp, type Sys } from './system'
 import { clockOf, dateOf, useNow } from './time'
 import { useNewCount } from './unread'
 import { AppContext, scaleOf } from './ui'
@@ -57,6 +62,19 @@ function originRect(name: string): Rect | null {
 }
 
 const iconOrigin = (id: PhoneApp) => `icon:${id}`
+
+/** What each app last opened out of, when that was not its own icon (a widget, a notification): where the
+ * keyboard goes back to when the app is put away. */
+const cameFrom = new Map<PhoneApp, string>()
+
+/** The thing on the Home Screen that an app opened out of, to give the keyboard back to: what is marked
+ * with that origin if it is there (the widget), or else the app's icon. */
+function opener(home: HTMLElement | null, app: PhoneApp | null) {
+  if (!home || !app) return null
+  const marked = (name: string) => [...home.querySelectorAll<HTMLElement>('[data-origin]')].find((el) => el.dataset.origin === name)?.closest<HTMLElement>('button, a') ?? null
+  const from = cameFrom.get(app)
+  return (from ? marked(from) : null) ?? marked(iconOrigin(app))
+}
 
 /** Something opens the conversation: the reply it is about, as a notification shows it. */
 function Reply({ index, banner, origin, onOpen, className }: { index: number; banner?: boolean; origin: string; onOpen: () => void; className?: string }) {
@@ -112,9 +130,11 @@ function Lock() {
   const now = useNow()
   const root = useRef<HTMLDivElement>(null)
   const drag = useRef<{ y: number; t: number; dy: number; v: number; k: number; moving: boolean } | null>(null)
+  /** When the screen was last tapped where there is nothing to press: a second tap soon after opens it. */
+  const tapped = useRef(0)
   // It stays drawn while it slides away
   const [shown, setShown] = useState(locked)
-  const [hint, setHint] = useState(false)
+  const [torch, setTorch] = useState(false)
   if (locked && !shown) setShown(true)
   useEffect(() => {
     if (locked || !shown) return
@@ -122,19 +142,18 @@ function Lock() {
     return () => clearTimeout(t)
   }, [locked, shown])
 
-  // "Swipe up to open" comes up after a moment, as it does on waking a phone
+  // The torch does not stay on behind a phone that has been opened
   useEffect(() => {
-    if (!locked) return setHint(false)
-    const t = setTimeout(() => setHint(true), 1400)
-    return () => clearTimeout(t)
+    tapped.current = 0
+    if (!locked) setTorch(false)
   }, [locked])
 
-  // Any key opens it
+  // Any key opens it. A key pressed on one of its own controls (a notification, the torch) is that control's
   useEffect(() => {
     if (!locked) return
     const key = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.key === 'Tab' || e.key === 'Shift') return
-      if ((e.target as HTMLElement).closest?.('.sb-note')) return
+      if ((e.target as HTMLElement).closest?.('.sb-note, button')) return
       e.preventDefault()
       unlock()
     }
@@ -174,10 +193,32 @@ function Lock() {
     place(dy, true)
   }
 
+  /** The screen lifts a little and falls back, as an iPhone's does when it is tapped: which way it opens. */
+  const nudge = () => {
+    const el = root.current
+    if (!el) return
+    el.removeAttribute('data-nudge')
+    // Read once, so that a second tap starts the move over instead of being swallowed by the first
+    void el.offsetWidth
+    el.setAttribute('data-nudge', '')
+  }
+
   const up = (e: ReactPointerEvent) => {
     const d = drag.current
     drag.current = null
-    if (!d || !d.moving) return
+    if (!d) return
+    if (!d.moving) {
+      // A tap, which is what most people try first. On a notification or a button it is theirs. Anywhere
+      // else the screen answers it (it lifts and falls back under the words that say how it opens), and a
+      // second tap soon after opens it
+      if ((e.target as HTMLElement).closest?.('.sb-note, button')) return
+      if (tapped.current && e.timeStamp - tapped.current < 2000) {
+        haptic()
+        return unlock()
+      }
+      tapped.current = e.timeStamp
+      return nudge()
+    }
     const speed = e.timeStamp - d.t > 90 ? 0 : d.v
     place(0, false)
     if (d.dy < -110 || (d.dy < -20 && speed < -0.45)) {
@@ -186,18 +227,57 @@ function Lock() {
     }
   }
 
+  /** The touch was taken away (a call, a system gesture): nothing was tapped. */
+  const cancel = () => {
+    const d = drag.current
+    drag.current = null
+    if (d?.moving) place(0, false)
+  }
+
   if (!shown) return null
   return (
-    <div ref={root} className="sb-lock" data-leaving={!locked || undefined} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} {...(locked ? null : ({ inert: '' } as object))}>
-      <LockScreen date={dateOf(now)} time={clockOf(now)}>
+    <div
+      ref={root}
+      className="sb-lock"
+      data-leaving={!locked || undefined}
+      data-torch={torch || undefined}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={cancel}
+      onAnimationEnd={(e) => e.target === e.currentTarget && e.currentTarget.removeAttribute('data-nudge')}
+      {...(locked ? null : ({ inert: '' } as object))}
+    >
+      {/* The torch's light, up from its button */}
+      <span className="sb-lock__beam" aria-hidden />
+      {/* The kit draws its two round buttons as pictures; the ones below it can be pressed */}
+      <LockScreen date={dateOf(now)} time={clockOf(now)} controls={false}>
         {announced && replied > 0 && (
           <div className="sb-stack" data-more={replied > 1 ? (replied > 2 ? 2 : 1) : undefined}>
             <Reply key={replied} index={replied - 1} origin="lock-note" onOpen={() => openGroup('lock-note')} />
           </div>
         )}
       </LockScreen>
+      <div className="sb-lock__controls">
+        <button
+          type="button"
+          className="sb-lock__control"
+          aria-label="Flashlight"
+          aria-pressed={torch}
+          onClick={() => {
+            haptic()
+            setTorch((on) => !on)
+          }}
+        >
+          <LockGlyph name="torch" />
+        </button>
+        {/* An iPhone's camera is where its photos come from; this one opens where Shrug's are */}
+        <button type="button" className="sb-lock__control" aria-label={`Camera: opens ${PHONE.photos.label}`} data-origin="lock:camera" onClick={() => launch('photos', 'lock:camera')}>
+          <LockGlyph name="camera" />
+        </button>
+      </div>
       {/* A swipe opens it, as on any iPhone; the words can be pressed too, for a mouse or a keyboard */}
-      <button type="button" className="sb-lock__hint" data-show={hint || undefined} onClick={unlock}>
+      <button type="button" className="sb-lock__hint" onClick={unlock}>
         Swipe up to open
       </button>
     </div>
@@ -230,7 +310,10 @@ function LinkIcon({ name, href, children }: { name: string; href: string; childr
   return (
     <a className="sb-icon" href={href} target="_blank" rel="noreferrer">
       <span className="sb-icon__tile">{children}</span>
-      <span className="sb-icon__name">{name}</span>
+      <span className="sb-icon__name">
+        {name}
+        <span className="sr-only">, opens in a new tab</span>
+      </span>
     </a>
   )
 }
@@ -246,8 +329,10 @@ function ChatWidget() {
           <GroupAvatar size={24} />
           <span className="sb-chat__name">{GROUP_NAME}</span>
           <span className="sb-chat__count">
-            {replied} of {TOTAL}
-            <span className="sr-only"> have replied</span>
+            <span aria-hidden>
+              {replied} of {TOTAL}
+            </span>
+            <span className="sr-only">{replied === 0 ? 'No one has replied yet' : `${replied} of ${TOTAL} ${replied === 1 ? 'has' : 'have'} replied`}</span>
           </span>
         </span>
         {latest ? (
@@ -278,19 +363,44 @@ function Home() {
   const locked = useStore(sys, (s) => s.locked)
   const spotlight = useStore(sys, (s) => s.spotlight)
   // A folder open over the Home Screen: the icons fall out of focus behind it
-  const folder = useOpenFolder() !== null
+  const open = useOpenFolder()
+  const folder = open !== null
   const hidden = covered || locked || spotlight || folder
   // A pull down on the Home Screen brings up search, as it does on an iPhone
   const pull = useRef<{ x: number; y: number; k: number } | null>(null)
+  const root = useRef<HTMLDivElement>(null)
+  /** The folder that was last open over it. */
+  const wasOpen = useRef<string | null>(null)
+  if (open) wasOpen.current = open
+
+  // The Home Screen is back in front (an app has been put away, a folder shut, the phone opened) and the
+  // keyboard was on what has gone: it goes to what that came out of (the folder, the app's icon, the
+  // widget), or to what had it when the phone locked, and never to nowhere
+  useEffect(() => {
+    if (hidden) return
+    const shut = wasOpen.current
+    wasOpen.current = null
+    const frame = requestAnimationFrame(() => {
+      const el = root.current
+      if (!el || !focusLost()) return
+      const tile = shut ? el.querySelector<HTMLElement>(`[data-origin="folder:${shut}"]`)?.closest<HTMLElement>('button') : null
+      refocus(tile, opener(el, sys.get().prev), firstControl(el))
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [hidden])
+
   return (
     <div
+      ref={root}
       className="sb-home"
       data-covered={covered || undefined}
       data-locked={locked || undefined}
       data-searching={spotlight || undefined}
       data-folder={folder || undefined}
       onPointerDown={(e) => {
-        if (e.pointerType !== 'mouse') pull.current = { x: e.clientX, y: e.clientY, k: scaleOf(e.currentTarget) }
+        // Where the Home Screen scrolls (a screen too small to lay it out on), a drag down is a scroll, not the pull
+        const scrolls = e.currentTarget.scrollHeight > e.currentTarget.clientHeight + 1
+        if (e.pointerType !== 'mouse' && !scrolls) pull.current = { x: e.clientX, y: e.clientY, k: scaleOf(e.currentTarget) }
       }}
       onPointerMove={(e) => {
         const p = pull.current
@@ -351,7 +461,15 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   // One app opened from inside another slides in over it, as iOS takes you from app to app
   const [slide, setSlide] = useState<'in' | 'under' | null>(null)
   const wasSwitcher = useRef(switcher)
+  const slot = useRef<HTMLDivElement>(null)
   const Root = PHONE[id].Root
+
+  // What it opened out of, for the keyboard to go back to when it is put away
+  useEffect(() => {
+    if (!front) return
+    if (origin && !origin.startsWith('icon:')) cameFrom.set(id, origin)
+    else cameFrom.delete(id)
+  }, [front, origin, id])
 
   useLayoutEffect(() => {
     const left = wasSwitcher.current && !switcher
@@ -402,16 +520,30 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const open = switcher || lingering || slide === 'under' ? true : zoom.open
   const still = switcher || lingering || slide ? true : zoom.still
   const active = front && !locked && !switcher
+
+  // In front and open: the keyboard comes in with it, onto the screen it is showing (or back to where it
+  // was in here, if the phone has just been opened again over it). Whatever opened it is behind it now
+  useEffect(() => {
+    if (!active || !open) return
+    const frame = requestAnimationFrame(() => {
+      const el = slot.current
+      if (!el || el.contains(document.activeElement)) return
+      const pages = el.querySelectorAll<HTMLElement>('.ios-page[data-pos="top"]')
+      refocus(pages[pages.length - 1], el.querySelector('.sb-drag'))
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [active, open])
   // Out of anything but its icon (a widget, a notification), it grows from a plain card the shape of that thing
   const card = origin !== null && !origin.startsWith('icon:')
   return (
-    <div className="sb-slot" data-app={id} data-front={front || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order } as CSSProperties}>
+    <div ref={slot} className="sb-slot" data-app={id} data-front={front || undefined} data-open={(front && zoom.open) || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order, '--tone': COLOR[tone] } as CSSProperties}>
       <div className="sb-slot__label" aria-hidden>
         <span className="sb-slot__icon">
           <PhoneIcon id={id} />
         </span>
         {PHONE[id].label}
       </div>
+      {switcher && <CardClose id={id} />}
       <div className="sb-card">
         <Expand
           open={open}
@@ -426,7 +558,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
           style={{ '--ss-expand-bg': COLOR[tone] } as CSSProperties}
           {...(active ? null : ({ inert: '' } as object))}
         >
-          <div className="sb-drag">
+          <div className="sb-drag" tabIndex={-1}>
             <AppContext.Provider value={{ app: id, active }}>
               {/* An app that fails does what an app on an iPhone does: it is gone, back to the Home Screen, and starts afresh next time */}
               <Boundary onError={() => quit(id)}>
@@ -441,11 +573,48 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   )
 }
 
-/** A card in the App Switcher: tap it to go to the app, flick it up to close it. The row of cards pans under a sideways drag. */
+const strip = () => document.querySelector<HTMLElement>('.sb-apps')
+const slotOf = (el: Element) => el.closest<HTMLElement>('.sb-slot')
+
+/** Closes an app from the App Switcher: its card flies off the top, the others close up, and the keyboard
+ * goes to the card that is left in its place. With none left, it is the Home Screen. */
+function throwAway(id: PhoneApp, el: HTMLElement, apps: HTMLElement) {
+  el.style.setProperty('--lift', `-130%`)
+  el.setAttribute('data-thrown', '')
+  setTimeout(() => {
+    const keyboard = el.contains(document.activeElement)
+    quit(id)
+    const left = sys.get().recents.length
+    const stride = apps.offsetWidth * 0.76
+    const pan = parseFloat(apps.style.getPropertyValue('--pan') || '0')
+    apps.style.setProperty('--pan', `${Math.min(pan, Math.max(0, left - 1) * stride)}px`)
+    if (!left) return goHome()
+    if (keyboard) requestAnimationFrame(() => focusFirst(apps.querySelector('.sb-card__hit')))
+  }, 240)
+}
+
+/** The small button over a card in the App Switcher that closes its app: for a hand, or a pointer, that cannot flick. */
+function CardClose({ id }: { id: PhoneApp }) {
+  return (
+    <button
+      type="button"
+      className="sb-slot__close"
+      aria-label={`Close ${PHONE[id].label}`}
+      onClick={(e) => {
+        const apps = strip()
+        const el = slotOf(e.currentTarget)
+        if (apps && el) throwAway(id, el, apps)
+      }}
+    >
+      <X size={15} strokeWidth={3} aria-hidden />
+    </button>
+  )
+}
+
+/** A card in the App Switcher: tap it to go to the app, flick it up to close it (or press its close button, or Delete). The row of cards pans under a sideways drag. */
 function CardHandle({ id }: { id: PhoneApp }) {
   const drag = useRef<{ x: number; y: number; t: number; dx: number; dy: number; vy: number; k: number; axis: 'x' | 'y' | null; pan: number } | null>(null)
-  const strip = () => document.querySelector<HTMLElement>('.sb-apps')
-  const slot = (el: Element) => el.closest<HTMLElement>('.sb-slot')
+  const slot = slotOf
 
   const down = (e: ReactPointerEvent) => {
     const apps = strip()
@@ -493,27 +662,42 @@ function CardHandle({ id }: { id: PhoneApp }) {
       return
     }
     const speed = e.timeStamp - d.t > 90 ? 0 : d.vy
-    if (d.dy < -130 || (d.dy < -30 && speed < -0.5)) {
-      // Flicked away: the app is closed
-      el.style.setProperty('--lift', `-130%`)
-      el.setAttribute('data-thrown', '')
-      setTimeout(() => {
-        quit(id)
-        const left = sys.get().recents.length
-        const stride = apps.offsetWidth * 0.76
-        const pan = parseFloat(apps.style.getPropertyValue('--pan') || '0')
-        apps.style.setProperty('--pan', `${Math.min(pan, Math.max(0, left - 1) * stride)}px`)
-        if (!left) goHome()
-      }, 240)
-    } else el.style.setProperty('--lift', '0px')
+    // Flicked away: the app is closed
+    if (d.dy < -130 || (d.dy < -30 && speed < -0.5)) throwAway(id, el, apps)
+    else el.style.setProperty('--lift', '0px')
   }
 
-  return <button type="button" className="sb-card__hit" aria-label={`${PHONE[id].label}. Open it; flick it up to close it.`} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onKeyDown={(e) => e.key === 'Enter' && launch(id)} />
+  return (
+    <button
+      type="button"
+      className="sb-card__hit"
+      aria-label={`${PHONE[id].label}. Open it, or press Delete to close it.`}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      // A card off to the side that takes the keyboard is brought to the middle
+      onFocus={(e) => {
+        const apps = strip()
+        const at = sys.get().recents.indexOf(id)
+        if (apps && at >= 0 && e.currentTarget.matches(':focus-visible')) apps.style.setProperty('--pan', `${at * apps.offsetWidth * 0.76}px`)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') return launch(id)
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return
+        e.preventDefault()
+        const apps = strip()
+        const el = slot(e.currentTarget)
+        if (apps && el) throwAway(id, el, apps)
+      }}
+    />
+  )
 }
 
 function Apps() {
   const recents = useStore(sys, (s) => s.recents)
   const switcher = useStore(sys, (s) => s.switcher)
+  const locked = useStore(sys, (s) => s.locked)
   const root = useRef<HTMLDivElement>(null)
   // Apps keep their place in the page whatever order they were last used in, so nothing remounts
   const [mounted, setMounted] = useState<PhoneApp[]>(recents)
@@ -525,9 +709,20 @@ function Apps() {
     if (switcher) root.current?.style.setProperty('--pan', '0px')
   }, [switcher])
 
+  // Opened from the keyboard, the keyboard goes to the first card
+  useEffect(() => {
+    if (!switcher) return
+    const frame = requestAnimationFrame(() => {
+      const el = root.current
+      if (el && (focusLost() || document.activeElement?.closest('.sb-homebar'))) focusFirst(el.querySelector('.sb-card__hit'))
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [switcher])
+
   return (
-    <div ref={root} className="sb-apps" data-switcher={switcher || undefined}>
-      {switcher && <button type="button" className="sb-apps__away" aria-label="Home Screen" onClick={goHome} />}
+    <div ref={root} className="sb-apps" data-switcher={switcher || undefined} data-locked={locked || undefined}>
+      {/* A press beside the cards goes home. For a pointer only: the home bar's own button says "Home Screen" once */}
+      {switcher && <div className="sb-apps__away" aria-hidden onClick={goHome} />}
       {mounted.map((id) => (
         <AppSlot key={id} id={id} order={recents.indexOf(id)} />
       ))}
@@ -602,7 +797,11 @@ function HomeBar({ drawn }: { drawn: boolean }) {
   const root = useRef<HTMLDivElement>(null)
   const drag = useRef<{ x: number; y: number; t: number; dy: number; dx: number; v: number; k: number; h: number; el: HTMLElement | null } | null>(null)
   const hold = useRef<ReturnType<typeof setTimeout>>()
+  const press = useRef<ReturnType<typeof setTimeout>>()
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
+  // Something is over the Home Screen that "Home Screen" would put away: an app, the switcher, search, a folder
+  const away = useStore(sys, (s) => !s.locked && (s.app !== null || s.switcher || s.spotlight || s.sheet !== null))
+  const running = useStore(sys, (s) => s.recents.length > 0)
 
   const follow = (el: HTMLElement | null, dy: number, dx: number, h: number) => {
     if (!el) return
@@ -627,6 +826,17 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     const el = at === 'app' ? screen.querySelector<HTMLElement>('.sb-slot[data-front] .sb-drag') : null
     drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dy: 0, dx: 0, v: 0, k: scaleOf(screen), h: screen.offsetHeight, el }
     e.currentTarget.setPointerCapture(e.pointerId)
+    // Pressed and held where it is, it asks for the App Switcher too: for a hand that cannot drag, and for a mouse
+    clearTimeout(press.current)
+    if (at !== 'switcher' && sys.get().recents.length)
+      press.current = setTimeout(() => {
+        const d = drag.current
+        if (!d || Math.abs(d.dy) > 6 || Math.abs(d.dx) > 6) return
+        drag.current = null
+        settle(d.el)
+        haptic()
+        showSwitcher(true)
+      }, 550)
   }
 
   /** The finger has come to rest part-way up: that asks for the App Switcher. */
@@ -647,6 +857,7 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     const dt = Math.max(1, e.timeStamp - d.t)
     const v = (dy - d.dy) / dt
     d.v = d.v * 0.6 + v * 0.4
+    if (Math.abs(dy) > 6 || Math.abs(dx) > 6) clearTimeout(press.current)
     // Holding still is how the switcher is asked for: the wait starts over each time the finger moves in earnest
     if (Math.abs(dy - d.dy) > 1.5 || Math.abs(dx - d.dx) > 1.5) {
       clearTimeout(hold.current)
@@ -666,6 +877,7 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     const d = drag.current
     drag.current = null
     clearTimeout(hold.current)
+    clearTimeout(press.current)
     if (!d) return
     const speed = e.timeStamp - d.t > 90 ? 0 : d.v
     const far = -d.dy / d.h
@@ -684,9 +896,16 @@ function HomeBar({ drawn }: { drawn: boolean }) {
   return (
     <div ref={root} className="sb-homebar" data-at={at} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
       {drawn && <span className="sb-homebar__pill" />}
-      {at !== 'lock' && (
-        <button type="button" className="sr-only" onClick={goHome}>
+      {/* The bar's two gestures as buttons, for a keyboard or a screen reader: out of sight until one has the
+          keyboard, when it shows over the bar, saying what it does */}
+      {away && (
+        <button type="button" className="sr-only sb-homebar__key" onClick={goHome}>
           Home Screen
+        </button>
+      )}
+      {at !== 'lock' && at !== 'switcher' && running && (
+        <button type="button" className="sb-homebar__key" onClick={() => showSwitcher(true)}>
+          App Switcher
         </button>
       )}
     </div>
@@ -694,6 +913,31 @@ function HomeBar({ drawn }: { drawn: boolean }) {
 }
 
 // ---- All of it ----
+
+/** A screen that is there to be read: a question's note, a note of the visitor's own, a conversation. */
+function reading(s: Sys) {
+  if (!s.app || s.switcher || s.spotlight) return false
+  const top = topOf(s, s.app) ?? ''
+  return (s.app === 'notes' && /^[nu]:/.test(top)) || (s.app === 'messages' && top.startsWith('c:'))
+}
+
+/** Where the phone is, as the page's title says it, innermost first and one to a line: the conversation,
+ * company, question or album where the screen is one, then the app. Nothing on the Lock Screen and the
+ * Home Screen, which are the site itself. */
+function placeName(s: Sys) {
+  if (s.locked) return ''
+  if (s.spotlight) return 'Search'
+  if (s.switcher) return 'App Switcher'
+  if (!s.app) return s.sheet === 'folder:portfolio' ? 'Portfolio' : s.sheet === 'folder:faqs' ? 'FAQs' : ''
+  const top = topOf(s, s.app) ?? ''
+  const at = top.slice(2)
+  let screen: string | null | undefined = null
+  if (s.app === 'messages' && top.startsWith('c:')) screen = at === 'group' ? GROUP_NAME : eggOf(at)?.name
+  else if (s.app === 'finder') screen = s.sheet?.startsWith('company:') ? COMPANIES.find((company) => company.key === s.sheet!.slice(8))?.name : top === 'f:all' ? 'Portfolio' : null
+  else if (s.app === 'notes') screen = top.startsWith('n:') ? FAQS[Number(at)]?.question : top === 'f:faqs' ? 'FAQs' : null
+  else if (s.app === 'photos' && top.startsWith('a:')) screen = at
+  return [screen, PHONE[s.app].label].filter(Boolean).join('\n')
+}
 
 export function Springboard({ framed }: { framed: boolean }) {
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
@@ -703,7 +947,11 @@ export function Springboard({ framed }: { framed: boolean }) {
     setChatUnseen(!watched)
     return () => setChatUnseen(false)
   }, [watched])
-  // Left alone for as long as Auto-Lock in Settings says, the phone locks itself
+  // Left alone for as long as Auto-Lock in Settings says, the phone locks itself. Alone means alone: the
+  // wait starts over with anything a visitor does, a screen reader's reading and a selection included; it
+  // does not run while the page is out of sight (and starts afresh when the page is looked at again, so
+  // coming back is not met by a Lock Screen); and a note or a conversation, which are there to be read
+  // for longer than that without a touch, is never locked over
   const autoLock = useStore(settings, (s) => s.autoLock)
   useEffect(() => {
     if (autoLock === null) return
@@ -711,19 +959,33 @@ export function Springboard({ framed }: { framed: boolean }) {
     let timer: ReturnType<typeof setTimeout>
     const arm = () => {
       clearTimeout(timer)
+      if (document.hidden) return
       timer = setTimeout(() => {
-        if (!document.hidden && !sys.get().locked && !document.querySelector('.ph :is(input, textarea):focus')) lock()
+        const s = sys.get()
+        if (!document.hidden && !s.locked && !reading(s) && !document.querySelector('.ph :is(input, textarea):focus')) lock()
         arm()
       }, wait)
     }
-    const events = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'] as const
+    const events = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll', 'focusin'] as const
     events.forEach((name) => window.addEventListener(name, arm, { passive: true, capture: true }))
+    document.addEventListener('selectionchange', arm)
+    document.addEventListener('visibilitychange', arm)
+    window.addEventListener('pageshow', arm)
     arm()
     return () => {
       clearTimeout(timer)
       events.forEach((name) => window.removeEventListener(name, arm, { capture: true }))
+      document.removeEventListener('selectionchange', arm)
+      document.removeEventListener('visibilitychange', arm)
+      window.removeEventListener('pageshow', arm)
     }
   }, [autoLock])
+  // The page's title names the place: a tab, a screen reader and the browser's history all read it
+  const place = useStore(sys, placeName)
+  useEffect(() => {
+    setTitle(...place.split('\n'))
+  }, [place])
+  useEffect(() => () => setTitle(), [])
   // Escape steps back out: a sheet (which sees to itself), then a screen, then the app
   useEffect(() => {
     const key = (e: KeyboardEvent) => {

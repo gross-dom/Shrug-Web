@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { CornerDownLeft, Ellipsis, Eraser, KeyRound, RotateCcw } from 'lucide-react'
-import { answer, isEmail, term, TerminalLog } from '../../apps/Terminal'
+import { useEffect, useLayoutEffect, useRef, type FormEvent, type ReactNode } from 'react'
+import { Ellipsis, Eraser, KeyRound, RotateCcw } from 'lucide-react'
+import { bareClick, LINE_MAX, startOver, term, TerminalLog, useLine } from '../../apps/Terminal'
 import { Caret } from '../../kit/window'
 import { useStore } from '../../os/store'
 import { Menu, NavStack, Screen, useApp } from '../ui'
@@ -9,23 +9,22 @@ import '../../styles/phone/terminal.css'
 // Case Studies on the phone. iOS has no terminal of its own, so this is the
 // one a current iPhone would have: black from edge to edge, monospaced, with
 // the glass floating over it. The session is the desktop's own (the same
-// listing, the same refusal, the same question, kept in the same store), and a
-// row of keys floats at the foot, as terminal apps put one over the keyboard,
-// so nobody has to type to get through it.
+// listing, the same refusal, the same question, the same answers, kept in the
+// same store), and a row of keys floats at the foot, as terminal apps put one
+// over the keyboard, so nobody has to type to get through it: y and n while
+// the question is waiting, and the commands worth trying once it is answered.
 
 /** One key of the row at the foot. It never takes the keyboard from the line being typed. */
-function Key({ label, onPress, wide, prominent, disabled, children }: { label: string; onPress: () => void; wide?: boolean; prominent?: boolean; disabled?: boolean; children: ReactNode }) {
+function Key({ label, onPress, wide, children }: { label: string; onPress: () => void; wide?: boolean; children: ReactNode }) {
   return (
     <button
       type="button"
       className="ios-glass term-ios-key"
       data-wide={wide || undefined}
-      data-prominent={prominent || undefined}
       aria-label={label}
-      aria-disabled={disabled || undefined}
       // Pressing a key leaves the cursor where it is, so the phone's keyboard stays up
       onMouseDown={(e) => e.preventDefault()}
-      onClick={disabled ? undefined : onPress}
+      onClick={onPress}
     >
       {children}
     </button>
@@ -36,13 +35,11 @@ function Session() {
   const { active } = useApp()
   const step = useStore(term, (t) => t.step)
   const lines = useStore(term, (t) => t.log.length)
-  const [typed, setTyped] = useState('')
+  const { typed, setTyped, type, say: send, onKeyDown } = useLine()
   const input = useRef<HTMLInputElement>(null)
   const screen = useRef<HTMLFormElement>(null)
   /** Reading the newest line, until the reader scrolls back up the log. */
   const pinned = useRef(true)
-  /** Where the cursor goes once a key from the row has been typed in. */
-  const caret = useRef<number | null>(null)
 
   const toEnd = () => {
     const el = screen.current
@@ -68,7 +65,9 @@ function Session() {
 
   // With a real keyboard to hand, typing goes straight into the line: the first
   // key pressed while nothing else has the keyboard puts the cursor there, and
-  // lands in it
+  // lands in it. In the first moments after the app is opened the screen is
+  // still arriving and cannot take the keyboard: a letter typed then goes into
+  // the line all the same, and the cursor follows it once it can
   useEffect(() => {
     if (!active) return
     const key = (e: KeyboardEvent) => {
@@ -76,42 +75,28 @@ function Session() {
       const at = document.activeElement
       if (at instanceof HTMLInputElement || at instanceof HTMLTextAreaElement) return
       // Space presses a button that has the keyboard
-      if (e.key === ' ' && at instanceof HTMLButtonElement) return
+      if (e.key === ' ' && at instanceof HTMLButtonElement && screen.current?.closest('.sb-app')?.contains(at)) return
       if (screen.current?.closest('.ios-screen')?.querySelector('.ios-menu > [aria-expanded="true"]')) return
-      input.current?.focus({ preventScroll: true })
+      const el = input.current
+      if (!el) return
+      el.focus({ preventScroll: true })
+      if (document.activeElement === el) {
+        // After whatever is already in the line
+        el.setSelectionRange(el.value.length, el.value.length)
+        return
+      }
+      e.preventDefault()
+      type(e.key)
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [active])
+  }, [active]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A key from the row has landed in the line: the cursor goes after it
-  useLayoutEffect(() => {
-    if (caret.current === null) return
-    input.current?.setSelectionRange(caret.current, caret.current)
-    caret.current = null
-  }, [typed])
-
-  /** Puts the cursor in the line, with the keyboard for an email. Called from
-   * inside a tap, which is the only time a phone will bring its keyboard up. */
-  const takeKeyboard = () => {
-    const el = input.current
-    if (!el) return
-    if (term.get().step === 'email' && el.inputMode !== 'email') {
-      el.inputMode = 'email'
-      el.autocomplete = 'email'
-      // A keyboard that is already up only changes its keys when the cursor comes back to the field
-      if (document.activeElement === el) el.blur()
-    }
-    el.focus({ preventScroll: true })
-  }
-
+  /** Says it, as if typed. A yes brings a few lines and things to press: the keyboard gets out of their way. */
   const say = (text: string) => {
-    answer(text)
-    setTyped('')
-    const now = term.get().step
-    if (now === 'email') takeKeyboard()
-    // Noted: the keyboard gets out of the way of what it says
-    else if (now === 'done') input.current?.blur()
+    const waiting = term.get().step === 'ask'
+    send(text)
+    if (waiting && term.get().step === 'free') input.current?.blur()
   }
 
   const submit = (e: FormEvent) => {
@@ -119,30 +104,11 @@ function Session() {
     say(typed)
   }
 
-  /** Types `text` where the cursor is. */
-  const insert = (text: string) => {
-    const el = input.current
-    const from = el?.selectionStart ?? typed.length
-    const to = el?.selectionEnd ?? typed.length
-    // `.com` after a stop that is already there is only `com`
-    const add = text === '.com' && typed.slice(0, from).endsWith('.') ? 'com' : text
-    caret.current = from + add.length
-    setTyped(typed.slice(0, from) + add + typed.slice(to))
-    el?.focus({ preventScroll: true })
-  }
-
-  const startOver = () => {
-    term.set({ step: 'ask', log: [] })
+  const clear = () => {
+    startOver()
     setTyped('')
     input.current?.blur()
   }
-
-  const requestAccess = () => {
-    if (term.get().step === 'ask') return say('y')
-    takeKeyboard()
-  }
-
-  const ready = isEmail(typed)
 
   return (
     <Screen
@@ -154,15 +120,15 @@ function Session() {
         <Menu
           label="More"
           items={[
-            { label: 'Request Access', icon: <KeyRound size={18} strokeWidth={2.1} />, disabled: step === 'done', onSelect: requestAccess },
-            { label: 'Clear', icon: <Eraser size={18} strokeWidth={2.1} />, divided: true, onSelect: startOver },
+            { label: 'Request Access', icon: <KeyRound size={18} strokeWidth={2.1} />, onSelect: () => say('y') },
+            { label: 'Clear', icon: <Eraser size={18} strokeWidth={2.1} />, divided: true, onSelect: clear },
           ]}
         >
           <Ellipsis size={22} strokeWidth={2.4} aria-hidden />
         </Menu>
       }
       foot={
-        <div key={step} className="term-ios-keys" role="group" aria-label={step === 'ask' ? 'Answer' : step === 'email' ? 'Keys for an email' : 'Session'}>
+        <div key={step} className="term-ios-keys" role="group" aria-label={step === 'ask' ? 'Answer' : 'Commands'}>
           {step === 'ask' ? (
             <>
               <Key label="y: yes, request access" wide onPress={() => say('y')}>
@@ -172,27 +138,19 @@ function Session() {
                 n
               </Key>
             </>
-          ) : step === 'email' ? (
+          ) : (
             <>
-              <Key label="At sign" onPress={() => insert('@')}>
-                @
+              <Key label="help: what can be typed" wide onPress={() => say('help')}>
+                help
               </Key>
-              <Key label="Full stop" onPress={() => insert('.')}>
-                .
+              <Key label="ls: list the case studies" wide onPress={() => say('ls')}>
+                ls
               </Key>
-              <Key label="Dot com" onPress={() => insert('.com')}>
-                .com
-              </Key>
-              <span className="term-ios-keys__gap" />
-              <Key label="Return: send the request" prominent disabled={!ready} onPress={() => say(typed)}>
-                <CornerDownLeft size={20} strokeWidth={2.4} aria-hidden />
+              <Key label="clear: start over" wide onPress={clear}>
+                <RotateCcw size={16} strokeWidth={2.4} aria-hidden />
+                clear
               </Key>
             </>
-          ) : (
-            <Key label="Start over" wide onPress={startOver}>
-              <RotateCcw size={16} strokeWidth={2.4} aria-hidden />
-              start over
-            </Key>
           )}
         </div>
       }
@@ -206,10 +164,9 @@ function Session() {
           const el = e.currentTarget
           pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24
         }}
-        onPointerUp={() => {
-          // A tap anywhere in the terminal types into it, unless text was just selected
-          if (!window.getSelection()?.toString()) takeKeyboard()
-        }}
+        // A tap anywhere in the terminal types into it, unless it was on something of its own or text was just
+        // selected. Inside the tap itself, which is the only time a phone will bring its keyboard up
+        onClick={(e) => bareClick(e) && input.current?.focus({ preventScroll: true })}
       >
         <TerminalLog />
         <label className="term__entry term-ios-entry">
@@ -220,17 +177,18 @@ function Session() {
               ref={input}
               className="term__input term-ios-input"
               type="text"
-              inputMode={step === 'email' ? 'email' : 'text'}
+              maxLength={LINE_MAX}
               // A space, so the line can tell it is empty (and show its cursor) without saying anything
               placeholder=" "
-              aria-label={step === 'email' ? 'Your email' : step === 'ask' ? 'Request access? y or n' : 'Terminal input'}
-              autoComplete={step === 'email' ? 'email' : 'off'}
+              aria-label={step === 'ask' ? 'Request access? y or n' : 'Terminal: help lists what can be typed'}
+              autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
               enterKeyHint="send"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
+              onKeyDown={onKeyDown}
             />
             {/* The cursor a terminal shows while nobody is typing */}
             <span className="term-ios-cursor" aria-hidden>

@@ -8,6 +8,8 @@
      it: a field's type must be 16px on a phone, or the page zooms on focus */
   --term-size: 13.5px;
   --term-k: 0.84375;
+  /* Black from edge to edge: the shared focus ring is white on it */
+  --ring: #fff;
 }
 
 /* A narrow phone: a size at which the prompt and its command still fit on one line */
@@ -59,6 +61,16 @@
 /* The path, the mark and the command stay together where the line has to break */
 .term-ios .ss-term__prompt {
   text-wrap: pretty;
+}
+
+/* A line that goes somewhere is as tall as a finger needs, its words where a line's would be */
+.term-ios .term__go {
+  flex: none;
+}
+
+.term-ios .term__link {
+  display: inline-block;
+  padding: 11px 16px 11px 0;
 }
 
 /* ---- The line being typed ---- */
@@ -137,10 +149,6 @@
   }
 }
 
-.term-ios-keys__gap {
-  flex: 1;
-}
-
 .term-ios-key {
   display: inline-grid;
   flex: none;
@@ -167,26 +175,7 @@
   flex: 1;
 }
 
-/* Return, once there is something to send */
-.term-ios .term-ios-key[data-prominent] {
-  min-width: 64px;
-  background: var(--blue);
-  box-shadow:
-    0 0 0 0.5px rgb(255 255 255 / 0.14),
-    0 4px 14px -4px rgb(10 132 255 / 0.6),
-    inset 0 0.5px 0 rgb(255 255 255 / 0.3);
-  color: #fff;
-}
-
-.term-ios .term-ios-key[aria-disabled='true'] {
-  background: rgb(70 70 76 / 0.55);
-  box-shadow:
-    0 0 0 0.5px rgb(255 255 255 / 0.14),
-    inset 0 0.5px 0 rgb(255 255 255 / 0.16);
-  color: rgb(235 235 245 / 0.3);
-}
-
-.term-ios-key:not([aria-disabled='true']):active {
+.term-ios-key:active {
   transform: scale(0.94);
   transition-duration: 0.08s;
 }

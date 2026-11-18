@@ -174,3 +174,18 @@ export function OnePagerIcon() {
     </Tile>
   )
 }
+
+/** The glyphs on the Lock Screen's two round buttons: solid shapes with cut-outs, after the flashlight and camera symbols iOS uses there. */
+const LOCK_GLYPHS = {
+  torch: { size: 22, d: 'M7.6 1.6h8.8a1.6 1.6 0 0 1 1.6 1.6v1.9H6V3.2a1.6 1.6 0 0 1 1.6-1.6ZM6 6h12l-2.6 4v10.4a2 2 0 0 1-2 2h-2.8a2 2 0 0 1-2-2V10ZM10.6 14a1.4 1.4 0 1 0 2.8 0 1.4 1.4 0 1 0-2.8 0Z' },
+  camera: { size: 24, d: 'M4.6 6.6h3.3l1.2-1.8a1.3 1.3 0 0 1 1.1-.6h3.6a1.3 1.3 0 0 1 1.1.6l1.2 1.8h3.3A2.6 2.6 0 0 1 22 9.2v8.6a2.6 2.6 0 0 1-2.6 2.6H4.6A2.6 2.6 0 0 1 2 17.8V9.2a2.6 2.6 0 0 1 2.6-2.6ZM7.5 13.4a4.5 4.5 0 1 0 9 0 4.5 4.5 0 1 0-9 0ZM9 13.4a3 3 0 1 0 6 0 3 3 0 1 0-6 0Z' },
+}
+
+export function LockGlyph({ name }: { name: keyof typeof LOCK_GLYPHS }) {
+  const { size, d } = LOCK_GLYPHS[name]
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden>
+      <path fill="currentColor" fillRule="evenodd" d={d} />
+    </svg>
+  )
+}

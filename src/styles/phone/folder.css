@@ -3,11 +3,15 @@
 
 /* ---- Closed ---- */
 
-/* A square of frosted glass, two icons tall, with what is inside showing through it */
+/* A square of frosted glass, two icons tall, with what is inside showing
+   through it. It keeps to the two columns it has: where those are a few
+   points narrower than two icons are tall (a narrow phone), the square is
+   that much smaller, and its edges still line up with the icons' */
 .sb-folder__face {
   display: grid;
-  width: auto;
-  height: calc(var(--icon) * 2 + 37px);
+  width: 100%;
+  max-width: calc(var(--icon) * 2 + 37px);
+  height: auto;
   aspect-ratio: 1;
   border-radius: 23%;
   background: rgb(255 255 255 / 0.2);
@@ -42,12 +46,19 @@
   border-radius: 23% !important;
 }
 
-/* FAQs: the first few questions, as the titles of the notes they are */
+/* FAQs: the first few questions, as the titles of the notes they are. A title
+   that does not fit whole goes to a second column, which is past the edge and
+   so not drawn; the room round the titles is the face's own, so that nothing
+   of that column shows in it either. */
+.sb-folder__face[data-folder='faqs'] {
+  padding: 13px 15px 9px;
+}
+
 .sb-folder__titles {
   display: flex;
   flex-flow: column wrap;
+  min-width: 0;
   min-height: 0;
-  padding: 13px 15px 9px;
   overflow: hidden;
 }
 
@@ -72,6 +83,102 @@
   border-top: 0.5px solid rgb(255 255 255 / 0.3);
 }
 
+/* ---- How large, by the room there is ----
+   Two icons tall is the size a folder has where the screen is tall enough for
+   the Messages widget, a row of folders that size, a row of icons, Search and
+   the Dock. How tall that is goes by the width, because an icon's size does
+   (268px and six icons and 3.3% of the width: 610px at 360 wide, 642 at 393,
+   677 at 430), so the rule below is stepped by width; each step is the most
+   its widths need, so nothing ever overlaps and a folder is at worst a few
+   points late in growing. On its side the Home Screen is laid out for the
+   width (src/styles/phone.css) and the measure is different: the large size
+   needs the two columns a folder has to be about as wide as it is tall, and
+   room under it for the row of icons and Search.
+
+   Where that size does not fit, a folder is an ordinary one: an icon among
+   the icons, with the same things showing through it. That needs a row of
+   icons more and a row of folders less: 518px at 360 wide, 545 at 393. */
+
+/* On its side with room: a folder is in the same row as the Messages widget,
+   so it is as tall as that is (their names line up) and as wide as its two
+   columns, which here are a little narrower */
+@container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
+  .sb-folder .sb-folder__face {
+    height: calc(var(--icon) * 2 + 37px);
+    aspect-ratio: auto;
+  }
+}
+
+@container ((not ((min-aspect-ratio: 5 / 4) and (max-height: 520px))) and ((height < 604px) or ((width > 353px) and (height < 611px)) or ((width > 360px) and (height < 625px)) or ((width > 375px) and (height < 634px)) or ((width > 384px) and (height < 642px)) or ((width > 393px) and (height < 651px)) or ((width > 402px) and (height < 662px)) or ((width > 414px) and (height < 677px)) or ((width > 430px) and (height < 691px)) or ((width > 444px) and (height < 701px)))) or ((min-aspect-ratio: 5 / 4) and (max-height: 520px) and ((width < 720px) or (height < 320px) or ((width >= 760px) and (height < 328px)) or ((width >= 800px) and (height < 335px)))) {
+  .sb-widget.sb-folder {
+    grid-column: span 1;
+    width: var(--icon);
+  }
+
+  .sb-folder .sb-folder__face {
+    width: var(--icon);
+    max-width: none;
+    height: var(--icon);
+    aspect-ratio: auto;
+    box-shadow:
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.3),
+      inset 0 1px 0 rgb(255 255 255 / 0.34),
+      0 2px 5px rgb(0 0 0 / 0.14);
+  }
+
+  /* The questions are too small to read at this size: a line stands for each, as on a small picture of a note */
+  .sb-folder .sb-folder__face[data-folder='faqs'] {
+    padding: 0 20%;
+  }
+
+  .sb-folder .sb-folder__titles {
+    flex-flow: column nowrap;
+    justify-content: center;
+    gap: calc(var(--icon) * 0.11);
+  }
+
+  .sb-folder .sb-folder__titles span,
+  .sb-folder .sb-folder__titles span + span {
+    display: block;
+    width: 100%;
+    height: calc(var(--icon) * 0.06);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--icon) * 0.03);
+    background: rgb(255 255 255 / 0.62);
+    font-size: 0;
+    text-shadow: none;
+  }
+
+  /* The first is the note's title: shorter and brighter */
+  .sb-folder .sb-folder__titles span:first-child {
+    width: 62%;
+    background: #fff;
+  }
+
+  .sb-folder .sb-folder__titles span:last-child {
+    width: 84%;
+  }
+}
+
+/* On its side, with the folders the size of icons: the Messages widget is two
+   rows of them tall, and everything else sits beside it in two rows of four */
+@container (min-aspect-ratio: 5 / 4) and (max-height: 520px) and ((width < 720px) or (height < 320px) or ((width >= 760px) and (height < 328px)) or ((width >= 800px) and (height < 335px))) {
+  .sb-grid .sb-widget--wide {
+    grid-row: span 2;
+  }
+}
+
+/* Upright and too short even for that (an old small phone with its browser's
+   bars showing: under 519px at 360 wide, 545 at 393): the folders are left
+   off. Files and Notes, in the Dock, hold the same. */
+@container (not ((min-aspect-ratio: 5 / 4) and (max-height: 520px))) and ((height < 513px) or ((width > 353px) and (height < 519px)) or ((width > 360px) and (height < 531px)) or ((width > 375px) and (height < 545px)) or ((width > 393px) and (height < 562px)) or ((width > 414px) and (height < 575px)) or ((width > 430px) and (height < 586px)) or ((width > 444px) and (height < 596px))) {
+  .sb-widget.sb-folder {
+    display: none;
+  }
+}
+
 /* ---- Behind an open folder ---- */
 
 .sb-home[data-folder] {
@@ -84,6 +191,8 @@
 
 .sb-open {
   --icon: clamp(50px, 15.3cqw, 64px);
+  /* Over the wallpaper the keyboard's ring is white: the accent would not show */
+  --ring: #fff;
   position: absolute;
   inset: 0;
   display: grid;
@@ -113,6 +222,11 @@
 .sb-open[data-folder='faqs'] .sb-open__box {
   width: min(100cqw - 52px, 344px);
   margin-top: 0;
+}
+
+/* The folder takes the keyboard as a whole when it opens, so that Tab starts inside it: no ring round all of it */
+.sb-open .sb-open__box:focus-visible {
+  outline: none;
 }
 
 /* Out of the folder on the Home Screen, and back into it */
@@ -221,29 +335,46 @@
   border-radius: 23% !important;
 }
 
+/* The strip under the pages. Its left half goes back a page and its right
+   half goes on (each 44 points tall, half the folder wide); the dots are the
+   picture of where that leaves you, and take no touches themselves. */
+.sb-open__turn {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 44px;
+  /* It reaches a little way up into the room under the last row of names */
+  margin-top: -6px;
+}
+
+.sb-open__step {
+  border-radius: 16px;
+}
+
+.sb-open .sb-open__step:focus-visible {
+  outline-offset: -5px;
+}
+
 .sb-open__dots {
+  position: absolute;
+  inset: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 2px 0 12px;
+  gap: 8px;
+  padding-bottom: 4px;
+  pointer-events: none;
 }
 
 .sb-open__dot {
-  display: grid;
-  place-items: center;
-  width: 15px;
-  height: 24px;
-}
-
-.sb-open__dot::before {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: rgb(255 255 255 / 0.4);
-  content: '';
   transition: background-color 0.2s ease;
 }
 
-.sb-open__dot[aria-current]::before {
+.sb-open__dot[data-current] {
   background: #fff;
 }
 
@@ -308,8 +439,8 @@
     padding-top: 18px;
   }
 
-  .sb-open__dots {
-    padding-bottom: 6px;
+  .sb-open__turn {
+    margin-top: -10px;
   }
 
   .sb-open__notes {

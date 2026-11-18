@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import { ArrowUpRight, Check, ChevronDown, Clock, Ellipsis, Folder, LayoutGrid, List as ListIcon, Search, Share, Trash2, X } from 'lucide-react'
-import { ALL, companiesIn, companyKeyed, CompanyLogo, hostOf, visitLabel, type Listed } from '../../apps/portfolio-ui'
-import { finder, setFinderQuery, setFinderView } from '../../apps/state'
+import { companiesIn, companyKeyed, CompanyLogo, fateOf, hostOf, tellApart, visitLabel, type Listed } from '../../apps/portfolio-ui'
+import { finder, setFinderQuery, setFinderView, sought } from '../../apps/state'
 import { VERTICALS } from '../../data/portfolio'
 import { SITE } from '../../data/site'
 import { prefersReducedMotion } from '../../os/dom'
@@ -22,7 +22,8 @@ import '../../styles/phone/files.css'
 // lists them. Use Groups puts them under their verticals instead, as Files
 // groups a folder. Recents is what has been opened this visit, Shared is the
 // one-pager, and a company opens over the folder as the card Files shows for
-// a file.
+// a file: with the link to its site, or, for one with no site, the line that
+// says so where the link would be.
 
 type TabId = 'recents' | 'shared' | 'browse'
 
@@ -104,9 +105,6 @@ const open = (company: Listed) => openSheet(companySheet(company.key))
 const COMPANY_SHEET = companySheet('')
 
 const byName = (a: Listed, b: Listed) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-
-/** Two companies can have one name. Where a line under a company would say the same for both, its address goes there instead. */
-const namesake = (company: Listed) => ALL.some((other) => other !== company && other.name === company.name)
 
 function Icons({ companies }: { companies: Listed[] }) {
   return (
@@ -407,7 +405,7 @@ function SharedScreen() {
             <PageThumb />
             <span className="files-item__name">{SITE.name} One-pager</span>
             <span className="files-item__where">Shared by {SITE.legalName}</span>
-            <span className="sr-only">, opens in the browser</span>
+            <span className="sr-only">, opens in a new tab</span>
           </a>
         </li>
       </ul>
@@ -422,11 +420,28 @@ function SearchScreen() {
   const query = useStore(finder, (s) => s.query)
   const found = useMemo(() => (query.trim() ? companiesIn(-1, query) : []), [query])
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      closeSearch()
-    } else if (e.key === 'Enter') (e.target as HTMLElement).blur()
+    if (e.key === 'Enter') (e.target as HTMLElement).blur()
   }
+
+  // Escape, as in every search on the phone: it empties the field, then lets go of it (the shared search
+  // bar sees to both), and then it is the way back. Back from here is out of search, to the screen search
+  // was opened over, not out of the folder under it. Heard on the document, so after the field has had
+  // its say and before the phone takes Escape for its own Back.
+  useEffect(() => {
+    const key = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const s = sys.get()
+      if (s.app !== 'finder' || s.locked || s.sheet || s.switcher || s.spotlight) return
+      e.preventDefault()
+      // A field that did not answer for itself is answered for: emptied, then let go
+      const field = e.target instanceof HTMLInputElement && e.target.classList.contains('ios-search__input') ? e.target : null
+      if (field?.value) setFinderQuery('')
+      else if (field) field.blur()
+      else closeSearch()
+    }
+    document.addEventListener('keydown', key)
+    return () => document.removeEventListener('keydown', key)
+  }, [closeSearch])
   return (
     <Screen
       title="Search"
@@ -448,12 +463,13 @@ function SearchScreen() {
         </Empty>
       ) : found.length ? (
         <>
-          <Rows companies={found} detail={(company) => `Portfolio — ${namesake(company) && company.url ? whereOf(company) : company.vertical}`} />
+          {/* Two companies can have one name: where the line under each would say the same, its address goes there instead */}
+          <Rows companies={found} detail={(company) => `Portfolio — ${tellApart(company) || company.vertical}`} />
           <p className="files-count">{countOf(found.length)}</p>
         </>
       ) : (
-        <Empty icon={<Search size={44} strokeWidth={1.8} />} title="No Results">
-          Nothing in the portfolio matches “{query.trim()}”. Check the spelling or try another search.
+        <Empty icon={<Search size={44} strokeWidth={1.8} />} title={`No Results for “${sought(query)}”`}>
+          Check the spelling or try a new search.
         </Empty>
       )}
     </Screen>
@@ -466,7 +482,8 @@ function SearchScreen() {
  * the one thing to do with it, and what is known about it underneath. */
 function CompanySheet({ id }: { id: string }) {
   const company = companyKeyed(id)
-  const [copied, setCopied] = useState(false)
+  /** What Share put on the clipboard, where there was no share sheet to hand it to. */
+  const [copied, setCopied] = useState<'Link copied' | 'Copied' | null>(null)
 
   // Looked at is opened: it goes to the front of Recents
   useEffect(() => {
@@ -475,7 +492,7 @@ function CompanySheet({ id }: { id: string }) {
 
   useEffect(() => {
     if (!copied) return
-    const t = setTimeout(() => setCopied(false), 1800)
+    const t = setTimeout(() => setCopied(null), 1800)
     return () => clearTimeout(t)
   }, [copied])
 
@@ -489,10 +506,12 @@ function CompanySheet({ id }: { id: string }) {
     )
 
   const visit = visitLabel(company)
+  const fate = fateOf(company)
   const site = company.url && !/notion\.site/.test(company.url) ? hostOf(company.url) : ''
+  // A company with no site is passed on as its name and what it does, with no address: not this page's in its place
   const send = async () => {
-    const sent = await share({ title: company.name, text: company.blurb ? `${company.name}: ${company.blurb}` : company.name, url: company.url ?? undefined })
-    if (sent === 'copied') setCopied(true)
+    const sent = await share({ title: company.name, text: company.blurb ? `${company.name}: ${company.blurb}` : company.name, url: company.url ?? null })
+    if (sent === 'copied') setCopied(company.url ? 'Link copied' : 'Copied')
   }
 
   return (
@@ -517,16 +536,20 @@ function CompanySheet({ id }: { id: string }) {
         <h3 className="files-file__name">{company.name}</h3>
         <div className="files-file__kind">Company · {company.vertical}</div>
         {company.blurb && <p className="files-file__blurb">{company.blurb}</p>}
-        {company.url && visit && (
-          <a className="files-open" href={company.url} target="_blank" rel="noreferrer">
+        {company.url && visit ? (
+          // Its own site is told where the visit came from: `noopener`, not `noreferrer`
+          <a className="files-open" href={company.url} target="_blank" rel="noopener">
             {visit}
             <ArrowUpRight size={18} strokeWidth={2.6} aria-hidden />
-            <span className="sr-only">, in the browser</span>
+            <span className="sr-only">, opens in a new tab</span>
           </a>
+        ) : (
+          // Nowhere to send anyone: said where the link would be, so the sheet is not just a name
+          <p className="files-fate">{fate}</p>
         )}
         {/* Said aloud when it happens; the button keeps its own name */}
         <span className="sr-only" role="status">
-          {copied ? 'Link copied' : ''}
+          {copied ?? ''}
         </span>
       </div>
       <List className="files-info">

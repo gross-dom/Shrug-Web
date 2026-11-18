@@ -29,6 +29,13 @@
   background: rgb(255 204 0 / 0.4);
 }
 
+/* At the narrowest phone the search field between two buttons has little room: a placeholder
+   that does not fit ends in an ellipsis, not in a cut word */
+.notes-screen .ios-search__input,
+.notes-screen .ios-search__input::placeholder {
+  text-overflow: ellipsis;
+}
+
 /* A wrapper that is there to listen, not to be a box */
 .notes-contents {
   display: contents;
@@ -38,6 +45,16 @@
 
 .notes-folders {
   padding-top: 2px;
+}
+
+/* A folder's name is the visitor's to choose, and can be long: one or two lines of it, then an ellipsis */
+.notes-folder .ios-cell__title {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* The account the folders are in: its name, as large as a heading, and the chevron that folds them away */
@@ -309,7 +326,38 @@
   white-space: pre-line;
 }
 
-/* No answer yet: the slot kept for one, set apart so it can't be read as the answer */
+/* No answer yet, as a visitor meets it: the ways on from here, under the line that says so.
+   Notes' yellow carries no words on white, so these are ink the colour of its deep end, on a wash of it */
+.notes-ways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.notes-way {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 22px;
+  background: rgb(255 204 0 / 0.24);
+  color: #6f4f00;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition: opacity 0.15s ease;
+}
+
+.notes-way:active {
+  opacity: 0.6;
+  transition: none;
+}
+
+/* The same in the editor's view (?draft): the slot kept for an answer, set apart so it can't be read as the answer */
 .notes-slot {
   margin-top: 4px;
   padding: 13px 15px 14px;

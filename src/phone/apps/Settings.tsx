@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useId, useRef, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { ArrowUpRight, Check, Search, Sun, X } from 'lucide-react'
+import { chat, toggleChat } from '../../apps/chat'
+import { GROUP_NAME } from '../../apps/chat-ui'
 import { hostOf } from '../../apps/portfolio-ui'
 import { ShrugAvatar } from '../../apps/ui'
 import { CASE_STUDIES } from '../../data/caseStudies'
-import { DROPS, MEDIA } from '../../data/drops'
+import { arrived, DROPS } from '../../data/drops'
 import { FAQS } from '../../data/faqs'
 import { PEOPLE } from '../../data/people'
 import { COMPANY_COUNT, VERTICALS } from '../../data/portfolio'
-import { SITE } from '../../data/site'
+import { reach, reachable, SITE } from '../../data/site'
 import { useStore } from '../../os/store'
 import '../../styles/phone/settings.css'
 import { AUTO_LOCK, autoLockLabel, setSetting, settings } from '../settings'
 import { launch, launchAt, push, type PhoneApp } from '../system'
-import { Cell, Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, Switch } from '../ui'
+import { Cell, Empty, GlassButton, List, NavStack, quoted, Screen, SearchBar, Section, Switch, usePageHeadingId } from '../ui'
 
 // Settings, as the iPhone has it. Whose phone this is heads the first screen,
 // as an Apple Account does; under it are the pages that change something here
@@ -20,7 +22,7 @@ import { Cell, Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, S
 // and the two that only tell: General › About, where an iPhone keeps its name
 // and its counts, and Privacy & Security. Every figure is counted from the
 // site's own data, and every switch is one the rest of the phone obeys
-// (src/phone/settings.ts).
+// (src/phone/settings.ts), kept in the browser from one visit to the next.
 
 // ---- The pages ----
 
@@ -40,15 +42,15 @@ interface Page {
 }
 
 const PAGES: Record<PageId, Page> = {
-  account: { title: SITE.legalName, path: ['account'], top: null, words: 'about shrug one-pager website' },
+  account: { title: SITE.legalName, path: ['account'], top: null, words: 'about shrug one-pager website contact reach email pitch get in touch' },
   general: { title: 'General', path: ['general'], top: 'general', words: '' },
-  about: { title: 'About', path: ['general', 'about'], top: 'general', words: 'name replies companies verticals faqs case studies drops photos videos' },
+  about: { title: 'About', path: ['general', 'about'], top: 'general', words: `name replies companies verticals faqs case studies drops${arrived() ? ' photos videos' : ''}` },
   display: { title: 'Display & Brightness', path: ['display'], top: 'display', words: '' },
   autolock: { title: 'Auto-Lock', path: ['display', 'autolock'], top: 'display', words: '' },
-  notifications: { title: 'Notifications', path: ['notifications'], top: 'notifications', words: 'allow notifications banners replies' },
+  notifications: { title: 'Notifications', path: ['notifications'], top: 'notifications', words: 'allow notifications banners replies pause stop' },
   previews: { title: 'Show Previews', path: ['notifications', 'previews'], top: 'notifications', words: '' },
   sounds: { title: 'Sounds & Haptics', path: ['sounds'], top: 'sounds', words: 'system haptics' },
-  privacy: { title: 'Privacy & Security', path: ['privacy'], top: 'privacy', words: 'tracking cookies messages access requests' },
+  privacy: { title: 'Privacy & Security', path: ['privacy'], top: 'privacy', words: 'tracking cookies messages access requests storage saved kept' },
 }
 
 /** The first screen's list, in iOS's order. */
@@ -148,13 +150,24 @@ function Tile({ id, big }: { id: TopId; big?: boolean }) {
 /** A row that leaves the site says so with an arrow, where a row that stays has a chevron. */
 const out = <ArrowUpRight className="settings-out" size={18} strokeWidth={2.4} aria-hidden />
 /** The same, for someone who is told the row and not shown it. */
-const inBrowser = <span className="sr-only">, in the browser</span>
+const inNewTab = <span className="sr-only">, opens in a new tab</span>
+
+/** The site is being read at the address Settings would send a visitor to: there is nowhere else to send them. */
+const atHome = () => {
+  try {
+    return new URL(SITE.url).hostname === window.location.hostname
+  } catch {
+    return false
+  }
+}
 
 /** A page headed by its own name in the page (a card, a face): the bar says
  * the name only once that has scrolled away under it, as Settings does. */
-function Headed({ title, head, children }: { title: string; head: (name: (el: HTMLElement | null) => void) => ReactNode; children: ReactNode }) {
+function Headed({ title, head, children }: { title: string; head: (name: (el: HTMLElement | null) => void, id: string | undefined) => ReactNode; children: ReactNode }) {
   const scroller = useRef<HTMLDivElement>(null)
   const name = useRef<HTMLElement | null>(null)
+  // The name in the page is the page's heading: the page is named by it
+  const headingId = usePageHeadingId()
   const setName = useCallback((el: HTMLElement | null) => {
     name.current = el
   }, [])
@@ -181,6 +194,7 @@ function Headed({ title, head, children }: { title: string; head: (name: (el: HT
       tone="grouped"
       className="settings-screen"
       scrollRef={scroller}
+      ownHeading
       center={
         // The name in the page is the page's heading; this one is only for the eye
         <span className="ios-bar__name settings-bar-name" data-show={under || undefined} aria-hidden>
@@ -188,7 +202,7 @@ function Headed({ title, head, children }: { title: string; head: (name: (el: HT
         </span>
       }
     >
-      {head(setName)}
+      {head(setName, headingId)}
       {children}
     </Screen>
   )
@@ -199,10 +213,10 @@ function Carded({ id, text, children }: { id: TopId; text: string; children: Rea
   return (
     <Headed
       title={PAGES[id].title}
-      head={(name) => (
+      head={(name, headingId) => (
         <div className="settings-hero">
           <Tile id={id} big />
-          <h2 ref={name} className="settings-hero__title">
+          <h2 ref={name} id={headingId} className="settings-hero__title">
             {PAGES[id].title}
           </h2>
           <p className="settings-hero__text">{text}</p>
@@ -285,8 +299,8 @@ function Root() {
             </Section>
           </List>
         ) : (
-          <Empty icon={<Search size={44} strokeWidth={1.8} />} title="No Results">
-            for “{query.trim()}”
+          <Empty icon={<Search size={44} strokeWidth={1.8} />} title={`No Results for “${quoted(query)}”`}>
+            Check the spelling or try a new search.
           </Empty>
         )
       ) : (
@@ -308,25 +322,42 @@ function Root() {
 // ---- Whose phone this is ----
 
 function Account() {
+  // The way to Shrug, when there is one that is more than the one-pager (src/data/site.ts)
+  const way = reachable() ? reach() : null
   return (
     <Headed
       title={SITE.legalName}
-      head={(name) => (
+      head={(name, headingId) => (
         <div className="settings-id">
           <ShrugAvatar size={96} />
-          <h2 ref={name} className="settings-id__name">
+          <h2 ref={name} id={headingId} className="settings-id__name">
             {SITE.legalName}
           </h2>
           <div className="settings-id__mark" aria-hidden>
             {SITE.mark}
           </div>
+          {/* Who Shrug is, in a sentence */}
+          <p className="settings-id__line">{SITE.line.replace(/-/g, '\u2011')}</p>
         </div>
       )}
     >
       <List>
         <Section>
-          <Cell title={<>One-pager{inBrowser}</>} href={SITE.onePager} trailing={out} />
-          <Cell title={<>Website{inBrowser}</>} value={hostOf(SITE.url)} href={SITE.url} trailing={out} />
+          {way && (
+            <Cell
+              title={
+                <>
+                  {way.label}
+                  <span className="sr-only">{way.kind === 'email' ? ', opens your mail app' : ', opens your messages app'}</span>
+                </>
+              }
+              href={way.href}
+              trailing={out}
+            />
+          )}
+          <Cell title={<>One-pager{inNewTab}</>} href={SITE.onePager} trailing={out} />
+          {/* Not when this is that website: the row would open the page it is on */}
+          {!atHome() && <Cell title={<>Website{inNewTab}</>} value={hostOf(SITE.url)} href={SITE.url} trailing={out} />}
         </Section>
       </List>
     </Headed>
@@ -337,7 +368,7 @@ function Account() {
 
 function General() {
   return (
-    <Carded id="general" text="See what this iPhone is and what is on it.">
+    <Carded id="general" text="What this iPhone is, and what is on it.">
       <List>
         <Section>
           <Cell title="About" chevron onClick={() => push('about')} />
@@ -355,8 +386,9 @@ const FACTS: { label: string; value: number; app?: PhoneApp }[] = [
   { label: 'FAQs', value: FAQS.length, app: 'notes' },
   { label: 'Case Studies', value: CASE_STUDIES.length, app: 'terminal' },
   { label: 'Drops', value: DROPS.length, app: 'photos' },
-  { label: 'Photos', value: MEDIA.filter((m) => m.kind === 'photo').length },
-  { label: 'Videos', value: MEDIA.filter((m) => m.kind === 'video').length },
+  // Photos and videos are counted as they arrive: until one has, there is no row for them
+  ...(arrived('photo') ? [{ label: 'Photos', value: arrived('photo') }] : []),
+  ...(arrived('video') ? [{ label: 'Videos', value: arrived('video') }] : []),
 ]
 
 function About() {
@@ -379,6 +411,9 @@ function About() {
 function Notifications() {
   const allowed = useStore(settings, (s) => s.notifications)
   const previews = useStore(settings, (s) => s.previews)
+  // The conversation itself: the same switch as in its details, here so that it can be stopped from outside it
+  const paused = useStore(chat, (c) => c.paused)
+  const done = useStore(chat, (c) => c.done)
   return (
     <Carded id="notifications" text="Replies drop in at the top of the screen while you are outside Messages, and wait on the Lock Screen.">
       <List>
@@ -388,6 +423,9 @@ function Notifications() {
         <Section>
           {/* With nothing announced there is nothing to preview */}
           <Cell title="Show Previews" value={previews ? 'Always' : 'Never'} chevron disabled={!allowed} onClick={() => push('previews')} />
+        </Section>
+        <Section footer={done ? 'Everyone has replied.' : `Stops new replies everywhere: in ${GROUP_NAME}, as notifications, on the Messages badge and on the Home Screen.`}>
+          <Cell title="Pause Replies" trailing={<Switch on={paused} label="Pause Replies" disabled={done} onChange={toggleChat} />} />
         </Section>
       </List>
     </Carded>
@@ -456,24 +494,30 @@ function Sounds() {
 // ---- Privacy & Security ----
 
 /** What the site does with a visitor, row by row. Each is true of the site's
- * own code as it stands: what is typed is kept in the page and nowhere else
- * (`sendMessage` in apps/chat.ts, `answer` in apps/Terminal.tsx), nothing is
- * written to cookies or the browser's storage (the phone's place is kept in
- * the tab's own history, and that is all), and every file the page loads is
- * the site's own. If the site starts to send or keep anything, or to load
- * anything from elsewhere, this page has to say so. */
+ * own code as it stands. Nothing is sent anywhere by the site: what is typed
+ * into a conversation stays where it was typed (`sendMessage` in
+ * apps/chat.ts), and an access request, once Shrug has an address, is written
+ * in the visitor's own mail or messages app and sent by them. Nothing is
+ * written to cookies, and every file the page loads is the site's own. What a
+ * visitor sets or writes is kept, in their own browser and nowhere else, so
+ * that the site is as they left it: the choices made here
+ * (src/phone/settings.ts), their notes and folders, what they have favorited
+ * in VIP, how far the conversation has got, and the phone's place (in the
+ * tab's history). If the site starts to send anything, to keep it anywhere
+ * else, or to load anything from elsewhere, this page has to say so. */
 const PRIVACY: { label: string; value: string }[] = [
   { label: 'Messages You Type', value: 'Not Sent' },
-  { label: 'Access Requests', value: 'Not Sent' },
+  { label: 'Access Requests', value: reachable() ? (reach().kind === 'email' ? 'From Your Mail' : 'From Your Messages') : 'Not Sent' },
   { label: 'Cookies', value: 'None' },
   { label: 'Tracking', value: 'None' },
+  { label: 'What You Set or Write', value: 'Kept on This Device' },
 ]
 
 function Privacy() {
   return (
     <Carded id="privacy" text="What this site does with what you do here.">
       <List>
-        <Section footer="What you type here stays on this page: it is not sent anywhere, and it is gone when the page is closed or reloaded. The site sets no cookies, saves nothing to your browser’s storage, and loads nothing from other sites.">
+        <Section footer="Nothing you do here is sent anywhere, and the site loads nothing from other sites. What you set or write is kept in this browser, on this device, so that the site is as you left it. Clearing this site’s data in your browser clears it.">
           {PRIVACY.map(({ label, value }) => (
             <Cell key={label} title={label} value={value} />
           ))}

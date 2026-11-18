@@ -1,4 +1,5 @@
 import type { AppId } from '../os/apps'
+import { focusFirst, holdFocus } from '../os/focus'
 import { createStore } from '../os/store'
 import { FAQS_FOLDER, PORTFOLIO_FOLDER } from './apps/routes'
 
@@ -217,8 +218,26 @@ export function closeSheet(motion = true) {
 
 // ---- The lock, the switcher, search ----
 
-export const lock = () => sys.set((s) => ({ ...s, locked: true, switcher: false, spotlight: false, motion: true }))
+/** What had the keyboard when the phone locked, to be given it back when the phone opens. */
+let held: ReturnType<typeof holdFocus> | null = null
+
+export function lock() {
+  if (sys.get().locked) return
+  // Before anything is drawn locked: what is under the Lock Screen is about to be shut off, and the keyboard with it
+  held = holdFocus()
+  sys.set((s) => ({ ...s, locked: true, switcher: false, spotlight: false, motion: true }))
+}
+
 export const unlock = () => sys.set((s) => (s.locked ? { ...s, locked: false, motion: true } : s))
+
+/** Puts the keyboard somewhere real after the screen has changed under it: back on what had it when the
+ * phone locked, if that is still there to take it, and otherwise on the first of `otherwise` that can. */
+export function refocus(...otherwise: (Element | null | undefined)[]) {
+  const give = held
+  held = null
+  return give ? give(...otherwise) : focusFirst(...otherwise)
+}
+
 export const showSwitcher = (on: boolean) => sys.set((s) => (s.switcher === on || (on && !s.recents.length) ? s : { ...s, switcher: on, spotlight: false, motion: true }))
 export const showSpotlight = (on: boolean) => sys.set((s) => (s.spotlight === on ? s : { ...s, spotlight: on, switcher: false, motion: true }))
 

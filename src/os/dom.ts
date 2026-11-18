@@ -2,7 +2,7 @@ import type { AppId } from './apps'
 import type { Point } from './wm'
 
 // Small reads from the page: where a Dock icon is, for windows to open from
-// and minimise into.
+// and minimize into.
 
 /** The center of an app's Dock icon, or of the menu bar's mark for an app that has none. */
 export function dockPoint(id: AppId): Point | null {

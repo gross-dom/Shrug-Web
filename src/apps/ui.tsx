@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { Search, X } from 'lucide-react'
 import { Face } from '../os/icons'
 
@@ -40,14 +40,70 @@ export function ToolSetButton({ label, onClick, disabled, pressed, children }: {
   )
 }
 
-/** A search field that really filters: the kit's field shape around a real input. */
-export function SearchField({ value, onChange, placeholder = 'Search', label }: { value: string; onChange: (value: string) => void; placeholder?: string; label: string }) {
+interface SearchFieldProps {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  label: string
+  /** Return in the field: the window's to answer, usually by opening the first thing found. */
+  onEnter?: () => void
+  /** The down arrow in the field: the window's to answer, usually by going into what was found. */
+  onArrowDown?: () => void
+}
+
+/** A search field that really filters: the kit's field shape around a real input.
+ * Escape empties it, and emptying it (by the key or by its button) leaves the caret where it was:
+ * in the field, ready for the next search. */
+export function SearchField({ value, onChange, placeholder = 'Search', label, onEnter, onArrowDown }: SearchFieldProps) {
+  const input = useRef<HTMLInputElement>(null)
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    // A key that is finishing a character being composed is not a command
+    if (e.nativeEvent.isComposing) return
+    if (e.key === 'Escape' && value) {
+      // The Escape is spent on the search: nothing behind the field hears it
+      e.preventDefault()
+      e.stopPropagation()
+      onChange('')
+    } else if (e.key === 'Enter' && onEnter) {
+      e.preventDefault()
+      onEnter()
+    } else if (e.key === 'ArrowDown' && onArrowDown) {
+      e.preventDefault()
+      onArrowDown()
+    }
+  }
   return (
     <label className="search" data-filled={value ? '' : undefined}>
       <Search size={13} strokeWidth={2} className="search__glass" aria-hidden />
-      <input className="search__input" type="text" inputMode="search" autoComplete="off" spellCheck={false} placeholder={placeholder} aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} />
+      <input
+        ref={input}
+        className="search__input"
+        type="text"
+        inputMode="search"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder={placeholder}
+        aria-label={label}
+        // What is typed may be in a right-to-left script: the field sets it in its own direction
+        dir="auto"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKey}
+      />
       {value && (
-        <button type="button" className="search__clear" aria-label="Clear search" onClick={() => onChange('')}>
+        <button
+          type="button"
+          className="search__clear"
+          aria-label="Clear search"
+          // A press on it never takes the caret (on a touch screen the keyboard would go down with it),
+          // and once it has gone from the page the caret is in the field, not nowhere
+          onPointerDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            onChange('')
+            input.current?.focus()
+          }}
+        >
           <X size={9} strokeWidth={2.6} aria-hidden />
         </button>
       )}

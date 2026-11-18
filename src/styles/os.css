@@ -271,6 +271,15 @@
   letter-spacing: 0.01em;
 }
 
+/* Under an open menu, over everything else: it takes the press that puts the
+   menu away, so that nothing beneath it is pressed as well. Behind the bar's
+   own titles, which stay live for moving from menu to menu */
+.menubar__shade {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
 .menubar__status {
   display: flex;
   align-items: center;
@@ -362,7 +371,30 @@
   background: rgba(0, 0, 0, 0.1);
 }
 
+/* A line over a set of choices, in line with their words */
+.menu__heading {
+  padding: 5px 10px 3px 24px;
+  color: var(--ss-text);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ---- On the desk ---- */
+
+/* The desk as one thing, for the screen saver to put out of reach. It draws
+   nothing of its own: the bar, the windows and the Dock lie on the screen as
+   they always did */
+.os__desk {
+  display: contents;
+}
+
+/* A double tap is two taps, never a zoom */
+.menubar,
+.os__windows,
+.dock {
+  touch-action: manipulation;
+}
 
 .desk {
   position: absolute;
@@ -372,6 +404,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Under the windows, in their layer, which takes no presses of its own */
+  pointer-events: auto;
 }
 
 .desk__item {
@@ -557,11 +591,11 @@
   transition: background-color 0.15s ease;
 }
 
-/* A little more to hit than the eye sees */
+/* More to hit than the eye sees: as wide as the lights are apart, and 24px tall */
 .wf__light::after {
   content: '';
   position: absolute;
-  inset: -4px;
+  inset: -6px -4px;
 }
 
 .wf__light[data-kind='close'] {
@@ -961,9 +995,16 @@ html[data-wm-busy='se'] * {
   transition: opacity 0.1s ease;
 }
 
-.dock__item:hover .dock__label,
 .dock__item:focus-visible .dock__label {
   opacity: 1;
+}
+
+/* Under a pointer that can rest on it. A finger has no resting: its tap
+   would leave the name hanging over the Dock */
+@media (hover: hover) {
+  .dock__item:hover .dock__label {
+    opacity: 1;
+  }
 }
 
 .dock__item:focus-visible {
@@ -1000,6 +1041,11 @@ html[data-wm-busy='se'] * {
   opacity: 1;
   visibility: visible;
   transition: opacity 1.2s ease;
+}
+
+/* It holds the keyboard while it is up, and needs no ring to say so */
+.saver:focus-visible {
+  outline: none;
 }
 
 .saver__sky {
@@ -1074,10 +1120,37 @@ html[data-wm-busy='se'] * {
 }
 
 .saver__who {
+  --said: clamp(17px, 1.9vw, 26px);
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
   gap: 3px;
+  /* Room for three lines of what they said, so the shrug's ground does not
+     move as the people turn over. How long each stays is set with it (ScreenSaver.tsx) */
+  min-height: calc(var(--said) * 1.32 * 3 + 62px);
   animation: saver-who 4.2s ease both;
+}
+
+.saver__said {
+  max-width: min(760px, 84vw);
+  margin-bottom: 12px;
+  font-size: var(--said);
+  font-weight: 500;
+  line-height: 1.32;
+  text-wrap: balance;
+  opacity: 0.92;
+}
+
+/* A short screen has room for the name and no more */
+@media (max-height: 600px) {
+  .saver__who {
+    min-height: 0;
+  }
+
+  .saver__said {
+    display: none;
+  }
 }
 
 .saver__name {
@@ -1094,7 +1167,7 @@ html[data-wm-busy='se'] * {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
-  opacity: 0.44;
+  opacity: 0.6;
 }
 
 @keyframes saver-who {
@@ -1102,8 +1175,8 @@ html[data-wm-busy='se'] * {
     opacity: 0;
     transform: translateY(6px);
   }
-  14%,
-  84% {
+  8%,
+  92% {
     opacity: 1;
     transform: none;
   }
@@ -1113,26 +1186,147 @@ html[data-wm-busy='se'] * {
   }
 }
 
-/* ---- Touch: bigger lights. (A phone-sized screen has its own layout: phone.css) ---- */
+/* ---- Not everything in a window is its words ---- */
 
-@media (pointer: coarse) {
+/* Select All takes a window's words: not the initials in a face, nor the
+   grey words a field shows while it is empty */
+.os__windows :where(.ss-avatar, .ss-field__placeholder, [data-placeholder]) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* A link is pressed, not dragged off as an address */
+.menubar a,
+.dock a,
+.os__windows a {
+  -webkit-user-drag: none;
+}
+
+/* ---- Touch: where there is a finger, there is more to take hold of. This
+   asks whether any pointer is a finger, not whether the main one is: a
+   laptop with a trackpad and a touch screen is touched too. (A phone-sized
+   screen has its own layout: phone.css) ---- */
+
+@media (any-pointer: coarse) {
+  /* The lights: bigger, further apart, their marks always showing, each with
+     44px of height to press. Over the grips, which would otherwise take the
+     corner they sit in */
   .wf__lights {
-    gap: 12px;
+    top: calc(var(--lights-y) - 9px);
+    left: calc(var(--lights-y) - 9px);
+    z-index: 6;
+    gap: 14px;
   }
 
   .wf__light {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
   }
 
   .wf__light svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     opacity: 1;
   }
 
+  /* A light that does nothing says nothing */
+  .wf__light:disabled svg {
+    opacity: 0;
+  }
+
   .wf__light::after {
-    inset: -9px -6px;
+    inset: -13px -7px;
+  }
+
+  /* The room the kit keeps for the lights grows with them, so that what
+     follows in a window's bar moves along */
+  .wf .ss-window__lights {
+    margin-right: 30px;
+  }
+
+  /* The grips: a band a fingertip can land on, most of it outside the window
+     so that the window's own edge still belongs to what is in it; and a
+     corner the size of a fingertip */
+  .wf__grip[data-edge='n'] {
+    inset: -18px 22px auto;
+    height: 24px;
+  }
+
+  .wf__grip[data-edge='s'] {
+    inset: auto 22px -16px;
+    height: 24px;
+  }
+
+  .wf__grip[data-edge='e'] {
+    inset: 22px -16px 22px auto;
+    width: 24px;
+  }
+
+  .wf__grip[data-edge='w'] {
+    inset: 22px auto 22px -16px;
+    width: 24px;
+  }
+
+  .wf__grip[data-edge='ne'],
+  .wf__grip[data-edge='nw'],
+  .wf__grip[data-edge='se'],
+  .wf__grip[data-edge='sw'] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .wf__grip[data-edge='ne'] {
+    top: -22px;
+    right: -22px;
+  }
+
+  .wf__grip[data-edge='nw'] {
+    top: -22px;
+    left: -22px;
+  }
+
+  .wf__grip[data-edge='se'] {
+    right: -22px;
+    bottom: -22px;
+  }
+
+  .wf__grip[data-edge='sw'] {
+    bottom: -22px;
+    left: -22px;
+  }
+
+  /* The menu bar keeps its height; each title takes presses a little above
+     it and well below */
+  .menubar__title {
+    position: relative;
+    padding: 0 11px;
+  }
+
+  .menubar__title::after {
+    content: '';
+    position: absolute;
+    inset: -3px 0 -9px;
+  }
+
+  .menu {
+    min-width: 236px;
+    font-size: 15px;
+  }
+
+  .menu__item {
+    height: 38px;
+    padding-right: 14px;
+  }
+
+  .menu__heading {
+    padding-top: 8px;
+    font-size: 12px;
+  }
+
+  .tile-menu__option {
+    width: 64px;
+    padding: 11px 0 9px;
+    font-size: 12px;
   }
 }
 

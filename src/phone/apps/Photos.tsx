@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react'
 import { flushSync } from 'react-dom'
 import { ArrowUpDown, Check, ChevronRight, Clock, Ellipsis, Heart, Image as ImageIcon, Images, Info, Play, Search, Share, Video, X } from 'lucide-react'
-import { DROPS, MEDIA, type MediaKind } from '../../data/drops'
+import { DROPS, hasFile, hueOf, MEDIA, type MediaKind } from '../../data/drops'
+import { DRAFT } from '../../data/site'
 import { prefersReducedMotion } from '../../os/dom'
 import { createStore, useStore } from '../../os/store'
 import { haptic, share } from '../native'
@@ -15,10 +16,14 @@ import '../../styles/phone/photos.css'
 // squares; Collections has each drop as an album, with the media types and the
 // utilities under them; Search is the round button beside the tabs; a tap on a
 // square opens it full screen, to swipe through. None of the media has been
-// supplied yet, so every tile is the slot one will go in: fill in a `src` in
-// src/data/drops.ts and the picture takes its slot's place. Nothing here has a
-// date, so the parts of Photos that are made of dates (Years, Months, the date
-// over a picture) are left out, not made up.
+// supplied yet: fill in a `src` in src/data/drops.ts and the picture takes its
+// slot's place. Until then a visitor is shown a quiet tile in the drop's own
+// colour with its name on it ("On its way" when opened), and nothing is
+// counted that is not there; with `?draft` in the address (`DRAFT`) every
+// empty slot is drawn as the note that says what is missing, and counted, for
+// whoever is filling them in. Nothing here has a date, so the parts of Photos
+// that are made of dates (Years, Months, the date over a picture) are left
+// out, not made up.
 
 type TabId = 'library' | 'collections'
 
@@ -52,14 +57,39 @@ interface Mine {
   bare: boolean
 }
 
-/** What the app keeps while it is in the background. It lasts as long as the page does. */
-const mine = createStore<Mine>({ tab: 'library', searching: false, swapped: false, filter: 'all', query: '', loved: [], recent: [], run: null, bare: false })
+/** What has been favorited is kept for the tab, so a reload (or a phone bringing the tab back by
+ * itself) finds it again: in the tab's own storage, which nothing but this page reads and which goes
+ * when the tab does. A frame that is refused storage simply starts with none. */
+const KEPT = 'shrug:vip:loved'
+
+function keptLoved(): number[] {
+  try {
+    const list: unknown = JSON.parse(window.sessionStorage.getItem(KEPT) ?? '[]')
+    return Array.isArray(list) ? list.filter((i): i is number => Number.isInteger(i) && i >= 0 && i < MEDIA.length) : []
+  } catch {
+    return []
+  }
+}
+
+function keepLoved(loved: number[]) {
+  try {
+    window.sessionStorage.setItem(KEPT, JSON.stringify(loved))
+  } catch {
+    // No storage here: it is kept for as long as the page is, as before
+  }
+}
+
+/** What the app keeps while it is in the background. It lasts as long as the page does (the favorites, as long as the tab). */
+const mine = createStore<Mine>({ tab: 'library', searching: false, swapped: false, filter: 'all', query: '', loved: keptLoved(), recent: [], run: null, bare: false })
 
 const showTab = (tab: TabId) => mine.set((s) => (s.tab === tab && !s.searching ? s : { ...s, tab, searching: false, query: '', swapped: true }))
 const leaveSearch = () => mine.set((s) => (s.searching ? { ...s, searching: false, query: '', swapped: true } : s))
 const setFilter = (filter: Filter) => mine.set((s) => (s.filter === filter ? s : { ...s, filter }))
 const setQuery = (query: string) => mine.set((s) => (s.query === query ? s : { ...s, query }))
-const toggleLoved = (index: number) => mine.set((s) => ({ ...s, loved: s.loved.includes(index) ? s.loved.filter((i) => i !== index) : [...s.loved, index] }))
+const toggleLoved = (index: number) => {
+  mine.set((s) => ({ ...s, loved: s.loved.includes(index) ? s.loved.filter((i) => i !== index) : [...s.loved, index] }))
+  keepLoved(mine.get().loved)
+}
 const viewed = (index: number) => mine.set((s) => (s.recent[0] === index ? s : { ...s, recent: [index, ...s.recent.filter((i) => i !== index)] }))
 
 /** Every item, by its place in MEDIA. */
@@ -75,17 +105,19 @@ const shownBy = (filter: Filter, loved: number[]) => (filter === 'all' ? EVERYTH
 
 const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
-/** How many of each kind, as Photos writes it: 8 Photos, 4 Videos. */
+/** What there is to count: for a visitor, the photos and videos that have arrived; for the editor, every slot. */
+const there = (indices: number[]) => (DRAFT ? indices : indices.filter((i) => hasFile(MEDIA[i]!)))
+
+/** How many of each kind, as Photos writes it: 8 Photos, 4 Videos. Nothing at all, when none of them is there yet. */
 function tally(indices: number[]) {
-  const p = indices.filter((i) => MEDIA[i]!.kind === 'photo').length
-  const v = indices.length - p
-  return [p ? count(p, 'Photo') : '', v ? count(v, 'Video') : ''].filter(Boolean).join(', ') || 'No Items'
+  const real = there(indices)
+  const p = real.filter((i) => MEDIA[i]!.kind === 'photo').length
+  const v = real.length - p
+  return [p ? count(p, 'Photo') : '', v ? count(v, 'Video') : ''].filter(Boolean).join(', ')
 }
 
-/** A slot's ground takes its colour from its drop, so a drop looks the same
- * wherever it turns up and the grid doesn't read as a gray wall. */
-const HUES = ['#3f8cff', '#8a6dff', '#ff66b8', '#ffa63d', '#2bbfa4', '#ff5a3c', '#2b55cf', '#3fb8e0']
-const hueOf = (drop: string) => HUES[Math.max(0, DROPS.indexOf(drop)) % HUES.length]!
+/** What stands in for a count while what it would count is still to come. */
+const waiting = (indices: number[]) => (indices.length === 1 ? 'On its way' : 'On their way')
 
 /** The app's own element: what a press outside React's reach (the search field's focus, a tab's scroll to the top) is found in. */
 const RootContext = createContext<RefObject<HTMLDivElement>>({ current: null })
@@ -124,17 +156,19 @@ const TABS: Tab<TabId>[] = [
 
 // ---- A tile ----
 
-/** One photo or video as a square: the picture, or the slot it will go in. A
- * video carries a play mark in its corner, where Photos writes its length; a
- * favorite, a heart. A slot is named for its drop, except where that is
- * already said: an album's `cover` has the name under it, and `within` an
- * album every slot is from the one drop, so each says what kind of slot it is
- * instead. */
+/** One photo or video as a square: the picture, or the tile that keeps its
+ * place. A video carries a play mark in its corner, where Photos writes its
+ * length; a favorite, a heart. A tile without its picture is named for its
+ * drop, except where that is already said: an album's `cover` has the name
+ * under it, and `within` an album every tile is from the one drop, so each
+ * says that it is on its way instead (or, to the editor, what kind of slot it
+ * is). */
 function Picture({ index, loved, cover, within }: { index: number; loved?: boolean; cover?: boolean; within?: boolean }) {
   const slot = MEDIA[index]!
   const video = slot.kind === 'video'
+  const words = DRAFT ? (within ? (video ? 'Video slot' : 'Photo slot') : slot.drop) : within ? 'On its way' : slot.drop
   return (
-    <span className="photos-pic" data-kind={slot.kind} data-empty={!slot.src || undefined} style={{ '--hue': hueOf(slot.drop) } as CSSProperties}>
+    <span className="photos-pic" data-kind={slot.kind} data-empty={!slot.src || undefined} data-draft={DRAFT || undefined} style={{ '--hue': hueOf(slot.drop) } as CSSProperties}>
       {slot.src ? (
         video ? (
           <video className="photos-pic__media" src={slot.src} muted playsInline preload="metadata" tabIndex={-1} />
@@ -144,7 +178,7 @@ function Picture({ index, loved, cover, within }: { index: number; loved?: boole
       ) : (
         <span className="photos-pic__slot">
           {video ? <Video size={22} strokeWidth={1.7} aria-hidden /> : <ImageIcon size={22} strokeWidth={1.7} aria-hidden />}
-          {!cover && <span className="photos-pic__name">{within ? (video ? 'Video slot' : 'Photo slot') : slot.drop}</span>}
+          {!cover && <span className="photos-pic__name">{words}</span>}
         </span>
       )}
       {video && <Play className="photos-pic__play" size={13} strokeWidth={0} fill="currentColor" aria-hidden />}
@@ -154,11 +188,12 @@ function Picture({ index, loved, cover, within }: { index: number; loved?: boole
 }
 
 /** What a tile is, for someone who is told it and not shown it. It holds the
- * words the tile shows (its drop's name; within an album, "Photo slot"). */
+ * words the tile shows (its drop's name; within an album, "On its way"). */
 const describe = (index: number) => {
   const slot = MEDIA[index]!
   const kind = slot.kind === 'video' ? 'Video' : 'Photo'
-  return `${kind}${slot.src ? '' : ' slot'} from ${slot.drop}${slot.from ? `, sent by ${slot.from}` : ''}`
+  if (slot.src) return `${kind} from ${slot.drop}${slot.from ? `, sent by ${slot.from}` : ''}`
+  return DRAFT ? `${kind} slot from ${slot.drop}` : `${kind} from ${slot.drop}, on its way`
 }
 
 /** Opens one in the viewer, to swipe through the rest of the grid it was in. */
@@ -260,12 +295,17 @@ function Library() {
       {shown.length ? (
         <>
           <Grid indices={shown} />
-          {/* How Photos ends its library: what is in it, and a quieter line under that */}
-          <p className="photos-note">
-            {tally(shown)}
-            <br />
-            From the people who got a drop.
-          </p>
+          {/* How Photos ends its library: what is in it, and a quieter line under that. Nothing is
+              counted that has not arrived: until something has, the quieter line says so by itself */}
+          {tally(shown) ? (
+            <p className="photos-note">
+              {tally(shown)}
+              <br />
+              From the people who got a drop.
+            </p>
+          ) : (
+            <p className="photos-note photos-note--plain">From the people who got a drop. The first ones are on their way.</p>
+          )}
         </>
       ) : (
         <Empty icon={none.icon} title={none.title}>
@@ -308,6 +348,8 @@ function useAlbums(): AlbumSpec[] {
 /** An album as Photos shows one: its cover, its name, how much is in it. */
 function AlbumCard({ album }: { album: AlbumSpec }) {
   const n = album.items.length
+  // Favorites holds what the visitor put there, whatever it is; a drop's album, what has arrived from it
+  const held = album.heart ? n : there(album.items).length
   return (
     <button type="button" className="photos-album" onClick={() => push(album.view)}>
       <span className="photos-album__cover">
@@ -316,8 +358,18 @@ function AlbumCard({ album }: { album: AlbumSpec }) {
       </span>
       <span className="photos-album__name">{album.name}</span>
       <span className="photos-album__count">
-        {n}
-        <span className="sr-only"> {n === 1 ? 'item' : 'items'}</span>
+        {held > 0 || album.heart ? (
+          <>
+            {held}
+            <span className="sr-only"> {held === 1 ? 'item' : 'items'}</span>
+          </>
+        ) : (
+          // Nothing from this drop yet: no nought under it, and the line keeps its height
+          <>
+            {'\u00a0'}
+            <span className="sr-only">{waiting(album.items).toLowerCase()}</span>
+          </>
+        )}
       </span>
     </button>
   )
@@ -366,7 +418,7 @@ function TypeRows() {
   return (
     <List className="photos-rows">
       <Section>
-        <Cell lead={<Video size={23} strokeWidth={2} aria-hidden />} title="Videos" value={ALL_VIDEOS.length} chevron onClick={() => push(VIDEOS_VIEW)} />
+        <Cell lead={<Video size={23} strokeWidth={2} aria-hidden />} title="Videos" value={there(ALL_VIDEOS).length || undefined} chevron onClick={() => push(VIDEOS_VIEW)} />
       </Section>
     </List>
   )
@@ -437,7 +489,7 @@ function RowsScreen({ title, children }: { title: string; children: ReactNode })
 function GridScreen({ title, indices, within, none }: { title: string; indices: number[]; within?: boolean; none: { icon: ReactNode; title: string; text: string } }) {
   const foot = useTabsFoot()
   return (
-    <Screen title={title} large subtitle={indices.length ? tally(indices) : undefined} className="photos-screen" foot={foot}>
+    <Screen title={title} large subtitle={indices.length ? tally(indices) || waiting(indices) : undefined} className="photos-screen" foot={foot}>
       {indices.length ? (
         <Grid indices={indices} within={within} />
       ) : (
@@ -476,15 +528,18 @@ function found(index: number, q: string) {
 /** An album as a row: what search lists, to jump to. */
 function AlbumRow({ drop }: { drop: string }) {
   const items = inDrop(drop)
+  const held = there(items).length
   return (
     <Cell
       lead={<span className="photos-thumb">{items.length > 0 && <Picture index={items[0]!} cover />}</span>}
       title={drop}
       value={
-        <>
-          {items.length}
-          <span className="sr-only"> {items.length === 1 ? 'item' : 'items'}</span>
-        </>
+        held > 0 ? (
+          <>
+            {held}
+            <span className="sr-only"> {held === 1 ? 'item' : 'items'}</span>
+          </>
+        ) : undefined
       }
       chevron
       onClick={() => push(albumView(drop))}
@@ -566,7 +621,7 @@ function SearchPane() {
           )}
           {tiles.length > 0 && (
             <>
-              <h3 className="photos-head">{tally(tiles)}</h3>
+              <h3 className="photos-head">{tally(tiles) || 'Photos and Videos'}</h3>
               <Grid indices={tiles} />
             </>
           )}
@@ -757,18 +812,21 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
       }
       foot={
         <div className="photos-tools">
-          <GlassGroup label="Photo">
-            <GroupButton
-              label={copied ? 'Link copied' : 'Share'}
-              onClick={async () => {
-                const how = await share({ title: slot.drop, text: `${video ? 'A video' : 'A photo'} from ${slot.drop}, a Shrug drop.` })
-                if (how !== 'copied') return
-                setCopied(true)
-                setTimeout(() => setCopied(false), 1700)
-              }}
-            >
-              {copied ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <Share size={21} strokeWidth={2.1} aria-hidden />}
-            </GroupButton>
+          <GlassGroup label={video ? 'Video' : 'Photo'}>
+            {/* Nothing to share until the picture is there */}
+            {(slot.src || DRAFT) && (
+              <GroupButton
+                label={copied ? 'Link copied' : 'Share'}
+                onClick={async () => {
+                  const how = await share({ title: slot.drop, text: `${video ? 'A video' : 'A photo'} from ${slot.drop}, a Shrug drop.` })
+                  if (how !== 'copied') return
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 1700)
+                }}
+              >
+                {copied ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <Share size={21} strokeWidth={2.1} aria-hidden />}
+              </GroupButton>
+            )}
             <GroupButton
               label={loved ? 'Unfavorite' : 'Favorite'}
               onClick={() => {
@@ -825,10 +883,12 @@ function Viewer({ index, under }: { index: number; under: string | null }) {
                   <img className="photos-page__media" src={item.src} alt={describe(i)} loading={i === index ? 'eager' : 'lazy'} decoding="async" draggable={false} />
                 )
               ) : (
-                <div className="photos-big" data-kind={item.kind} style={{ '--hue': hueOf(item.drop) } as CSSProperties}>
+                <div className="photos-big" data-kind={item.kind} data-draft={DRAFT || undefined} style={{ '--hue': hueOf(item.drop) } as CSSProperties}>
                   {film ? <Video size={40} strokeWidth={1.4} aria-hidden /> : <ImageIcon size={40} strokeWidth={1.4} aria-hidden />}
-                  <b>{film ? 'Video slot' : 'Photo slot'}</b>
+                  {/* The tile it was opened from, large: its drop, and that it is on its way (to the editor: which slot it is) */}
+                  {DRAFT && <b>{film ? 'Video slot' : 'Photo slot'}</b>}
                   <span>{item.drop}</span>
+                  {!DRAFT && <b>On its way</b>}
                   {film && <Play className="photos-pic__play" size={18} strokeWidth={0} fill="currentColor" aria-hidden />}
                 </div>
               )}
@@ -851,10 +911,11 @@ function InfoSheet() {
   return (
     <Sheet label="Info" title="Info" detent="medium">
       <List>
-        <Section footer={slot.src ? undefined : 'Nothing has been supplied for this slot yet. The picture takes its place when it is.'}>
+        <Section footer={slot.src ? undefined : DRAFT ? 'Nothing has been supplied for this slot yet. The picture takes its place when it is.' : 'This one hasn’t come in yet. It shows here when it does.'}>
           <Cell title="Drop" value={slot.drop} />
           <Cell title="Kind" value={slot.kind === 'video' ? 'Video' : 'Photo'} />
-          <Cell title="From" value={slot.from ?? 'Not supplied yet'} />
+          {/* Who sent it, once that is known (the editor is shown that it is not) */}
+          {(slot.from || DRAFT) && <Cell title="From" value={slot.from ?? 'Not supplied yet'} />}
         </Section>
       </List>
     </Sheet>

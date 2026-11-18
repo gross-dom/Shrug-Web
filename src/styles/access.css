@@ -1,0 +1,641 @@
+/* For the people the rest of the stylesheets do not think of first: forced
+   colours (Windows High Contrast), where every shadow and background that
+   draws an edge, a state or a control is taken away and has to be said again
+   in the system's own colours; and the kit's parts that still move when a
+   visitor has asked for less motion. One file for both layouts.
+
+   It is loaded last of the stylesheets the page starts with, but the iPhone's
+   own (src/styles/phone/*.css) arrive later still, with the iPhone. So a fill
+   or an ink here that has to beat one of theirs is written one step more
+   exactly: it starts at `.ph`, the iPhone's screen. An edge never is. */
+
+/* ---- Less motion: the kit's parts ----
+   The kit's own rules for this sit in its layer under rules that outrank
+   them, so its popovers still grow out of a corner and a message still pops.
+   Here they only fade: a menu, the details and the + menu appear where they
+   are, and a message is simply there. */
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-popover::before,
+  .ss-popover:not([data-show]):not([data-instant]) {
+    transform: none;
+  }
+
+  .ss-popover::before {
+    transition: none;
+  }
+
+  .ss-popover:not([data-show]):not([data-instant]) {
+    transition: opacity 0.2s ease;
+  }
+
+  .ss-bubble[data-arrived],
+  .ss-bubble[data-arrived]::before,
+  .ss-bubble[data-arrived] > .ss-bubble__text,
+  .ss-bubble[data-grew] > .ss-bubble__text,
+  .ss-bubble[data-arrived] > .ss-bubble__tail {
+    animation: none;
+  }
+
+  .ss-bubble__tail {
+    transition: none;
+  }
+}
+
+/* ---- Forced colours ----
+   The browser has thrown away every colour, gradient and shadow and repainted
+   the page in the visitor's own few: Canvas and CanvasText for the page,
+   ButtonFace and ButtonText for controls, Highlight and HighlightText for what
+   is chosen, GrayText for what is off, LinkText for what leads away. What the
+   site drew with a shadow (an edge) or a tint (a state) has gone with them, so
+   each is drawn again here in those colours.
+
+   Edges are outlines, which take up no room, so nothing moves. Each is
+   written as one class and no more: the focus ring is an outline too, from a
+   rule one step more exact, so it still takes over when a control has the
+   keyboard. `forced-color-adjust: none` is kept for the few things that must
+   fill with Highlight and have their words read on it, and for pictures. */
+
+@media (forced-colors: active) {
+  /* -- Pictures stay pictures --
+     A company's logo is drawn for the white tile it sits on, and a face is a
+     grey disc with initials: both are left as they were painted. Recoloured,
+     a dark logo would vanish into a dark Canvas. Shrug's own face is a black
+     disc, so it gets an edge. */
+  .logo,
+  .ss-avatar,
+  .shrug-avatar {
+    forced-color-adjust: none;
+  }
+
+  .shrug-avatar {
+    outline: 1px solid CanvasText;
+  }
+
+  /* -- The desktop: every surface has an edge -- */
+
+  .menubar {
+    background-color: Canvas;
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .menubar__title[data-open] {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  /* A window: a solid sheet with a line round it. The one in front has the heavier line, in Highlight */
+  .wf__content > .ss-window {
+    background-color: Canvas;
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .wf[data-active] .wf__content > .ss-window {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  .ss-window[data-side='floating'] > .ss-window__side {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  /* Its three lights: rings with their marks always showing, since there is no red, amber and green to go by */
+  .wf__light {
+    outline: 1px solid ButtonText;
+  }
+
+  .wf__light svg {
+    opacity: 1;
+    stroke: ButtonText;
+  }
+
+  .wf__light .wf__light-fill {
+    fill: ButtonText;
+    stroke: none;
+  }
+
+  .wf__light:disabled {
+    outline-color: GrayText;
+  }
+
+  .wf__light:disabled svg {
+    opacity: 0;
+  }
+
+  /* Menus and popovers (the menu bar's, the details, the + menu, the ways to tile, an iPhone's menus) */
+  .ss-popover {
+    outline: 1px solid CanvasText;
+  }
+
+  .ss-popover::before {
+    background-color: Canvas;
+  }
+
+  .menu__item:hover,
+  .menu__item:focus-visible,
+  .composer__app:hover,
+  .composer__app:focus-visible,
+  .tile-menu__option:hover,
+  .tile-menu__option:focus-visible,
+  .tile-menu__option[aria-pressed='true'] {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .menu__item[aria-disabled='true'],
+  .menu__item[aria-disabled='true']:hover {
+    background-color: transparent;
+    color: GrayText;
+    forced-color-adjust: auto;
+  }
+
+  .menu__rule {
+    background-color: CanvasText;
+  }
+
+  .tile-menu__screen {
+    stroke: CanvasText;
+  }
+
+  .tile-menu__part {
+    fill: CanvasText;
+  }
+
+  .tile-menu__option:hover .tile-menu__screen,
+  .tile-menu__option:focus-visible .tile-menu__screen,
+  .tile-menu__option[aria-pressed='true'] .tile-menu__screen {
+    stroke: HighlightText;
+  }
+
+  .tile-menu__option:hover .tile-menu__part,
+  .tile-menu__option:focus-visible .tile-menu__part,
+  .tile-menu__option[aria-pressed='true'] .tile-menu__part {
+    fill: HighlightText;
+  }
+
+  .tile-preview {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  /* The Dock: a shelf with an edge; what is new on an icon is counted in Highlight */
+  .dock__shelf {
+    background-color: Canvas;
+    outline: 1px solid CanvasText;
+  }
+
+  .dock__badge {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .dock__dot,
+  .dock__rule {
+    background-color: CanvasText;
+  }
+
+  .dock__label {
+    background-color: Canvas;
+    outline: 1px solid CanvasText;
+  }
+
+  /* An icon on the desk that has been picked */
+  .desk__item[data-picked] .desk__icon {
+    outline: 2px solid Highlight;
+  }
+
+  .desk__item[data-picked] .desk__name {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  /* When the site cannot be drawn, and half of it on its way */
+  .stalled {
+    background-color: Canvas;
+  }
+
+  .stalled__button,
+  .window-failed__retry {
+    outline: 1px solid ButtonText;
+  }
+
+  .arriving__spin {
+    background-color: CanvasText;
+  }
+
+  /* -- What is chosen, on the desktop --
+     Each of these was a tint. Now it fills with Highlight, and its words,
+     icons and counts are HighlightText. */
+  .conv[data-selected],
+  .side-item[aria-current],
+  .chip[aria-pressed='true'],
+  .tool__part[aria-pressed='true'],
+  .pf-file[aria-selected='true'] .pf-file__name,
+  .pf-row[aria-selected='true'],
+  .pf-row[aria-selected='true']:nth-child(odd),
+  .faq-row[data-selected],
+  .faq-row[data-selected]:hover,
+  .seg [role='radio'][aria-checked='true'],
+  .ss-seg__option[data-on],
+  .composer__send[data-ready] {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  /* Inside one, every word and glyph. `!important`, here and wherever else a
+     thing fills with Highlight: each of them has a colour of its own from a
+     rule more exact than any written here, and on Highlight none of those can
+     be trusted to show. Pictures are left alone. */
+  .menu__item:not([aria-disabled='true']):hover *,
+  .menu__item:not([aria-disabled='true']):focus-visible *,
+  .composer__app:hover *,
+  .composer__app:focus-visible *,
+  .conv[data-selected] :not(.ss-avatar, .ss-avatar *, .shrug-avatar, .shrug-avatar *),
+  .side-item[aria-current] *,
+  .chip[aria-pressed='true'] *,
+  .pf-row[aria-selected='true'] :not(.logo, .logo *),
+  .faq-row[data-selected] *,
+  .seg [role='radio'][aria-checked='true'] *,
+  .ss-seg__option[data-on] * {
+    color: HighlightText !important;
+  }
+
+  .ss-seg__thumb {
+    background-color: Highlight;
+  }
+
+  .pf-file[aria-selected='true'] .pf-file__icon {
+    outline: 2px solid Highlight;
+  }
+
+  /* What is new in a conversation: the dot beside it */
+  .conv .ss-row__dot,
+  .ph .msg-row .ss-row__dot {
+    background-color: Highlight;
+  }
+
+  .conv[data-selected] .ss-row__dot {
+    background-color: HighlightText;
+  }
+
+  /* The list has the keyboard: a second line round the conversation the arrows are on */
+  .conv-list:focus-visible .conv[data-selected] {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  /* -- Shapes, on the desktop: buttons and fields keep an edge -- */
+
+  .tool__cap,
+  .chat-back,
+  .chip,
+  .search,
+  .search__clear,
+  .chat__new,
+  .composer__plus,
+  .composer__field,
+  .composer__send,
+  .faq__way,
+  .ss-seg {
+    outline: 1px solid ButtonText;
+  }
+
+  .pf-preview__visit,
+  .about__link {
+    outline: 1px solid LinkText;
+  }
+
+  .tool[aria-disabled='true'] .tool__cap {
+    outline-color: GrayText;
+  }
+
+  /* A field with the caret in it: the ring that was a glow */
+  .search:focus-within,
+  .composer__field:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .composer__caret {
+    background-color: CanvasText;
+  }
+
+  /* The details: grouped rows with lines between, and a switch that can be seen */
+  .details__group {
+    outline: 1px solid CanvasText;
+  }
+
+  .details__row + .details__row {
+    border-top: 1px solid CanvasText;
+  }
+
+  .ss-toggle {
+    background-color: Canvas;
+    outline: 1px solid ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .ss-toggle__knob {
+    background-color: ButtonText;
+  }
+
+  .ss-toggle[data-on] {
+    background-color: Highlight;
+  }
+
+  .ss-toggle[data-on] .ss-toggle__knob {
+    background-color: HighlightText;
+  }
+
+  /* VIP's tiles and their captions */
+  .vip-tile {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .vip-tile__cap {
+    background-color: Canvas;
+    outline: 1px solid CanvasText;
+  }
+
+  /* -- Messages, on both layouts: whose words are whose --
+     A bubble was a colour. Now it is a line round the words: Highlight and
+     heavier for Shrug's own side, CanvasText for everyone else's. The tail was
+     a painted shape and goes; the side a bubble hugs says the rest. */
+  .ss-bubble::before {
+    border: 1px solid CanvasText;
+    background-color: Canvas;
+  }
+
+  [data-from='me'] > .ss-bubble::before {
+    border: 2px solid Highlight;
+  }
+
+  .ss-bubble__tail {
+    display: none;
+  }
+
+  .ss-bubble__dots i {
+    background-color: CanvasText;
+  }
+
+  .chat-failed::after {
+    outline: 1px solid CanvasText;
+  }
+
+  /* -- The iPhone: the Lock Screen and the Home Screen --
+     The wallpaper is a picture and stays; the browser puts a plate behind any
+     words set straight on it. What floated over it as frosted glass (a
+     notification, the widget, a folder, the Dock, Search) is now a solid
+     sheet with an edge. */
+  .ss-notification,
+  .sb-stack[data-more]::before,
+  .sb-stack[data-more='2']::after,
+  .sb-widget__face,
+  .sb-folder__face,
+  .sb-dock,
+  .sb-open__panel,
+  .spot-card {
+    outline: 1px solid CanvasText;
+  }
+
+  .ss-lock__control,
+  .sb-search,
+  .spot-field,
+  .spot-close,
+  .spot-field__clear,
+  .spot-glyph {
+    outline: 1px solid ButtonText;
+  }
+
+  .ss-notification,
+  .ss-lock__control,
+  .ph .sb-stack[data-more]::before,
+  .ph .sb-stack[data-more='2']::after,
+  .ph .sb-widget__face,
+  .ph .sb-folder__face,
+  .ph .sb-dock,
+  .ph .sb-search,
+  .ph .sb-open__panel,
+  .ph .spot-card,
+  .ph .spot-field,
+  .ph .spot-close,
+  .ph .spot-field__clear,
+  .ph .spot-glyph,
+  .ph .spot-away {
+    background-color: Canvas;
+  }
+
+  /* What is new, counted on an icon */
+  .ph .sb-badge {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  /* The widget's two sides of the conversation, as in the conversation itself */
+  .sb-chat__bubble {
+    outline: 1px solid CanvasText;
+  }
+
+  .sb-chat__mine {
+    outline: 2px solid Highlight;
+  }
+
+  /* The home indicator, which was a colour of its own */
+  .ph .sb-homebar__pill {
+    background-color: CanvasText;
+  }
+
+  /* A folder: the lines between its questions; open, its pages' dots are rings, the one for the page showing filled */
+  .ph .sb-folder__titles span + span {
+    border-top-color: CanvasText;
+  }
+
+  .ph .sb-open__note + .sb-open__note::before {
+    background-color: CanvasText;
+  }
+
+  .sb-open__dot {
+    outline: 1px solid CanvasText;
+  }
+
+  .ph .sb-open__dot {
+    background-color: Canvas;
+  }
+
+  .ph .sb-open__dot:is([data-current], [aria-current]) {
+    background-color: Highlight;
+    outline-color: Highlight;
+  }
+
+  /* The App Switcher: each app's card has an edge */
+  .sb-apps[data-switcher] .sb-card {
+    outline: 2px solid CanvasText;
+  }
+
+  /* Search: the field with the caret in it, and the result the arrows are on */
+  .ph .spot-field:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .ph .spot-row + .spot-row::before {
+    background-color: CanvasText;
+  }
+
+  .ph .spot [data-spot-item][data-active] {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .ph .spot [data-spot-item][data-active] :not(.logo, .logo *, .ss-avatar, .ss-avatar *, .shrug-avatar, .shrug-avatar *, svg, svg *) {
+    color: HighlightText !important;
+  }
+
+  /* -- The iPhone's apps: bars, glass and lists --
+     A bar was clear, with what scrolls fading away under it; with no fade the
+     words would run through its title, so it is solid, with a line. Every
+     piece of glass (a round button, a group of them, a tab bar, a search
+     field, the message field) is a solid shape with an edge. */
+  .ios-bar {
+    border-bottom: 1px solid CanvasText;
+    background-color: Canvas;
+  }
+
+  .ios-foot {
+    border-top: 1px solid CanvasText;
+    background-color: Canvas;
+  }
+
+  .ios-glass {
+    background-color: Canvas;
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
+  }
+
+  .ios-group::before {
+    background-color: Canvas;
+  }
+
+  .ph .ios-button[data-prominent],
+  .ph .ios-tabs__item[aria-current='page'],
+  .ph .ios-segments__item[aria-checked='true'],
+  .ph .ios-menu__list .ios-menu__item:is(:hover, :focus-visible, :active),
+  .ph .msg-row.ss-row[data-picked],
+  .ph .msg-field__send[data-ready],
+  .ph .notes-hit {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .ph .ios-button[data-prominent] *,
+  .ph .ios-tabs__item[aria-current='page'] *,
+  .ph .ios-segments__item[aria-checked='true'] *,
+  .ph .ios-menu__list .ios-menu__item:is(:hover, :focus-visible, :active) *,
+  .ph .msg-row.ss-row[data-picked] :not(.ss-avatar, .ss-avatar *, .shrug-avatar, .shrug-avatar *) {
+    color: HighlightText !important;
+  }
+
+  .ph .ios-segments__thumb {
+    background-color: Highlight;
+  }
+
+  .ph .ios-button[aria-disabled='true'],
+  .ph .ios-group__part[aria-disabled='true'],
+  .ph .ios-cell[aria-disabled='true'],
+  .ph .ios-menu__list .ios-menu__item[aria-disabled='true'] {
+    background-color: transparent;
+    color: GrayText;
+    forced-color-adjust: auto;
+    opacity: 1;
+  }
+
+  .ios-segments,
+  .ios-search__clear,
+  .msg-field__send,
+  .notes-name,
+  .notes-name__clear,
+  .notes-minus,
+  .notes-way,
+  .term-ios-key {
+    outline: 1px solid ButtonText;
+  }
+
+  .files-open {
+    outline: 1px solid LinkText;
+  }
+
+  /* Lists: a grouped list is a card with an edge, its rows parted by lines. So is a sheet,
+     which has to keep its edge while it holds the keyboard (its own rule takes the ring off it) */
+  .ios-section__rows,
+  .ios-sheet__panel,
+  .ph .ios-sheet .ios-sheet__panel:focus-visible,
+  .settings-hero,
+  .settings-tile,
+  .notes-tile__page,
+  .msg-card__tag,
+  .files-dot {
+    outline: 1px solid CanvasText;
+  }
+
+  .ios-section[data-plain] > .ios-section__rows {
+    outline: none;
+  }
+
+  .ios-sheet__panel {
+    background-color: Canvas;
+  }
+
+  .ph .ios-cell + .ios-cell::before,
+  .ph .msg-row::after,
+  .ph .files-side__rows > li + li > .files-place::before,
+  .ph .files-rows > li + li > .files-row::before,
+  .ph .ios-sheet__grabber,
+  .ph .msg-field__caret {
+    background-color: CanvasText;
+  }
+
+  .ph .ios-menu__item[data-divided] {
+    border-top: 1px solid CanvasText;
+  }
+
+  /* A switch: a ring with a knob; filled with Highlight when it is on */
+  .ios-switch {
+    background-color: Canvas;
+    outline: 1px solid ButtonText;
+    forced-color-adjust: none;
+  }
+
+  .ios-switch__knob {
+    background-color: ButtonText;
+  }
+
+  .ios-switch[aria-checked='true'] {
+    background-color: Highlight;
+  }
+
+  .ios-switch[aria-checked='true'] .ios-switch__knob {
+    background-color: HighlightText;
+  }
+
+  /* VIP: a tile with no picture yet still has its place. The line is on what
+     fills the tile, since anything the tile drew itself would be under it */
+  .photos-pic__slot,
+  .photos-album__cover,
+  .photos-thumb,
+  .photos-big {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+}

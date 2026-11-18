@@ -70,10 +70,12 @@ export const EGGS: Egg[] = [
   },
   {
     id: 'code',
-    name: '72975',
+    // Not a short code: five digits can be somebody's real one. A 555-01 number belongs to nobody.
+    name: '+1 (555) 010-0199',
     ago: 5 * DAY,
     messages: [
-      { from: 'them', text: 'Your Shrug verification code is 000000. Don’t share it with anyone.' },
+      // A joke about one-time codes, and plainly one: there is no code in it, and nothing to verify
+      { from: 'them', text: `Your Shrug verification code is ${SITE.mark}. There’s nothing to verify.` },
       { from: 'them', text: 'We’ll never ask for it. We might ask what you’re building.' },
     ],
   },

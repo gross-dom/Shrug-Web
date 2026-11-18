@@ -1,4 +1,5 @@
 import { COMPANIES, VERTICALS, type Company } from '../data/portfolio'
+import { createStore, useStore } from '../os/store'
 
 // What the Portfolio window and the phone's Portfolio screen share: every
 // company in Shrug's order, its logo as an icon, and where its icon opens.
@@ -19,12 +20,29 @@ export function companiesIn(vertical: number, query: string) {
   return q ? base.filter((c) => c.name.toLowerCase().includes(q) || c.vertical.toLowerCase().includes(q) || (c.blurb ?? '').toLowerCase().includes(q)) : base
 }
 
+// A logo that did not arrive (the line dropped as the folder was opened, say)
+// is not left as the browser's broken picture: its company stands as a letter
+// tile, like the ones with no logo at all, until the line is back. Then each
+// is asked for again.
+const missing = createStore<ReadonlySet<string>>(new Set())
+
+if (typeof window !== 'undefined') window.addEventListener('online', () => missing.set((gone) => (gone.size ? new Set() : gone)))
+
+const noteMissing = (logo: string) => missing.set((gone) => (gone.has(logo) ? gone : new Set(gone).add(logo)))
+
 /** A company's logo as an app icon: its own mark on a rounded tile, or its
- * initial where no logo could be confirmed. */
+ * initial where no logo could be confirmed, or where the file did not arrive. */
 export function CompanyLogo({ company, size = 56 }: { company: Company; size?: number }) {
+  const logo = company.logo
+  const gone = useStore(missing, (s) => !!logo && s.has(logo))
+  const shown = logo && !gone
   return (
-    <span className="logo" data-empty={company.logo ? undefined : ''} style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }} aria-hidden>
-      {company.logo ? <img src={`${import.meta.env.BASE_URL}logos/${company.logo}`} width={size} height={size} alt="" loading="lazy" decoding="async" draggable={false} /> : company.name.trim()[0]?.toUpperCase()}
+    <span className="logo" data-empty={shown ? undefined : ''} style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }} aria-hidden>
+      {shown ? (
+        <img src={`${import.meta.env.BASE_URL}logos/${logo}`} width={size} height={size} alt="" loading="lazy" decoding="async" draggable={false} onError={() => noteMissing(logo)} />
+      ) : (
+        company.name.trim()[0]?.toUpperCase()
+      )}
     </span>
   )
 }
@@ -41,6 +59,22 @@ export function hostOf(url: string) {
 /** What the link to a company is called: its address, or its Shrug case study. */
 export const visitLabel = (company: Company) => (!company.url ? null : /notion\.site/.test(company.url) ? 'Read the case study' : `Visit ${hostOf(company.url)}`)
 
+/** What a company with no site says where its link would be, until Shrug has written what became of it (`note` in the data). */
+export const NO_SITE = 'No website listed'
+
+/** For a company with nowhere to send a visitor: the line that stands where its link would be. Null for one that has a site. */
+export const fateOf = (company: Company) => (company.url ? null : (company.note ?? NO_SITE))
+
+/** Two companies can have one name (there are two called Atoms). Where both show, each says which it is. */
+export const namesake = (company: Company) => ALL.some((other) => other !== company && other.name === company.name)
+
+/** What tells a company from another of the same name: its site's address. Empty for a company whose name is its own. */
+export const tellApart = (company: Company) => (namesake(company) && company.url ? hostOf(company.url) : '')
+
+/** Opens a company's site in a new tab, where it has one. The company it opens for can see where the
+ * visit came from (`noopener` alone: the page that opens is still told who sent it). Says whether anything opened. */
 export function openCompany(company: Company) {
-  if (company.url) window.open(company.url, '_blank', 'noopener,noreferrer')
+  if (!company.url) return false
+  window.open(company.url, '_blank', 'noopener')
+  return true
 }

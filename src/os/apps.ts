@@ -47,7 +47,7 @@ export const APPS: Record<AppId, AppSpec> = {
   },
   messages: {
     id: 'messages',
-    name: 'Group chat',
+    name: 'Group Chat',
     blurb: 'What people say',
     size: fit({ w: 0.7, h: 0.84 }, { w: 820, h: 560 }, { w: 1180, h: 800 }),
     min: { w: 380, h: 360 },
@@ -59,7 +59,7 @@ export const APPS: Record<AppId, AppSpec> = {
   notes: {
     id: 'notes',
     name: 'FAQs',
-    blurb: 'Questions, answered',
+    blurb: 'Questions about Shrug',
     size: fit({ w: 0.54, h: 0.66 }, { w: 700, h: 460 }, { w: 900, h: 620 }),
     min: { w: 400, h: 320 },
     nudge: { x: 90, y: 18 },

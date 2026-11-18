@@ -273,15 +273,27 @@
 
 .msg-convo .chat-undelivered {
   margin-right: 28px;
+  font-size: 12px;
+}
+
+/* The line is small type; the press it takes is not */
+.msg-convo .chat-undelivered::after {
+  content: '';
+  position: absolute;
+  inset: -13px -12px;
+}
+
+.msg-convo .chat-undelivered:hover {
+  text-decoration: none;
 }
 
 /* Back to the newest: a piece of glass over the field */
 .msg-convo .chat__new {
   bottom: calc(var(--foot-gap) + 44px + 18px);
   gap: 5px;
-  height: 34px;
-  padding: 0 14px 0 10px;
-  border-radius: 17px;
+  height: 36px;
+  padding: 0 15px 0 11px;
+  border-radius: 18px;
   background: rgb(255 255 255 / 0.72);
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
   backdrop-filter: blur(14px) saturate(1.6);
@@ -546,7 +558,116 @@
   min-height: 60px;
 }
 
+/* ---- Alerts ---- */
+
+/* An alert over the conversation, as iOS draws one: a title, a line under it,
+   and what can be done, one under another (Messages.tsx, Alert) */
+.msg-alert {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.msg-alert__shade {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.22);
+  animation: ios-fade-in 0.2s ease;
+  transition: opacity 0.2s ease;
+}
+
+.msg-alert__box {
+  position: relative;
+  width: 270px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden auto;
+  border-radius: 14px;
+  background: rgb(246 246 248 / 0.9);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.24);
+  color: var(--label);
+  text-align: center;
+  animation: msg-alert-in 0.26s var(--ui);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+@keyframes msg-alert-in {
+  from {
+    opacity: 0;
+    transform: scale(1.14);
+  }
+}
+
+.msg-alert[data-closing] {
+  pointer-events: none;
+}
+
+.msg-alert[data-closing] .msg-alert__shade,
+.msg-alert[data-closing] .msg-alert__box {
+  opacity: 0;
+}
+
+.msg-alert__title {
+  margin: 19px 16px 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+}
+
+.msg-alert__say {
+  margin: 3px 16px 18px;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  line-height: 18px;
+}
+
+.msg-alert__acts {
+  display: grid;
+}
+
+.msg-alert__act {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  box-shadow: 0 -0.5px 0 var(--sep);
+  color: var(--blue);
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.msg-alert__act[data-bold] {
+  font-weight: 600;
+}
+
+/* Darker than iOS's own red, which this size of type cannot carry on a light ground */
+.msg-alert__act[data-destructive] {
+  color: #d70015;
+}
+
+.msg-alert__act:active {
+  background: rgb(0 0 0 / 0.08);
+}
+
+.msg-alert__act:focus-visible {
+  outline-offset: -3px;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .msg-alert__shade,
+  .msg-alert__box {
+    animation: none;
+    transition: none;
+  }
+
   .msg-field__caret {
     animation: none;
   }
