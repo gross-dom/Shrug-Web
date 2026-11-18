@@ -60,8 +60,18 @@ const fetchOther = () => {
   void fetchHalf(compact ? 'surface' : 'phone').catch(() => {})
 }
 
+interface Boot {
+  done(): void
+  styled(then: () => void): void
+}
+const boot = () => (window as { __shrugBoot?: Boot }).__shrugBoot
+
 /** The site is drawn: the loading screen in index.html gives way to it. */
-const landed = () => (window as { __shrugBoot?: { done(): void } }).__shrugBoot?.done()
+const landed = () => boot()?.done()
+
+/** The site's stylesheet is on. The built page fetches it without holding up the loading screen
+ * (tools/page.ts), so the site can be running before it is dressed: nothing is measured or shown until it is. */
+const styled = () => new Promise<void>((resolve) => (boot() ? boot()!.styled(resolve) : resolve()))
 
 export function Desktop() {
   const saving = useStore(saver, (s) => s.on)
@@ -117,7 +127,7 @@ export function Desktop() {
       t3 = setTimeout(fetchOther, 6000)
     }
     // Once what this screen shows has arrived and been drawn: the chat opens out of a Dock that is there
-    void first.then(
+    void Promise.all([first, styled()]).then(
       () => requestAnimationFrame(() => requestAnimationFrame(open)),
       () => open(),
     )

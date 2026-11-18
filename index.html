@@ -147,6 +147,26 @@
             CSS.supports('color', 'color-mix(in srgb, red, blue)') &&
             CSS.supports('width', '1cqw')
         } catch (e) {}
+        // The site's stylesheet is fetched without holding this screen up (the built page asks for it as if
+        // for print and switches it on when it has arrived): this screen stays until it is on, and tells the site
+        var sheets = document.querySelectorAll('link[data-styles]')
+        var waiting = 0
+        var styled = []
+        /** The site has drawn itself and is only waiting for its stylesheet before this gives way. */
+        var leaving = false
+        function dressed() {
+          if (--waiting > 0) return
+          var told = styled
+          styled = null
+          for (var j = 0; j < told.length; j++) told[j]()
+          if (leaving && !stuck) leave()
+        }
+        for (var i = 0; i < sheets.length; i++) {
+          if (sheets[i].media !== 'print') continue
+          waiting++
+          sheets[i].addEventListener('load', dressed)
+        }
+        if (!waiting) styled = null
         boot.removeAttribute('hidden')
         if (!able) show('old')
         setTimeout(function () { show('late') }, 10000)
@@ -177,7 +197,14 @@
             if (up) return
             up = true
             offer()
-            if (!stuck) leave()
+            if (stuck) return
+            if (styled) leaving = true
+            else leave()
+          },
+          /** Calls back once the site's stylesheet is on (at once, if it already is). */
+          styled: function (then) {
+            if (styled) styled.push(then)
+            else then()
           }
         }
       })()

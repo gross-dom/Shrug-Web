@@ -175,9 +175,12 @@ export function page(): Plugin {
 // What the built page does for a visitor on a slow connection. Two things,
 // both to the page Vite writes:
 //
-// 1. The stylesheet moves from the head to the body, under the loading screen.
-//    In the head it holds back the first paint until it has arrived; under the
-//    loading screen, that screen is drawn at once and only what follows waits.
+// 1. The stylesheet stays first in the head, where its rules must be (the two
+//    halves' own stylesheets are added after it and are written to win over
+//    it), but no longer holds back the first paint: it is asked for as if for
+//    print and switched on when it has arrived, so the loading screen is drawn
+//    at once. The loading screen and the site both wait for it before the
+//    site is shown (`styled` in index.html, src/os/Desktop.tsx).
 // 2. The site is two downloads after the first: the desktop, or the iPhone
 //    (src/os/Desktop.tsx). Which one a screen needs is known before any script
 //    has arrived, so the page asks for it straight away, alongside the first
@@ -194,12 +197,11 @@ export function arrival(): Plugin {
     transformIndexHtml: {
       order: 'post',
       handler(html, ctx) {
-        const sheets: string[] = []
-        html = html.replace(/[ \t]*<link rel="stylesheet"[^>]*>\n?/g, (tag) => {
-          sheets.push(tag.trim())
-          return ''
+        // A stylesheet asked for as if for print is fetched last of all; the preload beside it has it fetched first
+        html = html.replace(/<link rel="stylesheet"([^>]*)>/g, (_, rest: string) => {
+          const told = rest.replace(/\s*\/$/, '')
+          return `<link rel="preload" as="style"${told}>\n    <link rel="stylesheet"${told} media="print" data-styles onload="this.media='all'">`
         })
-        if (sheets.length) html = html.replace(/([ \t]*)<div id="root">/, (root, indent: string) => sheets.map((tag) => indent + tag + '\n').join('') + root)
 
         // Each half's files: its own script, the scripts that one imports, and their stylesheets
         const chunks = Object.values(ctx.bundle ?? {}).flatMap((file) => (file.type === 'chunk' ? [file] : []))
@@ -250,7 +252,6 @@ export function arrival(): Plugin {
         if (type && !/Macintosh|iPhone|iPad|iPod/.test(navigator.userAgent)) ask('preload', 'font', type, 'font/woff2')
       })()
     </script>`
-        // In the head, ahead of the stylesheet: a script after a stylesheet waits for it
         return html.replace(/([ \t]*)<\/head>/, (end, indent: string) => indent + '  ' + ask + '\n' + end)
       },
     },
