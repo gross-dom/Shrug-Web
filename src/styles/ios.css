@@ -1031,15 +1031,17 @@
 /* ---- Little height ---- */
 
 /* A phone on its side: a menu's rows are a little shorter, so that the whole
-   of it shows between the bars */
+   of it shows between the bars. Every menu's: the one that rises out of a
+   conversation's plus has taller rows of its own, and would start above the
+   screen */
 @container (max-height: 400px) {
-  .ios-menu__item {
+  .ios-menu__list .ios-menu__item {
     min-height: 40px;
   }
 }
 
 @container (max-height: 340px) {
-  .ios-menu__item {
+  .ios-menu__list .ios-menu__item {
     min-height: 36px;
   }
 }

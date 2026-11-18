@@ -68,6 +68,13 @@
       .plain li { margin-bottom: 6px; }
       .plain dt { margin-top: 18px; font-weight: 600; }
       .plain dd { margin: 4px 0 0; color: rgba(255, 255, 255, 0.82); }
+      /* In forced colours (Windows High Contrast) backgrounds are taken away: the bar and the buttons are drawn as edges */
+      @media (forced-colors: active) {
+        .boot .boot-bar { outline: 1px solid CanvasText; }
+        .boot .boot-bar i { background-color: CanvasText; }
+        .boot .boot-go a, .boot .boot-go button, .plain .plain-go { outline: 1px solid ButtonText; }
+        .plain .plain-note { outline: 1px solid CanvasText; }
+      }
       @-webkit-keyframes boot-in { from { opacity: 0; } to { opacity: 1; } }
       @keyframes boot-in { from { opacity: 0; } to { opacity: 1; } }
       @-webkit-keyframes boot-fill { to { -webkit-transform: scaleX(0.92); } }
