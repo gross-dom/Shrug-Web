@@ -55,9 +55,10 @@
 .spot-scroll {
   position: absolute;
   top: calc(var(--status) + 2px);
-  right: 0;
+  /* On a phone on its side the shade runs through the bands at the ends of the screen; what can be pressed keeps inside them */
+  right: var(--side-r, 0px);
   bottom: calc(var(--foot) + 48px + 10px);
-  left: 0;
+  left: var(--side-l, 0px);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -89,9 +90,9 @@
 
 .spot-foot {
   position: absolute;
-  right: var(--edge);
+  right: calc(var(--edge) + var(--side-r, 0px));
   bottom: var(--foot);
-  left: var(--edge);
+  left: calc(var(--edge) + var(--side-l, 0px));
   display: flex;
   align-items: center;
   gap: 10px;

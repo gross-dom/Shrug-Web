@@ -208,6 +208,8 @@
   inset: 0;
   display: grid;
   place-items: center;
+  /* On a phone on its side the shade runs through the bands at the ends of the screen; the folder keeps inside them */
+  padding: 0 var(--side-r, 0px) 0 var(--side-l, 0px);
   color: #fff;
 }
 
