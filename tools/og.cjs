@@ -22,6 +22,11 @@ const { chromium } = require('playwright')
     flow.style.paddingTop = '0px'
     flow.style.paddingTop = `${Math.max(10, (room - document.querySelector('.msg-convo .chat__thread').offsetHeight) / 2)}px`
     document.querySelector('.msg-convo .chat__scroll').scrollTop = 0
+    // Whose conversation it is: the mark and the name in a corner, so the picture says so on its own
+    const mark = document.createElement('div')
+    mark.textContent = 'Shrug  ¯\\_(ツ)_/¯'
+    mark.style.cssText = `position:fixed;left:14px;top:${room - 22}px;z-index:99;font:600 11px/1 -apple-system,BlinkMacSystemFont,"Inter Variable",sans-serif;letter-spacing:0.01em;color:#8e8e93;white-space:pre`
+    document.body.append(mark)
   }, 252)
   await page.waitForTimeout(200)
   await page.screenshot({ path: 'public/og.png', clip: { x: 0, y: 0, width: 480, height: 252 } })

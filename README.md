@@ -15,6 +15,8 @@ Node 20.19 or newer.
 
 The build writes more than the app: the site in plain words inside the page itself, the link preview's tags, `robots.txt`, `sitemap.xml`, `llms.txt` and `404.html`, all from the data in `src/data/` (`tools/page.ts`). They carry the site's address, `SITE.url` in `src/data/site.ts`: change it there if the site is served from somewhere else.
 
+Any static host will do. It should compress what it serves, may cache `/assets/` for good (those names change with their contents) and should not cache `index.html`. For an address it does not have it can serve either `404.html` or `index.html`: both send `/portfolio` and the like to that app. The page starts with a few lines of script and style written into it (the loading screen, and asking early for what it needs), so a Content-Security-Policy, if the host sets one, has to allow them.
+
 ## What's on the desktop
 
 | Window | In the Dock as | What it holds |
@@ -69,7 +71,7 @@ Below 740px wide (or 480px tall) the site is an iPhone, in the look of the curre
 | A reply landing while another window is in front | **A banner** at the top of the screen. Tap it to open the conversation. |
 
 - **On a real phone the phone is the frame.** The screen is drawn edge to edge under the phone's own status bar, and the browser's bars are painted to match what is showing. The home indicator at the foot is the site's own: the phone's is below the browser, and leaves it.
-- **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed. Where a window cannot hold the frame at a readable size (a short window, or a laptop zoomed to 200%), the phone is drawn edge to edge instead, so nothing is cut off and zooming makes the type larger.
+- **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed. Where a window cannot hold the frame at about two thirds of its size or more (a short window, or a laptop zoomed to 200%), the phone is drawn edge to edge instead, so nothing is cut off and zooming makes the type larger; a window too small even for that gets a Home Screen that scrolls.
 - **The badge on Messages counts what is new.** It starts at nothing, ticks up with each reply that comes in to Shrug Family, and is cleared by reading the conversation, as a badge is on an iPhone. The number beside Back inside an easter egg is the same count (`useNewReplies` in `src/apps/state.ts`; the desktop's Dock counts the same way).
 - **Out of the conversation, the replies come a little quicker**: one every 1.9 seconds in place of 2.8, and the first of them sooner. On the Lock Screen and the Home Screen a reply is a notification or a line in the widget, with no message field to watch being typed into and no dots to watch being written, so those waits are cut short (`UNSEEN` in `src/apps/chat.ts`). Open the conversation and it keeps the desktop's time.
 - **A folder opens where it is**, as one does on an iPhone: the Home Screen falls out of focus behind it and it grows into a larger piece of glass with its name over it. Portfolio shows the companies nine to a page, each under its logo the way a folder holds apps, and turns sideways; FAQs lists the questions. Picking one opens it in its app (a company in Files, a question in Notes), and a tap outside, the home bar or the browser's back closes the folder (`src/phone/Folder.tsx`). The strip of dots under Portfolio's pages steps back and on from its left and right halves. The folders are large wherever they fit; on a shorter screen they are icon-sized folders among the icons, and only on a very short one are they left off (Files and Notes are in the Dock).
@@ -152,6 +154,8 @@ tools/         page.ts writes the plain page, the link preview's tags, robots.tx
                built page ask early for what it needs; wallpaper.py draws the
                wallpaper; og.cjs takes the link preview; icons.cjs draws the
                icons; preview.cjs makes the site into one file to send
+tests/         the checks the audit ran, and a runner for them (tests/README.md)
+docs/          audit.md: what the audit found and what became of each finding
 src/
   data/     the site's content
   os/       the site's root (Desktop.tsx: which layout, arriving, and the card
@@ -193,6 +197,8 @@ src/
 - **Contrast.** Small gray type is a shade darker than the systems' own so that it passes; iOS's blue on white falls a little short for small text, as it does on an iPhone.
 
 ## What it was tested on
+
+In November 2026 seven testers went over the whole site, each as a different visitor, and what they found was fixed: `docs/audit.md` is the record, finding by finding. The checks they wrote are in `tests/` (`sh tests/all.sh` builds the site and runs them all: see `tests/README.md` for what that needs).
 
 Playwright's Chromium at every size from 280px phones to a 4K desktop, with touch, with a keyboard only, slowed down, throttled to 3G, offline, with scripts off, with reduced motion and with forced colours; and WebKitGTK (Safari's engine) for the things engines differ on. Not on real iPhones, Androids or iPads, not in Firefox, and not with a real screen reader: what a real device adds (its keyboard, its safe areas, its own gestures) is emulated or argued in the code's comments.
 

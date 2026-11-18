@@ -1,0 +1,492 @@
+// Fixer P's checks: Portfolio / Finder / Files, FAQs / Notes, and the desktop's search field.
+//   node portfolio-faqs.cjs [base]        (base defaults to the dev server; the main session runs it on :4173)
+// Exits non-zero if anything fails. Findings covered are named beside each check.
+const A = require('./lib.cjs')
+const BASE = process.argv[2] || process.env.BASE || 'http://127.0.0.1:5173/'
+
+let failed = 0
+const check = (name, ok, detail = '') => {
+  if (!ok) failed++
+  console.log((ok ? 'PASS  ' : 'FAIL  ') + name + (detail ? '  (' + detail + ')' : ''))
+}
+const up = (page) => page.waitForFunction(() => !document.getElementById('boot') && !!document.querySelector('.os[data-booted]'), null, { timeout: 30000 })
+const focusOf = (page) => page.evaluate(() => {
+  const el = document.activeElement
+  return el ? `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}${el.getAttribute('data-company') ? `[${el.getAttribute('data-company')}]` : ''}` : 'none'
+})
+const PENDING = 'Shrug hasn’t written this one down yet.'
+const BRACKET = '[Shrug’s answer goes here'
+
+;(async () => {
+  const browser = await A.launch()
+  const desk = async (query, device = 'laptop') => {
+    const t = await A.open(browser, { device, base: BASE, query: 'still&' + query })
+    await up(t.page)
+    await t.sleep(1300)
+    return t
+  }
+
+  // ---------- The desktop's Portfolio ----------
+  {
+    const t = await desk('open=portfolio')
+    const win = t.page.locator('.wf[data-app="finder"]')
+    const field = win.locator('.search__input')
+    const tabs = []
+    t.ctx.on('page', (p) => tabs.push(p))
+
+    // DK-10: the search field hands over to the keyboard
+    await field.click()
+    await field.pressSequentially('liquid')
+    await t.sleep(200)
+    await field.press('ArrowDown')
+    check('DK-10 Portfolio: ArrowDown in the search goes to the first result', (await focusOf(t.page)) === 'button.pf-file[Liquid Death]', await focusOf(t.page))
+    await field.focus()
+    await field.press('Enter')
+    check('DK-10 Portfolio: Return in the search goes to the first result', (await focusOf(t.page)) === 'button.pf-file[Liquid Death]', await focusOf(t.page))
+    await field.focus()
+    await field.press('Escape')
+    check('DK-10 Portfolio: Escape empties the search and keeps the caret in it', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', `${await field.inputValue()} | ${await focusOf(t.page)}`)
+    await field.pressSequentially('zzzz')
+    await t.sleep(200)
+    const none = (await win.locator('.pf__none').innerText()).replace(/\s+/g, ' ').trim()
+    check('UX-19 Portfolio: an empty search says "No Results for “x”" and what to try', none === 'No Results for “zzzz” Check the spelling or try a new search.', none)
+    await win.locator('.search__clear').click()
+    check('DK-10 / tb-10 Portfolio: the clear button empties the search and the caret stays in the field', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', `${await field.inputValue()} | ${await focusOf(t.page)}`)
+
+    // UX-16 / DK-13: a company with no site
+    await field.fill('drumroll')
+    await t.sleep(250)
+    const fate = win.locator('.pf-preview .pf-preview__fate')
+    check('UX-16 Portfolio: a company with no site says so where its link would be', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && (await win.locator('.pf-preview__visit').count()) === 0, (await fate.count()) ? await fate.innerText() : 'no line')
+    await win.locator('[data-company="Drumroll"]').dblclick()
+    await t.sleep(150)
+    const nudged = await win.locator('.pf-preview__fate[data-nudged]').count()
+    const said = await win.locator('.pf__foot [role="status"].sr-only').innerText().catch(() => '')
+    check('DK-13 Portfolio: a double-click on it is answered (the line stirs and says so aloud), no tab opens', nudged === 1 && /Drumroll: No website listed/.test(said) && tabs.length === 0, `nudged ${nudged} | said "${said}" | tabs ${tabs.length}`)
+    await t.sleep(2600)
+    await win.locator('[data-company="Drumroll"]').focus()
+    await t.page.keyboard.press('Enter')
+    await t.sleep(150)
+    check('DK-13 Portfolio: Return on it is answered the same way', (await win.locator('.pf-preview__fate[data-nudged]').count()) === 1 && tabs.length === 0)
+
+    // The two companies called Atoms
+    await field.fill('atoms')
+    await t.sleep(250)
+    const hosts = await win.locator('.pf-file .pf-file__host').allInnerTexts()
+    check('DK-13 Portfolio: the two called Atoms are told apart by their addresses', hosts.join() === 'atoms.co,atoms.com', hosts.join())
+    check('DK-13 Portfolio: only namesakes carry an address under the name', (await (async () => { await field.fill('varda'); await t.sleep(200); return win.locator('.pf-file .pf-file__host').count() })()) === 0)
+
+    // UX-26, AX-22: the link out, and the heading
+    const visit = win.locator('.pf-preview .pf-preview__visit')
+    const link = await visit.evaluate((a) => ({ rel: a.rel, target: a.target, href: a.getAttribute('href'), says: a.textContent }))
+    check('UX-26 Portfolio: a company link is rel="noopener" (its site sees where the visit came from)', link.rel === 'noopener' && link.target === '_blank', JSON.stringify(link))
+    check('UX-19 Portfolio: the link says it opens in a new tab', /, opens in a new tab$/.test(link.says), link.says)
+    check('AX-22 Portfolio: the preview heading is an h2', (await win.locator('.pf-preview__name').evaluate((h) => h.tagName)) === 'H2')
+    await win.locator('[data-company="Varda"]').dblclick()
+    await t.sleep(600)
+    check('Portfolio: a double-click on a company with a site still opens it in a new tab', tabs.length === 1, String(tabs.length))
+    for (const p of tabs) await p.close().catch(() => {})
+
+    // AX-15: greys that can be read
+    const greys = await t.page.evaluate(() => {
+      const c = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).color : null }
+      return { count: c('.wf[data-app="finder"] .side-item__count') }
+    })
+    check('AX-15 Portfolio: sidebar counts are the readable grey', greys.count === 'rgb(99, 100, 107)', greys.count)
+
+    // DK-9: as List on a laptop shows names in full
+    await field.fill('')
+    await win.locator('[aria-label="as List"]').click()
+    await t.sleep(300)
+    const list = async () => t.page.evaluate(() => {
+      const w = document.querySelector('.wf[data-app="finder"]')
+      const cut = (el) => el.scrollWidth > el.clientWidth + 1
+      const names = [...w.querySelectorAll('.pf-row:not(.pf-row--head) .pf-row__name > span:not(.logo):not(.pf-row__host)')]
+      const cells = [...w.querySelectorAll('.pf-row:not(.pf-row--head) > span')]
+      const preview = w.querySelector('.pf-preview')
+      const foot = w.querySelector('.pf__foot-visit, .pf__foot-fate')
+      const second = w.querySelector('.pf-row[aria-selected="true"] > span:nth-child(2)')
+      return {
+        rows: names.length,
+        namesCut: names.filter(cut).map((n) => n.textContent),
+        titled: cells.every((c) => (c.getAttribute('title') ?? '') !== '' || c.textContent.trim() === ''),
+        preview: !!preview && getComputedStyle(preview).display !== 'none',
+        foot: !!foot && getComputedStyle(foot).display !== 'none' ? foot.textContent : null,
+        second: second ? getComputedStyle(second).color : null,
+        width: w.getBoundingClientRect().width,
+      }
+    })
+    let l = await list()
+    check('DK-9 Portfolio as List at 1280x720: every name in full', l.rows === 81 && l.namesCut.length === 0, `${l.rows} rows, cut: ${l.namesCut.join(', ') || 'none'} (window ${Math.round(l.width)})`)
+    check('DK-9 Portfolio as List at 1280x720: the preview stands down and its link is in the foot', !l.preview && /Visit varda\.com/.test(l.foot ?? ''), `preview ${l.preview} | foot ${l.foot}`)
+    check('DK-9 Portfolio as List: every cell carries its words in full as a title', l.titled)
+    check('AX-15 Portfolio as List: the selected row\'s second line is white', l.second === 'rgb(255, 255, 255)', l.second)
+    await win.locator('[data-company="YOLO"]').click()
+    await t.sleep(150)
+    l = await list()
+    check('UX-16 Portfolio as List: a company with no site says so in the foot too', l.foot === 'No website listed', String(l.foot))
+    await t.ctx.close()
+
+    for (const [device, wantPreview] of [['desktop', false], ['fhd', true]]) {
+      const d = await desk('open=portfolio', device)
+      const w = d.page.locator('.wf[data-app="finder"]')
+      await w.locator('[aria-label="as List"]').click()
+      await d.sleep(300)
+      const r = await d.page.evaluate(() => {
+        const w = document.querySelector('.wf[data-app="finder"]')
+        const names = [...w.querySelectorAll('.pf-row:not(.pf-row--head) .pf-row__name > span:not(.logo):not(.pf-row__host)')]
+        const preview = w.querySelector('.pf-preview')
+        return { cut: names.filter((el) => el.scrollWidth > el.clientWidth + 1).length, preview: !!preview && getComputedStyle(preview).display !== 'none', width: Math.round(w.getBoundingClientRect().width) }
+      })
+      check(`DK-9 Portfolio as List on ${device}: names in full, preview ${wantPreview ? 'kept' : 'stood down'}`, r.cut === 0 && r.preview === wantPreview, JSON.stringify(r))
+      await d.ctx.close()
+    }
+  }
+
+  // ---------- The desktop's FAQs ----------
+  {
+    const t = await desk('open=faqs')
+    const win = t.page.locator('.wf[data-app="notes"]')
+    const field = win.locator('.search__input')
+    const body = async () => (await win.locator('.faq__note').innerText()).replace(/\s+/g, ' ')
+    const text = await body()
+    check('UX-4 FAQs: an unanswered question tells the visitor so, with the one-pager as the way on', text.includes(PENDING) && text.includes('Read the One-pager') && !(await win.innerText()).includes(BRACKET), text.slice(0, 140))
+    const way = await win.locator('.faq__way').first().evaluate((a) => ({ href: a.href, target: a.target, says: a.textContent }))
+    check('UX-4 FAQs: that link is the one-pager, in a new tab, and says so', /docsend\.com/.test(way.href) && way.target === '_blank' && /, opens in a new tab$/.test(way.says), JSON.stringify(way))
+    const previews = await win.locator('.faq-row .ss-row__preview').allInnerTexts()
+    check('UX-4 FAQs: each row says "Answer on its way"', previews.length === 7 && previews.every((p) => p.trim() === 'Answer on its way'), previews.join(' | '))
+    check('AX-15 FAQs: "Question 1 of 7" is the readable grey', (await win.locator('.faq__meta').evaluate((el) => getComputedStyle(el).color)) === 'rgb(99, 100, 107)')
+
+    // DK-10: the window follows the search
+    await field.click()
+    await field.pressSequentially('drops')
+    await t.sleep(300)
+    check('DK-10 FAQs: the window follows the search as it is typed', (await win.locator('.faq__title').innerText()).trim() === 'What are drops?', await win.locator('.faq__title').innerText())
+    await field.press('Enter')
+    check('DK-10 FAQs: Return goes to the first question found', /faq-row/.test(await t.page.evaluate(() => document.activeElement?.className ?? '')), await focusOf(t.page))
+    await field.focus()
+    await field.press('ArrowDown')
+    check('DK-10 FAQs: so does ArrowDown', /faq-row/.test(await t.page.evaluate(() => document.activeElement?.className ?? '')), await focusOf(t.page))
+    // Next question still goes where it says while a search is in
+    await win.locator('[aria-label="Next question"]').click()
+    await t.sleep(200)
+    check('DK-10 FAQs: Next still steps on while a search is in the field', (await win.locator('.faq__title').innerText()).trim() === 'What is VIP?', await win.locator('.faq__title').innerText())
+    await field.focus()
+    await field.press('Escape')
+    check('DK-10 FAQs: Escape empties the search and keeps the caret in it', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', await focusOf(t.page))
+    await field.pressSequentially('zzzz')
+    await t.sleep(200)
+    const none = (await win.locator('.side-empty').innerText()).replace(/\s+/g, ' ').trim()
+    check('UX-19 FAQs: an empty search says "No Results for “x”" and what to try', none === 'No Results for “zzzz” Check the spelling or try a new search.', none)
+    await win.locator('.search__clear').click()
+    check('DK-10 / tb-10 FAQs: the clear button keeps the caret in the field', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', await focusOf(t.page))
+    check('FAQs: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 200))
+    await t.ctx.close()
+
+    const d = await desk('open=faqs&draft')
+    const dw = d.page.locator('.wf[data-app="notes"]')
+    const dt = (await dw.locator('.faq__note').innerText()).replace(/\s+/g, ' ')
+    check('UX-4 FAQs with ?draft: the editor\'s note, in its dashed box, as before', dt.includes(BRACKET) && !dt.includes(PENDING) && (await dw.locator('.faq__todo').count()) === 1, dt.slice(0, 120))
+    await d.ctx.close()
+  }
+
+  // ---------- RS-10: logos that do not arrive ----------
+  for (const device of ['laptop', 'iphone']) {
+    const t = await A.open(browser, { device, base: BASE, query: 'still' + (device === 'laptop' ? '&open=portfolio' : ''), goto: false })
+    await t.page.route('**/logos/**', (route) => route.abort())
+    await t.page.goto(BASE + '?still' + (device === 'laptop' ? '&open=portfolio' : ''))
+    if (device === 'iphone') {
+      await A.unlock(t.page)
+      await A.at(t.page, 'finder', ['f:all'])
+    } else {
+      await up(t.page)
+      await t.sleep(1500)
+    }
+    const scope = device === 'laptop' ? '.wf[data-app="finder"]' : '.sb-slot[data-front]'
+    // go down the whole folder a screen at a time, so that each lazy picture is asked for
+    const walk = () => t.page.evaluate(async (scope) => {
+      let box = document.querySelector(`${scope} .logo`)?.parentElement
+      while (box && !(box.scrollHeight > box.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement
+      if (!box) return
+      for (let y = 0; y <= box.scrollHeight; y += Math.max(120, box.clientHeight - 60)) {
+        box.scrollTop = y
+        await new Promise((r) => setTimeout(r, 220))
+      }
+      await new Promise((r) => setTimeout(r, 700))
+    }, scope)
+    await walk()
+    const state = () => t.page.evaluate((scope) => {
+      const logos = [...document.querySelectorAll(`${scope} .logo`)]
+      const imgs = logos.map((l) => l.querySelector('img')).filter(Boolean)
+      return { logos: logos.length, broken: imgs.filter((i) => i.complete && i.naturalWidth === 0).length, letters: logos.filter((l) => l.hasAttribute('data-empty') && l.textContent.trim().length === 1).length, drawn: imgs.filter((i) => i.complete && i.naturalWidth > 0).length }
+    }, scope)
+    let s = await state()
+    check(`RS-10 ${device}: logos that fail are letter tiles, never a broken picture`, s.broken === 0 && s.letters === s.logos, JSON.stringify(s))
+    await t.page.unroute('**/logos/**')
+    await t.page.evaluate(() => window.dispatchEvent(new Event('online')))
+    await walk()
+    s = await state()
+    check(`RS-10 ${device}: back online they are asked for again and arrive`, s.broken === 0 && s.drawn >= 71 && s.letters <= 12, JSON.stringify(s))
+    await t.ctx.close()
+  }
+
+  // ---------- Touch sizes on the desktop (tb-8, tb-9) ----------
+  {
+    const t = await desk('open=portfolio', 'ipad-land')
+    const win = t.page.locator('.wf[data-app="finder"]')
+    await win.locator('.search__input').fill('a')
+    await win.locator('[aria-label="as List"]').tap()
+    await t.sleep(300)
+    const sizes = await t.page.evaluate(() => {
+      const w = document.querySelector('.wf[data-app="finder"]')
+      const box = (sel) => { const r = w.querySelector(sel)?.getBoundingClientRect(); return r ? [Math.round(r.width), Math.round(r.height)] : null }
+      const clear = w.querySelector('.search__clear').getBoundingClientRect()
+      // 14px to the left of, and above, the clear button's middle: still the button, by its wider touch area
+      const hit = (dx, dy) => document.elementFromPoint(clear.left + clear.width / 2 + dx, clear.top + clear.height / 2 + dy)?.closest('.search__clear') !== null && document.elementFromPoint(clear.left + clear.width / 2 + dx, clear.top + clear.height / 2 + dy)?.className.includes('search__clear')
+      return { part: box('.tool__part'), row: box('.pf-row:not(.pf-row--head)'), side: box('.side-item'), foot: box('.pf__foot-visit'), clearHit: [hit(-14, 0), hit(0, -14), hit(14, 0), hit(0, 14)], any: matchMedia('(any-pointer: coarse)').matches }
+    })
+    check('tb-8 touch: toolbar buttons 40x36, list rows and sidebar rows 36 tall', sizes.part?.[0] >= 40 && sizes.part?.[1] >= 36 && sizes.row?.[1] >= 36 && sizes.side?.[1] >= 36, JSON.stringify(sizes))
+    check('tb-8 touch: the clear button takes a press 14px from its middle', sizes.clearHit.filter(Boolean).length >= 3, JSON.stringify(sizes.clearHit))
+    check('tb-8 touch: the foot\'s link is 36 tall', sizes.foot?.[1] >= 36, JSON.stringify(sizes.foot))
+    // tb-10: a finger on the clear button leaves the caret in the field
+    const field = win.locator('.search__input')
+    await field.tap()
+    await win.locator('.search__clear').tap()
+    await t.sleep(150)
+    check('tb-10 touch: a finger on the clear button leaves the caret in the field', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', await focusOf(t.page))
+    await win.locator('[aria-label="as Icons"]').tap()
+    await field.fill('varda')
+    await t.sleep(250)
+    const visit = await win.locator('.pf-preview__visit').boundingBox()
+    check('tb-8 touch: Visit is 36 tall', Math.round(visit.height) >= 36, JSON.stringify(visit))
+    await t.ctx.close()
+  }
+
+  // ---------- The phone ----------
+  {
+    const t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still' })
+    await A.unlock(t.page)
+    const front = '.sb-slot[data-front] .ios-page[data-pos="top"]'
+
+    // UX-4 / AX-23: Notes
+    await A.at(t.page, 'notes', ['f:faqs'])
+    const rows = await t.page.locator(`${front} .notes-row`).evaluateAll((els) => els.map((el) => ({ seen: el.innerText.replace(/\s+/g, ' ').trim(), read: el.textContent.replace(/\s+/g, ' ').trim() })))
+    check('UX-4 Notes: each question\'s row says "Answer on its way"', rows.length === 7 && rows.every((r) => /Answer on its way$/.test(r.seen)) && !rows.some((r) => /No additional text/.test(r.seen)), rows[0]?.seen)
+    check('AX-23 Notes: a row\'s parts are set apart for a screen reader', rows.every((r) => /\?\s?, .+, Answer on its way$/.test(r.read)), rows[0]?.read)
+    await A.at(t.page, 'notes', ['f:faqs', 'n:3'])
+    const note = (await t.page.locator(`${front} .notes-note`).innerText()).replace(/\s+/g, ' ')
+    check('UX-4 Notes: an unanswered question tells the visitor so, with the one-pager as the way on', note.includes(PENDING) && note.includes('Read the One-pager') && !note.includes(BRACKET) && (await t.page.locator(`${front} .notes-slot`).count()) === 0, note.slice(0, 160))
+    const way = await t.page.locator(`${front} .notes-way`).first().evaluate((a) => ({ href: a.href, target: a.target, h: Math.round(a.getBoundingClientRect().height), says: a.textContent }))
+    check('UX-4 Notes: that link is the one-pager, 44 tall, and says it opens in a new tab', /docsend\.com/.test(way.href) && way.target === '_blank' && way.h >= 44 && /, opens in a new tab$/.test(way.says), JSON.stringify(way))
+
+    // UX-16: Files, a company with no site
+    await A.at(t.page, 'finder', ['f:all'], 'company:Drumroll')
+    const sheet = '.sb-slot[data-front] .ios-sheet'
+    const fate = t.page.locator(`${sheet} .files-fate`)
+    check('UX-16 Files: a company with no site says so where the button would be', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && (await t.page.locator(`${sheet} .files-open`).count()) === 0)
+    await t.page.evaluate(() => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }) })
+    const shareAndRead = async () => {
+      await t.page.evaluate(() => navigator.clipboard.writeText('—'))
+      await t.page.locator(`${sheet} [aria-label="Share"]`).tap()
+      await t.sleep(300)
+      return t.page.evaluate(() => navigator.clipboard.readText())
+    }
+    let sent = await shareAndRead()
+    check('UX-16 Files: Share on it sends its name with no address', sent === 'Drumroll', sent)
+    check('UX-16 Files: and says "Copied", not "Link copied"', (await t.page.locator(`${sheet} .files-file [role="status"]`).innerText().catch(() => '')) === 'Copied')
+    await A.at(t.page, 'finder', ['f:all'], 'company:Clubhouse')
+    sent = await shareAndRead()
+    check('UX-16 Files: one with a line sends the name and the line, no address', sent === 'Clubhouse: A space for casual, drop-in audio conversations', sent)
+    await A.at(t.page, 'finder', ['f:all'], 'company:Varda')
+    sent = await shareAndRead()
+    check('Files: Share on a company with a site still sends its address', /varda\.com/.test(sent), sent)
+    const open = await t.page.locator(`${sheet} .files-open`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
+    check('UX-26 Files: a company link is rel="noopener" and says it opens in a new tab', open.rel === 'noopener' && open.target === '_blank' && /, opens in a new tab$/.test(open.says), JSON.stringify(open))
+
+    // UX-19: Files, an empty search
+    await A.at(t.page, 'finder', ['f:all'])
+    await t.page.locator(`${front} [aria-label="Search"]`).tap()
+    await t.sleep(400)
+    await t.page.keyboard.type('zzzz')
+    await t.sleep(300)
+    const empty = (await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .ios-empty').innerText()).replace(/\s+/g, ' ').trim()
+    check('UX-19 Files: an empty search says "No Results for “x”" and what to try', empty === 'No Results for “zzzz” Check the spelling or try a new search.', empty)
+    await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [aria-label="Close search"]').tap()
+    await t.sleep(300)
+    // The one-pager under Shared
+    await A.at(t.page, 'finder', [])
+    await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [role="tab"]:has-text("Shared"), .sb-slot[data-front] .ios-page[data-pos="top"] button:has-text("Shared")').first().tap()
+    await t.sleep(400)
+    const shared = await t.page.locator('.sb-slot[data-front] .files-item--shared').evaluate((a) => ({ rel: a.rel, says: a.textContent })).catch(() => null)
+    check('UX-19 Files: the one-pager under Shared says it opens in a new tab (and keeps noreferrer)', !!shared && shared.rel === 'noreferrer' && /, opens in a new tab$/.test(shared.says), JSON.stringify(shared))
+    check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 200))
+    await t.ctx.close()
+
+    const d = await A.open(browser, { device: 'iphone', base: BASE, query: 'still&draft' })
+    await A.unlock(d.page)
+    await A.at(d.page, 'notes', ['f:faqs', 'n:3'])
+    const dn = (await d.page.locator(`${front} .notes-note`).innerText()).replace(/\s+/g, ' ')
+    check('UX-4 Notes with ?draft: the editor\'s note, in its dashed box, as before', dn.includes(BRACKET) && !dn.includes(PENDING) && (await d.page.locator(`${front} .notes-slot`).count()) === 1, dn.slice(0, 120))
+    await A.at(d.page, 'notes', ['f:faqs'])
+    const dr = await d.page.locator(`${front} .notes-row`).first().innerText()
+    check('UX-4 Notes with ?draft: rows say what Notes says of a note that is only a title', /No additional text/.test(dr), dr.replace(/\s+/g, ' '))
+    await d.ctx.close()
+
+    // PH-7: the narrowest phone
+    const n = await A.open(browser, { device: 'fold', base: BASE, query: 'still' })
+    await A.unlock(n.page)
+    await A.at(n.page, 'notes', [])
+    const ph = await n.page.locator(`${front} .ios-search__input`).evaluate((i) => ({ overflow: getComputedStyle(i).textOverflow, placeholder: getComputedStyle(i, '::placeholder').textOverflow, w: Math.round(i.getBoundingClientRect().width) }))
+    check('PH-7 Notes at 280 wide: a placeholder that does not fit ends in an ellipsis', ph.overflow === 'ellipsis' && ph.placeholder === 'ellipsis', JSON.stringify(ph))
+    await n.ctx.close()
+  }
+
+  // ---------- The chaos tester's findings (MK-7, MK-11, MK-15, MK-17) ----------
+  {
+    const front = '.sb-slot[data-front] .ios-page[data-pos="top"]'
+    const sheet = '.sb-slot[data-front] .ios-sheet'
+    const t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still' })
+    await A.unlock(t.page)
+    await A.at(t.page, 'notes', [])
+
+    // MK-17: new folders are numbered; MK-11: a name stops at a hundred characters
+    const newFolder = async (typed) => {
+      await t.page.locator(`${front} [aria-label="New Folder"]`).tap()
+      await t.page.waitForSelector(`${sheet} .notes-name__input`, { timeout: 5000 })
+      await t.sleep(450)
+      const offered = await t.page.locator(`${sheet} .notes-name__input`).inputValue()
+      if (typed !== undefined) await t.page.locator(`${sheet} .notes-name__input`).fill(typed)
+      const kept = await t.page.locator(`${sheet} .notes-name__input`).inputValue()
+      await t.page.locator(`${sheet} [aria-label="Done"]`).tap()
+      await t.sleep(900)
+      return { offered, kept }
+    }
+    const first = await newFolder()
+    const second = await newFolder()
+    const third = await newFolder()
+    check('MK-17 Notes: new folders are offered New Folder, New Folder 2, New Folder 3', [first.offered, second.offered, third.offered].join() === 'New Folder,New Folder 2,New Folder 3', [first.offered, second.offered, third.offered].join())
+    const long = await newFolder('Questions for the Shrug partners about how early and how much and what happens after the check and how to get in front of them and what drops are and what VIP is')
+    check('MK-11 Notes: a folder\'s name stops at a hundred characters', long.kept.length === 100, String(long.kept.length))
+    const rows = await t.page.locator(`${front} .notes-folder`).evaluateAll((els) => els.map((el) => ({ name: el.querySelector('.ios-cell__title').textContent.slice(0, 24), h: Math.round(el.getBoundingClientRect().height), lines: Math.round(el.querySelector('.ios-cell__title').getBoundingClientRect().height / parseFloat(getComputedStyle(el.querySelector('.ios-cell__title')).lineHeight)) })))
+    check('MK-11 Notes: a long name is two lines in the list, with the rest cut', rows.length === 6 && rows[5].lines === 2 && rows.slice(0, 5).every((r) => r.lines === 1), JSON.stringify(rows.map((r) => r.lines)))
+    await t.page.screenshot({ path: require('path').join(A.OUT, 'fixP-mk-folders.png') })
+
+    // MK-17: what is typed is set in its own direction
+    await t.page.locator(`${front} [aria-label="New Note"]`).tap()
+    await t.sleep(900)
+    const title = t.page.locator(`${front} textarea[aria-label="Title"]`)
+    const body = t.page.locator(`${front} textarea[aria-label="Note"]`)
+    await title.fill('Ask about drops')
+    await body.fill('שלום לכולם')
+    await t.sleep(200)
+    const dirs = await t.page.evaluate((front) => ({ title: document.querySelector(`${front} textarea[aria-label="Title"]`)?.dir, body: document.querySelector(`${front} textarea[aria-label="Note"]`)?.dir, bodyDir: getComputedStyle(document.querySelector(`${front} textarea[aria-label="Note"]`)).direction }), front)
+    check('MK-17 Notes: a note\'s title and body are dir="auto" (Hebrew is set right to left)', dirs.title === 'auto' && dirs.body === 'auto' && dirs.bodyDir === 'rtl', JSON.stringify(dirs))
+
+    // MK-7: a reload brings the visitor's notes and folders back, with the place
+    const before = await A.state(t.page)
+    await t.page.reload({ waitUntil: 'load' })
+    await t.page.waitForFunction(() => !document.getElementById('boot') && !!document.querySelector('.os[data-booted]'), null, { timeout: 30000 })
+    await t.sleep(1200)
+    const after = await A.state(t.page)
+    const back = await t.page.evaluate((front) => ({ title: document.querySelector(`${front} textarea[aria-label="Title"]`)?.value ?? null, body: document.querySelector(`${front} textarea[aria-label="Note"]`)?.value ?? null }), front)
+    check('MK-7 Notes: after a reload the note that was open is there, with its words', !after.locked && JSON.stringify(after.place) === JSON.stringify(before.place) && back.title === 'Ask about drops' && back.body === 'שלום לכולם', JSON.stringify({ place: after.place, back }))
+    await A.at(t.page, 'notes', [])
+    const names = await t.page.locator(`${front} .notes-folder .ios-cell__title`).allInnerTexts()
+    check('MK-7 Notes: and so are the folders that were made', names.length === 6 && names[2] === 'New Folder' && names[3] === 'New Folder 2', names.map((n) => n.slice(0, 14)).join(' | '))
+    const counts = await t.page.locator(`${front} .notes-folder .ios-cell__value`).allInnerTexts()
+    check('MK-7 Notes: the Notes folder still counts its one note', counts[1]?.trim() === '1', counts.join())
+
+    // MK-7: something that is no longer there shows what it was in, and the phone steps back to it
+    for (const [stack, lands, says] of [
+      [['f:notes', 'u:zz9'], 'f:notes', 'Notes'],
+      [['f:u999'], '', 'Folders'],
+      [['f:u999', 'u:zz9'], '', 'Folders'],
+      [['f:faqs', 'n:99'], 'f:faqs', 'FAQs'],
+      [['x:what'], '', 'Folders'],
+    ]) {
+      await A.at(t.page, 'notes', stack, null, 1500)
+      const s = await A.state(t.page)
+      const shown = await t.page.evaluate((front) => {
+        const page = document.querySelector(front)
+        return { title: (page?.querySelector('.ios-large, .ios-bar__title')?.textContent ?? '').trim(), empty: !!page?.querySelector('.ios-empty'), pages: document.querySelectorAll('.sb-slot[data-front] .ios-page').length }
+      }, front)
+      check(`MK-7 Notes: ${stack.join(' > ')} (gone) lands on ${says}`, s.place?.app === 'notes' && s.place.stack.join() === lands && shown.title.startsWith(says), JSON.stringify({ stack: s.place?.stack, shown }))
+    }
+    check('MK: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 300))
+    await t.ctx.close()
+
+    // MK-7: a page that may not keep anything carries on without
+    const r = await A.open(browser, { device: 'iphone', base: BASE, query: 'still', goto: false })
+    await r.page.addInitScript(() => {
+      const refuse = () => { throw new DOMException('refused', 'SecurityError') }
+      Storage.prototype.getItem = refuse
+      Storage.prototype.setItem = refuse
+    })
+    await r.page.goto(BASE + '?still')
+    await A.unlock(r.page)
+    await A.at(r.page, 'notes', ['f:notes'])
+    await r.page.locator(`${front} [aria-label="New Note"]`).tap()
+    await r.sleep(900)
+    await r.page.locator(`${front} textarea[aria-label="Title"]`).fill('Kept in memory')
+    await A.at(r.page, 'notes', ['f:notes'])
+    const mem = await r.page.locator(`${front} .notes-row`).allInnerTexts()
+    check('MK-7 Notes: with storage refused, notes still work for as long as the page does', mem.length === 1 && /Kept in memory/.test(mem[0]) && A.realErrors(r.errors).length === 0, mem.join(' | ').replace(/\s+/g, ' ') + ' ' + A.realErrors(r.errors).join(' | ').slice(0, 200))
+    await r.ctx.close()
+
+    // MK-15: Escape in search, with a keyboard (the iPhone in its frame on a computer)
+    const k = await A.open(browser, { device: { w: 600, h: 900, dpr: 1 }, base: BASE, query: 'still' })
+    await A.unlock(k.page)
+    const where = () => k.page.evaluate((front) => {
+      const page = document.querySelector(front)
+      const field = page?.querySelector('.ios-search__input')
+      return { searching: !!page?.querySelector('.files-screen--search'), value: field?.value ?? null, focused: !!field && document.activeElement === field }
+    }, front)
+    await A.at(k.page, 'finder', ['f:all'])
+    await k.page.locator(`${front} [aria-label="Search"]`).click()
+    await k.sleep(400)
+    await k.page.keyboard.type('varda')
+    await k.sleep(200)
+    const steps = [await where()]
+    for (let i = 0; i < 4; i++) {
+      await k.page.keyboard.press('Escape')
+      await k.sleep(700)
+      steps.push({ ...(await where()), stack: (await A.state(k.page)).place?.stack?.join() ?? null, app: (await A.state(k.page)).place?.app ?? null })
+    }
+    check('MK-15 Files: Escape empties the search', steps[1].searching && steps[1].value === '' && steps[1].focused, JSON.stringify(steps[1]))
+    check('MK-15 Files: then lets go of the field', steps[2].searching && !steps[2].focused, JSON.stringify(steps[2]))
+    check('MK-15 Files: then leaves search, for the folder it was opened over', !steps[3].searching && steps[3].app === 'finder' && steps[3].stack === 'f:all', JSON.stringify(steps[3]))
+    check('MK-15 Files: and only then goes Back', steps[4].app === 'finder' && steps[4].stack === '', JSON.stringify(steps[4]))
+
+    await A.at(k.page, 'notes', ['f:faqs'])
+    await k.page.locator(`${front} .ios-search__input`).click()
+    await k.page.keyboard.type('drops')
+    await k.sleep(300)
+    const nwhere = async () => ({ ...(await k.page.evaluate((front) => { const f = document.querySelector(`${front} .ios-search__input`); return { value: f?.value ?? null, focused: !!f && document.activeElement === f } }, front)), stack: (await A.state(k.page)).place?.stack?.join() ?? null })
+    const n = []
+    for (let i = 0; i < 3; i++) {
+      await k.page.keyboard.press('Escape')
+      await k.sleep(700)
+      n.push(await nwhere())
+    }
+    check('MK-15 Notes: Escape empties the search, then lets go, then goes Back', n[0].value === '' && n[0].focused && !n[1].focused && n[1].stack === 'f:faqs' && n[2].stack === '', JSON.stringify(n))
+    await k.ctx.close()
+
+    // MK-17: the desktop's search field is dir="auto" too
+    const d = await A.open(browser, { device: 'laptop', base: BASE, query: 'still&open=portfolio' })
+    await up(d.page)
+    await d.sleep(1200)
+    check('MK-17 the desktop\'s search field is dir="auto"', (await d.page.locator('.wf[data-app="finder"] .search__input').getAttribute('dir')) === 'auto')
+    await d.page.locator('.wf[data-app="finder"] .search__input').fill('x'.repeat(300))
+    await d.sleep(200)
+    const cutTo = (await d.page.locator('.wf[data-app="finder"] .pf__none b').innerText()).length
+    check('MK-6 a long word searched for is said back cut short', cutTo < 70, String(cutTo))
+    await d.ctx.close()
+  }
+
+  await browser.close()
+  console.log(failed ? `${failed} FAILED` : 'ALL PASS')
+  process.exit(failed ? 1 : 0)
+})().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})
