@@ -35,17 +35,17 @@
   --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.09), inset 0 0.5px 0 rgba(255, 255, 255, 1), 0 1px 2px rgba(20, 30, 60, 0.06), 0 5px 16px rgba(20, 30, 60, 0.09);
 }
 
-/* ---- Wallpaper: a deep blue ground crossed by a few large petals of light,
-   each a sheet of glass lit along its edge. It is a picture
-   (public/wallpaper.webp), drawn by tools/wallpaper.py (its "glass" style);
-   the gradient under it is its colours, roughly, for the moment before it
-   arrives ---- */
+/* ---- Wallpaper: the s of the logo, very large, as ribbons of glass lit along
+   their edges, over a sky that runs from near-black to blue. It is a picture
+   (public/wallpaper.webp), made by tools/wallpaper.cjs from the drawing in
+   tools/wallpaper.svg; the gradient under it is its colours, roughly, for the
+   moment before it arrives ---- */
 
 .os__wallpaper {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(180deg, #040618 0%, #142a6c 42%, #2a50ad 78%, #17296b 100%);
+  background: linear-gradient(150deg, #0f1129 0%, #454ca0 33%, #7c8dd2 67%, #768bd2 100%);
 }
 
 .os__wallpaper::before {
@@ -65,7 +65,7 @@
 }
 
 /* A photograph instead: put it in public/ and set --wallpaper on .os, e.g.
-   --wallpaper: url('/wallpaper.jpg'). It covers the drawn hills. */
+   --wallpaper: url('/wallpaper.jpg'). It covers the drawn one. */
 .os__wallpaper::after {
   content: '';
   position: absolute;

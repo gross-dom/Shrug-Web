@@ -1,9 +1,18 @@
-"""Draws the site's wallpaper. Original artwork: every pixel is computed here, nothing is
-traced or downloaded. Four pictures can be drawn, and each is laid out for the shape it is
-asked for, so the same style serves the desktop (2880 x 1800) and the phone (900 x 1560):
+"""Draws a wallpaper for the site, and finishes one that was drawn elsewhere.
+
+The site's wallpaper is now a drawing, tools/wallpaper.svg and tools/wallpaper-phone.svg, and
+tools/wallpaper.cjs makes the pictures from it. It finishes each here, so that the picture has
+the grain and the compression the ones below have:
+
+  python3 tools/wallpaper.py grain <picture> <out> [quality]
+
+The four below are the wallpapers the site had before, and can still be drawn. Original
+artwork: every pixel is computed here, nothing is traced or downloaded. Each is laid out for
+the shape it is asked for, so the same style serves the desktop (2880 x 1800) and the phone
+(900 x 1560):
 
   present  sheets of colour rising across one another, each lit along its crest and shading
-           the one behind, with a light coming up behind them (what the site has now)
+           the one behind, with a light coming up behind them (the site's first)
   glass    a deep blue ground crossed by a few large, soft petals of light, cyan through
            blue to violet, each a sheet of glass that catches the light along its edge
   sheets   the present one, refined: the same colours and rising sheets, with softer
@@ -281,11 +290,19 @@ def dusk(W, H):
 STYLES = {'present': present, 'glass': glass, 'sheets': sheets, 'dusk': dusk}
 
 if __name__ == '__main__':
-    out, W, H = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-    quality = int(sys.argv[4]) if len(sys.argv) > 4 else 90
-    style = sys.argv[5] if len(sys.argv) > 5 else 'present'
-    if style not in STYLES:
-        sys.exit(f'no such style: {style} (one of {", ".join(STYLES)})')
-    img = STYLES[style](W, H)
+    if len(sys.argv) > 3 and sys.argv[1] == 'grain':
+        # A picture drawn elsewhere (tools/wallpaper.cjs draws the site's from its SVG): the same
+        # grain as the ones drawn here, and below the same compression
+        out, style = sys.argv[3], 'grain'
+        quality = int(sys.argv[4]) if len(sys.argv) > 4 else 86
+        img = grain(np.asarray(Image.open(sys.argv[2]).convert('RGB'), dtype=np.float64) / 255.0, 11, 2.6)
+        H, W = img.shape[:2]
+    else:
+        out, W, H = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+        quality = int(sys.argv[4]) if len(sys.argv) > 4 else 90
+        style = sys.argv[5] if len(sys.argv) > 5 else 'present'
+        if style not in STYLES:
+            sys.exit(f'no such style: {style} (one of {", ".join(STYLES)})')
+        img = STYLES[style](W, H)
     Image.fromarray((np.clip(img, 0, 1) * 255 + 0.5).astype(np.uint8), 'RGB').save(out, quality=quality, method=6)
     print(out, W, H, style)

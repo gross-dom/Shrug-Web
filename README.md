@@ -154,9 +154,11 @@ public/        the companies' logos (logos/), the wallpaper, the link preview
                (og.png) and the icons
 tools/         page.ts writes the plain page, the link preview's tags, robots.txt,
                sitemap.xml, llms.txt and 404.html from the data, and has the
-               built page ask early for what it needs; wallpaper.py draws the
-               wallpaper; og.cjs takes the link preview; icons.cjs draws the
-               icons; preview.cjs makes the site into one file to send
+               built page ask early for what it needs; wallpaper.cjs makes the
+               wallpaper from its drawing (wallpaper.svg, wallpaper-phone.svg),
+               with wallpaper.py for its grain; og.cjs takes the link preview;
+               icons.cjs draws the icons; preview.cjs makes the site into one
+               file to send
 tests/         the checks the audit ran, and a runner for them (tests/README.md)
 docs/          audit.md: what the audit found and what became of each finding
 src/
@@ -185,7 +187,7 @@ src/
 - **A new window**: add it to `os/apps.ts`, write its component in `apps/` and list it in `os/Surface.tsx`.
 - **The iPhone** is `phone/system.ts` (locked or not, which app is in front, how far into each app, mirrored into history), `phone/Phone.tsx` (the screen: edge to edge on a real phone, in the kit's frame elsewhere), `phone/Springboard.tsx` (the Lock Screen, the Home Screen, apps opening out of their icons, the App Switcher, banners, the home indicator), `phone/ui.tsx` with `styles/ios.css` (what the apps are built from: screens with floating glass buttons and folding large titles, stacks of screens, grouped lists, tab and search bars, menus, sheets), `phone/apps/` (one file per app; `routes.ts` names the screens inside them), `phone/icons.tsx` (the app icons) and `phone/settings.ts` (what the Settings app can change, read by the rest of the phone).
 - **A new app on the iPhone**: write it in `phone/apps/` from the parts in `phone/ui.tsx`, name it in `phone/apps/index.tsx`, draw its icon in `phone/icons.tsx`, and put it on the Home Screen or in the Dock (`DOCKED`, `ON_HOME`).
-- **The wallpaper** is a picture, `public/wallpaper.webp` for the desktop and `public/wallpaper-phone.webp` for the iPhone, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86 glass` and `… public/wallpaper-phone.webp 900 1560 86 glass`; it needs numpy and Pillow), so the colours and shapes can be changed there. It can draw four: `glass` (the one in use: a deep blue ground crossed by petals of light), `sheets`, `dusk` and `present` (the one the site had before). The colours that follow the wallpaper are the fallbacks under it in `os.css` and `phone.css`, `WALLPAPER_TOP` in `src/phone/chrome.ts` (what the Lock Screen and Home Screen tint the browser's bar with), and `theme-color` in `index.html`. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
+- **The wallpaper** is a picture, `public/wallpaper.webp` for the desktop and `public/wallpaper-phone.webp` for the iPhone, made from a drawing: `tools/wallpaper.svg` and `tools/wallpaper-phone.svg` (the s of the logo, very large, as ribbons of glass over a sky that runs from near-black to blue). To change it, change or replace the drawings and run `node tools/wallpaper.cjs`: it draws each at the size it is shown and gives it a fine grain, so that the long gradients do not band once the picture is compressed (it needs Playwright, and Python with numpy and Pillow). `tools/wallpaper.py` adds that grain, and can still draw the four wallpapers the site had before (`glass`, `sheets`, `dusk` and `present`: `python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86 glass`). The colours that follow the wallpaper are the fallbacks under it in `os.css` and `phone.css`, and `WALLPAPER_TOP` in `src/phone/chrome.ts` (what the Lock Screen and Home Screen tint the browser's bar with). The loading screen keeps the site's own dark, and `theme-color` in `index.html` is that ground's. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
 - **Dates and times** are written in English whatever the browser's language, with the visitor's own clock, 12 hours or 24 (`os/dates.ts`: every formatter comes from there).
 - **The focus ring** is one rule in `base.css`: the accent, solid. A surface it would not show against (the wallpaper, the Dock, a dark window) sets `--ring: #fff`.

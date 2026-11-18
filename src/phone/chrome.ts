@@ -11,7 +11,7 @@ export type Tone = 'plain' | 'grouped' | 'dark'
 export const COLOR: Record<Tone, string> = { plain: '#ffffff', grouped: '#f2f2f7', dark: '#000000' }
 
 /** The wallpaper's colour at the top of the screen: what the lock and home screens give the browser. */
-export const WALLPAPER_TOP = '#040618'
+export const WALLPAPER_TOP = '#0f1130'
 
 export const chrome = createStore<Record<PhoneApp, Tone>>({ messages: 'plain', finder: 'plain', notes: 'plain', terminal: 'dark', photos: 'plain', about: 'grouped' })
 

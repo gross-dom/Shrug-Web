@@ -183,7 +183,7 @@
 .sb-wall {
   position: absolute;
   inset: 0;
-  background: #1c306f url('/wallpaper-phone.webp') center / cover no-repeat;
+  background: #4a539b url('/wallpaper-phone.webp') center / cover no-repeat;
   transition:
     filter 0.45s ease,
     transform 0.5s var(--glide);
