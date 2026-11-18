@@ -17,6 +17,7 @@ import { useStore } from '../os/store'
 import { chat, finishChat, replayChat, sendMessage, toggleChat, TOTAL, type Chat, type ChatItem } from './chat'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
 import { SearchField, ShrugAvatar } from './ui'
+import { formatter } from '../os/dates'
 
 // The parts of the group chat that the Mac window and the phone screen share:
 // the conversation itself, the message field, the list of conversations and
@@ -26,7 +27,7 @@ import { SearchField, ShrugAvatar } from './ui'
 
 export const GROUP_NAME = 'Shrug Family'
 
-const TIME = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
 /** A time as Messages writes it beside a conversation. */
 export const clock = (t: number) => TIME.format(t || Date.now())
 
@@ -96,8 +97,8 @@ export const QUOTES: ReactNode[] = PEOPLE.map((person, index) =>
 // ---- The conversation ----
 
 const DAY_MS = 86_400_000
-const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: 'long' })
-const DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'numeric', year: '2-digit' })
+const WEEKDAY = formatter({ weekday: 'long' })
+const DATE = formatter({ day: 'numeric', month: 'numeric', year: '2-digit' })
 
 /** How many midnights ago a moment was. */
 const daysAgo = (t: number) => Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / DAY_MS)

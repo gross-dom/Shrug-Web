@@ -1,0 +1,258 @@
+import type { Plugin } from 'vite'
+import { FAQS } from '../src/data/faqs'
+import { PEOPLE } from '../src/data/people'
+import { COMPANIES, COMPANY_COUNT } from '../src/data/portfolio'
+import { SITE } from '../src/data/site'
+import { ALIASES, APP_IDS } from '../src/os/apps'
+
+// What the page is before, without and around the site that runs in it. Two
+// plugins for vite.config.ts, both writing from the site's own data so that
+// nothing is said twice by hand:
+//
+//   page()     the words: what a link preview and a search engine read (the
+//              head's tags), the plain page inside #root (what is there with
+//              scripts off, in a browser too old to draw the site, or when it
+//              fails to arrive), robots.txt, sitemap.xml, llms.txt (the same
+//              words for a machine that reads text) and 404.html.
+//   arrival()  the speed: the built page asks for what it is about to need.
+
+const esc = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+/** How many testimonials the plain page carries. The rest are in the conversation itself. */
+const QUOTED = 12
+
+const TITLE = `${SITE.name} ${SITE.mark}`
+const DESCRIPTION = `${SITE.line} See what ${PEOPLE.length} people say about working with it and the ${COMPANY_COUNT} companies it has backed, on a desktop you can click around or an iPhone you can tap through.`
+const PICTURE = `${SITE.url}og.png`
+const PICTURE_SAYS = 'The Shrug Family group chat. Shrug asks: ok be honest. what’s it actually like working with us? The first reply is under it.'
+
+/** The head's tags: the description, the address, and what a link unfolds into when it is sent. */
+function tags() {
+  const about = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE.legalName,
+    alternateName: SITE.name,
+    url: SITE.url,
+    logo: `${SITE.url}icon-512.png`,
+    description: SITE.line,
+  }
+  return [
+    `<meta name="description" content="${esc(DESCRIPTION)}" />`,
+    `<link rel="canonical" href="${SITE.url}" />`,
+    `<meta property="og:site_name" content="${esc(SITE.name)}" />`,
+    `<meta property="og:title" content="${esc(TITLE)}" />`,
+    `<meta property="og:description" content="${esc(DESCRIPTION)}" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:url" content="${SITE.url}" />`,
+    `<meta property="og:image" content="${PICTURE}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${esc(PICTURE_SAYS)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${esc(TITLE)}" />`,
+    `<meta name="twitter:description" content="${esc(DESCRIPTION)}" />`,
+    `<meta name="twitter:image" content="${PICTURE}" />`,
+    `<meta name="twitter:image:alt" content="${esc(PICTURE_SAYS)}" />`,
+    `<script type="application/ld+json">${JSON.stringify(about).replace(/</g, '\\u003c')}</script>`,
+  ].join('\n    ')
+}
+
+/** The site as plain words: who Shrug is, what is said of it, who it has backed, and the one-pager. */
+function plain() {
+  const quoted = PEOPLE.filter((person) => person.quote).slice(0, QUOTED)
+  const answered = FAQS.filter((faq) => faq.answer)
+  const said = quoted.map((person) => `<figure><blockquote>${esc(person.quote!)}</blockquote><figcaption>${esc(person.name)}, ${esc(person.role)}</figcaption></figure>`)
+  const backed = COMPANIES.map((company) => {
+    const name = company.url ? `<a href="${esc(company.url)}" rel="noopener">${esc(company.name)}</a>` : esc(company.name)
+    return `<li>${name}${company.blurb ? `: ${esc(company.blurb)}` : ''}</li>`
+  })
+  const asked = answered.map((faq) => `<dt>${esc(faq.question)}</dt><dd>${esc(faq.answer!)}</dd>`)
+  return [
+    `<main class="plain">`,
+    `<noscript><p class="plain-note">This is the site in plain words. The site itself is a desktop to click around, or an iPhone to tap through, and needs JavaScript: turn it on and reload to see it.</p></noscript>`,
+    `<p class="plain-mark" aria-hidden="true">${esc(SITE.mark)}</p>`,
+    `<h1>${esc(SITE.name)}</h1>`,
+    `<p class="plain-line">${esc(SITE.line)}</p>`,
+    `<p><a class="plain-go" href="${SITE.onePager}" rel="noopener">Read the one-pager</a></p>`,
+    `<h2>What people say</h2>`,
+    ...said,
+    `<p class="plain-more">And ${PEOPLE.length - quoted.length} more, in the group chat on the site itself.</p>`,
+    `<h2>Portfolio</h2>`,
+    `<p class="plain-more">${COMPANY_COUNT} companies.</p>`,
+    `<ul>`,
+    ...backed,
+    `</ul>`,
+    ...(asked.length ? [`<h2>FAQs</h2>`, `<dl>`, ...asked, `</dl>`] : []),
+    `</main>`,
+  ].join('\n      ')
+}
+
+/** The site as text for a machine that reads no scripts: everything said of Shrug, and every company. */
+function text() {
+  const said = PEOPLE.filter((person) => person.quote).map((person) => `- “${person.quote}” ${person.name}, ${person.role}`)
+  const backed = COMPANIES.map((company) => `- ${company.url ? `[${company.name}](${company.url})` : company.name}${company.blurb ? `: ${company.blurb}` : ''}`)
+  const asked = FAQS.filter((faq) => faq.answer).flatMap((faq) => [`### ${faq.question}`, '', faq.answer!, ''])
+  return [
+    `# ${SITE.name}`,
+    '',
+    `> ${SITE.line}`,
+    '',
+    `The site (${SITE.url}) is interactive: a desktop to click around, or an iPhone to tap through. This file is what it holds, as text.`,
+    '',
+    `- [One-pager](${SITE.onePager})`,
+    '',
+    `## What people say (${said.length})`,
+    '',
+    ...said,
+    '',
+    `## Portfolio (${COMPANY_COUNT} companies)`,
+    '',
+    ...backed,
+    '',
+    ...(asked.length ? ['## FAQs', '', ...asked] : []),
+  ].join('\n')
+}
+
+/** The page an address the site does not have is answered with, where the host serves 404.html:
+ * `/portfolio`, `/faqs` and the like go to that app; anything else goes to the site. With scripts
+ * off it says so and links there. */
+function lost() {
+  const names = [...APP_IDS, ...Object.keys(ALIASES)]
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Not here · ${esc(SITE.name)}</title>
+    <style>
+      html { background: #040618; }
+      body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; padding: 32px 28px; color: #fff; font: 15px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center; }
+      .mark { font-size: 30px; line-height: 1.2; font-weight: 500; white-space: nowrap; }
+      h1 { margin: 26px 0 6px; font-size: 19px; line-height: 1.3; font-weight: 600; }
+      p { margin: 0; color: rgba(255, 255, 255, 0.72); }
+      a { display: inline-block; margin-top: 22px; padding: 12px 20px; border-radius: 22px; background: #fff; color: #040618; font-weight: 600; line-height: 20px; text-decoration: none; }
+    </style>
+    <script>
+      ;(function () {
+        // An address that names one of the site's apps opens it; any other is the site
+        var names = ${JSON.stringify(names)}
+        var asked = decodeURIComponent(location.pathname).replace(/^\\/+|\\/+$/g, '').split('/')[0].toLowerCase()
+        location.replace('/' + (names.indexOf(asked) >= 0 ? '?open=' + asked : ''))
+      })()
+    </script>
+  </head>
+  <body>
+    <div class="mark" aria-hidden="true">${esc(SITE.mark)}</div>
+    <h1>That page isn’t here</h1>
+    <p>The site is one page. Everything is on it.</p>
+    <a href="/">Go to ${esc(SITE.name)}</a>
+  </body>
+</html>
+`
+}
+
+export function page(): Plugin {
+  return {
+    name: 'shrug-page',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        for (const token of ['<!--tags-->', '<!--plain-->']) if (!html.includes(token)) throw new Error(`index.html has lost its ${token} marker (tools/page.ts)`)
+        return html.replace('<!--tags-->', tags).replace('<!--plain-->', plain)
+      },
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: `User-agent: *\nAllow: /\n\nSitemap: ${SITE.url}sitemap.xml\n` })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${SITE.url}</loc></url>\n</urlset>\n` })
+      this.emitFile({ type: 'asset', fileName: 'llms.txt', source: text() })
+      this.emitFile({ type: 'asset', fileName: '404.html', source: lost() })
+    },
+  }
+}
+
+// What the built page does for a visitor on a slow connection. Two things,
+// both to the page Vite writes:
+//
+// 1. The stylesheet moves from the head to the body, under the loading screen.
+//    In the head it holds back the first paint until it has arrived; under the
+//    loading screen, that screen is drawn at once and only what follows waits.
+// 2. The site is two downloads after the first: the desktop, or the iPhone
+//    (src/os/Desktop.tsx). Which one a screen needs is known before any script
+//    has arrived, so the page asks for it straight away, alongside the first
+//    script, rather than after it. The rule is the one in src/os/wm.ts; if the
+//    two ever disagree the cost is one wasted download, nothing else.
+export function arrival(): Plugin {
+  let base = '/'
+  return {
+    name: 'shrug-arrival',
+    apply: 'build',
+    configResolved(config) {
+      base = config.base
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const sheets: string[] = []
+        html = html.replace(/[ \t]*<link rel="stylesheet"[^>]*>\n?/g, (tag) => {
+          sheets.push(tag.trim())
+          return ''
+        })
+        if (sheets.length) html = html.replace(/([ \t]*)<div id="root">/, (root, indent: string) => sheets.map((tag) => indent + tag + '\n').join('') + root)
+
+        // Each half's files: its own script, the scripts that one imports, and their stylesheets
+        const chunks = Object.values(ctx.bundle ?? {}).flatMap((file) => (file.type === 'chunk' ? [file] : []))
+        const named = new Map(chunks.map((chunk) => [chunk.fileName, chunk]))
+        const filesOf = (source: string) => {
+          const start = chunks.find((chunk) => chunk.isDynamicEntry && chunk.facadeModuleId?.endsWith(source))
+          if (!start) return null
+          const seen = new Set<string>()
+          const files: string[] = []
+          const visit = (name: string) => {
+            const chunk = named.get(name)
+            if (!chunk || chunk.isEntry || seen.has(name)) return
+            seen.add(name)
+            files.push(name, ...(chunk.viteMetadata?.importedCss ?? []))
+            chunk.imports.forEach(visit)
+          }
+          visit(start.fileName)
+          return [...new Set(files)].map((name) => base + name)
+        }
+        const desk = filesOf('/src/os/Surface.tsx')
+        const phone = filesOf('/src/phone/Phone.tsx')
+        // One file for everything (tools/preview.cjs builds it so): nothing to ask for
+        if (!desk || !phone) return html
+        // The type the site is set in where Apple's own is not installed (src/styles/base.css)
+        const type = Object.keys(ctx.bundle ?? {}).find((name) => /inter-latin-wght-normal[^/]*\.woff2$/.test(name))
+
+        const ask = `<script>
+      ;(function () {
+        // The half of the site this screen shows, asked for now (the rule is src/os/wm.ts's)
+        var phone = /[?&]phone\\b/.test(location.search) || (window.__shrugHost && window.__shrugHost.phone === true) || innerWidth < 740 || innerHeight < 480
+        var files = phone ? ${JSON.stringify(phone)} : ${JSON.stringify(desk)}
+        function ask(rel, as, href, type) {
+          var link = document.createElement('link')
+          link.rel = rel
+          if (as) link.as = as
+          if (type) link.type = type
+          link.crossOrigin = ''
+          link.href = href
+          document.head.appendChild(link)
+        }
+        for (var i = 0; i < files.length; i++) {
+          if (/\\.css$/.test(files[i])) ask('preload', 'style', files[i])
+          else ask('modulepreload', '', files[i])
+        }
+        // Where Apple's own type is not installed the site is set in Inter: asked for now, so that it is
+        // there by the time there are words to set
+        var type = ${JSON.stringify(type ? base + type : '')}
+        if (type && !/Macintosh|iPhone|iPad|iPod/.test(navigator.userAgent)) ask('preload', 'font', type, 'font/woff2')
+      })()
+    </script>`
+        // In the head, ahead of the stylesheet: a script after a stylesheet waits for it
+        return html.replace(/([ \t]*)<\/head>/, (end, indent: string) => indent + '  ' + ask + '\n' + end)
+      },
+    },
+  }
+}

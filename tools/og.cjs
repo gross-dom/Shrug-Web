@@ -9,8 +9,8 @@ const { chromium } = require('playwright')
   const browser = await chromium.launch()
   // A phone in the hand, 480 points across: 1200 pixels at this scale
   const page = await (await browser.newContext({ viewport: { width: 480, height: 800 }, deviceScaleFactor: 2.5, hasTouch: true, isMobile: true })).newPage()
+  // A link that names the chat arrives in the conversation
   await page.goto(url + (url.includes('?') ? '&' : '?') + 'open=chat')
-  await page.locator('[data-conversation="group"]').tap()
   // Shrug's question and the first answer to it, before the second is on its way
   await page.waitForFunction(() => document.querySelectorAll('.chat__thread [data-person]:not([data-typing])').length >= 1, null, { timeout: 60000 })
   await page.waitForTimeout(600)

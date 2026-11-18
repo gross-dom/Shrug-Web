@@ -49,6 +49,7 @@ function fold(dir) {
   })
   // Nothing beside the page can be fetched from a file: the hints and the Home Screen links go
   html = html.replace(/<link rel="(preload|manifest|apple-touch-icon)"[^>]*>\s*/g, '')
+  html = html.replace(/<link rel="icon"[^>]*favicon\.ico"[^>]*>\s*/g, '')
   html = html.replace(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g, (_, src) => `<script type="module">${read(src).replace(/<\/script>/g, '<\\/script>')}</script>`)
 
   // The logos are files beside the page. They go in it as data, and the places
@@ -98,7 +99,7 @@ function wrap(app) {
 const APP = ${text};
 let frame = null, desk = false;
 // A computer's screen, by the site's own rule for what is a phone (src/os/wm.ts)
-const wide = () => innerWidth >= 760 && innerHeight >= 480;
+const wide = () => innerWidth >= 740 && innerHeight >= 480;
 const says = document.querySelector('span'), button = document.querySelector('button');
 // What the site in the frame is told: whether to be the iPhone whatever the frame's size
 const hook = (phone) => '\\u003cscript>window.__shrugHost={phone:' + phone + '}\\u003c/script>';

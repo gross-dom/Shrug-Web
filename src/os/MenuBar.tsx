@@ -9,6 +9,7 @@ import { dockPoint } from './dom'
 import { startSaver } from './saver'
 import { useStore } from './store'
 import { activeApp, bringAllToFront, closeApp, focusApp, minimizeApp, openApp, tileApp, toggleZoom, wm } from './wm'
+import { formatter } from './dates'
 
 // The menu bar: Shrug's mark where the system menu goes, the front app's name
 // and its menus, and on the right the day and the time. Every item does
@@ -115,8 +116,8 @@ function useNow(every = 10_000) {
   return now
 }
 
-const DAY = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
-const TIME = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+const DAY = formatter({ weekday: 'short', day: 'numeric', month: 'short' })
+const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
 
 export function MenuBar() {
   const menus = useMenus()

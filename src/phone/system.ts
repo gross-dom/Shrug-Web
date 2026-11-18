@@ -242,10 +242,13 @@ export function startSystem(): boolean {
 }
 
 /** A link that names an app (`?open=portfolio`) arrives with it open and the
- * phone unlocked. Nobody tapped anything, so it takes the place of the step
- * the visit began on instead of adding one. */
-export function arriveIn(app: PhoneApp) {
-  const place: Place = { app, stacks: sys.get().stacks, sheet: null }
+ * phone unlocked; so does a visit that was on the desktop until the screen
+ * changed (src/os/crossing.ts), at the screens it was on there (`stack`,
+ * `sheet`). Nobody tapped anything, so it takes the place of the step the
+ * phone is on instead of adding one. */
+export function arriveIn(app: PhoneApp, stack?: string[], sheet: string | null = null) {
+  const stacks = stack ? { ...sys.get().stacks, [app]: stack } : sys.get().stacks
+  const place: Place = { app, stacks, sheet }
   amend(place)
   apply(place, false)
   sys.set((s) => ({ ...s, locked: false }))

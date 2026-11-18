@@ -6,6 +6,8 @@
 // `logo: null` means none could be confirmed, and the window shows the
 // company's initial until a file is added.
 
+import { typeset } from './typeset'
+
 export interface Company {
   /** What tells it from every other company: its name, except for the one whose name another company has too. */
   key: string
@@ -33,7 +35,7 @@ const VERTICAL_ORDER = ['Deep tech', 'Climate and energy', 'Creator', 'Health', 
 
 type VerticalName = (typeof VERTICAL_ORDER)[number]
 
-const c = (name: string, vertical: VerticalName, url: string | null, logo: string | null, blurb: string | null = null, key = name): Company => ({ key, name, vertical, url, blurb, logo })
+const c = (name: string, vertical: VerticalName, url: string | null, logo: string | null, blurb: string | null = null, key = name): Company => ({ key, name, vertical, url, blurb: blurb && typeset(blurb), logo })
 
 /** Every company, in Shrug's order. */
 export const COMPANIES: Company[] = [

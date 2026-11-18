@@ -2,6 +2,7 @@ import { FAQS } from '../../data/faqs'
 import { createStore } from '../../os/store'
 import { sys } from '../system'
 import { FAQS_FOLDER, noteView } from './routes'
+import { formatter } from '../../os/dates'
 
 // What Notes holds on the phone. The FAQs are the site's: a folder of seven
 // notes, there to be read. Beside it the visitor has what any Notes has, a
@@ -188,11 +189,11 @@ export const found = (entries: Entry[], q: string) => (q ? entries.filter((e) =>
 
 // ---- Dates, as Notes writes them ----
 
-const TIME = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
-const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: 'long' })
-const SHORT = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'numeric', year: '2-digit' })
-const MONTH = new Intl.DateTimeFormat(undefined, { month: 'long' })
-const FULL = new Intl.DateTimeFormat(undefined, { dateStyle: 'long', timeStyle: 'short' })
+const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
+const WEEKDAY = formatter({ weekday: 'long' })
+const SHORT = formatter({ day: 'numeric', month: 'numeric', year: '2-digit' })
+const MONTH = formatter({ month: 'long' })
+const FULL = formatter({ dateStyle: 'long', timeStyle: 'short' })
 
 /** How many midnights ago a moment was. */
 const daysAgo = (t: number) => Math.round((startOfDay(Date.now()) - startOfDay(t)) / DAY_MS)

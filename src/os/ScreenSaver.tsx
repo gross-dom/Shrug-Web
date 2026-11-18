@@ -5,14 +5,15 @@ import { prefersReducedMotion } from './dom'
 import { idleSeconds, saver, startSaver, wakeSaver } from './saver'
 import { useStore } from './store'
 import { wm } from './wm'
+import { formatter } from './dates'
 
 // The screen saver. The shrug drifts across a dark screen and turns at the
 // edges, the clock sits where a lock screen keeps it, and the people from the
 // group chat pass by one at a time. Any key, click or movement wakes the desk.
 // A phone has none: nobody should be locked out of a page for reading it.
 
-const DATE = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
-const TIME = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+const DATE = formatter({ weekday: 'long', day: 'numeric', month: 'long' })
+const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
 
 /** The colors the shrug takes, one after another, each time it turns. */
 const TINTS = ['#ffffff', '#9fd0ff', '#ffd66b', '#ff9d8a', '#b9a4ff', '#8ee6b8']

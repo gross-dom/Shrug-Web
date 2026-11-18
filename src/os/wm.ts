@@ -1,3 +1,4 @@
+import { isOn } from './address'
 import { APPS, APP_IDS, type AppId, type Size } from './apps'
 import { createStore } from './store'
 
@@ -62,9 +63,20 @@ export const metrics = (compact: boolean) => ({
 })
 
 /** The address asks for the phone whatever the screen's size (`?phone`), or a page holding this one does. */
-const asked = typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('phone') || (window as { __shrugHost?: { phone?: boolean } }).__shrugHost?.phone === true)
+const asked = typeof window !== 'undefined' && (isOn('phone') || (window as { __shrugHost?: { phone?: boolean } }).__shrugHost?.phone === true)
 
-const isCompact = (v: Size) => asked || v.w < 760 || v.h < 480
+/** Under this size the site is the iPhone. Every tablet is a desktop both ways up: the narrowest
+ * current one, an iPad mini, is 744 across. (index.html's preloads, tools/page.ts and tools/preview.cjs
+ * repeat these two numbers.) */
+export const PHONE_UNDER: Size = { w: 740, h: 480 }
+
+const isCompact = (v: Size) => asked || v.w < PHONE_UNDER.w || v.h < PHONE_UNDER.h
+
+/** A text field has the caret. */
+const typing = () => {
+  const el = typeof document === 'undefined' ? null : document.activeElement
+  return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el instanceof HTMLElement && el.isContentEditable)
+}
 
 const viewportNow = (): Size => (typeof window === 'undefined' ? { w: 1440, h: 900 } : { w: window.innerWidth, h: window.innerHeight })
 
@@ -284,7 +296,10 @@ export function bringAllToFront() {
 export function setViewport(viewport: Size) {
   wm.set((s) => {
     if (s.viewport.w === viewport.w && s.viewport.h === viewport.h) return s
-    const compact = isCompact(viewport)
+    // A keyboard that takes the foot of the page (some browsers shrink the page for theirs) is not a new
+    // screen: while someone is typing, a change of height alone leaves the layout as it is
+    const keyboard = viewport.w === s.viewport.w && typing()
+    const compact = keyboard ? s.compact : isCompact(viewport)
     // A phone-sized screen draws its own layout and never reads these rects:
     // leave them as they are, to come back to
     const wins = compact ? s.wins : (Object.fromEntries(APP_IDS.map((id) => [id, refit(s.wins[id], viewport)])) as Record<AppId, Win>)

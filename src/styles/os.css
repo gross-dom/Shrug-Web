@@ -52,7 +52,16 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/wallpaper.webp') center / cover no-repeat;
+  background: center / cover no-repeat;
+}
+
+/* The picture is asked for only where it shows: on the desktop, and behind an
+   iPhone drawn in its frame. A phone in the hand covers it with its own, and
+   never fetches this one (it is three times the size of everything else a
+   phone needs) */
+.os:not([data-compact]) .os__wallpaper::before,
+.os:has(.ph-desk) .os__wallpaper::before {
+  background-image: url('/wallpaper.webp');
 }
 
 /* A photograph instead: put it in public/ and set --wallpaper on .os, e.g.
@@ -71,6 +80,110 @@
   opacity: 0.14;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- When the site cannot be drawn: half of it did not arrive, or it fell
+   over. The loading screen's look (index.html), over the wallpaper ---- */
+
+.stalled {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 28px;
+  overflow: auto;
+  background: rgb(4 6 24 / 0.62);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: #fff;
+  font: 15px/1.45 var(--font-ui);
+  text-align: center;
+}
+
+.stalled__mark {
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.stalled__title {
+  margin-top: 26px;
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.stalled__say {
+  max-width: 320px;
+  margin-top: 6px;
+  color: rgb(255 255 255 / 0.72);
+}
+
+.stalled__go {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 8px;
+  margin-top: 22px;
+}
+
+.os .stalled__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 22px;
+  background: rgb(255 255 255 / 0.16);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.os .stalled__button--lead {
+  background: #fff;
+  color: #040618;
+}
+
+.os .stalled__button:focus-visible {
+  outline: 3px solid #8ab8ff;
+  outline-offset: 2px;
+}
+
+/* Half of the site on its way: a spinner, once it has been a moment */
+.arriving {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  animation: arriving-in 0.3s 0.5s both;
+}
+
+.arriving__spin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: conic-gradient(from 22.5deg, rgb(255 255 255 / 0.18), #fff);
+  -webkit-mask: radial-gradient(circle, transparent 6.5px, #000 7px 14px, transparent 14.5px), repeating-conic-gradient(#000 0 16deg, transparent 16deg 45deg);
+  mask: radial-gradient(circle, transparent 6.5px, #000 7px 14px, transparent 14.5px), repeating-conic-gradient(#000 0 16deg, transparent 16deg 45deg);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  animation: arriving-spin 0.9s steps(8) infinite;
+}
+
+@keyframes arriving-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes arriving-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---- Arriving: the desk fades up, the bar and Dock slide in ---- */

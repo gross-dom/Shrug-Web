@@ -6,34 +6,178 @@
     <meta name="theme-color" content="#040618" />
     <meta name="color-scheme" content="light" />
     <title>Shrug ¯\_(ツ)_/¯</title>
-    <meta name="description" content="Shrug Capital: what people say, the portfolio, FAQs and drops, on a desktop you can click around or an iPhone you can tap through." />
     <!-- Dates, counts and times on the page are not phone numbers -->
     <meta name="format-detection" content="telephone=no" />
-    <meta property="og:title" content="Shrug ¯\_(ツ)_/¯" />
-    <meta property="og:description" content="Shrug Capital: what people say, the portfolio, FAQs and drops, on a desktop you can click around or an iPhone you can tap through." />
-    <meta property="og:type" content="website" />
-    <!-- What a link to the site unfolds into when it is texted: the conversation. tools/og.cjs takes the picture.
-         Some services want this address in full: once the site has a home, write it as https://…/og.png -->
-    <meta property="og:image" content="/og.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <!-- The description, the site's address, and what a link to it unfolds into when it is sent: written from
+         src/data by tools/page.ts. The picture is public/og.png (tools/og.cjs takes it). -->
+    <!--tags-->
+    <!-- The tab's icon: drawn (favicon.svg) where a browser takes that, pictures (favicon.ico) where it does not -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- What the site looks like on a phone's Home Screen, if it is added to one: tools/icons.cjs draws these -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="preload" as="image" type="image/webp" href="/wallpaper.webp" media="(min-width: 760px)" />
-    <link rel="preload" as="image" type="image/webp" href="/wallpaper-phone.webp" media="(max-width: 759px)" />
+    <link rel="preload" as="image" type="image/webp" href="/wallpaper.webp" media="(min-width: 740px) and (min-height: 480px)" />
+    <link rel="preload" as="image" type="image/webp" href="/wallpaper-phone.webp" media="(max-width: 739px), (max-height: 479px)" />
+    <!-- What is on screen until the site is: the mark, and a bar that fills while the rest arrives. If that takes
+         a while there is something to read; if it fails, or this browser is too old to draw the site, it says so
+         and gives a way on. Plain CSS and an old dialect of JavaScript on purpose: this has to work where
+         the site itself does not. The site takes it down once it is drawn (see `landed` in src/os/Desktop.tsx). -->
+    <style>
+      html { background: #040618; }
+      .boot { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 2147483647; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-orient: vertical; -webkit-flex-direction: column; flex-direction: column; -webkit-box-align: center; -webkit-align-items: center; align-items: center; -webkit-box-pack: center; -webkit-justify-content: center; justify-content: center; box-sizing: border-box; padding: 32px 28px; overflow: auto; background: #040618; color: #fff; font: 15px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center; -webkit-text-size-adjust: 100%; -webkit-transition: opacity 0.26s ease; transition: opacity 0.26s ease; }
+      .boot[hidden] { display: none; }
+      .boot[data-state='done'] { opacity: 0; pointer-events: none; }
+      .boot p { margin: 0; }
+      /* A quick arrival never shows any of it: the mark and the bar wait a moment before they are drawn */
+      .boot .boot-mark { font-size: 30px; line-height: 1.2; font-weight: 500; white-space: nowrap; -webkit-animation: boot-in 0.4s 0.45s both; animation: boot-in 0.4s 0.45s both; }
+      .boot .boot-bar { width: 172px; max-width: 60%; height: 4px; margin-top: 30px; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.2); -webkit-animation: boot-in 0.4s 0.45s both; animation: boot-in 0.4s 0.45s both; }
+      .boot .boot-bar i { display: block; height: 100%; border-radius: 2px; background: #fff; -webkit-transform-origin: 0 50%; transform-origin: 0 50%; -webkit-transform: scaleX(0); transform: scaleX(0); -webkit-animation: boot-fill 12s 0.45s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; animation: boot-fill 12s 0.45s cubic-bezier(0.1, 0.7, 0.2, 1) forwards; }
+      .boot .boot-card { max-width: 320px; }
+      .boot .boot-title { font-size: 19px; line-height: 1.3; font-weight: 600; }
+      .boot .boot-title:empty, .boot .boot-say:empty { display: none; }
+      .boot .boot-title, .boot .boot-say { margin-top: 26px; }
+      .boot .boot-title + .boot-say { margin-top: 6px; }
+      .boot .boot-say { color: rgba(255, 255, 255, 0.72); }
+      .boot .boot-go { display: none; margin-top: 22px; }
+      .boot .boot-go a, .boot .boot-go button { display: none; box-sizing: border-box; min-height: 44px; margin: 0 4px 10px; padding: 12px 20px; border: 0; border-radius: 22px; background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-weight: 600; line-height: 20px; text-decoration: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
+      .boot .boot-go .boot-lead { background: #fff; color: #040618; }
+      .boot .boot-go a:focus, .boot .boot-go button:focus { outline: 3px solid #8ab8ff; outline-offset: 2px; }
+      .boot .boot-go a:focus:not(:focus-visible), .boot .boot-go button:focus:not(:focus-visible) { outline: 0; }
+      .boot[data-state='late'] .boot-go, .boot[data-state='slow'] .boot-go, .boot[data-state='failed'] .boot-go, .boot[data-state='old'] .boot-go { display: block; }
+      .boot .boot-go a { display: inline-block; }
+      .boot[data-state='slow'] #boot-again, .boot[data-state='failed'] #boot-again, .boot[data-can] #boot-on, .boot[data-plain] #boot-plain { display: inline-block; }
+      .boot[data-state='failed'] .boot-bar, .boot[data-state='old'] .boot-bar { display: none; }
+      .boot[data-state='failed'] .boot-mark, .boot[data-state='old'] .boot-mark { -webkit-animation: none; animation: none; }
+      /* The site in plain words, inside #root until the site replaces it (tools/page.ts writes it): what is there with
+         scripts off, and what "Plain Version" uncovers when the site cannot be drawn */
+      .plain { position: fixed; top: 0; right: 0; bottom: 0; left: 0; overflow: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box; padding: 44px 24px 72px; background: #040618; color: #fff; font: 16px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%; }
+      .plain > * { max-width: 640px; margin-left: auto; margin-right: auto; }
+      .plain p, .plain ul, .plain dl { margin-top: 0; margin-bottom: 14px; }
+      .plain h1 { margin-top: 4px; margin-bottom: 8px; font-size: 34px; line-height: 1.15; }
+      .plain h2 { margin-top: 46px; margin-bottom: 14px; font-size: 22px; line-height: 1.25; }
+      .plain a { color: #9cc4ff; }
+      .plain .plain-mark { margin-bottom: 0; font-size: 26px; white-space: nowrap; }
+      .plain .plain-line { margin-bottom: 20px; font-size: 19px; line-height: 1.4; color: rgba(255, 255, 255, 0.86); }
+      .plain .plain-go { display: inline-block; padding: 12px 20px; border-radius: 22px; background: #fff; color: #040618; font-weight: 600; line-height: 20px; text-decoration: none; }
+      .plain .plain-note { margin-bottom: 30px; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); font-size: 14px; }
+      .plain figure { margin-top: 0; margin-bottom: 24px; }
+      .plain blockquote { margin: 0 0 6px; }
+      .plain figcaption, .plain .plain-more { font-size: 14px; color: rgba(255, 255, 255, 0.62); }
+      .plain ul { padding-left: 20px; }
+      .plain li { margin-bottom: 6px; }
+      .plain dt { margin-top: 18px; font-weight: 600; }
+      .plain dd { margin: 4px 0 0; color: rgba(255, 255, 255, 0.82); }
+      @-webkit-keyframes boot-in { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes boot-in { from { opacity: 0; } to { opacity: 1; } }
+      @-webkit-keyframes boot-fill { to { -webkit-transform: scaleX(0.92); } }
+      @keyframes boot-fill { to { transform: scaleX(0.92); } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <noscript>
-      <div style="font: 16px/1.5 system-ui, sans-serif; color: #fff; padding: 32px; max-width: 40em">
-        <p style="font-size: 28px; margin: 0 0 12px">¯\_(ツ)_/¯ Shrug</p>
-        <p>This site is a desktop you can click around, and it needs JavaScript to run.</p>
-        <p><a style="color: #fff" href="https://docsend.com/view/4659mp7f5ci9zdxa">Read the one-pager</a></p>
+    <div id="boot" class="boot" hidden>
+      <div class="boot-mark" aria-hidden="true">¯\_(ツ)_/¯</div>
+      <div class="boot-bar" aria-hidden="true"><i></i></div>
+      <div class="boot-card" role="status">
+        <p class="boot-title" id="boot-title"></p>
+        <p class="boot-say" id="boot-say"></p>
       </div>
-    </noscript>
+      <p class="boot-go">
+        <button type="button" id="boot-again" class="boot-lead">Try Again</button>
+        <a id="boot-doc" href="https://docsend.com/view/4659mp7f5ci9zdxa" target="_blank" rel="noopener">Read the one-pager</a>
+        <button type="button" id="boot-plain">Plain Version</button>
+        <button type="button" id="boot-on">Continue Anyway</button>
+      </p>
+    </div>
+    <script>
+      ;(function () {
+        var boot = document.getElementById('boot')
+        var title = document.getElementById('boot-title')
+        var say = document.getElementById('boot-say')
+        var doc = document.getElementById('boot-doc')
+        var WORDS = {
+          late: ['', 'Still loading. This takes a moment on a slow connection.'],
+          slow: ['', 'This is taking longer than it should. Keep waiting, or try again.'],
+          failed: ['Shrug didn’t load', 'Check your connection and try again.'],
+          old: ['Shrug needs a newer browser', 'This one can’t draw the site. Open the link in a current Safari, Chrome, Edge or Firefox, or read it in plain words.']
+        }
+        /** The site is drawn. */
+        var up = false
+        /** 'failed' or 'old': what the page says until the visitor does something about it. */
+        var stuck = ''
+        function mark(name, on) {
+          if (on) boot.setAttribute(name, '')
+          else boot.removeAttribute(name)
+        }
+        /** What else there is to press: the site in plain words while that is still under this screen, or the site itself once it is up. */
+        function offer() {
+          mark('data-plain', !!stuck && !up && !!document.querySelector('#root > .plain'))
+          mark('data-can', stuck === 'old' && up)
+        }
+        function show(state) {
+          if (stuck || (up && state !== 'old')) return
+          if (state === 'failed' || state === 'old') stuck = state
+          boot.setAttribute('data-state', state)
+          title.textContent = WORDS[state][0]
+          say.textContent = WORDS[state][1]
+          doc.className = state === 'old' ? 'boot-lead' : ''
+          offer()
+        }
+        function leave() {
+          boot.setAttribute('data-state', 'done')
+          setTimeout(function () {
+            if (boot.parentNode) boot.parentNode.removeChild(boot)
+          }, 300)
+        }
+        // What the site is built on. A browser without these would draw it broken, or not at all
+        var able = false
+        try {
+          able =
+            'noModule' in HTMLScriptElement.prototype &&
+            'inert' in HTMLElement.prototype &&
+            !!window.CSS &&
+            CSS.supports('selector(:has(a))') &&
+            CSS.supports('color', 'color-mix(in srgb, red, blue)') &&
+            CSS.supports('width', '1cqw')
+        } catch (e) {}
+        boot.removeAttribute('hidden')
+        if (!able) show('old')
+        setTimeout(function () { show('late') }, 10000)
+        setTimeout(function () { show('slow') }, 30000)
+        // A file of the site's that did not arrive, or a script that arrived and could not run
+        window.addEventListener(
+          'error',
+          function (e) {
+            if (up || stuck) return
+            var from = e.target
+            if (from && from !== window) {
+              var missing = from.tagName === 'SCRIPT' || (from.tagName === 'LINK' && from.rel === 'stylesheet')
+              if (missing) show('failed')
+            } else {
+              setTimeout(function () { show('failed') }, 3000)
+            }
+          },
+          true
+        )
+        document.getElementById('boot-again').onclick = function () { window.location.reload() }
+        document.getElementById('boot-on').onclick = leave
+        document.getElementById('boot-plain').onclick = leave
+        // The plain page is further down this file than this script: look for it again once it has been read
+        document.addEventListener('DOMContentLoaded', offer)
+        window.__shrugBoot = {
+          /** The site has drawn itself: this gives way, unless it is saying something the visitor has to see. */
+          done: function () {
+            if (up) return
+            up = true
+            offer()
+            if (!stuck) leave()
+          }
+        }
+      })()
+    </script>
+    <div id="root">
+      <!--plain-->
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

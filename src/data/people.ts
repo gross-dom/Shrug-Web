@@ -2,6 +2,8 @@
 // from the design canvas; each quote is that person's testimonial as published
 // on shrug.vc.
 
+import { typeset } from './typeset'
+
 export type Relation = 'F' | 'L' | 'C'
 
 export interface Person {
@@ -23,7 +25,7 @@ const p = (name: string, role: string, tags: string, quote: string | null = null
   name,
   role,
   relations: tags.split('') as Relation[],
-  quote,
+  quote: quote && typeset(quote),
 })
 
 export const PEOPLE: Person[] = [

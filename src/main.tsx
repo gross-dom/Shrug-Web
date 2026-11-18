@@ -1,6 +1,5 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/inter'
 // The kit's tokens and looks live in the stage's stylesheet; the desktop is
 // the stage here, so it is loaded directly.
 import './kit/stage.css'

@@ -3,6 +3,29 @@
    inside a stage; the desktop is the page here, so its controls start from
    nothing instead and every rule below is a class. */
 
+/* The type, where Apple's own is not installed: Inter (the Latin files of
+   @fontsource-variable/inter). `optional`: it is used if it is there when the
+   first words are set, and otherwise not on this visit, so the type never
+   changes under a reader. The page asks for it at once where it will be
+   wanted (tools/page.ts), so it nearly always is there. */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 100 900;
+  src: url('../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: optional;
+  font-weight: 100 900;
+  src: url('../../node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
@@ -52,9 +75,11 @@ body {
   -webkit-user-select: text;
 }
 
-/* The focus ring every control shares: the accent, soft, just outside it */
+/* The focus ring every control shares: the accent, solid, just outside it
+   (4.8:1 on a white window). A surface the accent would not show against (the
+   wallpaper, the Dock, the Lock Screen, a dark window) sets --ring to white. */
 .os :where(button, a, input, textarea, [tabindex]):focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--ss-accent) 55%, transparent);
+  outline: 3px solid var(--ring, #0a6de6);
   outline-offset: 1px;
 }
 

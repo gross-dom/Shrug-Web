@@ -105,3 +105,17 @@ export const APPS: Record<AppId, AppSpec> = {
 export const APP_IDS = Object.keys(APPS) as AppId[]
 
 export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
+
+/** The names an address can ask for besides the apps' own: `?open=portfolio,faqs` opens those, and
+ * `/portfolio` (an address the site does not have) is sent to `?open=portfolio` (tools/page.ts). */
+export const ALIASES: Record<string, AppId> = {
+  chat: 'messages',
+  'group-chat': 'messages',
+  portfolio: 'finder',
+  files: 'finder',
+  settings: 'about',
+  faqs: 'notes',
+  faq: 'notes',
+  'case-studies': 'terminal',
+  vip: 'photos',
+}
