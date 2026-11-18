@@ -1,0 +1,11 @@
+# What is not needed to build the site on Vercel. (With this file present the CLI no longer reads
+# .gitignore, so what that leaves out is said again here.)
+node_modules
+dist
+.vite
+*.local
+.DS_Store
+.claude
+.agents
+tests
+docs
