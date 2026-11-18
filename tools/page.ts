@@ -21,9 +21,17 @@ const esc = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').
 /** How many testimonials the plain page carries. The rest are in the conversation itself. */
 const QUOTED = 12
 
+/** Where this build is served from: the address a link preview and a search engine are given. On Vercel
+ * that is the project's own address (its domain once it has one, its vercel.app address until then), so
+ * that a link to it unfolds with a picture that is there to fetch. Anywhere else it is the site's home,
+ * `SITE.url`, unless `SITE_URL` says otherwise when the site is built. */
+const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {}
+const served = env.SITE_URL || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : SITE.url)
+const HOME = served.endsWith('/') ? served : `${served}/`
+
 const TITLE = `${SITE.name} ${SITE.mark}`
 const DESCRIPTION = `${SITE.line} See what ${PEOPLE.length} people say about working with it and the ${COMPANY_COUNT} companies it has backed, on a desktop you can click around or an iPhone you can tap through.`
-const PICTURE = `${SITE.url}og.png`
+const PICTURE = `${HOME}og.png`
 const PICTURE_SAYS = 'The Shrug Family group chat. Shrug asks: ok be honest. what’s it actually like working with us? The first reply is under it.'
 
 /** The head's tags: the description, the address, and what a link unfolds into when it is sent. */
@@ -33,18 +41,18 @@ function tags() {
     '@type': 'Organization',
     name: SITE.legalName,
     alternateName: SITE.name,
-    url: SITE.url,
-    logo: `${SITE.url}icon-512.png`,
+    url: HOME,
+    logo: `${HOME}icon-512.png`,
     description: SITE.line,
   }
   return [
     `<meta name="description" content="${esc(DESCRIPTION)}" />`,
-    `<link rel="canonical" href="${SITE.url}" />`,
+    `<link rel="canonical" href="${HOME}" />`,
     `<meta property="og:site_name" content="${esc(SITE.name)}" />`,
     `<meta property="og:title" content="${esc(TITLE)}" />`,
     `<meta property="og:description" content="${esc(DESCRIPTION)}" />`,
     `<meta property="og:type" content="website" />`,
-    `<meta property="og:url" content="${SITE.url}" />`,
+    `<meta property="og:url" content="${HOME}" />`,
     `<meta property="og:image" content="${PICTURE}" />`,
     `<meta property="og:image:width" content="1200" />`,
     `<meta property="og:image:height" content="630" />`,
@@ -98,7 +106,7 @@ function text() {
     '',
     `> ${SITE.line}`,
     '',
-    `The site (${SITE.url}) is interactive: a desktop to click around, or an iPhone to tap through. This file is what it holds, as text.`,
+    `The site (${HOME}) is interactive: a desktop to click around, or an iPhone to tap through. This file is what it holds, as text.`,
     '',
     `- [One-pager](${SITE.onePager})`,
     '',
@@ -164,8 +172,8 @@ export function page(): Plugin {
       },
     },
     generateBundle() {
-      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: `User-agent: *\nAllow: /\n\nSitemap: ${SITE.url}sitemap.xml\n` })
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${SITE.url}</loc></url>\n</urlset>\n` })
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: `User-agent: *\nAllow: /\n\nSitemap: ${HOME}sitemap.xml\n` })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${HOME}</loc></url>\n</urlset>\n` })
       this.emitFile({ type: 'asset', fileName: 'llms.txt', source: text() })
       this.emitFile({ type: 'asset', fileName: '404.html', source: lost() })
     },

@@ -13,7 +13,7 @@ npm run preview  # serves the build
 
 Node 20.19 or newer.
 
-The build writes more than the app: the site in plain words inside the page itself, the link preview's tags, `robots.txt`, `sitemap.xml`, `llms.txt` and `404.html`, all from the data in `src/data/` (`tools/page.ts`). They carry the site's address, `SITE.url` in `src/data/site.ts`: change it there if the site is served from somewhere else.
+The build writes more than the app: the site in plain words inside the page itself, the link preview's tags, `robots.txt`, `sitemap.xml`, `llms.txt` and `404.html`, all from the data in `src/data/` (`tools/page.ts`). They carry the address the build is served from: on Vercel the project's own (its domain once it has one, its `vercel.app` address until then), so that a link to it unfolds with a picture that is there to fetch; anywhere else `SITE.url` in `src/data/site.ts`, or whatever `SITE_URL=https://… npm run build` says.
 
 It is deployed on Vercel as the project `shrug-web`, at https://shrug-web.vercel.app: `npx vercel deploy --prod` from this folder puts up what is in it (`vercel.json` has the settings: files under `/assets/` cached for good, and a `noindex` header on any `*.vercel.app` address, so that only the site's own domain is indexed once it has one). Connecting the GitHub repository in Vercel's project settings would deploy every push instead.
 
