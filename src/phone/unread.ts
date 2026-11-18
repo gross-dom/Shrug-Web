@@ -1,4 +1,4 @@
-// What is new on the phone: the replies that have come in to Shrug Family and
+// What is new on the phone: the replies that have come in to the group chat and
 // not been seen there yet. The badge on Messages counts them, so it starts at
 // nothing, ticks up as replies arrive, and is cleared by having the
 // conversation on screen, as a badge is on an iPhone. The other conversations

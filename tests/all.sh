@@ -42,7 +42,7 @@ run "desktop shell"                  node desktop-shell.cjs $BASE
 run "forced colours, reduced motion" node forced-colours.cjs $BASE
 run "messages"                       node messages.cjs $BASE
 if [ $webkit -eq 1 ]; then run "folders and search" node folders-search.cjs $BASE; else run "folders and search" node folders-search.cjs $BASE nowk; fi
-run "iOS parts and Settings"         node ios-parts.cjs $BASE
+run "iOS parts, replies, About"      node ios-parts.cjs $BASE
 run "phone shell"                    node phone-shell.cjs $BASE
 # Safari's engine, one driver at a time
 if [ $webkit -eq 1 ]; then

@@ -13,12 +13,15 @@ export type EggLink = { label: string; href: string } | { label: string; app: Ap
 export type EggMessage = { from: 'me' | 'them'; text: string } | { from: 'me' | 'them'; link: EggLink }
 
 export interface Egg {
-  /** What the conversation is called in an address and in the phone's history (`c:mom`). */
+  /** What the conversation is called in an address and in the phone's history (`c:drops`). */
   id: string
   /** Who it is with. A name gets a monogram; a number gets the plain face Messages gives a sender it doesn't know. */
   name: string
   /** How long ago its last message was, in minutes: where it sits in the list, and what its row says. */
   ago: number
+  /** Heard from in the small hours: its last message came at this time of night, the last there
+   * was, so its row always shows a late hour. `ago` then only says where it sits in the list. */
+  night?: { hour: number; minute: number }
   messages: EggMessage[]
 }
 
@@ -28,35 +31,24 @@ const DAY = 24 * HOUR
 export const EGGS: Egg[] = [
   {
     id: 'founder',
-    name: 'A Founder',
-    ago: 7 * HOUR,
+    name: 'Akash Nigam',
+    ago: 2 * HOUR,
+    night: { hour: 2, minute: 14 },
     messages: [
       { from: 'them', text: 'you up?' },
       { from: 'me', text: 'always' },
-      { from: 'them', text: 'we just closed our first customer' },
-      { from: 'me', text: 'LET’S GO. calling you' },
+      { from: 'them', text: 'we just closed another customer' },
     ],
   },
   {
     id: 'unknown',
     name: '+1 (555) 010-0142',
-    ago: 21 * HOUR,
+    // More than a day, so that it stays under the one above whatever the hour
+    ago: 26 * HOUR,
     messages: [
       { from: 'them', text: 'hi! got your number from a friend. can i send you what we’re building?' },
       { from: 'me', text: 'please do. here’s a bit about us first' },
       { from: 'me', link: { label: 'Shrug one-pager', href: SITE.onePager } },
-    ],
-  },
-  {
-    id: 'mom',
-    name: 'Mom',
-    ago: 30 * HOUR,
-    messages: [
-      { from: 'them', text: 'so what is it you do again' },
-      { from: 'me', text: 'we back founders early' },
-      { from: 'them', text: 'like shark tank' },
-      { from: 'me', text: SITE.mark },
-      { from: 'them', text: 'ok. wear a jacket' },
     ],
   },
   {
@@ -66,17 +58,6 @@ export const EGGS: Egg[] = [
     messages: [
       { from: 'them', text: 'Your drop is out for delivery.' },
       { from: 'them', link: { label: 'See who got one in VIP', app: 'photos' } },
-    ],
-  },
-  {
-    id: 'code',
-    // Not a short code: five digits can be somebody's real one. A 555-01 number belongs to nobody.
-    name: '+1 (555) 010-0199',
-    ago: 5 * DAY,
-    messages: [
-      // A joke about one-time codes, and plainly one: there is no code in it, and nothing to verify
-      { from: 'them', text: `Your Shrug verification code is ${SITE.mark}. There’s nothing to verify.` },
-      { from: 'them', text: 'We’ll never ask for it. We might ask what you’re building.' },
     ],
   },
 ]

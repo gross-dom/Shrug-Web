@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Phone as Device } from '../kit/phone'
 import { useStore } from '../os/store'
 import { PHONE_UNDER, wm } from '../os/wm'
-import { COLOR, WALLPAPER_TOP, carried, chrome } from './chrome'
+import { useEdges } from './edges'
 import { SoftKeyboard } from './Keyboard'
 import { Springboard } from './Springboard'
 import { moving, sys } from './system'
@@ -10,7 +11,8 @@ import { clockOf, useNow } from './time'
 
 // The site as an iPhone. On a real phone the phone itself is the frame: the
 // screen is drawn edge to edge, under the phone's own status bar, and the
-// browser's bars are painted to match what is showing. Anywhere else (a narrow
+// browser's bars are painted to match what is showing, so that the page runs
+// to the top and the foot of the phone (edges.ts). Anywhere else (a narrow
 // window on a computer, or `?phone`) it is drawn inside the kit's iPhone, at
 // the real proportions, with the status bar and the island the kit draws:
 // unless the window is too small to hold that at a size that can be read, in
@@ -46,17 +48,9 @@ function framable(w: number, h: number) {
   return frameWidth(w, h) / DEVICE.w >= (small ? LEAST.small : LEAST.asked)
 }
 
-/** Whether the status bar's ink is light: over the wallpaper, or over a dark app. */
-function useDark() {
-  const tones = useStore(chrome, (s) => s)
-  const lifted = useStore(carried, (s) => s)
-  const app = useStore(sys, (s) => (s.locked || s.switcher || s.spotlight ? null : s.app))
-  return { dark: !app || lifted || tones[app] === 'dark', color: app && !lifted ? COLOR[tones[app]] : WALLPAPER_TOP }
-}
-
 export function Phone() {
   const viewport = useStore(wm, (s) => s.viewport)
-  const { dark, color } = useDark()
+  const { dark, top, foot } = useEdges()
   const now = useNow()
   const root = useRef<HTMLDivElement>(null)
   const bleed = inHand(viewport.w, viewport.h) || !framable(viewport.w, viewport.h)
@@ -68,18 +62,24 @@ export function Phone() {
     if (!bleed) document.querySelector('.ph-device .ss-phone__glyphs')?.setAttribute('aria-hidden', 'true')
   }, [bleed])
 
-  // A real phone: the browser's own bars take the colour of what is under them
+  // A real phone: the browser's own bars take the colour of what is at the edge they are on. Safari reads
+  // it from the strips fixed along the page's top and foot (drawn below, outside everything else on the
+  // page, where nothing can make them less than fixed), and falls back on the page's own colour; an older
+  // browser reads `theme-color`. All three say the same thing (edges.ts)
   useEffect(() => {
     if (!bleed) return
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    const before = { meta: meta?.content, body: document.body.style.backgroundColor }
-    if (meta) meta.content = color
-    document.body.style.backgroundColor = color
+    const root = document.documentElement
+    const before = { meta: meta?.content, root: root.style.backgroundColor, body: document.body.style.backgroundColor }
+    if (meta) meta.content = top
+    root.style.backgroundColor = top
+    document.body.style.backgroundColor = foot
     return () => {
       if (meta && before.meta) meta.content = before.meta
+      root.style.backgroundColor = before.root
       document.body.style.backgroundColor = before.body
     }
-  }, [bleed, color])
+  }, [bleed, top, foot])
 
   useEffect(() => {
     const el = root.current
@@ -116,9 +116,20 @@ export function Phone() {
 
   if (bleed)
     return (
-      <div ref={root} className="ph ph--bleed" data-dark={dark || undefined} data-moving={busy || undefined}>
-        <Springboard framed={false} />
-      </div>
+      <>
+        <div ref={root} className="ph ph--bleed" data-dark={dark || undefined} data-moving={busy || undefined}>
+          <Springboard framed={false} />
+        </div>
+        {/* The colour of the screen's top edge and of its foot, each in a strip fixed along that edge: what the
+            browser's bars are painted from */}
+        {createPortal(
+          <>
+            <span className="ph-edge ph-edge--top" style={{ backgroundColor: top }} aria-hidden />
+            <span className="ph-edge ph-edge--foot" style={{ backgroundColor: foot }} aria-hidden />
+          </>,
+          document.body,
+        )}
+      </>
     )
 
   const width = frameWidth(viewport.w, viewport.h)

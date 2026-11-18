@@ -1,6 +1,5 @@
 import { keepFor, keptFor } from '../apps/chat'
-import { finder, inbox, notes, openConversation, photos, pickCompany, setDrop, setFinderView, setMediaFilter, showNote, showVertical } from '../apps/state'
-import { DROPS } from '../data/drops'
+import { finder, inbox, notes, openConversation, photos, pickCompany, setFinderView, setMediaFilter, showNote, showVertical } from '../apps/state'
 import { EGGS } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { COMPANIES, VERTICALS } from '../data/portfolio'
@@ -17,7 +16,7 @@ interface Kept {
   windows: KeptWins
   finder: { vertical: number; view: string; picked: string | null }
   notes: { note: number }
-  photos: { filter: string; drop: string | null }
+  photos: { filter: string }
   inbox: { open: string }
 }
 
@@ -27,7 +26,7 @@ const now = (): Kept => ({
   windows: keptWins(),
   finder: { vertical: finder.get().vertical, view: finder.get().view, picked: finder.get().picked },
   notes: { note: notes.get().note },
-  photos: { filter: photos.get().filter, drop: photos.get().drop },
+  photos: { filter: photos.get().filter },
   inbox: { open: inbox.get().open },
 })
 
@@ -82,10 +81,7 @@ export function restoreDesk(): boolean {
   const note = kept.notes?.note
   if (typeof note === 'number' && Number.isInteger(note) && note >= 0 && note < FAQS.length) showNote(note)
   const p = kept.photos
-  if (p && typeof p === 'object') {
-    if (p.filter === 'all' || p.filter === 'photo' || p.filter === 'video') setMediaFilter(p.filter)
-    if (typeof p.drop === 'string' && DROPS.includes(p.drop)) setDrop(p.drop)
-  }
+  if (p && typeof p === 'object' && (p.filter === 'all' || p.filter === 'photo' || p.filter === 'video')) setMediaFilter(p.filter)
   const open = kept.inbox?.open
   if (typeof open === 'string' && (open === 'group' || EGGS.some((egg) => egg.id === open))) openConversation(open)
   // A desk with every window closed is a desk too: it comes back empty, not with the conversation opened again

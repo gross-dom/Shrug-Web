@@ -57,6 +57,8 @@ export function MessagesApp() {
   // seen: only replies that land with the window shut, put away or wholly
   // covered, or with another conversation showing, are new (and counted on the Dock)
   const showing = useStore(wm, inSight)
+  // Closed (not minimised): its conversation opens again at the newest message
+  const shut = useStore(wm, (s) => !s.wins.messages.open)
   const replied = useStore(chat, (s) => s.replied)
   useEffect(() => {
     if (showing && group) seeGroup()
@@ -129,7 +131,7 @@ export function MessagesApp() {
       }
       body={{ className: 'chat__body' }}
     >
-      <ConversationPane key={open} conversation={open} />
+      <ConversationPane key={open} conversation={open} shut={shut} />
       <Popover show={details && group} origin="top right" className="chat-details" role="dialog" aria-label={`${name} details`} {...(details && group ? null : ({ inert: '' } as object))}>
         <Details shown={details && group} onDone={() => setDetails(false)} />
       </Popover>

@@ -4,9 +4,9 @@ import { chat } from '../apps/chat'
 import { ConversationAvatar, GROUP_NAME, PersonAvatar } from '../apps/chat-ui'
 import { ALL, CompanyLogo, hostOf } from '../apps/portfolio-ui'
 import { showInGroup } from '../apps/state'
-import { arrived, DROPS } from '../data/drops'
+import { arrived, DROPS, MEDIA } from '../data/drops'
 import { EGGS, lastWords } from '../data/eggs'
-import { FAQS } from '../data/faqs'
+import { answerWords, FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
 import { DRAFT, reach, SITE } from '../data/site'
@@ -14,7 +14,7 @@ import { APPS } from '../os/apps'
 import { useStore } from '../os/store'
 import { OnePagerIcon, PhoneIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { albumView, companySheet, conversationView, FAQS_FOLDER, GROUP_VIEW, noteView, PORTFOLIO_FOLDER } from './apps/routes'
+import { cardsFor, companySheet, conversationView, FAQS_FOLDER, GROUP_VIEW, mediaView, noteView } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
 import '../styles/phone/spotlight.css'
 
@@ -27,15 +27,15 @@ const shared = new Set(ALL.map((c) => c.name).filter((name, i, all) => all.index
 // opens that app at that place.
 //
 // It answers to the site's own nouns and to what a visitor is likely to type:
-// an app by either of its names (Files is the Portfolio, Notes the FAQs) and
-// by the words for what it holds; the pages of Settings; the one-pager; and
+// an app by either of its names (Wallet is the Portfolio, Notes the FAQs) and
+// by the words for what it holds; the one-pager; and
 // the words for getting hold of Shrug (contact, email, pitch), which find the
 // way there is (`reach` in src/data/site.ts). A search that finds nothing
 // still leaves two things to press.
 
 // ---- What matches ----
 
-type Kind = 'app' | 'setting' | 'reach' | 'person' | 'company' | 'faq' | 'drop'
+type Kind = 'app' | 'reach' | 'person' | 'company' | 'faq' | 'drop'
 
 interface Hit {
   key: string
@@ -105,13 +105,13 @@ const glyph = (icon: ReactNode) => (size: number) => (
   </span>
 )
 
-/** What a drop's album holds, in words. Only what has arrived is counted; with the editor's view
- * (`?draft`) an album with nothing yet says so, and otherwise it is just an album. */
+/** What has arrived from a drop, in words. Only what has arrived is counted; with the editor's view
+ * (`?draft`) a drop with nothing yet says so, and otherwise it is just a drop. */
 function mediaOf(drop: string) {
   const photos = arrived('photo', drop)
   const videos = arrived('video', drop)
   const said = [photos && `${photos} photo${photos === 1 ? '' : 's'}`, videos && `${videos} video${videos === 1 ? '' : 's'}`].filter(Boolean)
-  return said.length ? said.join(', ') : DRAFT ? 'Album · nothing supplied yet' : 'Album'
+  return said.length ? said.join(', ') : DRAFT ? 'Drop · nothing supplied yet' : 'Drop'
 }
 
 /** The apps, in the order the Home Screen has them: the Dock's, then the rest. */
@@ -128,20 +128,7 @@ const ALSO: Record<PhoneApp, string[]> = {
   notes: ['faq', 'faqs', 'questions', 'answers'],
   photos: ['photos', 'videos', 'merch'],
   terminal: ['access', 'case study'],
-  about: ['about', 'shrug', 'privacy', 'cookies', 'website'],
 }
-
-/** The pages of Settings a search goes straight to: the name each has there, the screens that lead to
- * it (as src/phone/apps/Settings.tsx names them), the other names it answers to as if they were its
- * own, and the words that find it besides. */
-const SETTINGS: { title: string; path: string[]; names: string[]; words: string[] }[] = [
-  { title: SITE.legalName, path: ['account'], names: ['shrug', 'about', 'about shrug'], words: ['website', 'who', 'what is shrug'] },
-  { title: 'About', path: ['general', 'about'], names: [], words: ['counts', 'general', 'how many'] },
-  { title: 'Notifications', path: ['notifications'], names: [], words: ['banners', 'previews', 'alerts', 'pause', 'pause replies'] },
-  { title: 'Display & Brightness', path: ['display'], names: ['brightness'], words: ['auto-lock', 'autolock', 'lock'] },
-  { title: 'Sounds & Haptics', path: ['sounds'], names: ['haptics'], words: ['vibration', 'vibrate'] },
-  { title: 'Privacy & Security', path: ['privacy'], names: ['security'], words: ['cookies', 'tracking', 'data', 'gdpr'] },
-]
 
 /** What the one-pager answers to besides its name. */
 const ONE_PAGER = { names: ['one-pager', 'one pager', 'onepager'], words: ['deck', 'summary', 'overview', 'pdf', 'docsend', 'memo'] }
@@ -223,15 +210,6 @@ function find(raw: string, replied: number): Found {
     if (named >= 0 || (word >= 0 && word <= 1)) apps.push(onePager('link:one-pager', named >= 0 ? named : 1.25 + word, <Marked text="One-pager" q={q} />))
   }
 
-  const settings: Hit[] = []
-  SETTINGS.forEach((page) => {
-    const named = best([page.title, ...page.names], q)
-    const word = named < 0 && q.length >= 3 ? best(page.words, q) : -1
-    if (named < 0 && (word < 0 || word > 2)) return
-    // A word that is exactly one of its own is nearly as good as its name; part of one only lists it
-    settings.push({ key: `setting:${page.path.join('/')}`, kind: 'setting', score: named >= 0 ? named : word === 0 ? 1.25 : 4 + word, lead: tile('about'), title: <Marked text={page.title} q={q} />, subtitle: PHONE.about.label, open: () => launchAt('about', page.path) })
-  })
-
   // The words for getting hold of Shrug: the whole of one, or (four letters in) the start of one
   const reaching: Hit[] = []
   {
@@ -259,7 +237,7 @@ function find(raw: string, replied: number): Found {
       title: <Marked text={person.name} q={q} />,
       // What they said, where that is what matched; otherwise who they are
       subtitle: said ? <Marked text={around(person.quote!, q)} q={q} /> : <Marked text={person.role} q={q} />,
-      // Their reply is in Shrug Family and nowhere else: the group opens on it
+      // Their reply is in the group (Testimonials) and nowhere else: the group opens on it
       open: () => {
         showInGroup(i)
         launchAt('messages', [GROUP_VIEW])
@@ -295,7 +273,7 @@ function find(raw: string, replied: number): Found {
       title: <Marked text={company.name} q={q} />,
       // Two companies share a name: for them the line under it is their address, which tells them apart
       subtitle: described ? <Marked text={around(company.blurb!, q)} q={q} /> : shared.has(company.name) && company.url ? hostOf(company.url) : <Marked text={company.vertical} q={q} />,
-      open: () => launchAt('finder', [PORTFOLIO_FOLDER], null, companySheet(company.key)),
+      open: () => launchAt('finder', cardsFor(company.key), null, companySheet(company.key)),
     })
   })
 
@@ -306,7 +284,8 @@ function find(raw: string, replied: number): Found {
   const anyFaq = kindOf('faqs', 'questions', 'notes')
   FAQS.forEach((faq, i) => {
     const asked = rank(faq.question, q)
-    const answered = asked < 0 && !!faq.answer && faq.answer.toLowerCase().includes(q)
+    const words = faq.answer ? answerWords(faq.answer) : ''
+    const answered = asked < 0 && words.toLowerCase().includes(q)
     if (asked < 0 && !answered && !anyFaq) return
     faqs.push({
       key: `faq:${i}`,
@@ -314,7 +293,7 @@ function find(raw: string, replied: number): Found {
       score: asked >= 0 ? asked : answered ? 9 : 10,
       lead: tile('notes'),
       title: <Marked text={faq.question} q={q} />,
-      subtitle: answered ? <Marked text={around(faq.answer!, q)} q={q} /> : 'Note',
+      subtitle: answered ? <Marked text={around(words, q)} q={q} /> : 'Note',
       open: () => launchAt('notes', [FAQS_FOLDER, noteView(i)]),
     })
   })
@@ -324,17 +303,19 @@ function find(raw: string, replied: number): Found {
   DROPS.forEach((drop) => {
     const named = rank(drop, q)
     if (named < 0 && !anyDrop) return
-    // An album nothing has arrived for yet is found, but is not what search puts first
-    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, shy: arrived(undefined, drop) === 0, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), open: () => launchAt('photos', [albumView(drop)]) })
+    // A drop nothing has arrived for yet is found, but is not what search puts first. It opens as the first of its
+    // photos and videos, in the viewer, over the library
+    const first = MEDIA.findIndex((slot) => slot.drop === drop)
+    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, shy: arrived(undefined, drop) === 0, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), open: () => launchAt('photos', first < 0 ? [] : [mediaView(first)]) })
   })
 
-  const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), setting: settings.sort(byScore), reach: reaching, person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore), drop: drops.sort(byScore) }
+  const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), reach: reaching, person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore), drop: drops.sort(byScore) }
   const all = Object.values(lists).flat()
 
   // The best of them all, if it is a name that what was typed begins (or begins a word of). Level, the
-  // site's own things come first: an app, a page of Settings, the way to Shrug, then what is in the apps
+  // site's own things come first: an app, the way to Shrug, then what is in the apps
   let top: Hit | null = null
-  for (const kind of ['app', 'setting', 'reach', 'person', 'company', 'faq', 'drop'] as Kind[]) {
+  for (const kind of ['app', 'reach', 'person', 'company', 'faq', 'drop'] as Kind[]) {
     const eligible = lists[kind].find((hit) => !(hit.shy && all.some((other) => !other.shy)))
     if (eligible && eligible.score <= 2 && (!top || eligible.score < top.score)) top = eligible
   }
@@ -343,7 +324,6 @@ function find(raw: string, replied: number): Found {
   const icon = (id: PhoneApp) => <PhoneIcon id={id} />
   const groups: Found['groups'] = [
     { id: 'app' as const, title: 'Apps', icon: <LayoutGrid size={16} strokeWidth={2.4} />, hits: rest('app') },
-    { id: 'setting' as const, title: PHONE.about.label, icon: icon('about'), hits: rest('setting') },
     { id: 'reach' as const, title: 'Suggestions', icon: <Lightbulb size={16} strokeWidth={2.4} />, hits: rest('reach') },
     { id: 'person' as const, title: PHONE.messages.label, icon: icon('messages'), hits: rest('person') },
     { id: 'company' as const, title: PHONE.finder.label, icon: icon('finder'), hits: rest('company') },

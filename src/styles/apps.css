@@ -210,9 +210,14 @@
   display: inline-grid;
   flex: none;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
-  background: #1d1d1f;
+  background: #000;
   color: #fff;
+}
+
+.shrug-avatar > svg {
+  display: block;
 }
 
 /* ---- Group chat: Messages ---- */
@@ -357,7 +362,7 @@
 }
 
 /* The kit keeps every row on a layer of its own so it glides cleanly. With
-   ninety replies that is a lot of layers to hold: only the newest few rows
+   every reply in, that is a lot of layers to hold: only the newest few rows
    still move, so the older ones let theirs go */
 .chat__thread > :not(:nth-last-child(-n + 14)),
 .chat__thread > :not(:nth-last-child(-n + 14)) .ss-avatar {
@@ -428,113 +433,9 @@
   line-height: 15px;
 }
 
-/* A message that didn't go: the red mark beside the bubble and the line
-   under it, as Messages shows one. Nothing typed here leaves the page. */
-.chat-failed::after {
-  content: '!';
-  display: grid;
-  flex: none;
-  align-self: center;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  margin-left: 7px;
-  border-radius: 50%;
-  background: #ff3b30;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  animation: chat-arrive 0.3s ease 0.5s both;
-}
-
-/* The line is a button, and the red mark beside the bubble answers to the
-   same press (chat-ui.tsx): what they open says why, and where to go instead.
-   Its red is darker than Messages' own, which at this size cannot be read
-   on white */
-.chat-undelivered {
-  position: relative;
-  top: 0;
-  flex: none;
-  align-self: flex-end;
-  margin: 1px 25px 4px 0;
-  border-radius: 4px;
-  color: #d70015;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 15px;
-  text-align: right;
-  transition: top var(--ss-scroll);
-  animation: chat-arrive 0.3s ease 0.5s both;
-}
-
-.chat-undelivered:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.chat-undelivered:focus-visible {
-  outline-offset: 2px;
-}
-
-/* Why it didn't go: a small popover by the message, in the conversation's box */
-.chat-why.ss-popover {
-  width: 248px;
-  max-width: calc(100% - 16px);
-  padding: 0;
-  border-radius: 14px;
-}
-
-.chat-why[data-show] {
-  pointer-events: auto;
-}
-
-.chat-why__in {
-  padding: 12px 6px 6px;
-}
-
-.chat-why__title {
-  padding: 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 17px;
-}
-
-.chat-why__say {
-  margin: 3px 0 8px;
-  padding: 0 8px;
-  color: var(--ss-text);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.chat-why__acts {
-  display: flex;
-  flex-direction: column;
-  padding-top: 5px;
-  box-shadow: inset 0 0.5px 0 rgba(0, 0, 0, 0.12);
-}
-
-.chat-why__act {
-  display: flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 8px;
-  border-radius: 8px;
-  color: var(--ss-text-strong);
-  font-size: 13px;
-  text-align: left;
-}
-
-.chat-why__act[data-destructive] {
-  color: #d70015;
-}
-
-.chat-why__act:hover,
-.chat-why__act:focus-visible {
-  background: var(--ss-accent);
-  color: #fff;
-  outline: none;
+/* A message the visitor has just sent says Delivered a moment after it lands, as Messages does */
+.chat__thread .ss-receipt.chat-sent {
+  animation: chat-arrive 0.3s ease 0.7s both;
 }
 
 /* A bubble that goes somewhere: its words are the link, underlined, in the
@@ -637,6 +538,42 @@
   opacity: 1;
   transform: translate(-50%, 0);
   pointer-events: auto;
+}
+
+/* Every reply at once: a piece of glass at the head of the thread while they are still coming in,
+   for whoever would sooner not wait for each */
+.chat__all {
+  position: absolute;
+  top: var(--chat-all-top, 10px);
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px 0 9px;
+  border-radius: 14px;
+  background: var(--glass);
+  box-shadow: var(--glass-edge), 0 8px 22px rgba(20, 30, 60, 0.16);
+  color: var(--ss-accent-text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: 0;
+  transform: translate(-50%, -8px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.24s var(--ease-out);
+}
+
+.chat__all[data-show] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.chat__all:active {
+  opacity: 0.6;
 }
 
 /* The message field: a plus for everything else, then the field itself */
@@ -866,13 +803,35 @@
   --ss-row-line-2: 15px;
   --ss-row-gap: 1px;
   --ss-row-dot: 8px;
-  min-height: 0;
+  /* Every row is as tall as a name over two lines of what was last said, and what it does say
+     (one line or two) is set in the middle of that: level with the middle of the face beside it */
+  box-sizing: border-box;
+  min-height: calc(var(--ss-row-line) + 2 * var(--ss-row-line-2) + 2 * var(--ss-row-pad));
+  align-content: center;
   /* Room on the left for the unread dot, inside the row's own fill */
   padding-left: 22px;
   overflow: hidden;
   column-gap: 9px;
   border-radius: 11px;
   will-change: auto;
+}
+
+/* The kit keeps a second line under the name for a subtitle these rows do not have, and sets the
+   face against the top of the row. Here the name sits straight on the last message, and the face
+   (and the dot that says there is something new) are level with the middle of the two together */
+.conv.ss-row:has(.ss-row__preview) .ss-row__body {
+  min-height: 0;
+}
+
+.conv.ss-row:has(.ss-row__preview) .ss-row__lead {
+  align-self: center;
+  /* It takes no height of its own, so it cannot part the name from the message under it */
+  height: 0;
+}
+
+.conv.ss-row:has(.ss-row__preview) .ss-row__dot {
+  top: calc(50% - 3px);
+  align-self: center;
 }
 
 .conv .ss-row__dot {
@@ -1155,7 +1114,6 @@
   }
 
   .composer__app,
-  .chat-why__act,
   .details__row {
     min-height: 40px;
   }
@@ -1164,18 +1122,12 @@
     height: 40px;
   }
 
-  .chat__new {
+  .chat__new,
+  .chat__all {
     height: 36px;
     padding: 0 16px 0 12px;
     border-radius: 18px;
     font-size: 13px;
-  }
-
-  /* The line under a message that didn't go is small type: the press it takes is not */
-  .chat-undelivered::after {
-    content: '';
-    position: absolute;
-    inset: -12px -10px;
   }
 }
 
@@ -1348,8 +1300,7 @@
   overflow: hidden;
 }
 
-.pf__chips,
-.vip__chips {
+.pf__chips {
   display: none;
   flex: none;
   gap: 6px;
@@ -1830,6 +1781,11 @@
   outline-offset: -2px;
 }
 
+/* The page of a note takes the keyboard (its arrows scroll a long answer): its ring is drawn just inside the window */
+.faq__body:focus-visible {
+  outline-offset: -3px;
+}
+
 .faq__note {
   max-width: 640px;
   margin: 0 auto;
@@ -1865,6 +1821,45 @@
 .faq__answer {
   font-size: 15px;
   line-height: 1.5;
+}
+
+/* An answer's paragraphs and lists, and the links in them (apps/answer.tsx). The notes window
+   and the iPhone's Notes each set its type with a class of their own; the spacing follows it */
+.answer > * + * {
+  margin-top: 0.85em;
+}
+
+.answer__list > li {
+  position: relative;
+  padding-left: 1.3em;
+}
+
+.answer__list > li + li {
+  margin-top: 0.3em;
+}
+
+.answer__list > li::before {
+  content: '';
+  position: absolute;
+  top: 0.62em;
+  left: 0.42em;
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.answer__link {
+  color: var(--ss-accent);
+  text-decoration: underline;
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.answer__link:hover {
+  text-decoration-thickness: 0.09em;
 }
 
 /* An answer still to be written, as a visitor meets it: said plainly, with the way on */
@@ -2520,6 +2515,27 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* What Shrug says of itself: read, not pressed, and a long one runs on to a second line */
+.about__fact--said {
+  align-items: baseline;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.about__fact--said:hover {
+  background: none;
+}
+
+.about__fact--said > dt {
+  flex: none;
+  text-align: left;
+}
+
+.about__fact--said > dd {
+  text-align: right;
+  text-wrap: balance;
+}
+
 /* The ways on: a way to write to Shrug, where there is one, and the one-pager */
 .about__links {
   display: flex;
@@ -2555,22 +2571,19 @@
   background: var(--ss-ink-2, var(--ss-ink-1));
 }
 
-/* The shrug at the foot. Grey enough to read: 5.4:1 on the window */
-.about__mark {
-  margin-top: auto;
-  padding-top: 12px;
-  font-size: 13px;
-  color: #63646b;
-}
-
 /* On a short desk the window is shorter than what is in it. It gives up what
    it can spare before it makes anyone scroll: the icon is drawn smaller, and
-   then the shrug at the foot, which is only a flourish, goes */
+   then its rows sit closer. Each step is taken at the height the one before
+   it stops fitting. What is in the window is 522px tall as it is drawn in
+   full (which is the height the window is given: src/os/apps.ts), 484px with
+   the smaller icon and 452px with the closer rows; shorter than that, it
+   scrolls. A container's height is its body's less the 12px under the last
+   row, so the steps are at 510px and 472px */
 .about__body {
   container: about / size;
 }
 
-@container about (max-height: 387px) {
+@container about (max-height: 509px) {
   .about__icon {
     width: 60px;
     height: 60px;
@@ -2586,14 +2599,8 @@
   }
 }
 
-@container about (max-height: 353px) {
-  .about__mark {
-    display: none;
-  }
-}
-
 /* And, shorter still, its rows sit a little closer */
-@container about (max-height: 324px) {
+@container about (max-height: 471px) {
   .about__fact {
     padding-top: 6px;
     padding-bottom: 6px;
@@ -2612,8 +2619,7 @@
     padding-left: 90px;
   }
 
-  .pf__chips,
-  .vip__chips {
+  .pf__chips {
     display: flex;
   }
 
@@ -2820,13 +2826,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chat__new {
+  .chat__new,
+  .chat__all {
     transition-duration: 0.01s;
   }
 
   .chat-who,
-  .chat-failed::after,
-  .chat-undelivered,
+  .chat__thread .ss-receipt.chat-sent,
   .ss-bubble-row > .ss-bubble__avatar {
     animation: none !important;
   }

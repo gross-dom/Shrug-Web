@@ -1,9 +1,10 @@
 import type { Plugin } from 'vite'
-import { FAQS } from '../src/data/faqs'
+import { answerBlocks, FAQS, type Inline } from '../src/data/faqs'
 import { PEOPLE } from '../src/data/people'
+import { tileSvg } from '../src/data/logo'
 import { COMPANIES, COMPANY_COUNT } from '../src/data/portfolio'
 import { SITE } from '../src/data/site'
-import { ALIASES, APP_IDS } from '../src/os/apps'
+import { ALIASES, APP_IDS, type AppId } from '../src/os/apps'
 
 // What the page is before, without and around the site that runs in it. Two
 // plugins for vite.config.ts, both writing from the site's own data so that
@@ -29,10 +30,10 @@ const env = (globalThis as { process?: { env: Record<string, string | undefined>
 const served = env.SITE_URL || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : SITE.url)
 const HOME = served.endsWith('/') ? served : `${served}/`
 
-const TITLE = `${SITE.name} ${SITE.mark}`
+const TITLE = SITE.name
 const DESCRIPTION = `${SITE.line} See what ${PEOPLE.length} people say about working with it and the ${COMPANY_COUNT} companies it has backed, on a desktop you can click around or an iPhone you can tap through.`
 const PICTURE = `${HOME}og.png`
-const PICTURE_SAYS = 'The Shrug Family group chat. Shrug asks: ok be honest. what’s it actually like working with us? The first reply is under it.'
+const PICTURE_SAYS = 'The Testimonials group chat. Shrug asks: ok be honest. what’s it actually like working with us? The first reply is under it.'
 
 /** The head's tags: the description, the address, and what a link unfolds into when it is sent. */
 function tags() {
@@ -66,6 +67,24 @@ function tags() {
   ].join('\n    ')
 }
 
+/** Where a link to one of the site's own apps goes when there is no app to open: the address that opens it. */
+const appAddress = (app: AppId) => `${HOME}?open=${Object.keys(ALIASES).find((name) => ALIASES[name] === app) ?? app}`
+
+/** An answer as plain HTML: its paragraphs, its lists, and the links and stress in them. */
+function drawn(answer: string) {
+  const run = (parts: Inline[]) =>
+    parts
+      .map((part) => {
+        if (typeof part === 'string') return esc(part)
+        if ('em' in part) return `<em>${esc(part.em)}</em>`
+        return 'app' in part ? `<a href="${esc(appAddress(part.app))}">${esc(part.label)}</a>` : `<a href="${esc(part.href)}" rel="noopener">${esc(part.label)}</a>`
+      })
+      .join('')
+  return answerBlocks(answer)
+    .map((block) => (block.kind === 'list' ? `<ul>${block.items.map((item) => `<li>${run(item)}</li>`).join('')}</ul>` : `<p>${run(block.parts)}</p>`))
+    .join('')
+}
+
 /** The site as plain words: who Shrug is, what is said of it, who it has backed, and the one-pager. */
 function plain() {
   const quoted = PEOPLE.filter((person) => person.quote).slice(0, QUOTED)
@@ -75,11 +94,11 @@ function plain() {
     const name = company.url ? `<a href="${esc(company.url)}" rel="noopener">${esc(company.name)}</a>` : esc(company.name)
     return `<li>${name}${company.blurb ? `: ${esc(company.blurb)}` : ''}</li>`
   })
-  const asked = answered.map((faq) => `<dt>${esc(faq.question)}</dt><dd>${esc(faq.answer!)}</dd>`)
+  const asked = answered.map((faq) => `<dt>${esc(faq.question)}</dt><dd>${drawn(faq.answer!)}</dd>`)
   return [
     `<main class="plain">`,
     `<noscript><p class="plain-note">This is the site in plain words. The site itself is a desktop to click around, or an iPhone to tap through, and needs JavaScript: turn it on and reload to see it.</p></noscript>`,
-    `<p class="plain-mark" aria-hidden="true">${esc(SITE.mark)}</p>`,
+    `<p class="plain-mark" aria-hidden="true">${tileSvg(40)}</p>`,
     `<h1>${esc(SITE.name)}</h1>`,
     `<p class="plain-line">${esc(SITE.line)}</p>`,
     `<p><a class="plain-go" href="${SITE.onePager}" rel="noopener">Read the one-pager</a></p>`,
@@ -100,7 +119,7 @@ function plain() {
 function text() {
   const said = PEOPLE.filter((person) => person.quote).map((person) => `- “${person.quote}” ${person.name}, ${person.role}`)
   const backed = COMPANIES.map((company) => `- ${company.url ? `[${company.name}](${company.url})` : company.name}${company.blurb ? `: ${company.blurb}` : ''}`)
-  const asked = FAQS.filter((faq) => faq.answer).flatMap((faq) => [`### ${faq.question}`, '', faq.answer!, ''])
+  const asked = FAQS.filter((faq) => faq.answer).flatMap((faq) => [`### ${faq.question}`, '', faq.answer!.replace(/\]\(app:([\w-]+)\)/g, (_, app: AppId) => `](${appAddress(app)})`), ''])
   return [
     `# ${SITE.name}`,
     '',
@@ -137,7 +156,7 @@ function lost() {
     <style>
       html { background: #040618; }
       body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; padding: 32px 28px; color: #fff; font: 15px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center; }
-      .mark { font-size: 30px; line-height: 1.2; font-weight: 500; white-space: nowrap; }
+      .mark { line-height: 0; }
       h1 { margin: 26px 0 6px; font-size: 19px; line-height: 1.3; font-weight: 600; }
       p { margin: 0; color: rgba(255, 255, 255, 0.72); }
       a { display: inline-block; margin-top: 22px; padding: 12px 20px; border-radius: 22px; background: #fff; color: #040618; font-weight: 600; line-height: 20px; text-decoration: none; }
@@ -152,7 +171,7 @@ function lost() {
     </script>
   </head>
   <body>
-    <div class="mark" aria-hidden="true">${esc(SITE.mark)}</div>
+    <div class="mark" aria-hidden="true">${tileSvg(44)}</div>
     <h1>That page isn’t here</h1>
     <p>The site is one page. Everything is on it.</p>
     <a href="/">Go to ${esc(SITE.name)}</a>
@@ -167,8 +186,9 @@ export function page(): Plugin {
     transformIndexHtml: {
       order: 'pre',
       handler(html) {
-        for (const token of ['<!--tags-->', '<!--plain-->']) if (!html.includes(token)) throw new Error(`index.html has lost its ${token} marker (tools/page.ts)`)
-        return html.replace('<!--tags-->', tags).replace('<!--plain-->', plain)
+        for (const token of ['<!--tags-->', '<!--plain-->', '<!--mark-->']) if (!html.includes(token)) throw new Error(`index.html has lost its ${token} marker (tools/page.ts)`)
+        // The logo over the loading bar: the same drawing the site has (src/data/logo.ts)
+        return html.replace('<!--tags-->', tags).replace('<!--plain-->', plain).replace('<!--mark-->', tileSvg(44))
       },
     },
     generateBundle() {

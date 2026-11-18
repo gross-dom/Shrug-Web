@@ -185,8 +185,75 @@
   inset: 0;
   background: #4a539b url('/wallpaper-phone.webp') center / cover no-repeat;
   transition:
-    filter 0.45s ease,
-    transform 0.5s var(--glide);
+    filter 0.35s ease,
+    transform 0.4s var(--glide);
+}
+
+/* On a real phone the browser paints its own bars, over the page and under it, each in the one colour
+   it finds fixed along that edge (the strips below). The wallpaper is brought to those same two colours
+   over its last few points, top and foot, where it is all but flat already: the bar over the page is
+   then the wallpaper's own top carried on, and the one under it its own foot, with no line between */
+.ph--bleed .sb-wall::before,
+.ph--bleed .sb-wall::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  content: '';
+  pointer-events: none;
+}
+
+.ph--bleed .sb-wall::before {
+  top: 0;
+  height: 54px;
+  background: linear-gradient(to bottom, #0f1130 0, #0f1130 8px, rgb(15 17 48 / 0) 100%);
+}
+
+.ph--bleed .sb-wall::after {
+  bottom: 0;
+  height: 64px;
+  background: linear-gradient(to top, #8297de 0, #8297de 8px, rgb(130 151 222 / 0) 100%);
+}
+
+/* The strips themselves: the colour of the screen's top edge and of its foot (src/phone/edges.ts), each
+   fixed along that edge of the page, over everything, taking no touches. They are too like what is
+   under them to be seen. Safari reads them; nothing else needs them.
+
+   What Safari reads is worked out in WebKit's LocalFrameView::fixedContainerEdges, and these are made
+   to its measure. It looks at one point on each edge, the middle of it, 4px in; takes what is fixed or
+   sticky there; and uses that element's background colour for its bar if the element is at least nine
+   tenths of the screen across, more than 10px in both directions, and not see-through. (A thinner one
+   it does not trust for a colour: it looks at the pixels instead, once, and keeps what it saw for as
+   long as that element is there, so the bar would never follow the screen from the wallpaper into an
+   app.) So each strip is 12px deep. Only 7px of it is on the screen, which covers the point looked at
+   and stops short of the home indicator (8px up); the rest hangs off the edge. Its colour changes at
+   once, with no transition for Safari to catch half-way: Safari eases its own bar. And each is a layer
+   of its own, because it is the repainting of a fixed layer that has WebKit look again.
+
+   Not where the page is the whole screen already (added to the Home Screen): there is no bar there
+   to paint */
+.ph-edge {
+  position: fixed;
+  right: 0;
+  left: 0;
+  z-index: 2147483000;
+  display: block;
+  height: 12px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.ph-edge--top {
+  top: -5px;
+}
+
+.ph-edge--foot {
+  bottom: -5px;
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .ph-edge {
+    display: none;
+  }
 }
 
 /* Behind the App Switcher it falls back and out of focus */
@@ -203,8 +270,8 @@
   z-index: 1;
   touch-action: none;
   transition:
-    transform 0.5s var(--glide),
-    opacity 0.4s ease;
+    transform 0.4s var(--glide),
+    opacity 0.3s ease;
 }
 
 .sb-lock[data-leaving] {
@@ -240,9 +307,55 @@
 }
 
 /* The clock is as wide as four digits and a colon at any size: on the narrowest
-   phones, and on a screen too short to hold it over the two buttons, it gives way */
+   phones, and on a screen too short to hold it over the replies, it gives way */
 .sb-lock .ss-lock__clock {
   font-size: min(112px, 30cqw, 30cqh);
+}
+
+/* The time is set in glass, as the Lock Screen sets it now: tall figures, pale and seen through,
+   brightest along their top edges where the light catches, with a line of light round each. The
+   wallpaper behind them is a smooth ground, so what shows through is its colour */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .sb-lock .ss-lock__clock {
+    margin-bottom: 0.1em;
+    padding-top: 0.02em;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.9) 4%, rgb(255 255 255 / 0.5) 46%, rgb(255 255 255 / 0.36) 72%, rgb(255 255 255 / 0.6) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    opacity: 1;
+    -webkit-text-stroke: 0.7px rgb(255 255 255 / 0.62);
+    filter: drop-shadow(0 6px 16px rgb(6 8 44 / 0.2));
+    /* Taller than the type is drawn: the figures of the glass clock are */
+    transform: scaleY(1.16);
+    transform-origin: 50% 0;
+  }
+}
+
+/* The day over it, short: Wed 18 Nov */
+.sb-lock .ss-lock__date {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  opacity: 0.9;
+}
+
+/* A notification is a pane of the same glass */
+.sb-note.ss-notification {
+  background: linear-gradient(180deg, rgb(248 249 253 / 0.66), rgb(244 246 252 / 0.54));
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  backdrop-filter: blur(22px) saturate(1.8);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.5),
+    inset 0 1px 0.5px -0.5px rgb(255 255 255 / 0.9),
+    0 8px 26px rgb(8 10 60 / 0.12);
+}
+
+/* The replies wait just over the words that say how it opens: there are no round buttons under them to keep clear of */
+.sb-lock .ss-lock__stack {
+  bottom: calc(72px + var(--below, 0px));
 }
 
 /* On a real phone the page starts under the phone's own status bar */
@@ -257,7 +370,7 @@
   }
 
   .sb-lock .ss-lock__stack {
-    bottom: 104px;
+    bottom: calc(64px + var(--below, 0px));
   }
 }
 
@@ -278,61 +391,6 @@
   opacity: 0.9;
 }
 
-/* The torch and the camera. The row itself takes no touches: on a phone on its
-   side the notifications lie between the two buttons, under it */
-.sb-lock__controls {
-  position: absolute;
-  right: 46px;
-  bottom: calc(48px + var(--below, 0px));
-  left: 46px;
-  display: flex;
-  justify-content: space-between;
-  pointer-events: none;
-}
-
-/* The Lock Screen's frosted buttons: a dim, blurred disc with a white glyph */
-.sb-lock__control {
-  display: grid;
-  place-items: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: rgb(10 12 24 / 0.26);
-  -webkit-backdrop-filter: blur(24px) saturate(1.3);
-  backdrop-filter: blur(24px) saturate(1.3);
-  color: #fff;
-  pointer-events: auto;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s var(--glide);
-}
-
-.sb-lock__control:active {
-  transform: scale(1.14);
-}
-
-/* On, the torch's button is lit, and its light comes up the screen from it */
-.sb-lock__control[aria-pressed='true'] {
-  background: #fff;
-  color: #1c1c1e;
-}
-
-.sb-lock__beam {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(120% 78% at 71px calc(100% - 73px - var(--below, 0px)), rgb(255 246 222 / 0.5), rgb(255 246 222 / 0.16) 42%, transparent 70%),
-    radial-gradient(90px 90px at 71px calc(100% - 73px - var(--below, 0px)), rgb(255 250 235 / 0.7), transparent 70%);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-
-.sb-lock[data-torch] .sb-lock__beam {
-  opacity: 1;
-}
-
 /* Over the wallpaper the accent does not show: the ring round what has the
    keyboard is white here, with a line of shade outside it for where the
    wallpaper is pale */
@@ -343,7 +401,7 @@
   --ring: #fff;
 }
 
-:is(.sb-lock, .sb-home, .sb-apps[data-switcher]) :is(button, a, [tabindex]):focus-visible {
+html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) :is(button, a, [tabindex]):focus-visible {
   box-shadow: 0 0 0 5px rgb(4 6 24 / 0.55);
 }
 
@@ -381,7 +439,7 @@
 }
 
 .sb-stack > .sb-note {
-  animation: sb-note-in 0.55s var(--glide);
+  animation: sb-note-in 0.42s var(--glide);
 }
 
 @keyframes sb-note-in {
@@ -447,9 +505,9 @@
   /* Nothing here scrolls: a drag on it is the pull that brings up search, not the browser's to pan */
   touch-action: none;
   transition:
-    transform 0.5s var(--glide),
-    opacity 0.3s ease,
-    filter 0.3s ease;
+    transform 0.4s var(--glide),
+    opacity 0.26s ease,
+    filter 0.26s ease;
 }
 
 /* An app is in front: the icons fall back behind it */
@@ -464,10 +522,12 @@
   opacity: 0;
 }
 
+/* Search is up: the icons and widgets fall away almost to nothing, as they do under Spotlight, so that
+   its white type reads whatever was behind it (a white widget included) */
 .sb-home[data-searching] {
   transform: scale(0.94);
   filter: blur(20px);
-  opacity: 0.7;
+  opacity: 0.2;
 }
 
 /* Under a finger dragging an app away, they are already there */
@@ -547,10 +607,10 @@
   right: -9px;
   display: grid;
   place-items: center;
-  min-width: 24px;
+  /* A circle, whatever it counts: two figures are set a little smaller to sit in it */
+  width: 24px;
   height: 24px;
-  padding: 0 7px;
-  border-radius: 12px;
+  border-radius: 50%;
   background: #ff3b30;
   color: #fff;
   font-size: 15px;
@@ -559,6 +619,11 @@
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
   /* It pops onto the icon with the first reply, as a badge does */
   animation: sb-badge-in 0.34s var(--ui);
+}
+
+.sb-badge[data-digits='2'] {
+  font-size: 13px;
+  letter-spacing: -0.03em;
 }
 
 @keyframes sb-badge-in {
@@ -640,7 +705,7 @@
   align-items: flex-end;
   gap: 8px;
   min-height: 0;
-  animation: sb-reply-in 0.5s var(--glide);
+  animation: sb-reply-in 0.4s var(--glide);
 }
 
 @keyframes sb-reply-in {
@@ -709,12 +774,17 @@
   height: calc(var(--icon) + 34px);
   padding: 17px calc(var(--margin) - var(--inset)) 0;
   border-radius: 9.6cqw;
-  background: rgb(255 255 255 / 0.22);
-  -webkit-backdrop-filter: blur(28px) saturate(1.7);
-  backdrop-filter: blur(28px) saturate(1.7);
+  /* A tray of glass, as the Dock is now: clear enough that the wallpaper is seen through it (it is
+     blurred only a little), brighter along its top edge where the light catches, and lifted off the
+     wallpaper by a soft shade under it */
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.06));
+  -webkit-backdrop-filter: blur(12px) saturate(1.5) brightness(1.04);
+  backdrop-filter: blur(12px) saturate(1.5) brightness(1.04);
   box-shadow:
-    inset 0 0 0 0.5px rgb(255 255 255 / 0.28),
-    inset 0 1px 0 rgb(255 255 255 / 0.3);
+    inset 0 0 0 1px rgb(255 255 255 / 0.13),
+    inset 0 1.5px 1px -0.5px rgb(255 255 255 / 0.8),
+    inset 0 -1px 1px -0.5px rgb(255 255 255 / 0.26),
+    0 10px 30px rgb(8 10 60 / 0.16);
 }
 
 /* Four apps line up with the columns of icons above them; fewer share the Dock out evenly, as iOS does */
@@ -736,10 +806,13 @@
   height: 30px;
   padding: 0 13px 0 11px;
   border-radius: 15px;
-  background: rgb(255 255 255 / 0.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.26);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.11));
+  -webkit-backdrop-filter: blur(14px) saturate(1.9) brightness(1.06);
+  backdrop-filter: blur(14px) saturate(1.9) brightness(1.06);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.14),
+    inset 0 1px 0.5px -0.5px rgb(255 255 255 / 0.7),
+    0 4px 14px rgb(8 10 60 / 0.12);
   color: #fff;
   font-size: 13px;
   font-weight: 500;
@@ -788,8 +861,8 @@
   inset: 0;
   pointer-events: none;
   transition:
-    transform 0.46s var(--glide),
-    opacity 0.25s ease;
+    transform 0.38s var(--glide),
+    opacity 0.22s ease;
 }
 
 .sb-slot[data-front] {
@@ -815,7 +888,7 @@
 
 .ph--bleed .sb-slot[data-open]::before {
   opacity: 1;
-  transition: opacity 0.15s ease 0.5s;
+  transition: opacity 0.15s ease 0.3s;
 }
 
 .ph--bleed .sb-apps[data-switcher] .sb-slot::before,
@@ -828,18 +901,49 @@
   position: absolute;
   inset: 0;
   transition:
-    transform 0.46s var(--glide),
-    border-radius 0.46s var(--glide);
+    transform 0.38s var(--glide),
+    border-radius 0.38s var(--glide);
 }
 
 .sb-app {
   pointer-events: auto;
 }
 
+/* An app's window, the app in it and its icon's picture over it (Zoom.tsx): the three that move when
+   one opens. The app keeps a layer of its own for good, so its words never re-set when it lands */
+.sb-zoom {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.sb-zoom__app {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  background-color: var(--zoom-bg, #fff);
+  will-change: transform;
+}
+
+.sb-zoom__face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.sb-zoom__face > * {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
 /* Shut, it is no more than its icon: it takes no touches, and once it has landed it isn't drawn */
 .sb-app[data-shut] {
   pointer-events: none;
-  animation: sb-rest 0s 0.75s forwards;
+  animation: sb-rest 0s 0.34s forwards;
 }
 
 /* Shut without having flown there, it isn't drawn at all */
@@ -857,7 +961,7 @@
 /* From one app straight into another: the new one slides in from the right, over the one it came from */
 .sb-slot[data-slide='in'] > .sb-card {
   box-shadow: -12px 0 32px rgb(0 0 0 / 0.16);
-  animation: sb-slide-in 0.5s var(--glide);
+  animation: sb-slide-in 0.4s var(--glide);
 }
 
 @keyframes sb-slide-in {
@@ -867,7 +971,7 @@
 }
 
 .sb-slot[data-slide='under'] > .sb-card {
-  animation: sb-slide-under 0.5s var(--glide) forwards;
+  animation: sb-slide-under 0.4s var(--glide) forwards;
 }
 
 @keyframes sb-slide-under {
@@ -883,8 +987,8 @@
   overflow: hidden;
   overflow: clip;
   transition:
-    transform 0.5s var(--glide),
-    border-radius 0.5s var(--glide);
+    transform 0.4s var(--glide),
+    border-radius 0.4s var(--glide);
 }
 
 .ph[data-dragging] .sb-drag {
@@ -897,8 +1001,11 @@
 }
 
 .ph[data-dragging] .sb-app {
-  background-color: transparent !important;
   clip-path: none !important;
+}
+
+.ph[data-dragging] .sb-zoom__app {
+  background-color: transparent !important;
 }
 
 .sb-face--card {
@@ -1127,9 +1234,8 @@
 /* ---- A phone on its side ----
    A real iPhone keeps its Lock Screen and Home Screen upright when it is
    turned; a page is turned with the browser. So on a short, wide screen those
-   two are laid out for the width: the clock over the notifications between
-   the two buttons, and the Dock down the trailing edge, as the larger iPhones
-   used to turn theirs. The apps reflow on their own, as apps do. */
+   two are laid out for the width: the clock over the notifications, and the
+   Dock down the trailing edge, as the larger iPhones used to turn theirs. The apps reflow on their own, as apps do. */
 @container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
   .ph--bleed .ss-lock__date {
     margin-top: calc(var(--status) + 8px);
@@ -1141,19 +1247,9 @@
   }
 
   .sb-lock .ss-lock__stack {
-    right: 112px;
-    bottom: calc(46px + var(--below, 0px));
-    left: 112px;
-  }
-
-  .sb-lock__controls {
-    bottom: calc(42px + var(--below, 0px));
-  }
-
-  .sb-lock__beam {
-    background:
-      radial-gradient(70% 150% at 71px calc(100% - 67px - var(--below, 0px)), rgb(255 246 222 / 0.5), rgb(255 246 222 / 0.16) 42%, transparent 70%),
-      radial-gradient(90px 90px at 71px calc(100% - 67px - var(--below, 0px)), rgb(255 250 235 / 0.7), transparent 70%);
+    right: 64px;
+    bottom: calc(52px + var(--below, 0px));
+    left: 64px;
   }
 
   .sb-lock__hint {
@@ -1285,8 +1381,6 @@
   .sb-lock__hint,
   .sb-lock[data-nudge],
   .sb-lock[data-nudge] .sb-lock__hint,
-  .sb-lock__control,
-  .sb-lock__beam,
   .sb-apps,
   .sb-slot__close,
   .ph--bleed .sb-slot[data-open]::before,

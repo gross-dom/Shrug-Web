@@ -78,7 +78,7 @@ const parts = {
     check('saver: the clock has no AM or PM', /^\d{1,2}:\d{2}$/.test(state.time), state.time)
     check('saver: shows what the person said', !!state.said && state.said.length > 10, state.said)
     check('saver: hint for a mouse and keys, at 60%', state.hint === 'Move, click or press a key to wake' && state.hintOpacity === '0.6', state.hint + ' ' + state.hintOpacity)
-    check('saver: the title is the site\'s own while it is on', /^Shrug ¯/.test(state.title), state.title)
+    check('saver: the title is the site\'s own while it is on', state.title === 'Shrug', state.title)
     await t.page.screenshot({ path: path.join(OUT, 'saver-on.png') })
     await t.ctx.close()
 
@@ -324,7 +324,7 @@ const parts = {
     t = await fresh('desktop', 'still&empty')
     const none = await t.page.evaluate(() => ({ labels: [...document.querySelectorAll('.menubar__title')].map((b) => b.getAttribute('aria-label')), title: document.title }))
     check('menus: with no window open the titles\' names are all different, one "Shrug menu"', new Set(none.labels).size === none.labels.length && none.labels.filter((l) => l === 'Shrug menu').length === 1, JSON.stringify(none.labels))
-    check('title: the bare desk is the site\'s own', /^Shrug ¯/.test(none.title), none.title)
+    check('title: the bare desk is the site\'s own', none.title === 'Shrug', none.title)
     await t.page.click('.desk__item >> nth=0')
     await t.page.waitForTimeout(1600)
     const one = !!(await win(t.page, 'finder'))?.open

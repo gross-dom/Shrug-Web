@@ -26,7 +26,7 @@ const active = (page) => page.evaluate(() => `${document.activeElement?.tagName.
 const replies = (page, root) => page.evaluate((root) => document.querySelectorAll(`${root} .chat__thread [data-person]:not([data-typing])`).length, root)
 
 async function desk(browser) {
-  // ---- a message of the visitor's own: says why it did not go, and the keyboard is where it should be
+  // ---- a message of the visitor's own: it goes as any message does, and the keyboard is where it should be
   let t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still' })
   let p = t.page
   await p.waitForSelector(`${W} .composer__input`, { timeout: 20000 })
@@ -70,38 +70,22 @@ async function desk(browser) {
   await p.waitForTimeout(900)
   say((await active(p)) === 'input.composer__input', 'tb-10 the send button does not take the caret', await active(p))
   const told = await p.evaluate((W) => document.querySelector(`${W} .chat__pane > [role="status"]`).textContent.trim(), W)
-  say(/^Not Delivered/.test(told), 'AX-s a message that did not go is said in the status line', told)
+  say(/^Delivered\.\s?$/.test(told), 'AX-s a message that has gone is said in the status line', told)
 
-  // UX-2: the line is a button; it and the red mark open the same thing
-  const line = await p.evaluate((W) => { const b = document.querySelector(`${W} .chat-undelivered`); return { tag: b?.tagName, text: b?.textContent, popup: b?.getAttribute('aria-haspopup'), color: b && getComputedStyle(b).color } }, W)
-  say(line.tag === 'BUTTON' && line.text === 'Not Delivered' && line.popup === 'dialog', 'UX-2 "Not Delivered" is a button', JSON.stringify(line))
-  say(line.color === 'rgb(215, 0, 21)', 'AX-15 its red passes on white (#d70015)', line.color)
-  await p.locator(`${W} .chat-undelivered`).first().click()
-  await p.waitForTimeout(500)
-  const why = await p.evaluate((W) => {
-    const w = document.querySelector(`${W} .chat-why`)
-    const acts = [...w.querySelectorAll('.chat-why__act')]
-    return { show: w.hasAttribute('data-show'), role: w.getAttribute('role'), label: w.getAttribute('aria-label'), title: w.querySelector('.chat-why__title')?.textContent, say: w.querySelector('.chat-why__say')?.textContent, acts: acts.map((a) => a.textContent.replace(/, opens in a new tab/, '').trim()), doc: acts.find((a) => /One-pager/.test(a.textContent))?.getAttribute('href'), tab: acts.find((a) => /One-pager/.test(a.textContent))?.getAttribute('target'), focusIn: w.contains(document.activeElement) }
+  // UX-2 (as it is now): a message of the visitor's own is delivered, as any message is. "Delivered" is under the
+  // last one sent and nowhere else; nothing says it did not go, and there is nothing to press to be told why
+  const sent = await p.evaluate((W) => {
+    const rows = [...document.querySelectorAll(`${W} .chat__thread > *`)]
+    const mine = rows.filter((r) => r.querySelector('.ss-bubble[aria-label="You"]'))
+    const last = rows.findIndex((r) => r.textContent.includes('and again'))
+    return { mine: mine.map((r) => r.querySelector('.ss-bubble__text').textContent), from: mine.every((r) => r.dataset.from === 'me'), under: rows[last + 1]?.textContent.trim(), receipts: rows.filter((r) => r.textContent.trim() === 'Delivered').length, failed: document.querySelectorAll(`${W} .chat-failed, ${W} .chat-undelivered, ${W} .chat-why, ${W} [data-failed]`).length }
   }, W)
-  say(why.show && why.role === 'dialog' && why.title === 'Not Delivered' && /recording of what people said about Shrug/.test(why.say) && why.acts.join('|') === 'Read the One-pager|Delete Message' && /docsend/.test(why.doc) && why.tab === '_blank', 'UX-2 desktop: a popover that says why, with the one-pager and Delete Message', JSON.stringify(why))
-  say(why.focusIn, 'UX-2 the keyboard goes into it')
-  await p.screenshot({ path: path.join(OUT, 'desk-why.png') })
-  await p.keyboard.press('Escape')
-  await p.waitForTimeout(450)
-  say(!(await p.locator(`${W} .chat-why[data-show]`).count()) && (await active(p)) === 'button.chat-undelivered', 'UX-2 Escape closes it and the keyboard goes back to the line', await active(p))
-  // the red mark beside the bubble
-  const mark = await p.evaluate((W) => { const row = [...document.querySelectorAll(`${W} .chat-failed`)].pop(); const b = row.querySelector('.ss-bubble').getBoundingClientRect(); return { x: b.right + 16, y: b.top + b.height / 2 } }, W)
-  await p.mouse.click(mark.x, mark.y)
-  await p.waitForTimeout(450)
-  say((await p.locator(`${W} .chat-why[data-show]`).count()) === 1, 'UX-2 the red mark opens the same thing')
-  const before = await p.locator(`${W} .chat-failed`).count()
-  await p.locator(`${W} .chat-why__act`, { hasText: 'Delete Message' }).click()
-  await p.waitForTimeout(600)
-  say((await p.locator(`${W} .chat-failed`).count()) === before - 1 && !(await p.locator(`${W} .chat-why[data-show]`).count()), 'UX-2 Delete Message takes the bubble away', `${before} -> ${await p.locator(`${W} .chat-failed`).count()}`)
+  say(sent.mine.join('|') === 'hello from a visitor|and again' && sent.from && sent.under === 'Delivered' && sent.receipts === 1 && sent.failed === 0, 'UX-2 a message of the visitor’s own is delivered: "Delivered" under the last one sent, and nothing that says it did not go', JSON.stringify(sent))
+  await p.screenshot({ path: path.join(OUT, 'desk-delivered.png') })
 
   // tb-6: what is typed and not sent is kept with its conversation
   await p.fill(`${W} .composer__input`, 'half a thought')
-  await p.click(`${W} [data-conversation="mom"]`)
+  await p.click(`${W} [data-conversation="founder"]`)
   await p.waitForTimeout(500)
   const inMom = await p.inputValue(`${W} .composer__input`)
   await p.click(`${W} [data-conversation="group"]`)
@@ -120,7 +104,7 @@ async function desk(browser) {
   await p.waitForTimeout(300)
 
   // DK-5 / AX-22: search is of what has been said; nothing found is said outside the list
-  await p.fill(`${W} .search__input`, 'janky')
+  await p.fill(`${W} .search__input`, 'maggie norris')
   await p.waitForTimeout(400)
   const none = await p.evaluate((W) => { const l = document.querySelector(`${W} .conv-list`); const n = document.querySelector(`${W} .conv-none`); return { rows: l.querySelectorAll('[data-row]').length, strays: [...l.children].filter((c) => !c.matches('[role="option"], [role="group"]')).length, none: n?.textContent.trim(), role: n?.getAttribute('role'), inList: !!l.querySelector('.conv-none, .side-empty') } }, W)
   say(none.rows === 0 && none.none === 'No Results', 'DK-5 someone who has not replied yet is not found', JSON.stringify(none))
@@ -129,11 +113,11 @@ async function desk(browser) {
   await p.waitForTimeout(400)
   say((await p.locator(`${W} [data-row="p:0"]`).count()) === 1, 'DK-5 someone who has replied is found')
   // DK-10: Return opens the first thing found; the down arrow goes into the list
-  await p.fill(`${W} .search__input`, 'mom')
+  await p.fill(`${W} .search__input`, 'akash')
   await p.waitForTimeout(300)
   await p.keyboard.press('Enter')
   await p.waitForTimeout(500)
-  say((await p.textContent(`${W} .chat-id__name span`)) === 'Mom', 'DK-10 Return in the search opens the first conversation found', await p.textContent(`${W} .chat-id__name span`))
+  say((await p.textContent(`${W} .chat-id__name span`)) === 'Akash Nigam', 'DK-10 Return in the search opens the first conversation found', await p.textContent(`${W} .chat-id__name span`))
   await p.keyboard.press('ArrowDown')
   await p.waitForTimeout(300)
   say((await active(p)) === 'div.conv-list', 'DK-10 the down arrow goes into the list', await active(p))
@@ -142,12 +126,14 @@ async function desk(browser) {
   await p.click(`${W} [data-conversation="unknown"]`)
   await p.waitForTimeout(500)
   say((await p.textContent(`${W} a.chat-link .sr-only`)) === ', opens in a new tab', 'UX-19 a link bubble says ", opens in a new tab"')
-  // UX-25: the verification joke
-  const eggs = await p.evaluate((W) => [...document.querySelectorAll(`${W} .conv .ss-row__title`)].map((x) => x.textContent))
-  await p.click(`${W} [data-conversation="code"]`)
+  // The conversations beside the group: a founder by name, heard from in the small hours; no Mom, no verification code
+  const eggs = await p.evaluate((W) => [...document.querySelectorAll(`${W} .conv`)].map((row) => ({ name: row.querySelector('.ss-row__title').textContent.replace(/, unread$/, ''), when: row.querySelector('.ss-row__meta')?.textContent.trim(), said: row.querySelector('.ss-row__preview')?.textContent.trim() })), W)
+  say(eggs.map((e) => e.name).join(' | ') === 'Testimonials | Akash Nigam | +1 (555) 010-0142 | Drops', 'the list is Testimonials and three others: no Mom, no verification code', eggs.map((e) => e.name).join(' | '))
+  say(eggs[1].said === 'we just closed another customer' && /^(0?[1-4]:\d\d( ?AM)?)$/.test(eggs[1].when), 'the founder is Akash Nigam, heard from late at night: "we just closed another customer"', JSON.stringify(eggs[1]))
+  await p.click(`${W} [data-conversation="founder"]`)
   await p.waitForTimeout(500)
-  const code = await p.evaluate((W) => document.querySelector(`${W} .chat__thread`).innerText, W)
-  say(!eggs.some((n) => /72975/.test(n)) && /nothing to verify/.test(code) && !/000000/.test(code), 'UX-25 no real-looking short code or one-time code', JSON.stringify(eggs))
+  const night = await p.evaluate((W) => [...document.querySelectorAll(`${W} .chat__thread .ss-bubble__text`)].map((x) => x.textContent), W)
+  say(night.join(' | ') === 'you up? | always | we just closed another customer', 'and the conversation with him says so', night.join(' | '))
   await p.click(`${W} [data-conversation="group"]`)
   await p.waitForTimeout(500)
 
@@ -173,8 +159,8 @@ async function desk(browser) {
   await p.waitForTimeout(500)
   const det = await p.evaluate((W) => { const d = document.querySelector(`${W} .chat-details`); return { in: d.contains(document.activeElement), on: document.activeElement?.textContent.trim(), stops: d.querySelectorAll('.details__person[tabindex="0"]').length, people: d.querySelectorAll('.details__person').length, name: document.querySelector(`${W} .chat-id`).getAttribute('aria-label'), dialog: d.getAttribute('aria-label') } }, W)
   say(det.in && det.on === 'Pause Replies', 'AX-7 details take the keyboard in, on their first control', JSON.stringify(det))
-  say(det.stops === 1 && det.people === 90, 'AX-7 ninety people are one Tab stop', `${det.stops} of ${det.people}`)
-  say(det.name === 'Shrug Family. Details' && det.dialog === 'Shrug Family details', 'AX-23 one name for Details', `${det.name} / ${det.dialog}`)
+  say(det.stops === 1 && det.people === 89, 'AX-7 eighty-nine people are one Tab stop', `${det.stops} of ${det.people}`)
+  say(det.name === 'Testimonials. Details' && det.dialog === 'Testimonials details', 'AX-23 one name for Details', `${det.name} / ${det.dialog}`)
   await p.focus(`${W} .details__person[tabindex="0"]`)
   await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown')
   say((await p.evaluate(() => document.activeElement?.getAttribute('data-person-row'))) === '2', 'AX-7 the arrows walk the people')
@@ -194,14 +180,14 @@ async function desk(browser) {
   await pick(p, 'view', 'Show Every Reply')
   await p.waitForTimeout(1200)
   const allTold = await p.evaluate((W) => document.querySelector(`${W} .chat__pane > [role="status"]`).textContent.trim(), W)
-  say(allTold === 'All 90 have replied.', 'AX-8 …and that everyone has', allTold)
+  say(allTold === 'All 89 have replied.', 'AX-8 …and that everyone has', allTold)
   await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); s.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -900 })); s.scrollTop = 600 }, W)
   await p.waitForTimeout(500)
   say((await p.locator(`${W} .chat__new[data-show]`).count()) === 1, 'DK-4 (setup) scrolled back: the pill shows')
   await p.fill(`${W} .composer__input`, 'sent from far up')
   await p.keyboard.press('Enter')
   await p.waitForTimeout(1400)
-  const seen = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); const b = [...document.querySelectorAll(`${W} .chat-failed`)].pop().getBoundingClientRect(); const r = s.getBoundingClientRect(); return { inView: b.top >= r.top && b.bottom <= r.bottom + 1, fromEnd: Math.round(s.scrollHeight - s.scrollTop - s.clientHeight), pill: !!document.querySelector(`${W} .chat__new[data-show]`) } }, W)
+  const seen = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); const b = [...document.querySelectorAll(`${W} .ss-bubble[aria-label="You"]`)].pop().getBoundingClientRect(); const r = s.getBoundingClientRect(); return { inView: b.top >= r.top && b.bottom <= r.bottom + 1, fromEnd: Math.round(s.scrollHeight - s.scrollTop - s.clientHeight), pill: !!document.querySelector(`${W} .chat__new[data-show]`) } }, W)
   say(seen.inView && !seen.pill, 'DK-4 a message sent after scrolling back comes into view', JSON.stringify(seen))
   // AX-10: pressing the pill puts the keyboard on the thread
   await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); s.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -900 })); s.scrollTop = 600 }, W)
@@ -211,18 +197,15 @@ async function desk(browser) {
   await p.waitForTimeout(900)
   say((await active(p)) === 'div.chat__scroll', 'AX-10 the pill hands the keyboard to the thread', await active(p))
 
-  // UX-23: where to go once everyone has replied
+  // UX-23 (as it is now): the last reply is the end of the conversation. Shrug says nothing after it: no shrug, no
+  // "anyway.", no bubbles that lead somewhere else
   const end = await p.evaluate((W) => {
     const rows = [...document.querySelectorAll(`${W} .chat__thread > *`)]
-    const at = rows.findIndex((r) => r.textContent.trim() === 'anyway.')
-    const after = rows.slice(at, at + 4)
-    return { at, said: after.map((r) => (r.classList.contains('ss-receipt') ? 'receipt' : r.querySelector('.chat-link') ? `${r.querySelector('.chat-link').tagName}:${r.querySelector('.chat-link').textContent.replace(/, opens in a new tab/, '')}` : r.textContent.trim())), shrugBefore: rows[at - 1]?.textContent.trim(), people: document.querySelectorAll(`${W} .chat__thread [data-person]`).length }
+    const shrugs = rows.filter((r) => r.querySelector('.ss-bubble[aria-label="Shrug"]')).map((r) => r.textContent.trim())
+    const lastReply = rows.map((r, i) => (r.querySelector('[data-person]') ? i : -1)).filter((i) => i >= 0).pop()
+    return { shrugs, links: document.querySelectorAll(`${W} .chat__thread .chat-link`).length, people: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, after: rows.slice(lastReply + 1).map((r) => r.textContent.trim()), mark: /ツ/.test(document.querySelector(`${W} .chat__thread`).textContent) }
   }, W)
-  say(end.at > 0 && end.shrugBefore === '¯\\_(ツ)_/¯' && end.said.join(' | ') === 'anyway. | BUTTON:See the portfolio | A:Read the one-pager | receipt' && end.people === 90, 'UX-23 after the shrug: "anyway." and the two ways on, under them "Delivered"', JSON.stringify(end))
-  await p.evaluate((W) => document.querySelector(`${W} .chat__scroll`).scrollTo(0, 1e7), W)
-  await p.locator(`${W} button.chat-link`, { hasText: 'See the portfolio' }).click()
-  await p.waitForTimeout(900)
-  say((await p.locator('.wf[data-app="finder"]').count()) === 1, 'UX-23 "See the portfolio" opens Portfolio')
+  say(end.people === 89 && end.shrugs.join(' | ') === 'ok be honest. | what’s it actually like working with us?' && end.links === 0 && !end.mark && end.after.every((x) => /^(sent from far up|Delivered)$/.test(x)), 'UX-23 the last reply is the end of it: Shrug says nothing after it, and nothing in it leads elsewhere', JSON.stringify(end))
   say(A.realErrors(t.errors).length === 0, 'desktop: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 
@@ -249,7 +232,7 @@ async function desk(browser) {
   await p.waitForSelector(`${W} .composer__input`, { timeout: 20000 })
   await pick(p, 'window', 'Left Half')
   const half = await p.evaluate((W) => { const w = document.querySelector(W).getBoundingClientRect(); const s = document.querySelector(`${W} .chat-side`); const r = s.getBoundingClientRect(); return { width: Math.round(w.width), side: Math.round(r.width), rows: s.querySelectorAll('.conv').length, search: !!s.querySelector('.search__input'), back: getComputedStyle(document.querySelector(`${W} .chat-back`)).display, pane: Math.round(document.querySelector(`${W} .chat__pane`).getBoundingClientRect().width) } }, W)
-  say(half.width < 640 && half.side > 150 && half.rows === 6 && half.search && half.back === 'none' && half.pane > 300, 'DK-8 tiled to half of 1280 the chat keeps its list and search', JSON.stringify(half))
+  say(half.width < 640 && half.side > 150 && half.rows === 4 && half.search && half.back === 'none' && half.pane > 300, 'DK-8 tiled to half of 1280 the chat keeps its list and search', JSON.stringify(half))
   await p.screenshot({ path: path.join(OUT, 'desk-half.png') })
   await t.ctx.close()
   t = await A.open(browser, { device: { w: 900, h: 700, dpr: 1 }, base: BASE, query: 'still' })
@@ -261,12 +244,12 @@ async function desk(browser) {
   await p.click(`${W} .chat-back`)
   await p.waitForTimeout(400)
   const listing = await p.evaluate((W) => ({ side: getComputedStyle(document.querySelector(`${W} .ss-window__side`)).display, main: getComputedStyle(document.querySelector(`${W} .ss-window__main`)).display, rows: document.querySelectorAll(`${W} .conv`).length, wide: Math.round(document.querySelector(`${W} .chat-side`).getBoundingClientRect().width) }), W)
-  say(listing.side !== 'none' && listing.main === 'none' && listing.rows === 6 && listing.wide > 350, 'DK-8 the list is a pane of its own', JSON.stringify(listing))
+  say(listing.side !== 'none' && listing.main === 'none' && listing.rows === 4 && listing.wide > 350, 'DK-8 the list is a pane of its own', JSON.stringify(listing))
   await p.screenshot({ path: path.join(OUT, 'desk-folded-list.png') })
-  await p.click(`${W} [data-conversation="mom"]`)
+  await p.click(`${W} [data-conversation="founder"]`)
   await p.waitForTimeout(400)
   const back = await p.evaluate((W) => ({ main: getComputedStyle(document.querySelector(`${W} .ss-window__main`)).display, name: document.querySelector(`${W} .chat-id__name span`).textContent }), W)
-  say(back.main !== 'none' && back.name === 'Mom', 'DK-8 picking a conversation goes to it', JSON.stringify(back))
+  say(back.main !== 'none' && back.name === 'Akash Nigam', 'DK-8 picking a conversation goes to it', JSON.stringify(back))
   say(A.realErrors(t.errors).length === 0, 'narrow desktop: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 
@@ -305,8 +288,8 @@ async function desk(browser) {
   p = t.page
   await p.waitForSelector(`${W} .composer__input`, { timeout: 20000 })
   await p.waitForTimeout(1200)
-  const whole = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); return { replies: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, top: s.scrollTop, pill: document.querySelector(`${W} .chat__new[data-show]`)?.textContent.trim(), badge: document.querySelector('.dock__badge')?.textContent ?? null, next: !!document.querySelector(`${W} button.chat-link`) } }, W)
-  say(whole.replies === 90 && whole.top === 0 && whole.pill === 'Latest' && whole.badge === null && whole.next, 'AX-14 reduced motion: all ninety, from the top, "Latest" offered, nothing unread', JSON.stringify(whole))
+  const whole = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); return { replies: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, top: s.scrollTop, pill: document.querySelector(`${W} .chat__new[data-show]`)?.textContent.trim(), badge: document.querySelector('.dock__badge')?.textContent ?? null, next: !!document.querySelector(`${W} .chat__thread .chat-link`), all: !!document.querySelector(`${W} .chat__all[data-show]`) } }, W)
+  say(whole.replies === 89 && whole.top === 0 && whole.pill === 'Latest' && whole.badge === null && !whole.next && !whole.all, 'AX-14 reduced motion: all eighty-nine, from the top, "Latest" offered, nothing unread and nothing left to load', JSON.stringify(whole))
   await t.ctx.close()
   t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still', reducedMotion: true })
   p = t.page
@@ -316,7 +299,7 @@ async function desk(browser) {
   await A.at(p, 'messages', ['c:group'])
   await p.waitForTimeout(600)
   const there = await p.evaluate((F) => { const s = document.querySelector(`${F} .chat__scroll`); return { top: s.scrollTop, pill: document.querySelector(`${F} .chat__new[data-show]`)?.textContent.trim(), replies: document.querySelectorAll(`${F} .chat__thread [data-person]`).length } }, F)
-  say(homeBadge === null && there.top === 0 && there.pill === 'Latest' && there.replies === 90, 'AX-14 on the iPhone too: no badge of ninety, and the conversation from its top', JSON.stringify({ homeBadge, ...there }))
+  say(homeBadge === null && there.top === 0 && there.pill === 'Latest' && there.replies === 89, 'AX-14 on the iPhone too: no badge of eighty-nine, and the conversation from its top', JSON.stringify({ homeBadge, ...there }))
   await t.ctx.close()
 }
 
@@ -328,52 +311,39 @@ async function phone(browser) {
   await A.at(p, 'messages', ['c:group'], 'details')
   const foot = () => p.evaluate((F) => [...document.querySelectorAll(`${F} .ios-sheet .ios-section__footer, ${F} .ios-sheet [class*="footer"]`)].map((x) => x.textContent.trim()).find((x) => /replied/.test(x)) ?? null, F)
   const f0 = await foot()
-  await p.waitForFunction(() => /^1 of 90/.test([...document.querySelectorAll('.ios-sheet *')].map((x) => (x.children.length ? '' : x.textContent)).find((x) => /of 90/.test(x)) || ''), null, { timeout: 30000 }).catch(() => {})
+  await p.waitForFunction(() => /^1 of 89/.test([...document.querySelectorAll('.ios-sheet *')].map((x) => (x.children.length ? '' : x.textContent)).find((x) => /of 89/.test(x)) || ''), null, { timeout: 30000 }).catch(() => {})
   const f1 = await foot()
-  say(/^(No one has replied yet\.|1 of 90 has replied so far\.)$/.test(f0 || '') && (f1 === null || /^\d+ of 90 ha(s|ve) replied so far\.$/.test(f1)) && !/^1 of 90 have/.test(f1 || ''), 'UX-19 "No one has replied yet." / "1 of 90 has replied so far."', `${f0} -> ${f1}`)
+  say(/^(No one has replied yet\.|\d+ of 89 ha(s|ve) replied so far\.)$/.test(f0 || '') && (f1 === null || /^\d+ of 89 ha(s|ve) replied so far\.$/.test(f1)) && !/^1 of 89 have/.test(f1 || '') && !/^1 of 89 have/.test(f0 || ''), 'UX-19 "No one has replied yet." / "1 of 89 has replied so far."', `${f0} -> ${f1}`)
   await A.at(p, 'messages', ['c:group'])
 
   // AX-23: one control for Details; the camera is FaceTime
   const head = await p.evaluate((F) => ({ name: document.querySelector(`${F} .msg-head`)?.textContent.replace(/\s+/g, ' ').trim(), cam: document.querySelector(`${F} .ios-bar [aria-label="FaceTime"]`) ? 'FaceTime' : null, twins: document.querySelectorAll(`${F} [aria-label$="details"]`).length }), F)
-  say(head.name === 'Shrug Family. Details' && head.cam === 'FaceTime' && head.twins === 0, 'AX-23 the name opens Details; the camera is named for what it is', JSON.stringify(head))
+  say(head.name === 'Testimonials. Details' && head.cam === 'FaceTime' && head.twins === 0, 'AX-23 the name opens Details; the camera is named for what it is', JSON.stringify(head))
 
   // UX-17: FaceTime answers in character
   await p.locator(`${F} [aria-label="FaceTime"]`).tap()
   await p.waitForTimeout(700)
   const ft = await p.evaluate(() => { const a = document.querySelector('.msg-alert__box'); return { sheet: history.state?.shrug?.sheet, role: a?.getAttribute('role'), title: a?.querySelector('.msg-alert__title')?.textContent, say: a?.querySelector('.msg-alert__say')?.textContent, acts: [...(a?.querySelectorAll('.msg-alert__act') ?? [])].map((x) => x.textContent), focus: document.activeElement?.textContent } })
-  say(ft.sheet === 'facetime' && ft.role === 'alertdialog' && ft.title === 'FaceTime Unavailable' && ft.say === 'Shrug Family is not available for FaceTime.' && ft.acts.join() === 'OK' && ft.focus === 'OK', 'UX-17 the camera: "FaceTime Unavailable"', JSON.stringify(ft))
+  say(ft.sheet === 'facetime' && ft.role === 'alertdialog' && ft.title === 'FaceTime Unavailable' && ft.say === 'Testimonials is not available for FaceTime.' && ft.acts.join() === 'OK' && ft.focus === 'OK', 'UX-17 the camera: "FaceTime Unavailable"', JSON.stringify(ft))
   await p.screenshot({ path: path.join(OUT, 'phone-facetime.png') })
   await p.locator('.msg-alert__act').tap()
   await p.waitForTimeout(700)
   say((await A.state(p)).place.sheet === null && !(await p.locator('.msg-alert').count()), 'UX-17 OK closes it')
-  await A.at(p, 'messages', ['c:mom'])
+  await A.at(p, 'messages', ['c:founder'])
   await p.locator(`${F} [aria-label="FaceTime"]`).tap()
   await p.waitForTimeout(700)
-  say((await p.textContent('.msg-alert__say')) === 'Mom is not available for FaceTime.', 'UX-17 in another conversation it is that person', await p.textContent('.msg-alert__say'))
+  say((await p.textContent('.msg-alert__say')) === 'Akash Nigam is not available for FaceTime.', 'UX-17 in another conversation it is that person', await p.textContent('.msg-alert__say'))
   await p.goBack(); await p.waitForTimeout(700)
   say(!(await p.locator('.msg-alert:not([data-closing])').count()), 'UX-17 the browser’s Back closes it')
 
-  // UX-2: a message that did not go, in another conversation too
-  await p.fill(`${F} .msg-field__input`, 'hi mom')
+  // UX-2 (as it is now): a message sent in another conversation is delivered too
+  await p.fill(`${F} .msg-field__input`, 'congrats')
   await p.locator(`${F} .msg-field__send`).tap()
-  await p.waitForTimeout(900)
+  await p.waitForTimeout(1300)
   say((await active(p)) === 'input.msg-field__input', 'tb-10 the phone’s send button does not take the caret', await active(p))
-  await p.locator(`${F} .chat-undelivered`).tap()
-  await p.waitForTimeout(700)
-  const why = await p.evaluate(() => { const a = document.querySelector('.msg-alert__box'); return { sheet: history.state?.shrug?.sheet, title: a?.querySelector('.msg-alert__title')?.textContent, say: a?.querySelector('.msg-alert__say')?.textContent, acts: [...(a?.querySelectorAll('.msg-alert__act') ?? [])].map((x) => x.textContent.replace(/, opens in a new tab/, '')), doc: a?.querySelector('a.msg-alert__act')?.getAttribute('href'), focus: document.activeElement?.textContent } })
-  say(/^undelivered:me-/.test(why.sheet) && why.title === 'Not Delivered' && /recording of what people said about Shrug/.test(why.say) && why.acts.join('|') === 'Read the One-pager|Delete Message|Cancel' && /docsend/.test(why.doc) && why.focus === 'Cancel', 'UX-2 phone: an alert that says why, with the one-pager, Delete Message and Cancel', JSON.stringify(why))
-  await p.screenshot({ path: path.join(OUT, 'phone-why.png') })
-  await p.locator('.msg-alert__act', { hasText: 'Cancel' }).tap()
-  await p.waitForTimeout(700)
-  say((await A.state(p)).place.sheet === null && (await p.locator(`${F} .chat-failed`).count()) === 1, 'UX-2 Cancel closes it; the message stays')
-  // the red mark
-  const mark = await p.evaluate((F) => { const b = document.querySelector(`${F} .chat-failed .ss-bubble`).getBoundingClientRect(); return [b.right + 18, b.top + b.height / 2] }, F)
-  await p.touchscreen.tap(mark[0], mark[1])
-  await p.waitForTimeout(700)
-  say(/^undelivered:/.test((await A.state(p)).place.sheet || ''), 'UX-2 the red mark opens it too')
-  await p.locator('.msg-alert__act', { hasText: 'Delete Message' }).tap()
-  await p.waitForTimeout(900)
-  say((await p.locator(`${F} .chat-failed`).count()) === 0 && (await A.state(p)).place.sheet === null, 'UX-2 Delete Message takes the bubble away')
+  const sent = await p.evaluate((F) => { const rows = [...document.querySelectorAll(`${F} .ios-page[data-pos="top"] .chat__thread > *`)]; const at = rows.findIndex((r) => r.textContent.includes('congrats')); return { yours: !!rows[at]?.querySelector('.ss-bubble[aria-label="You"]'), under: rows[at + 1]?.textContent.trim(), last: at === rows.length - 2, failed: document.querySelectorAll(`${F} .chat-failed, ${F} .chat-undelivered`).length, sheet: history.state?.shrug?.sheet ?? null } }, F)
+  say(sent.yours && sent.under === 'Delivered' && sent.last && sent.failed === 0 && sent.sheet === null, 'UX-2 phone: a message sent to anyone is delivered, with nothing to say it did not go', JSON.stringify(sent))
+  await p.screenshot({ path: path.join(OUT, 'phone-delivered.png') })
 
   // MK-12 / tb-6: half a message survives Back and coming in again, and a look at another conversation
   await A.at(p, 'messages', ['c:group'])
@@ -387,19 +357,19 @@ async function phone(browser) {
   await p.fill(`${F} .ios-page[data-pos="top"] .msg-field__input`, 'مرحبا')
   await p.locator(`${F} .ios-page[data-pos="top"] .msg-field__send`).tap()
   await p.waitForTimeout(900)
-  const rtl = await p.evaluate((F) => { const x = [...document.querySelectorAll(`${F} .chat-failed .ss-bubble__text`)].pop(); return x ? getComputedStyle(x).direction : null }, F)
+  const rtl = await p.evaluate((F) => { const x = [...document.querySelectorAll(`${F} .ss-bubble[aria-label="You"] .ss-bubble__text`)].pop(); return x ? getComputedStyle(x).direction : null }, F)
   say(rtl === 'rtl', 'MK-17 right-to-left words are laid out right to left', String(rtl))
 
   // DK-5 on the phone: search does not find people who have not replied
   await p.locator(`${F} .msg-back`).tap()
   await p.waitForTimeout(900)
-  await p.fill(`${F} .ios-search__input`, 'janky')
+  await p.fill(`${F} .ios-search__input`, 'maggie norris')
   await p.waitForTimeout(500)
   say((await p.locator(`${F} .msg-row`).count()) === 0, 'DK-5 the phone’s search does not find someone who has not replied')
   await p.fill(`${F} .ios-search__input`, '')
 
   // MK-13: flicked out of the App Switcher, Messages starts over: nothing is still being looked for
-  await p.fill(`${F} .ios-search__input`, 'mom')
+  await p.fill(`${F} .ios-search__input`, 'akash')
   await p.waitForTimeout(400)
   const cdp = t.cdp
   const swipe = async ([x0, y0], [x1, y1], ms = 160, hold = 0) => {
@@ -423,16 +393,13 @@ async function phone(browser) {
   await p.locator('.sb-dock .sb-icon[aria-label^="Messages"]').tap()
   await p.waitForTimeout(1100)
   const after = await p.evaluate((F) => ({ q: document.querySelector(`${F} .ios-search__input`)?.value, rows: document.querySelectorAll(`${F} .msg-row`).length }), F)
-  say(quit && after.q === '' && after.rows === 6, 'MK-13 flicked out of the switcher, Messages comes back with no search', JSON.stringify({ quit, ...after }))
-  // UX-23 on the phone: the ways on, and the first of them opens Files
+  say(quit && after.q === '' && after.rows === 4, 'MK-13 flicked out of the switcher, Messages comes back with no search', JSON.stringify({ quit, ...after }))
+  // UX-23 on the phone (as it is now): everyone in, the last reply is the end of the conversation
   await A.at(p, 'messages', ['c:group'], 'details')
   await p.locator(`${F} .ios-sheet .ios-cell`, { hasText: 'Show Every Reply' }).tap()
   await p.waitForTimeout(1500)
-  const ways = await p.evaluate((F) => [...document.querySelectorAll(`${F} .ios-page[data-pos="top"] .chat-link`)].map((x) => `${x.tagName}:${x.textContent.replace(/, opens in a new tab/, '')}`), F)
-  say(ways.join(' | ') === 'BUTTON:See the portfolio | A:Read the one-pager', 'UX-23 phone: the two ways on are there', ways.join(' | '))
-  await p.locator(`${F} .ios-page[data-pos="top"] button.chat-link`).tap()
-  await p.waitForTimeout(1200)
-  say((await A.state(p)).front === 'finder', 'UX-23 phone: "See the portfolio" opens Files', JSON.stringify(await A.state(p)))
+  const ended = await p.evaluate((F) => { const thread = document.querySelector(`${F} .ios-page[data-pos="top"] .chat__thread`); return { people: thread.querySelectorAll('[data-person]').length, links: thread.querySelectorAll('.chat-link').length, anyway: /anyway\.|ツ/.test(thread.textContent) } }, F)
+  say(ended.people === 89 && ended.links === 0 && !ended.anyway, 'UX-23 phone: the last reply is the end of it; nothing after it leads elsewhere', JSON.stringify(ended))
 
   say(A.realErrors(t.errors).length === 0, 'phone: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
@@ -479,20 +446,20 @@ async function keep(browser) {
     await p.keyboard.press('Enter')
     await p.waitForFunction((root) => document.querySelectorAll(`${root} .chat__thread [data-person]:not([data-typing])`).length >= 3, root, { timeout: 40000 })
     await p.fill(field, 'not sent yet')
-    const before = await p.evaluate((root) => [...document.querySelectorAll(`${root} .chat__thread > .ss-bubble-row`)].map((r) => (r.classList.contains('chat-failed') ? 'mine' : r.querySelector('[data-person]') ? `p${r.querySelector('[data-person]').dataset.person}` : 'shrug')).filter((x) => x !== 'shrug'), root)
+    const before = await p.evaluate((root) => [...document.querySelectorAll(`${root} .chat__thread > .ss-bubble-row`)].map((r) => (r.querySelector('.ss-bubble[aria-label="You"]') ? 'mine' : r.querySelector('[data-person]') ? `p${r.querySelector('[data-person]').dataset.person}` : 'shrug')).filter((x) => x !== 'shrug'), root)
     await p.reload({ waitUntil: 'load' })
     await p.waitForSelector(field, { timeout: 20000 })
     await p.waitForTimeout(700)
     const after = await p.evaluate((root) => ({
-      order: [...document.querySelectorAll(`${root} .chat__thread > .ss-bubble-row`)].filter((r) => !r.querySelector('[data-typing]')).map((r) => (r.classList.contains('chat-failed') ? 'mine' : r.querySelector('[data-person]') ? `p${r.querySelector('[data-person]').dataset.person}` : 'shrug')).filter((x) => x !== 'shrug'),
-      mine: document.querySelector(`${root} .chat-failed .ss-bubble__text`)?.textContent,
-      line: document.querySelector(`${root} .chat-undelivered`)?.textContent,
+      order: [...document.querySelectorAll(`${root} .chat__thread > .ss-bubble-row`)].filter((r) => !r.querySelector('[data-typing]')).map((r) => (r.querySelector('.ss-bubble[aria-label="You"]') ? 'mine' : r.querySelector('[data-person]') ? `p${r.querySelector('[data-person]').dataset.person}` : 'shrug')).filter((x) => x !== 'shrug'),
+      mine: document.querySelector(`${root} .ss-bubble[aria-label="You"] .ss-bubble__text`)?.textContent,
+      line: document.querySelector(`${root} .ss-bubble[aria-label="You"]`)?.closest('.ss-bubble-row')?.nextElementSibling?.textContent.trim(),
       question: [...document.querySelectorAll(`${root} .chat__thread .ss-bubble-row[data-from="me"] .ss-bubble__text`)].slice(0, 2).map((x) => x.textContent).join(' '),
       badge: document.querySelector('.dock__badge, .sb-dock .sb-badge')?.textContent ?? null,
     }), root)
     const kept = before.filter((x) => !/typing/.test(x))
     say(after.question === 'ok be honest. what’s it actually like working with us?' && after.order.slice(0, kept.length - 1).join() === kept.slice(0, kept.length - 1).join() && after.order.length >= 3, `RS-17 ${device}: after a reload the replies that had come in are there, in place`, JSON.stringify({ before, after: after.order }))
-    say(after.mine === 'kept across a reload' && after.line === 'Not Delivered' && after.order.includes('mine'), `MK-7 ${device}: the visitor’s own message is back, where it was`, JSON.stringify(after))
+    say(after.mine === 'kept across a reload' && after.line === 'Delivered' && after.order.includes('mine'), `MK-7 ${device}: the visitor’s own message is back, where it was`, JSON.stringify(after))
     say((await p.inputValue(field)) === 'not sent yet', `tb-6 ${device}: what was typed and not sent is back too`, await p.inputValue(field))
     say(after.badge === null, `RS-17 ${device}: what had been seen is not new again`, String(after.badge))
     const n = after.order.filter((x) => x !== 'mine').length

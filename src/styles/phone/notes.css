@@ -326,6 +326,11 @@
   white-space: pre-line;
 }
 
+/* A link in one of the site's answers: Notes' yellow carries no words on white, so it is ink the colour of its deep end */
+.notes-note__body .answer__link {
+  color: #6f4f00;
+}
+
 /* No answer yet, as a visitor meets it: the ways on from here, under the line that says so.
    Notes' yellow carries no words on white, so these are ink the colour of its deep end, on a wash of it */
 .notes-ways {

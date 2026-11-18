@@ -296,7 +296,4 @@ export const PEOPLE: Person[] = [
   p('Maggie Norris', 'Founder of Aidaly', 'F',
     'Moshe was an early believer and helped pull together an amazing syndicate of investors, including an introduction to our lead. Shrug continues to be a trusted sounding board and mentors. I couldn’t recommend better partners at the earliest stage of your journey.'),
 
-  p('Janky', 'Virtual Influencer', '',
-    'Thank U Shrug fur believing’ in me even doh I aped your Rolex & stole your girl fam. I luv u SHRUG VENTUREZ'),
-
 ]

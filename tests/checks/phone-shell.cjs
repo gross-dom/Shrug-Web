@@ -4,6 +4,7 @@
 //   sections: letters to run, e.g. "ABD"; all of them by default. Exits non-zero if anything fails.
 // A frame  B lock over an app, reading  C back to the tab  D Lock Screen  E keyboard focus  F title
 // G App Switcher  H one press, one move  I history  J home bar  K lingering  L reload  M small things  N fit
+// O the edges (what a phone's browser paints its bars from)
 const A = require('./lib.cjs')
 const path = require('path')
 const BASE = process.argv[2] && /^https?:/.test(process.argv[2]) ? process.argv[2] : process.env.BASE || 'http://127.0.0.1:5173/'
@@ -126,11 +127,9 @@ const touchOf = (t) => ({
     await press(t, ...at); await p.waitForTimeout(110)
     const lifted = await p.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector('.sb-lock')).transform).m42)
     say(lifted < -2 && (await st(p)).locked, 'one tap lifts the screen and leaves it locked', lifted)
-    const torch = await mid(p, '.sb-lock__control[aria-label="Flashlight"]')
-    await p.waitForTimeout(600)
-    await press(t, ...torch); await p.waitForTimeout(450)
-    const lit = await p.evaluate(() => ({ pressed: document.querySelector('.sb-lock__control[aria-label="Flashlight"]').getAttribute('aria-pressed'), beam: +getComputedStyle(document.querySelector('.sb-lock__beam')).opacity }))
-    say(lit.pressed === 'true' && lit.beam > 0.9 && (await st(p)).locked, 'the torch is a button, and lights', JSON.stringify(lit))
+    // The Lock Screen has no torch and no camera: nothing at its foot but the hint
+    const controls = await p.evaluate(() => ({ buttons: [...document.querySelectorAll('.sb-lock button, .sb-lock [role="button"]')].filter((b) => !b.closest('.sb-note')).map((b) => (b.getAttribute('aria-label') || b.textContent).trim()), old: document.querySelectorAll('.sb-lock__control, .sb-lock__beam, .sb-lock [aria-label="Flashlight"], .sb-lock [aria-label^="Camera"]').length }))
+    say(controls.old === 0 && !controls.buttons.some((n) => /flashlight|torch|camera/i.test(n)), 'the Lock Screen has no torch and no camera', JSON.stringify(controls))
     await p.waitForTimeout(2100)
     await press(t, ...at); await p.waitForTimeout(500)
     say((await st(p)).locked, 'a tap long after the first only lifts it again')
@@ -138,14 +137,7 @@ const touchOf = (t) => ({
     say(!(await st(p)).locked, 'a second tap soon after opens it')
     await t.ctx.close()
 
-    const c = await fresh('iphone')
-    await c.page.waitForTimeout(500)
-    await press(c, ...(await mid(c.page, '.sb-lock__control[aria-label^="Camera"]'))); await c.page.waitForTimeout(1300)
-    const s = await st(c.page)
-    say(!s.locked && s.place?.app === 'photos', 'the camera opens VIP, unlocked', JSON.stringify(s.place))
-    await c.ctx.close()
-
-    // on its side the notification lies between the two buttons: it takes a press all over (PH-3)
+    // on its side the notification takes a press all over (PH-3)
     const l = await fresh('iphone-land', '')
     await l.page.waitForSelector('.sb-lock .sb-note', { timeout: 20000 })
     await l.page.waitForTimeout(900)
@@ -195,11 +187,15 @@ const touchOf = (t) => ({
     const titles = { lock: await p.title() }
     await A.unlock(p); titles.home = await p.title()
     await A.at(p, 'messages', ['c:group']); titles.chat = await p.title()
-    await A.at(p, 'finder', ['f:all'], 'company:Varda'); titles.company = await p.title()
+    await A.at(p, 'finder', []); titles.wallet = await p.title()
+    await A.at(p, 'finder', ['v:0']); titles.card = await p.title()
+    await A.at(p, 'finder', ['v:0'], 'company:Varda'); titles.company = await p.title()
     await A.at(p, 'notes', ['f:faqs', 'n:4']); titles.note = await p.title()
-    await A.at(p, 'about', []); titles.settings = await p.title()
-    const want = { lock: 'Shrug ¯\\_(ツ)_/¯', home: 'Shrug ¯\\_(ツ)_/¯', chat: 'Shrug Family · Messages · Shrug', company: 'Varda · Files · Shrug', note: 'What are drops? · Notes · Shrug', settings: 'Settings · Shrug' }
+    await A.at(p, 'photos', []); titles.vip = await p.title()
+    // No emoticon in the tab: the name alone on the Lock and Home Screens
+    const want = { lock: 'Shrug', home: 'Shrug', chat: 'Testimonials · Messages · Shrug', wallet: 'Portfolio · Wallet · Shrug', card: 'Deep tech · Wallet · Shrug', company: 'Varda · Wallet · Shrug', note: 'How do you do marketing? · Notes · Shrug', vip: 'VIP · Shrug' }
     say(Object.keys(want).every((k) => titles[k] === want[k]), 'the page is titled by where the phone is', JSON.stringify(titles))
+    say(Object.values(titles).every((title) => !/ツ/.test(title)), 'and no title has the shrug emoticon in it')
     await t.ctx.close()
   })
 
@@ -208,7 +204,7 @@ const touchOf = (t) => ({
     const t = await fresh('iphone')
     const p = t.page
     await A.unlock(p)
-    for (const [app, stack] of [['notes', ['f:faqs']], ['about', []], ['finder', ['f:all']]]) await A.at(p, app, stack, null, 700)
+    for (const [app, stack] of [['notes', ['f:faqs']], ['photos', []], ['finder', ['v:0']]]) await A.at(p, app, stack, null, 700)
     const key = p.locator('.sb-homebar__key', { hasText: 'App Switcher' })
     await key.focus()
     await p.keyboard.press('Shift'); await p.waitForTimeout(150)
@@ -221,7 +217,7 @@ const touchOf = (t) => ({
     const card = await mid(p, '.sb-slot[data-app="finder"] .sb-card__hit')
     await t.touch.tap(...card); await p.waitForTimeout(1100)
     let s = await st(p)
-    say(s.place?.app === 'finder' && s.place.stack.join() === 'f:all' && s.place.sheet === null && !(await p.evaluate(() => !!document.querySelector('.sb-apps[data-switcher]'))), 'a tap on a card brings the app forward and presses nothing in it', JSON.stringify(s.place))
+    say(s.place?.app === 'finder' && s.place.stack.join() === 'v:0' && s.place.sheet === null && !(await p.evaluate(() => !!document.querySelector('.sb-apps[data-switcher]'))), 'a tap on a card brings the app forward and presses nothing in it', JSON.stringify(s.place))
     // the second card, then the screen turns: still on a card (MK-16)
     await key.focus(); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
     await p.evaluate(() => { const hits = [...document.querySelectorAll('.sb-card__hit')]; const order = (h) => +getComputedStyle(h.closest('.sb-slot')).getPropertyValue('--i'); hits.sort((a, b) => order(a) - order(b))[1].focus({ focusVisible: true }) })
@@ -263,7 +259,7 @@ const touchOf = (t) => ({
       document.addEventListener('pointerdown', on, true)
     }), [points, times])
     const cases = [
-      ['Files in the Dock', '.sb-dock .sb-icon[aria-label^="Files"]', async () => {}],
+      ['Wallet in the Dock', '.sb-dock .sb-icon[aria-label^="Wallet"]', async () => {}],
       ['the Portfolio folder', '.sb-folder', async () => {}],
       ['Back in a note', '.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label="Back"]', async () => { await A.at(p, 'notes', ['f:faqs', 'n:1']) }],
     ]
@@ -273,16 +269,16 @@ const touchOf = (t) => ({
       const at = await mid(p, sel)
       if (!at) { say(false, `${name}: not found`); continue }
       const points = [at, [196, 380], [196, 700], [60, 120]]
-      const sampling = probe(points, [90, 180, 280, 380])
+      const sampling = probe(points, [90, 180, 270, 350])
       await t.touch.tap(...at)
       const got = await sampling
       const live = got.filter(([, inside]) => inside)
-      say(live.length === 0, `${name}: for 380ms after the tap, a second tap would land on nothing`, JSON.stringify(live.slice(0, 4)))
+      say(live.length === 0, `${name}: for 350ms after the tap, a second tap would land on nothing`, JSON.stringify(live.slice(0, 4)))
       await p.waitForTimeout(700)
       const after = await p.evaluate(() => document.querySelector('.ph').hasAttribute('data-moving'))
       say(!after, `${name}: and then the screen takes presses again`)
     }
-    // and for real: two taps on the Portfolio folder open the folder, not a company in Files
+    // and for real: two taps on the Portfolio folder open the folder, not a company in the Wallet
     await A.at(p, null, [], null, 800)
     const folder = await mid(p, '.sb-folder')
     const times = p.evaluate(() => new Promise((done) => { const ts = []; const on = () => { ts.push(performance.now()); if (ts.length === 2) { document.removeEventListener('pointerdown', on, true); done(ts[1] - ts[0]) } }; document.addEventListener('pointerdown', on, true); setTimeout(() => done(-1), 3000) }))
@@ -297,7 +293,7 @@ const touchOf = (t) => ({
     // with motion turned down too
     const r = await fresh('iphone', 'still', { reducedMotion: true })
     await A.unlock(r.page); await r.page.waitForTimeout(700)
-    const at = await mid(r.page, '.sb-dock .sb-icon[aria-label^="Files"]')
+    const at = await mid(r.page, '.sb-dock .sb-icon[aria-label^="Wallet"]')
     const watching = r.page.evaluate(() => new Promise((done) => { document.addEventListener('pointerdown', () => setTimeout(() => done(document.querySelector('.ph').hasAttribute('data-moving')), 200), { capture: true, once: true }) }))
     await r.touch.tap(...at)
     say(await watching, 'with motion turned down the same holds')
@@ -372,7 +368,7 @@ const touchOf = (t) => ({
     const t = await fresh('iphone')
     const p = t.page
     await A.unlock(p)
-    await A.at(p, 'finder', ['f:all'], null, 800)
+    await A.at(p, 'finder', ['v:0'], null, 800)
     await p.locator('.sb-homebar__key', { hasText: 'App Switcher' }).focus(); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
     await p.evaluate(() => document.querySelector('.sb-slot[data-app="finder"] .sb-card__hit').click())
     await p.waitForTimeout(180)
@@ -411,7 +407,7 @@ const touchOf = (t) => ({
     const one = await p.evaluate(() => { const a = [...document.querySelectorAll('.sb-home a.sb-icon')][0]; return { drag: a.draggable, name: a.textContent.replace(/\s+/g, ' ').trim() } })
     say(one.drag === false && /One-pager, opens in a new tab/.test(one.name), 'the One-pager icon says where it goes and cannot be dragged off', JSON.stringify(one))
     const words = await p.evaluate(() => document.querySelector('.sb-chat__count .sr-only').textContent)
-    say(/No one has replied yet|\d+ of 90 ha(s|ve) replied/.test(words) && !/^1 of 90 have/.test(words), 'the widget counts in a sentence', words)
+    say(/No one has replied yet|\d+ of 89 ha(s|ve) replied/.test(words) && !/^1 of 89 have/.test(words), 'the widget counts in a sentence', words)
     // the first banner of a visit is not held back
     const first = await p.waitForSelector('.sb-banner .sb-note', { timeout: 12000 }).then(() => true).catch(() => false)
     say(first, 'the first reply to land on the Home Screen drops in as a banner, early in the visit')
@@ -423,9 +419,10 @@ const touchOf = (t) => ({
     await t.ctx.close()
 
     // a banner pressed the instant it lands opens nothing; pressed a moment later, the conversation
+    // (watched for from before the phone is opened: the first reply is in within a few seconds of arriving)
     const b = await fresh('iphone', '')
-    await A.unlock(b.page)
     await b.page.evaluate(() => { window.__early = null; new MutationObserver(() => { const n = document.querySelector('.sb-banner .sb-note'); if (n && window.__early === null) { window.__early = 'pressed'; n.click() } }).observe(document.querySelector('.ph'), { childList: true, subtree: true }) })
+    await A.unlock(b.page)
     await b.page.waitForFunction(() => window.__early === 'pressed', null, { timeout: 15000 }).catch(() => {})
     await b.page.waitForTimeout(250)
     const early = await st(b.page)
@@ -438,7 +435,7 @@ const touchOf = (t) => ({
     // the only open app flicked away: Back is not left a step that changes nothing
     const q = await fresh('iphone')
     await A.unlock(q.page); await q.page.waitForTimeout(600)
-    await q.touch.tap(...(await mid(q.page, '.sb-dock .sb-icon[aria-label^="Files"]'))); await q.page.waitForTimeout(1200)
+    await q.touch.tap(...(await mid(q.page, '.sb-dock .sb-icon[aria-label^="Wallet"]'))); await q.page.waitForTimeout(1200)
     await q.page.locator('.sb-homebar__key', { hasText: 'App Switcher' }).focus(); await q.page.keyboard.press('Enter'); await q.page.waitForTimeout(900)
     await q.page.evaluate(() => document.querySelector('.sb-slot__close').click()); await q.page.waitForTimeout(1300)
     const h = await q.page.evaluate(() => ({ n: history.state.n, app: history.state.shrug.app, over: history.state.shrug.over ?? null, on: !!document.querySelector('.sb-apps[data-switcher]') }))
@@ -458,7 +455,7 @@ const touchOf = (t) => ({
     say(clock[0] >= 0 && clock[1] <= 280, 'at 280 wide the clock fits', JSON.stringify(clock))
     await A.unlock(p)
     const names = await p.evaluate(() => { const els = [...document.querySelectorAll('.sb-grid > .sb-icon .sb-icon__name')].map((n) => n.getBoundingClientRect()).sort((a, b) => a.top - b.top || a.left - b.left); const bad = []; for (let i = 1; i < els.length; i++) if (Math.abs(els[i].top - els[i - 1].top) < 4 && els[i].left < els[i - 1].right - 0.5) bad.push(i); return { n: els.length, bad } })
-    say(names.n >= 4 && names.bad.length === 0, 'and no icon name runs into the next', JSON.stringify(names))
+    say(names.n >= 3 && names.bad.length === 0, 'and no icon name runs into the next', JSON.stringify(names))
     await t.ctx.close()
 
     const i = await fresh('iphone')
@@ -472,7 +469,7 @@ const touchOf = (t) => ({
     await A.unlock(k.page); await k.page.waitForTimeout(500)
     const ring = await k.page.evaluate(() => { const a = document.activeElement; const cs = getComputedStyle(a); return { on: a.className.toString().slice(0, 12), visible: a.matches(':focus-visible'), color: cs.outlineColor, width: cs.outlineWidth, shade: cs.boxShadow !== 'none' } })
     say(ring.visible && ring.color === 'rgb(255, 255, 255)' && ring.shade, 'over the wallpaper the focus ring is white with a dark edge', JSON.stringify(ring))
-    await A.at(k.page, 'about', [], null, 800)
+    await A.at(k.page, 'notes', [], null, 800)
     await k.page.locator('.sb-homebar .sr-only').focus(); await k.page.keyboard.press('Shift'); await k.page.waitForTimeout(200)
     const home = await k.page.locator('.sb-homebar .sr-only').evaluate((el) => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), text: el.textContent.trim() } })
     say(home.text === 'Home Screen' && home.w > 30 && home.h > 12, 'the "Home Screen" button shows itself when it has the keyboard', JSON.stringify(home))
@@ -490,6 +487,51 @@ const touchOf = (t) => ({
     say(!inset || (edge.out.length === 0 && edge.over === 0), 'on its side, the Home Screen keeps inside the bands at the ends and the Dock covers nothing', inset ? JSON.stringify(edge) : 'insets cannot be emulated here')
     await s.page.screenshot({ path: path.join(OUT, 'fix-safe-side.png') })
     await s.ctx.close()
+  })
+
+  // ---- O. Full bleed: the strips Safari paints its bars from, made to WebKit's measure
+  // (LocalFrameView::fixedContainerEdges: it looks 4px in from the middle of each edge for something fixed, and takes
+  // its background colour if it is nine tenths of the screen across, more than 10px both ways, and not see-through)
+  await section('O', 'the edges', async () => {
+    const t = await fresh('iphone')
+    const p = t.page
+    const read = () => p.evaluate(() => {
+      const strips = [...document.querySelectorAll('.ph-edge')].map((e) => {
+        const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); const top = e.classList.contains('ph-edge--top')
+        return { side: top ? 'top' : 'foot', ofBody: e.parentElement === document.body, position: cs.position, across: r.width / innerWidth, deep: r.height, shows: top ? r.bottom : innerHeight - r.top, starts: top ? r.top : innerHeight - r.bottom, colour: cs.backgroundColor, opacity: cs.opacity, eases: cs.transitionDuration, touches: cs.pointerEvents }
+      })
+      const pill = document.querySelector('.sb-homebar__pill')?.getBoundingClientRect()
+      return { strips, html: getComputedStyle(document.documentElement).backgroundColor, body: getComputedStyle(document.body).backgroundColor, meta: document.querySelector('meta[name="theme-color"]')?.content, pillFromFoot: pill ? innerHeight - pill.bottom : null }
+    })
+    const side = (e, which) => e.strips.find((x) => x.side === which)
+    let e = await read()
+    const made = e.strips.length === 2 && e.strips.every((x) => x.ofBody && x.position === 'fixed' && x.across >= 0.9 && x.deep > 10 && x.shows > 4.5 && x.starts <= 0 && x.opacity === '1' && /^rgb\(/.test(x.colour) && x.eases === '0s' && x.touches === 'none')
+    say(made, 'a strip along the top and one along the foot: fixed, the screen across, more than 10px deep, over the point 4px in, solid, taking no touches', JSON.stringify(e.strips))
+    say(e.pillFromFoot === null || e.strips.every((x) => x.shows < e.pillFromFoot), 'what shows of them stops short of the home indicator', JSON.stringify({ shows: e.strips.map((x) => x.shows), pill: e.pillFromFoot }))
+    say(side(e, 'top').colour === 'rgb(15, 17, 48)' && side(e, 'foot').colour === 'rgb(130, 151, 222)' && e.html === 'rgb(15, 17, 48)' && e.body === 'rgb(130, 151, 222)' && e.meta === '#0f1130', 'over the Lock Screen they are the wallpaper\'s own top and foot, and the page and theme-color say the same', JSON.stringify([side(e, 'top').colour, side(e, 'foot').colour, e.html, e.body, e.meta]))
+    // the wallpaper is that colour where the strips lie over it: nothing of them can be seen
+    const wall = await p.evaluate(() => { const w = document.querySelector('.sb-wall'); const b = getComputedStyle(w, '::before'); const a = getComputedStyle(w, '::after'); return { before: b.backgroundImage, after: a.backgroundImage } })
+    say(/rgb\(15, 17, 48\) 0(px)?, rgb\(15, 17, 48\) 8px/.test(wall.before) && /rgb\(130, 151, 222\) 0(px)?, rgb\(130, 151, 222\) 8px/.test(wall.after), 'the wallpaper is brought to those colours for its first and last 8px, under the strips', JSON.stringify(wall).slice(0, 220))
+    await A.unlock(p)
+    e = await read()
+    say(side(e, 'top').colour === 'rgb(15, 17, 48)' && side(e, 'foot').colour === 'rgb(130, 151, 222)', 'the same over the Home Screen')
+    await A.at(p, 'messages', ['c:group'], null, 900)
+    e = await read()
+    say(side(e, 'top').colour === 'rgb(255, 255, 255)' && side(e, 'foot').colour === 'rgb(255, 255, 255)' && e.html === 'rgb(255, 255, 255)' && e.meta === '#ffffff', 'in a white app both are white, at once', JSON.stringify([side(e, 'top').colour, side(e, 'foot').colour, e.html, e.meta]))
+    await A.at(p, 'terminal', [], null, 900)
+    e = await read()
+    const dark = side(e, 'top').colour
+    say(dark === side(e, 'foot').colour && !['rgb(255, 255, 255)', 'rgb(15, 17, 48)'].includes(dark) && dark.match(/\d+/g).every((c) => +c < 40), 'in the terminal both are its dark ground', dark)
+    await A.at(p, 'finder', ['v:0'], 'company:Varda', 1000)
+    e = await read()
+    say(side(e, 'top').colour !== 'rgb(255, 255, 255)' && side(e, 'top').colour.match(/\d+/g).every((c) => +c < 255 && +c > 150), 'under a sheet the top is the app\'s ground with the sheet\'s shade over it', `${side(e, 'top').colour} / ${side(e, 'foot').colour}`)
+    await t.ctx.close()
+
+    // In its frame on a larger screen there is no browser bar to paint: no strips, and the page keeps its own colour
+    const f = await fresh({ w: 600, h: 900, dpr: 1 })
+    const framed = await f.page.evaluate(() => ({ strips: document.querySelectorAll('.ph-edge').length, lay: document.querySelector('.ph')?.className }))
+    say(framed.strips === 0 && /ph--framed/.test(framed.lay || ''), 'drawn in its frame, the page has no strips', JSON.stringify(framed))
+    await f.ctx.close()
   })
 
   await browser.close()

@@ -189,6 +189,12 @@
   scrollbar-width: none;
 }
 
+/* A page that is only read takes the keyboard itself (its arrows scroll it): its ring is drawn just inside the screen */
+.ios-screen__scroll:focus-visible {
+  outline-offset: -4px;
+  border-radius: 14px;
+}
+
 .ios-screen__scroll::-webkit-scrollbar {
   display: none;
 }
@@ -331,10 +337,6 @@
   --control: 48px;
 }
 
-.ios-foot:has(.ios-tabs) {
-  --control: 62px;
-}
-
 /* Only the bar's own controls take touches. The fade above them is paint: a
    swipe that starts on it scrolls the page, and a row showing through it can
    be pressed */
@@ -360,7 +362,7 @@
   opacity: 1;
 }
 
-/* ---- Search, tabs ---- */
+/* ---- Search ---- */
 
 .ios-search {
   display: flex;
@@ -422,52 +424,6 @@
   content: '';
 }
 
-.ios-tabs {
-  display: flex;
-  flex: 1;
-  /* On its side a phone has room to spare: the bar stays the size of its tabs */
-  max-width: 330px;
-  height: 62px;
-  padding: 4px;
-  border-radius: 31px;
-}
-
-/* and what follows it (search) keeps to the far corner */
-.ios-foot > .ios-tabs + * {
-  margin-left: auto;
-}
-
-.ios-tabs__item {
-  display: grid;
-  flex: 1;
-  place-content: center;
-  justify-items: center;
-  gap: 1px;
-  min-width: 0;
-  height: 54px;
-  border-radius: 27px;
-  color: #1c1c1e;
-  transition: background-color 0.2s ease;
-}
-
-.ios-tabs__item[aria-current='page'] {
-  background: rgb(0 0 0 / 0.07);
-  color: var(--blue);
-}
-
-.ios-tabs__icon {
-  display: grid;
-  place-items: center;
-  height: 28px;
-}
-
-.ios-tabs__label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: 12px;
-}
-
 /* ---- A stack of screens ---- */
 
 .ios-nav {
@@ -487,7 +443,7 @@
   position: absolute;
   inset: 0;
   transition:
-    transform 0.5s var(--glide),
+    transform 0.38s var(--glide),
     visibility 0s;
 }
 
@@ -496,8 +452,8 @@
   transform: translateX(-30%);
   visibility: hidden;
   transition:
-    transform 0.5s var(--glide),
-    visibility 0s 0.5s;
+    transform 0.38s var(--glide),
+    visibility 0s 0.38s;
 }
 
 .ios-page[data-pos='gone'] {
@@ -510,7 +466,7 @@
 }
 
 .ios-page[data-enter] {
-  animation: ios-push 0.5s var(--glide);
+  animation: ios-push 0.38s var(--glide);
 }
 
 @keyframes ios-push {
@@ -688,47 +644,6 @@
   opacity: 0.4;
 }
 
-.ios-segments {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
-  height: 36px;
-  padding: 2px;
-  border-radius: 18px;
-  background: var(--fill);
-}
-
-.ios-segments__thumb {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  width: calc((100% - 4px) / var(--n));
-  border-radius: 16px;
-  background: #fff;
-  box-shadow:
-    0 2px 8px rgb(0 0 0 / 0.1),
-    0 0 0 0.5px rgb(0 0 0 / 0.04);
-  transform: translateX(calc(var(--at) * 100%));
-  transition: transform 0.3s var(--ui);
-}
-
-.ios-segments__item {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-width: 0;
-  padding: 0 8px;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-.ios-segments__item[aria-checked='true'] {
-  font-weight: 600;
-}
-
 /* ---- Menus ---- */
 
 .ios-menu {
@@ -882,8 +797,8 @@
   box-shadow: 0 -4px 40px rgb(0 0 0 / 0.14);
   color: var(--label);
   outline: none;
-  animation: ios-sheet-up 0.5s var(--glide);
-  transition: transform 0.4s var(--glide);
+  animation: ios-sheet-up 0.4s var(--glide);
+  transition: transform 0.32s var(--glide);
 }
 
 .ios-sheet[data-tone='grouped'] .ios-sheet__panel {
@@ -1087,25 +1002,8 @@
     --control: 38px;
   }
 
-  .ios-foot:has(.ios-tabs) {
-    --control: 46px;
-  }
-
   .ios-search {
     height: 38px;
-  }
-
-  .ios-tabs {
-    height: 46px;
-    padding: 3px;
-  }
-
-  .ios-tabs__item {
-    height: 40px;
-  }
-
-  .ios-tabs__icon {
-    height: 22px;
   }
 
   .ios-screen[data-foot] > .ios-screen__scroll {

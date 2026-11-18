@@ -5,7 +5,7 @@ import { FAQS } from '../data/faqs'
 import { SITE } from '../data/site'
 import { Popover } from '../kit/motion/Popover'
 import { APPS, DOCK_APPS, type AppId } from './apps'
-import { formatter } from './dates'
+import { formatter, shortDay } from './dates'
 import { dockPoint } from './dom'
 import { focusLost } from './focus'
 import { askedIdle, saver, setSaverNever, startSaver } from './saver'
@@ -136,7 +136,6 @@ function useNow(every = 10_000) {
   return now
 }
 
-const DAY = formatter({ weekday: 'short', day: 'numeric', month: 'short' })
 const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
 
 export function MenuBar() {
@@ -368,7 +367,7 @@ export function MenuBar() {
       </div>
       <div className="menubar__status">
         <time className="menubar__clock" dateTime={now.toISOString()}>
-          <span>{DAY.format(now)}</span>
+          <span>{shortDay(now)}</span>
           <span>{TIME.format(now)}</span>
         </time>
       </div>

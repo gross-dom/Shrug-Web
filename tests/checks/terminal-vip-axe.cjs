@@ -33,10 +33,10 @@ const WITH_FILES = (js) => js.replace('from: null, src: null', 'from: drop === "
   await arrived(p); await p.waitForTimeout(1200)
   const front = '.sb-slot[data-front]'
   await run(p, 'phone VIP library', front)
-  await A.at(p, 'photos', ['a:Deep Tech Mat']); await run(p, 'phone VIP album', front)
   await A.at(p, 'photos', ['m:0']); await run(p, 'phone VIP viewer (tile on its way)', front)
   await A.at(p, 'photos', ['m:1'], 'info'); await run(p, 'phone VIP info', front)
-  await A.at(p, 'photos', ['albums']); await run(p, 'phone VIP albums', front)
+  await A.at(p, 'photos', []); await p.locator(front + ' .ios-page[data-pos="top"] button[aria-haspopup="menu"]').first().tap(); await p.waitForTimeout(500); await run(p, 'phone VIP, the filter open', front)
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300)
   await A.at(p, 'terminal', []); await run(p, 'phone terminal, question waiting', front)
   await p.locator(front + ' .term-ios-key', { hasText: /^y$/ }).tap(); await p.waitForTimeout(500)
   await run(p, 'phone terminal, after y', front)

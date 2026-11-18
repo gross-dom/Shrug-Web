@@ -1,7 +1,7 @@
 import { DROPS } from '../data/drops'
 import { PEOPLE } from '../data/people'
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
-import { reach, reachable, SITE } from '../data/site'
+import { ABOUT, reach, reachable, SITE } from '../data/site'
 import { Card } from '../kit/parts/Card'
 import { Window } from '../kit/window'
 import { APPS } from '../os/apps'
@@ -10,9 +10,11 @@ import { AppIcon } from '../os/icons'
 import { openApp } from '../os/wm'
 
 // About Shrug: the small window a system keeps for this. Who Shrug is, in a
-// sentence; what is on the site, each figure counted from the site's own data
-// and each row opening what it counts; and the ways on: the one-pager, and a
-// way to write to Shrug once there is one (src/data/site.ts).
+// sentence and then in a few facts (when it started, who its partners are,
+// which fund this is and what it backs: src/data/site.ts); what is on the
+// site, each figure counted from the site's own data and each row opening
+// what it counts; and the ways on: the one-pager, and a way to write to Shrug
+// once there is one.
 
 const FACTS: { label: string; value: string; open: () => void }[] = [
   { label: APPS.messages.name, value: `${PEOPLE.length} people`, open: () => openApp('messages', dockPoint('messages')) },
@@ -32,6 +34,16 @@ export function AboutApp() {
       {/* Set with hyphens that hold their word together: "early-stage" is not broken across the two lines */}
       <p className="about__kind">{SITE.line.replace(/-/g, '\u2011')}</p>
       <Card className="about__facts" flush pad="small" tone="sunken">
+        <dl className="about__firm">
+          {[...ABOUT.facts, { label: 'Backs', value: ABOUT.backs }].map((fact) => (
+            <div key={fact.label} className="about__fact about__fact--said">
+              <dt>{fact.label}</dt>
+              <dd className="about__value">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
+      <Card className="about__facts" flush pad="small" tone="sunken">
         {FACTS.map((fact) => (
           <button key={fact.label} type="button" className="about__fact" onClick={fact.open}>
             <span>{fact.label}</span>
@@ -48,9 +60,6 @@ export function AboutApp() {
         <a className="about__link" data-quiet={way ? '' : undefined} href={SITE.onePager} target="_blank" rel="noreferrer">
           One-pager<span className="sr-only">, opens in a new tab</span>
         </a>
-      </div>
-      <div className="about__mark" aria-hidden>
-        {SITE.mark}
       </div>
     </Window>
   )

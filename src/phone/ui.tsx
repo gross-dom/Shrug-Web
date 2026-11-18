@@ -3,7 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Mic, Search, X } from 'lucide-react'
 import { Popover } from '../kit/motion/Popover'
 import { focusFirst, focusLost, holdFocus, useReturnFocus } from '../os/focus'
 import { createStore, useStore } from '../os/store'
-import { setTone } from './chrome'
+import { COLOR, setTone, sheeted } from './chrome'
 import { closeSheet, pop, sys, type PhoneApp } from './system'
 
 // The parts every app on the phone is built from, drawn the way the current
@@ -135,6 +135,9 @@ export interface ScreenProps {
   fixed?: boolean
   /** The page draws its own heading (a card, a face, with `usePageHeadingId` for its id): the screen adds none. */
   ownHeading?: boolean
+  /** The page is there to be read and has nothing in it to press (a question's answer): the page itself
+   * takes the keyboard, so that the arrows, Space and Page Down scroll it. */
+  readable?: boolean
   className?: string
   scrollRef?: Ref<HTMLDivElement>
   children: ReactNode
@@ -142,7 +145,7 @@ export interface ScreenProps {
 
 /** One screen of an app. The bar's buttons float over the page; under them the
  * page fades and blurs as it scrolls past, as iOS's scroll edge does. */
-export function Screen({ title, large, subtitle, center, leading, trailing, header, foot, tone = 'plain', fixed, ownHeading, className, scrollRef, children }: ScreenProps) {
+export function Screen({ title, large, subtitle, center, leading, trailing, header, foot, tone = 'plain', fixed, ownHeading, readable, className, scrollRef, children }: ScreenProps) {
   const depth = useContext(DepthContext)
   const top = useContext(TopContext)
   const headingId = useContext(PageHeadingContext)
@@ -185,7 +188,7 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
       {fixed ? (
         <div className="ios-screen__body">{children}</div>
       ) : (
-        <div ref={setScroller} className="ios-screen__scroll" data-scroller onScroll={onScroll}>
+        <div ref={setScroller} className="ios-screen__scroll" data-scroller onScroll={onScroll} {...(readable ? { tabIndex: 0, role: 'group', 'aria-labelledby': headingId } : null)}>
           {large && (
             <h2 ref={heading} id={headingId} className="ios-large" dir="auto">
               {title}
@@ -237,8 +240,15 @@ interface Gone {
 /** An app's screens, one on top of another: a new one slides in from the
  * right over the last, and goes back out that way. `children` draws the screen
  * for a view (null is the app's first screen). The stack itself is the app's
- * in `sys`: `push`, `pop`. */
-export function NavStack({ children }: { children: (view: string | null, depth: number) => ReactNode }) {
+ * in `sys`: `push`, `pop`.
+ *
+ * `flat` is for an app whose screens are one piece that rearranges itself (the
+ * Wallet: its cards part to show one of them). There is one page, which stays
+ * where it is; `children` is given the innermost view, and moves what it draws
+ * between one view and the next itself. A step in is still a step in the
+ * stack, so Back, the keyboard and a sheet over the page all work as they do
+ * for any other app. */
+export function NavStack({ children, flat }: { children: (view: string | null, depth: number) => ReactNode; flat?: boolean }) {
   const { app, active } = useApp()
   const stack = useStore(sys, (s) => s.stacks[app])
   const motion = useStore(sys, (s) => s.motion)
@@ -289,7 +299,7 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
 
   useEffect(() => {
     if (!seen.gone.length) return
-    const t = setTimeout(() => setSeen((s) => (s.gone.length ? { ...s, gone: [] } : s)), 520)
+    const t = setTimeout(() => setSeen((s) => (s.gone.length ? { ...s, gone: [] } : s)), 400)
     return () => clearTimeout(t)
   }, [seen.gone])
 
@@ -314,18 +324,20 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
   // One list, so a screen that is leaving is the same screen it was (its place on the page, what it had scrolled to), not a new one
   return (
     <div ref={nav} className="ios-nav" data-snap={!motion || undefined}>
-      {[
-        page(null, 0, top === 0 ? 'top' : 'under'),
-        ...stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under')),
-        ...seen.gone.filter((g) => g.depth > top).map((g) => page(g.view, g.depth, 'gone')),
-      ]}
+      {flat
+        ? page(stack[top - 1] ?? null, 0, 'top')
+        : [
+            page(null, 0, top === 0 ? 'top' : 'under'),
+            ...stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under')),
+            ...seen.gone.filter((g) => g.depth > top).map((g) => page(g.view, g.depth, 'gone')),
+          ]}
     </div>
   )
 }
 
 // ---- Lists ----
 
-/** A page of grouped rows: Settings, a contact card, a folder's details. */
+/** A page of grouped rows: a contact card, a folder's details. */
 export function List({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={`ios-list${className ? ` ${className}` : ''}`}>{children}</div>
 }
@@ -412,21 +424,6 @@ export function Switch({ on, label, onChange, disabled }: { on: boolean; label: 
   )
 }
 
-/** A segmented control: two or three views of the same thing. */
-export function Segments<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { value: T; label: ReactNode }[]; onChange: (value: T) => void }) {
-  const at = Math.max(0, options.findIndex((o) => o.value === value))
-  return (
-    <div className="ios-segments" role="radiogroup" aria-label={label} style={{ '--n': options.length, '--at': at } as CSSProperties}>
-      <span className="ios-segments__thumb" aria-hidden />
-      {options.map((o) => (
-        <button key={o.value} type="button" className="ios-segments__item" role="radio" aria-checked={o.value === value} onClick={() => onChange(o.value)}>
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 // ---- What floats at the foot of a screen ----
 
 /** The search field iOS floats at the foot of a list: a glass capsule. Give it
@@ -482,28 +479,6 @@ export function SearchBar({ value, onChange, placeholder = 'Search', label, onFo
         <Mic size={18} strokeWidth={2.1} className="ios-search__mic" aria-hidden />
       )}
     </label>
-  )
-}
-
-export interface Tab<T extends string> {
-  id: T
-  label: string
-  icon: ReactNode
-}
-
-/** The floating tab bar: a glass capsule, the tab that is showing on a pill of its own. */
-export function TabBar<T extends string>({ label, tabs, value, onChange }: { label: string; tabs: Tab<T>[]; value: T; onChange: (id: T) => void }) {
-  return (
-    <nav className="ios-glass ios-tabs" aria-label={label}>
-      {tabs.map((tab) => (
-        <button key={tab.id} type="button" className="ios-tabs__item" aria-current={tab.id === value ? 'page' : undefined} onClick={() => onChange(tab.id)}>
-          <span className="ios-tabs__icon" aria-hidden>
-            {tab.icon}
-          </span>
-          <span className="ios-tabs__label">{tab.label}</span>
-        </button>
-      ))}
-    </nav>
   )
 }
 
@@ -687,7 +662,7 @@ export function SheetHost({ children }: { children: (name: string) => ReactNode 
   else if (!name && shown && !shown.closing) setShown(motion ? { ...shown, closing: true } : null)
   useEffect(() => {
     if (!shown?.closing) return
-    const t = setTimeout(() => setShown((s) => (s?.closing ? null : s)), 420)
+    const t = setTimeout(() => setShown((s) => (s?.closing ? null : s)), 340)
     return () => clearTimeout(t)
   }, [shown])
   if (!shown) return null
@@ -832,6 +807,15 @@ export function Sheet({ label, title, detent = 'large', leading, trailing, tone 
       el.removeEventListener('touchcancel', end)
     }
   }, [closing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // While it is up the top edge of the screen is the app under its shade, and (for a sheet that runs to
+  // the foot of the screen) the foot is the sheet's own ground: a real phone's browser paints its bars to match
+  useLayoutEffect(() => {
+    if (closing) return
+    const half = detent === 'medium'
+    sheeted.set({ shade: half ? 0.12 : 0.26, foot: half ? null : COLOR[tone] })
+    return () => sheeted.set({ shade: 0, foot: null })
+  }, [closing, detent, tone])
 
   // Escape closes it, as it closes any dialog
   useEffect(() => {

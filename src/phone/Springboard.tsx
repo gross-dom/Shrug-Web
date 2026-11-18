@@ -5,20 +5,20 @@ import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
 import { eggOf } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
-import { COMPANIES } from '../data/portfolio'
+import { MEDIA } from '../data/drops'
+import { COMPANIES, VERTICALS } from '../data/portfolio'
 import { SITE } from '../data/site'
 import type { Rect } from '../kit/measure'
-import { Expand } from '../kit/motion/Expand'
 import { LockScreen, Notification } from '../kit/phone'
 import { Boundary } from '../os/Boundary'
 import { firstControl, focusFirst, focusLost } from '../os/focus'
 import { useStore } from '../os/store'
 import { setTitle } from '../os/title'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { GROUP_VIEW } from './apps/routes'
+import { cardOf, GROUP_VIEW } from './apps/routes'
 import { COLOR, carried, chrome } from './chrome'
 import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
-import { LockGlyph, OnePagerIcon, PhoneIcon } from './icons'
+import { OnePagerIcon, PhoneIcon } from './icons'
 import { haptic } from './native'
 import { settings } from './settings'
 import { Spotlight } from './Spotlight'
@@ -27,13 +27,14 @@ import { dropLost, goHome, launch, launchAt, lock, pop, quit, refocus, showSpotl
 import { clockOf, dateOf, useNow } from './time'
 import { useNewCount } from './unread'
 import { AppContext, scaleOf } from './ui'
+import { Zoom } from './Zoom'
 
 // The phone itself, under and around its apps: the wallpaper, the Lock Screen
 // with the group's replies arriving on it, the Home Screen (widgets, icons,
 // the Dock), the apps opening out of their icons, the App Switcher, and the
 // banners that drop in when a reply lands while something else is showing.
-// The kit draws the Lock Screen, the notifications and the zoom an app opens
-// with; the gestures are here.
+// The kit draws the Lock Screen and the notifications; the zoom an app opens
+// with is the site's own (Zoom.tsx), and the gestures are here.
 
 // ---- Where things are ----
 
@@ -135,21 +136,19 @@ function Lock() {
   const tapped = useRef(0)
   // It stays drawn while it slides away
   const [shown, setShown] = useState(locked)
-  const [torch, setTorch] = useState(false)
   if (locked && !shown) setShown(true)
   useEffect(() => {
     if (locked || !shown) return
-    const t = setTimeout(() => setShown(false), 520)
+    const t = setTimeout(() => setShown(false), 420)
     return () => clearTimeout(t)
   }, [locked, shown])
 
-  // The torch does not stay on behind a phone that has been opened
+  // A tap made before it was last opened does not count towards opening it again
   useEffect(() => {
     tapped.current = 0
-    if (!locked) setTorch(false)
   }, [locked])
 
-  // Any key opens it. A key pressed on one of its own controls (a notification, the torch) is that control's
+  // Any key opens it. A key pressed on one of its own controls (a notification, the words that open it) is that control's
   useEffect(() => {
     if (!locked) return
     const key = (e: KeyboardEvent) => {
@@ -243,7 +242,6 @@ function Lock() {
       ref={root}
       className="sb-lock"
       data-leaving={!locked || undefined}
-      data-torch={torch || undefined}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
@@ -251,9 +249,6 @@ function Lock() {
       onAnimationEnd={(e) => e.target === e.currentTarget && e.currentTarget.removeAttribute('data-nudge')}
       {...(locked ? null : ({ inert: '' } as object))}
     >
-      {/* The torch's light, up from its button */}
-      <span className="sb-lock__beam" aria-hidden />
-      {/* The kit draws its two round buttons as pictures; the ones below it can be pressed */}
       <LockScreen date={dateOf(now)} time={clockOf(now)} controls={false}>
         {announced && replied > 0 && (
           <div className="sb-stack" data-more={replied > 1 ? (replied > 2 ? 2 : 1) : undefined}>
@@ -261,24 +256,6 @@ function Lock() {
           </div>
         )}
       </LockScreen>
-      <div className="sb-lock__controls">
-        <button
-          type="button"
-          className="sb-lock__control"
-          aria-label="Flashlight"
-          aria-pressed={torch}
-          onClick={() => {
-            haptic()
-            setTorch((on) => !on)
-          }}
-        >
-          <LockGlyph name="torch" />
-        </button>
-        {/* An iPhone's camera is where its photos come from; this one opens where Shrug's are */}
-        <button type="button" className="sb-lock__control" aria-label={`Camera: opens ${PHONE.photos.label}`} data-origin="lock:camera" onClick={() => launch('photos', 'lock:camera')}>
-          <LockGlyph name="camera" />
-        </button>
-      </div>
       {/* A swipe opens it, as on any iPhone; the words can be pressed too, for a mouse or a keyboard */}
       <button type="button" className="sb-lock__hint" onClick={unlock}>
         Swipe up to open
@@ -298,7 +275,7 @@ function HomeIcon({ id }: { id: PhoneApp }) {
       <span className="sb-icon__tile" data-origin={iconOrigin(id)}>
         <PhoneIcon id={id} />
         {badge > 0 && (
-          <span className="sb-badge" aria-hidden>
+          <span className="sb-badge" data-digits={String(badge).length} aria-hidden>
             {badge}
           </span>
         )}
@@ -449,7 +426,7 @@ function Home() {
 // ---- Apps ----
 
 /** How long a card takes to settle into the App Switcher, or out of it. */
-const SETTLE = 460
+const SETTLE = 380
 
 function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const front = useStore(sys, (s) => s.app === id)
@@ -555,17 +532,17 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
       </div>
       {switcher && <CardClose id={id} />}
       <div className="sb-card">
-        <Expand
+        <Zoom
           open={open}
           from={zoom.from}
           radius={card ? 24 : zoom.from.width * 0.225}
-          duration={still ? 0 : undefined}
+          still={still}
           face={card ? <span className="sb-face sb-face--card" /> : <PhoneIcon id={id} />}
           className="sb-app"
           data-app={id}
           data-shut={!open || undefined}
           data-snap={still || undefined}
-          style={{ '--ss-expand-bg': COLOR[tone] } as CSSProperties}
+          style={{ '--zoom-bg': COLOR[tone] } as CSSProperties}
           {...(active ? null : ({ inert: '' } as object))}
         >
           <div className="sb-drag" tabIndex={-1}>
@@ -576,7 +553,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
               </Boundary>
             </AppContext.Provider>
           </div>
-        </Expand>
+        </Zoom>
         {switcher && <CardHandle id={id} />}
       </div>
     </div>
@@ -978,7 +955,7 @@ function reading(s: Sys) {
 }
 
 /** Where the phone is, as the page's title says it, innermost first and one to a line: the conversation,
- * company, question or album where the screen is one, then the app. Nothing on the Lock Screen and the
+ * company, question or drop where the screen is one, then the app. Nothing on the Lock Screen and the
  * Home Screen, which are the site itself. */
 function placeName(s: Sys) {
   if (s.locked) return ''
@@ -989,9 +966,9 @@ function placeName(s: Sys) {
   const at = top.slice(2)
   let screen: string | null | undefined = null
   if (s.app === 'messages' && top.startsWith('c:')) screen = at === 'group' ? GROUP_NAME : eggOf(at)?.name
-  else if (s.app === 'finder') screen = s.sheet?.startsWith('company:') ? COMPANIES.find((company) => company.key === s.sheet!.slice(8))?.name : top === 'f:all' ? 'Portfolio' : null
+  else if (s.app === 'finder') screen = s.sheet?.startsWith('company:') ? COMPANIES.find((company) => company.key === s.sheet!.slice(8))?.name : cardOf(top) !== null ? VERTICALS[cardOf(top)!]!.name : 'Portfolio'
   else if (s.app === 'notes') screen = top.startsWith('n:') ? FAQS[Number(at)]?.question : top === 'f:faqs' ? 'FAQs' : null
-  else if (s.app === 'photos' && top.startsWith('a:')) screen = at
+  else if (s.app === 'photos' && top.startsWith('m:')) screen = MEDIA[Number(at)]?.drop
   return [screen, PHONE[s.app].label].filter(Boolean).join('\n')
 }
 
@@ -1003,7 +980,7 @@ export function Springboard({ framed }: { framed: boolean }) {
     setChatUnseen(!watched)
     return () => setChatUnseen(false)
   }, [watched])
-  // Left alone for as long as Auto-Lock in Settings says, the phone locks itself. Alone means alone: the
+  // Left alone for as long as its Auto-Lock says (src/phone/settings.ts), the phone locks itself. Alone means alone: the
   // wait starts over with anything a visitor does, a screen reader's reading and a selection included; it
   // does not run while the page is out of sight (and starts afresh when the page is looked at again, so
   // coming back is not met by a Lock Screen); and a note or a conversation, which are there to be read
@@ -1041,6 +1018,8 @@ export function Springboard({ framed }: { framed: boolean }) {
   // on the screen it was opened from
   useLayoutEffect(() => {
     dropLost((app, view) => {
+      // A screen from before the portfolio was kept in Wallet (a folder of Files), or a card there is no longer
+      if (app === 'finder') return cardOf(view) === null
       if (app !== 'notes') return false
       const { notes, folders } = book.get()
       if (view.startsWith('u:')) return !notes.some((note) => note.id === view.slice(2))

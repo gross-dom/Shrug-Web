@@ -3,7 +3,11 @@
 // the site running.
 //   npm run dev            (in another terminal)
 //   node tools/og.cjs      (writes public/og.png, 1200x630)
+const fs = require('fs')
 const { chromium } = require('playwright')
+// The logo, as the site draws it (src/data/logo.ts): white on a black tile here, 13 points across
+const drawing = fs.readFileSync('src/data/logo.ts', 'utf8')
+const logo = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="13" height="13"><rect width="180" height="180" fill="#000"/><path fill="#fff" transform="${/export const ON_TILE = '([^']+)'/.exec(drawing)[1]}" d="${/export const S = '([^']+)'/.exec(drawing)[1]}"/></svg>`
 ;(async () => {
   const url = process.argv[2] || 'http://127.0.0.1:5173/'
   const browser = await chromium.launch()
@@ -14,7 +18,7 @@ const { chromium } = require('playwright')
   // Shrug's question and the first answer to it, before the second is on its way
   await page.waitForFunction(() => document.querySelectorAll('.chat__thread [data-person]:not([data-typing])').length >= 1, null, { timeout: 60000 })
   await page.waitForTimeout(600)
-  await page.evaluate((room) => {
+  await page.evaluate(({ room, logo }) => {
     // Only the messages, set in the middle of the picture: the bars and the date line are left out
     for (const el of document.querySelectorAll('.ios-bar, .ios-foot, .msg-edge, .sb-homebar')) el.style.visibility = 'hidden'
     for (const el of document.querySelectorAll('.msg-convo .chat-stamp, .msg-convo .chat-note')) el.style.display = 'none'
@@ -22,12 +26,12 @@ const { chromium } = require('playwright')
     flow.style.paddingTop = '0px'
     flow.style.paddingTop = `${Math.max(10, (room - document.querySelector('.msg-convo .chat__thread').offsetHeight) / 2)}px`
     document.querySelector('.msg-convo .chat__scroll').scrollTop = 0
-    // Whose conversation it is: the mark and the name in a corner, so the picture says so on its own
+    // Whose conversation it is: the logo and the name in a corner, so the picture says so on its own
     const mark = document.createElement('div')
-    mark.textContent = 'Shrug  ¯\\_(ツ)_/¯'
-    mark.style.cssText = `position:fixed;left:14px;top:${room - 22}px;z-index:99;font:600 11px/1 -apple-system,BlinkMacSystemFont,"Inter Variable",sans-serif;letter-spacing:0.01em;color:#8e8e93;white-space:pre`
+    mark.innerHTML = `${logo}<span>Shrug</span>`
+    mark.style.cssText = `position:fixed;left:14px;top:${room - 25}px;z-index:99;display:flex;align-items:center;gap:5px;font:600 11px/1 -apple-system,BlinkMacSystemFont,"Inter Variable",sans-serif;letter-spacing:0.01em;color:#8e8e93`
     document.body.append(mark)
-  }, 252)
+  }, { room: 252, logo })
   await page.waitForTimeout(200)
   await page.screenshot({ path: 'public/og.png', clip: { x: 0, y: 0, width: 480, height: 252 } })
   await browser.close()

@@ -1,4 +1,4 @@
-import { ANSWER_PENDING_LINE, FAQS } from '../../data/faqs'
+import { ANSWER_PENDING_LINE, answerWords, FAQS } from '../../data/faqs'
 import { DRAFT } from '../../data/site'
 import { createStore } from '../../os/store'
 import { sys } from '../system'
@@ -208,7 +208,7 @@ function faqEdited(index: number) {
   return then.getTime()
 }
 
-const FAQ_ENTRIES: Entry[] = FAQS.map((faq, index) => ({ view: noteView(index), folder: FAQS_ID, title: faq.question, text: faq.answer ?? '', edited: faqEdited(index), faq: index, own: null }))
+const FAQ_ENTRIES: Entry[] = FAQS.map((faq, index) => ({ view: noteView(index), folder: FAQS_ID, title: faq.question, text: faq.answer ? answerWords(faq.answer) : '', edited: faqEdited(index), faq: index, own: null }))
 
 const ownEntry = (note: OwnNote): Entry => ({ view: ownView(note.id), folder: note.folder, title: note.title, text: note.body, edited: note.edited, faq: null, own: note })
 

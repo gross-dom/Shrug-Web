@@ -45,7 +45,7 @@ const check = (name, ok, detail = '') => {
 
   // the cascade: the site's own stylesheet first, each half's after it (a built page that got this the
   // other way round drew every grid as one column, and no test on the dev server could see it)
-  for (const [device, half, probe] of [['iphone', /Phone-/, ['finder', ['f:all'], '.files-grid']], ['desktop', /Surface-/, null]]) {
+  for (const [device, half, probe] of [['iphone', /Phone-/, ['finder', [], '.wallet-card__in']], ['desktop', /Surface-/, null]]) {
     v = await visit(device, device === 'iphone' ? '?open=portfolio' : '')
     const order = await v.t.page.evaluate(() => [...document.styleSheets].map((sheet) => (sheet.href || 'inline').split('/').pop()))
     const main = order.findIndex((name) => /^index-/.test(name))
@@ -54,7 +54,7 @@ const check = (name, ok, detail = '') => {
     if (main >= 0) check(`${device}: the site's stylesheet comes before its half's`, halfAt < 0 || main < halfAt, order.join(' '))
     if (probe) {
       const display = await v.t.page.evaluate((sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).display : 'missing' }, probe[2])
-      check(`${device}: the portfolio is a grid`, display === 'grid', display)
+      check(`${device}: a card of the portfolio sets its companies in a grid`, display === 'grid', display)
     }
     await v.t.ctx.close()
   }
@@ -62,18 +62,24 @@ const check = (name, ok, detail = '') => {
   // forgiving addresses, on the phone
   for (const [tail, app, stack] of [
     ['?open=chat', 'messages', 'c:group'],
-    ['?OPEN=Portfolio', 'finder', 'f:all'],
+    ['?OPEN=Portfolio', 'finder', ''],
+    ['?open=wallet', 'finder', ''],
+    ['?open=files', 'finder', ''],
+    ['?open=portfolio&at=varda', 'finder', 'v:0'],
     ['?open=portfolio;faqs', 'notes', 'f:faqs'],
     ['?open=portfolio+vip', 'photos', ''],
-    ['portfolio', 'finder', 'f:all'],
+    ['portfolio', 'finder', ''],
     ['#faqs', 'notes', 'f:faqs'],
+    // (About Shrug and Settings are the desktop's: a phone that is asked for one opens on its Home Screen)
+    ['?open=about', 'home', null],
+    ['?open=settings', 'home', null],
     ['?open=nonsense', null, null],
   ]) {
     v = await visit('iphone', tail, 900)
     const s = await A.state(v.t.page)
-    const ok = app ? !s.locked && s.place?.app === app && (s.place.stack.join() === stack) : s.locked
-    check(`phone ${tail} -> ${app ?? 'the Lock Screen'}`, ok, JSON.stringify(s.place) + ' locked ' + s.locked)
-    if (app) check(`…with no Lock Screen on the way`, !v.seenLock.v)
+    const ok = app === 'home' ? !s.locked && !s.place?.app : app ? !s.locked && s.place?.app === app && (s.place.stack.join() === stack) : s.locked
+    check(`phone ${tail} -> ${app === 'home' ? 'the Home Screen, open' : (app ?? 'the Lock Screen')}`, ok, JSON.stringify(s.place) + ' locked ' + s.locked)
+    if (app && app !== 'home') check(`…with no Lock Screen on the way`, !v.seenLock.v)
     await v.t.ctx.close()
   }
   // and on the desktop

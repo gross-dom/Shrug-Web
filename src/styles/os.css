@@ -45,7 +45,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(150deg, #0f1129 0%, #454ca0 33%, #7c8dd2 67%, #768bd2 100%);
+  background: linear-gradient(155deg, #0f1129 0%, #434a99 33%, #7a8bd1 67%, #677dc7 100%);
 }
 
 .os__wallpaper::before {
@@ -82,6 +82,134 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* ---- Notifications: a reply that lands out of sight drops in at the top right
+   corner, under the menu bar, as a Mac's do (os/Notifications.tsx). Over the
+   windows and the Dock, under an open menu ---- */
+
+.notify {
+  position: absolute;
+  top: 38px;
+  right: 12px;
+  z-index: 750;
+  width: 352px;
+  max-width: calc(100% - 24px);
+  pointer-events: none;
+}
+
+.notify__card {
+  position: relative;
+  border-radius: 18px;
+  background: rgba(246, 246, 249, 0.9);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.14),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.7),
+    0 14px 36px rgba(8, 12, 50, 0.26);
+  color: #1d1d1f;
+  pointer-events: auto;
+  animation: notify-in 0.46s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+.notify__card[data-leaving] {
+  animation: notify-out 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes notify-in {
+  from {
+    transform: translateX(calc(100% + 24px));
+  }
+}
+
+@keyframes notify-out {
+  to {
+    transform: translateX(calc(100% + 24px));
+  }
+}
+
+.notify__open {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px 12px 12px;
+  border-radius: inherit;
+  text-align: left;
+}
+
+.notify__icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-top: 1px;
+  filter: drop-shadow(0 1px 2px rgba(10, 16, 50, 0.2));
+}
+
+.notify__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.notify__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notify__name {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Gray enough to read on the glass over any part of the wallpaper */
+.notify__time {
+  flex: none;
+  color: #5c5d64;
+  font-size: 11.5px;
+}
+
+.notify__from {
+  font-weight: 600;
+}
+
+.notify__said {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Puts it away: there under a pointer, at the corner a Mac keeps it */
+.notify__close {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: rgba(246, 246, 249, 0.96);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(8, 12, 50, 0.22);
+  color: #46474e;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.notify__card:hover .notify__close {
+  opacity: 1;
+}
+
 /* ---- When the site cannot be drawn: half of it did not arrive, or it fell
    over. The loading screen's look (index.html), over the wallpaper ---- */
 
@@ -104,10 +232,7 @@
 }
 
 .stalled__mark {
-  font-size: 30px;
-  line-height: 1.2;
-  font-weight: 500;
-  white-space: nowrap;
+  line-height: 0;
 }
 
 .stalled__title {
@@ -266,6 +391,7 @@
   outline-offset: -2px;
 }
 
+/* The shrug itself: the one place on the site it is drawn */
 .menubar__mark {
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -844,6 +970,7 @@ html[data-wm-busy='se'] * {
 
 .dock {
   --dock-size: 52px;
+  --dock-gap: 14px;
   position: absolute;
   inset: auto 0 6px;
   z-index: 700;
@@ -857,7 +984,7 @@ html[data-wm-busy='se'] * {
   display: flex;
   align-items: flex-end;
   height: calc(var(--dock-size) + 16px);
-  padding: 0 5px 10px;
+  padding: 0 3px 10px;
   border-radius: 21px;
   background: rgba(255, 255, 255, 0.3);
   box-shadow:
@@ -877,7 +1004,8 @@ html[data-wm-busy='se'] * {
   flex: none;
   align-items: flex-end;
   justify-content: center;
-  width: calc(var(--dock-size) * var(--swell) + 6px);
+  /* An icon and the air either side of it: a Mac's Dock keeps about a quarter of an icon between two */
+  width: calc(var(--dock-size) * var(--swell) + var(--dock-gap));
   height: calc(var(--dock-size) * var(--swell));
   border-radius: 14px;
 }
@@ -889,7 +1017,7 @@ html[data-wm-busy='se'] * {
 .dock__icon {
   position: relative;
   display: block;
-  width: calc(100% - 6px);
+  width: calc(100% - var(--dock-gap));
   height: 100%;
   transform-origin: 50% 100%;
 }
@@ -906,8 +1034,9 @@ html[data-wm-busy='se'] * {
   filter: drop-shadow(0 2px 3px rgba(4, 10, 50, 0.28));
 }
 
+/* The one-pager is a sheet of paper, not a tile: it stands as tall as the icons beside it */
 .dock__icon--doc {
-  transform: scale(0.88);
+  transform: scale(1.06);
 }
 
 .dock__item:active .dock__icon .app-icon {
@@ -944,10 +1073,10 @@ html[data-wm-busy='se'] * {
   right: -6%;
   display: grid;
   place-items: center;
-  min-width: 36%;
-  height: 36%;
-  padding: 0 9%;
-  border-radius: 999px;
+  /* A circle, whatever it counts: two figures are set a little smaller to sit in it */
+  width: 38%;
+  height: 38%;
+  border-radius: 50%;
   background: #ff3b30;
   box-shadow: 0 1px 3px rgba(60, 0, 0, 0.35);
   color: #fff;
@@ -956,6 +1085,11 @@ html[data-wm-busy='se'] * {
   line-height: 1;
   font-variant-numeric: tabular-nums;
   animation: badge-in 0.36s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+.dock__badge[data-digits='2'] {
+  font-size: calc(var(--dock-size) * var(--swell, 1) * 0.19);
+  letter-spacing: -0.02em;
 }
 
 @keyframes badge-in {
@@ -1024,7 +1158,7 @@ html[data-wm-busy='se'] * {
   align-self: flex-end;
   width: 1px;
   height: calc(var(--dock-size) - 10px);
-  margin: 0 7px 5px;
+  margin: 0 5px 5px;
   background: rgba(12, 16, 40, 0.22);
   box-shadow: 1px 0 0 rgba(255, 255, 255, 0.18);
 }
@@ -1101,19 +1235,6 @@ html[data-wm-busy='se'] * {
   letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
   opacity: 0.94;
-}
-
-.saver__mark {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 0.3em 0.4em;
-  font-size: clamp(34px, 5.2vw, 78px);
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  will-change: transform;
-  transition: color 1.4s ease;
 }
 
 .saver__foot {
@@ -1356,13 +1477,6 @@ html[data-wm-busy='se'] * {
   .saver__who {
     animation: none;
   }
-
-  /* Still, the shrug sits in the middle of the screen */
-  .saver__mark {
-    top: 56%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
 }
 
 /* A window whose contents failed to draw */
@@ -1385,4 +1499,12 @@ html[data-wm-busy='se'] * {
   color: #fff;
   font-size: 13px;
   font-weight: 500;
+}
+
+/* Asked for less motion, a notification is there and then is not */
+@media (prefers-reduced-motion: reduce) {
+  .notify__card,
+  .notify__card[data-leaving] {
+    animation: none;
+  }
 }

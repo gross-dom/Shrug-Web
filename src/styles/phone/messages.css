@@ -264,29 +264,6 @@
   font-weight: 500;
 }
 
-.msg-convo .chat-failed::after {
-  width: 20px;
-  height: 20px;
-  margin-left: 8px;
-  font-size: 13px;
-}
-
-.msg-convo .chat-undelivered {
-  margin-right: 28px;
-  font-size: 12px;
-}
-
-/* The line is small type; the press it takes is not */
-.msg-convo .chat-undelivered::after {
-  content: '';
-  position: absolute;
-  inset: -13px -12px;
-}
-
-.msg-convo .chat-undelivered:hover {
-  text-decoration: none;
-}
-
 /* Back to the newest: a piece of glass over the field */
 .msg-convo .chat__new {
   bottom: calc(var(--foot-gap) + 44px + 18px);
@@ -308,9 +285,31 @@
   z-index: 4;
 }
 
-.msg-convo .chat__new > svg {
+.msg-convo .chat__new > svg,
+.msg-convo .chat__all > svg {
   width: 15px;
   height: 15px;
+}
+
+/* Every reply at once: the same glass, under the conversation's name */
+.msg-convo .chat__all {
+  top: calc(var(--status) + 94px);
+  gap: 5px;
+  height: 34px;
+  padding: 0 15px 0 11px;
+  border-radius: 17px;
+  background: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 4px 14px -4px rgb(0 0 0 / 0.18),
+    inset 0 0.5px 0 rgb(255 255 255 / 0.9);
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  z-index: 4;
 }
 
 /* ---- The message field ---- */

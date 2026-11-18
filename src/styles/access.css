@@ -139,8 +139,6 @@
   .menu__item:focus-visible,
   .composer__app:hover,
   .composer__app:focus-visible,
-  .chat-why__act:hover,
-  .chat-why__act:focus-visible,
   .tile-menu__option:hover,
   .tile-menu__option:focus-visible,
   .tile-menu__option[aria-pressed='true'] {
@@ -260,8 +258,6 @@
   .menu__item:not([aria-disabled='true']):focus-visible *,
   .composer__app:hover *,
   .composer__app:focus-visible *,
-  .chat-why__act:hover *,
-  .chat-why__act:focus-visible *,
   .conv[data-selected] :not(.ss-avatar, .ss-avatar *, .shrug-avatar, .shrug-avatar *),
   .side-item[aria-current] *,
   .chip[aria-pressed='true'] *,
@@ -391,13 +387,7 @@
     background-color: CanvasText;
   }
 
-  .chat-failed::after {
-    outline: 1px solid CanvasText;
-  }
-
-  /* Why a message did not go: the choices under the words are parted from them by a line,
-     and on the iPhone, where it is an alert, the alert is a sheet with an edge */
-  .chat-why__acts,
+  /* An alert on the iPhone: its choices are parted from its words by a line, and it is a sheet with an edge */
   .msg-alert__act {
     border-top: 1px solid CanvasText;
   }
@@ -436,6 +426,7 @@
   }
 
   .ss-notification,
+  .ph .sb-note.ss-notification,
   .ss-lock__control,
   .ph .sb-stack[data-more]::before,
   .ph .sb-stack[data-more='2']::after,
@@ -450,7 +441,14 @@
   .ph .spot-field__clear,
   .ph .spot-glyph,
   .ph .spot-away {
+    /* (Their glass is a gradient: the picture goes, and the ground is the system's) */
+    background-image: none;
     background-color: Canvas;
+  }
+
+  /* The strips the browser's bars are coloured from are a picture of the edge they are on: left as they are */
+  .ph-edge {
+    forced-color-adjust: none;
   }
 
   /* What is new, counted on an icon */
@@ -562,8 +560,6 @@
   }
 
   .ph .ios-button[data-prominent],
-  .ph .ios-tabs__item[aria-current='page'],
-  .ph .ios-segments__item[aria-checked='true'],
   .ph .ios-menu__list .ios-menu__item:is(:hover, :focus-visible, :active),
   .ph .msg-row.ss-row[data-picked],
   .ph .msg-field__send[data-ready],
@@ -574,15 +570,9 @@
   }
 
   .ph .ios-button[data-prominent] *,
-  .ph .ios-tabs__item[aria-current='page'] *,
-  .ph .ios-segments__item[aria-checked='true'] *,
   .ph .ios-menu__list .ios-menu__item:is(:hover, :focus-visible, :active) *,
   .ph .msg-row.ss-row[data-picked] :not(.ss-avatar, .ss-avatar *, .shrug-avatar, .shrug-avatar *) {
     color: HighlightText !important;
-  }
-
-  .ph .ios-segments__thumb {
-    background-color: Highlight;
   }
 
   .ph .ios-button[aria-disabled='true'],
@@ -595,7 +585,6 @@
     opacity: 1;
   }
 
-  .ios-segments,
   .ios-search__clear,
   .msg-field__send,
   .notes-name,
@@ -606,8 +595,21 @@
     outline: 1px solid ButtonText;
   }
 
-  .files-open {
+  .wallet-visit {
     outline: 1px solid LinkText;
+  }
+
+  /* The Wallet's cards are told apart by colour, which is gone: each keeps an edge, and is the page's
+     own ground, so that what is written on it is written in the page's ink */
+  .ph .wallet-card {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    color: CanvasText;
+  }
+
+  .ph :is(.wallet-card__toggle, .wallet-co):focus-visible {
+    outline-color: Highlight;
   }
 
   /* Lists: a grouped list is a card with an edge, its rows parted by lines. So is a sheet,
@@ -615,11 +617,9 @@
   .ios-section__rows,
   .ios-sheet__panel,
   .ph .ios-sheet .ios-sheet__panel:focus-visible,
-  .settings-hero,
-  .settings-tile,
   .notes-tile__page,
   .msg-card__tag,
-  .files-dot {
+  .wallet-dot {
     outline: 1px solid CanvasText;
   }
 
@@ -633,8 +633,7 @@
 
   .ph .ios-cell + .ios-cell::before,
   .ph .msg-row::after,
-  .ph .files-side__rows > li + li > .files-place::before,
-  .ph .files-rows > li + li > .files-row::before,
+  .ph .wallet-rows > li + li > .wallet-row::before,
   .ph .ios-sheet__grabber,
   .ph .msg-field__caret {
     background-color: CanvasText;
@@ -666,10 +665,17 @@
   /* VIP: a tile with no picture yet still has its place. The line is on what
      fills the tile, since anything the tile drew itself would be under it */
   .photos-pic__slot,
-  .photos-album__cover,
   .photos-thumb,
   .photos-big {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
+  }
+}
+
+/* A notification on the desktop: its glass is taken away in forced colours, so it has an edge */
+@media (forced-colors: active) {
+  .notify__card,
+  .notify__close {
+    border: 1px solid CanvasText;
   }
 }

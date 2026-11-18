@@ -4,7 +4,7 @@ import { FAQS } from '../data/faqs'
 import { prefersReducedMotion } from '../os/dom'
 import { focusFirst, focusLost } from '../os/focus'
 import { useStore } from '../os/store'
-import { companySheet, FAQS_FOLDER, noteView, PORTFOLIO_FOLDER } from './apps/routes'
+import { cardsFor, companySheet, FAQS_FOLDER, noteView } from './apps/routes'
 import { closeSheet, launchAt, openSheet, sys } from './system'
 import { scaleOf } from './ui'
 import '../styles/phone/folder.css'
@@ -15,7 +15,7 @@ import '../styles/phone/folder.css'
 // piece of glass with everything in it. Portfolio holds the companies, each
 // under its logo the way a folder holds apps, nine to a page; FAQs holds the
 // questions, as the titles of the notes they are. Picking one opens it in its
-// app: a company in Files, a question in Notes.
+// app: a company in Wallet, a question in Notes.
 //
 // An open folder is a step in the phone's history like any other place (it is
 // kept as the sheet over the Home Screen), so the browser's back closes it.
@@ -83,7 +83,7 @@ export function OpenFolder() {
 
   useEffect(() => {
     if (!shown?.closing) return
-    const t = setTimeout(() => setShown((s) => (s?.closing ? null : s)), 420)
+    const t = setTimeout(() => setShown((s) => (s?.closing ? null : s)), 360)
     return () => clearTimeout(t)
   }, [shown])
 
@@ -193,8 +193,8 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
                 {PAGES.map((companies, i) => (
                   <div key={i} className="sb-open__page" role="group" aria-label={`Page ${i + 1} of ${PAGES.length}`} {...(i === page ? null : ({ inert: '' } as object))}>
                     {companies.map((c) => (
-                      // A company opens in Files, out of its icon here, as an app opens out of a folder
-                      <button key={c.key} type="button" className="sb-open__app" onClick={() => launchAt('finder', [PORTFOLIO_FOLDER], `folder:${c.key}`, companySheet(c.key))}>
+                      // A company opens in Wallet, out of its icon here, as an app opens out of a folder
+                      <button key={c.key} type="button" className="sb-open__app" onClick={() => launchAt('finder', cardsFor(c.key), `folder:${c.key}`, companySheet(c.key))}>
                         <span className="sb-open__icon" data-origin={`folder:${c.key}`}>
                           <CompanyLogo company={c} size={60} />
                         </span>

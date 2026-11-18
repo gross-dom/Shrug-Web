@@ -1,17 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react'
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Images, Play, Video, X } from 'lucide-react'
-import { arrived, DROPS, hasFile, hueOf, MEDIA, type MediaSlot } from '../data/drops'
+import { ChevronLeft, ChevronRight, Image as ImageIcon, Play, Video, X } from 'lucide-react'
+import { arrived, hasFile, hueOf, MEDIA, type MediaSlot } from '../data/drops'
 import { DRAFT } from '../data/site'
 import { Segmented } from '../kit/controls/Segmented'
 import { Window } from '../kit/window'
 import { focusFirst } from '../os/focus'
 import { useStore } from '../os/store'
-import { lookAt, photos, setDrop, setMediaFilter, type MediaFilter } from './state'
-import { SideLabel } from './ui'
+import { lookAt, photos, setMediaFilter, type MediaFilter } from './state'
 
 // VIP as a photo library: photos and videos from the people who got a drop,
-// with each drop as an album down the sidebar. None of the media has been
-// supplied yet. Until a slot has its file a visitor is shown a quiet tile in
+// in one grid, with nothing to find one's way round but the choice of photos,
+// videos or both. None of the media has been supplied yet. Until a slot has its file a visitor is shown a quiet tile in
 // the drop's own colour, with its name on it, and nothing is counted that is
 // not there; with `?draft` in the address every empty slot is drawn as the
 // note that says what is missing, for whoever is filling them in. A tile that
@@ -22,8 +21,6 @@ const FILTERS: { id: MediaFilter; label: string }[] = [
   { id: 'photo', label: 'Photos' },
   { id: 'video', label: 'Videos' },
 ]
-
-const glyph = { size: 15, strokeWidth: 1.7 }
 
 /** What a photo or video is, for someone who is told it and not shown it. */
 const describe = (slot: MediaSlot) => `${slot.kind === 'video' ? 'Video' : 'Photo'} from ${slot.drop}${slot.from ? `, sent by ${slot.from}` : ''}`
@@ -85,42 +82,13 @@ function Tile({ slot, index }: { slot: MediaSlot; index: number }) {
  * than a nought), or for the editor every slot. */
 const counted = (slots: MediaSlot[]) => (DRAFT ? slots.length : slots.filter(hasFile).length || null)
 
-function Sidebar() {
-  const drop = useStore(photos, (s) => s.drop)
-  const row = (value: string | null, label: string, count: number | null, icon: JSX.Element) => (
-    <button key={label} type="button" className="side-item" aria-current={drop === value || undefined} onClick={() => setDrop(value)}>
-      <span className="side-item__icon">{icon}</span>
-      <span className="side-item__name">{label}</span>
-      {count !== null && <span className="side-item__count">{count}</span>}
-    </button>
-  )
-  return (
-    <nav className="side scrolls" aria-label="Drops">
-      <SideLabel>Library</SideLabel>
-      {/* How many drops there are, as About counts them: not how many tiles */}
-      {row(null, 'All Drops', DROPS.length, <Images {...glyph} aria-hidden />)}
-      <SideLabel>Drops</SideLabel>
-      {DROPS.map((name) =>
-        row(
-          name,
-          name,
-          counted(MEDIA.filter((m) => m.drop === name)),
-          <ImageIcon {...glyph} aria-hidden />,
-        ),
-      )}
-    </nav>
-  )
-}
-
-/** What the filters leave showing (each with its place in MEDIA), and how many of each kind the drop holds. */
+/** What the filter leaves showing (each with its place in MEDIA), and how many there are of each kind. */
 export function useMedia() {
-  const { filter, drop, look } = useStore(photos, (s) => s)
+  const { filter, look } = useStore(photos, (s) => s)
   const all = MEDIA.map((slot, index) => ({ slot, index }))
-  const inDrop = drop ? all.filter((m) => m.slot.drop === drop) : all
-  const shown = filter === 'all' ? inDrop : inDrop.filter((m) => m.slot.kind === filter)
-  const slots = inDrop.map((m) => m.slot)
-  const counts = { all: counted(slots), photo: counted(slots.filter((m) => m.kind === 'photo')), video: counted(slots.filter((m) => m.kind === 'video')) }
-  return { filter, drop, look, shown, counts }
+  const shown = filter === 'all' ? all : all.filter((m) => m.slot.kind === filter)
+  const counts = { all: counted(MEDIA), photo: counted(MEDIA.filter((m) => m.kind === 'photo')), video: counted(MEDIA.filter((m) => m.kind === 'video')) }
+  return { filter, look, shown, counts }
 }
 
 /** All, Photos or Videos: the kit's segmented control, made to really switch. */
@@ -161,7 +129,7 @@ export function MediaFilterControl() {
 
 /** The photos and videos showing, or a line saying there are none. */
 export function MediaGrid() {
-  const { filter, drop, shown } = useMedia()
+  const { filter, shown } = useMedia()
   const kind = filter === 'video' ? 'Videos' : 'Photos'
   return (
     <>
@@ -174,9 +142,7 @@ export function MediaGrid() {
         <div className="vip__none">
           {filter === 'video' ? <Video size={20} strokeWidth={1.6} aria-hidden /> : <ImageIcon size={20} strokeWidth={1.6} aria-hidden />}
           <b>No {kind}</b>
-          <span>
-            {kind} from {drop ? 'this drop' : 'the drops'} will show up here.
-          </span>
+          <span>{kind} from the drops will show up here.</span>
         </div>
       )}
     </>
@@ -246,7 +212,7 @@ function Look({ index, run }: { index: number; run: number[] }) {
 }
 
 export function PhotosApp() {
-  const { drop, look, shown } = useMedia()
+  const { look, shown } = useMedia()
   const browse = useRef<HTMLDivElement>(null)
   /** The window's body, which is what scrolls. */
   const scroller = () => browse.current?.parentElement ?? null
@@ -280,10 +246,7 @@ export function PhotosApp() {
   return (
     <Window
       className="app vip"
-      title={drop ?? 'All Drops'}
-      sidebar={<Sidebar />}
-      sidebarWidth={212}
-      sidebarStyle="floating"
+      title="VIP"
       lightsSize="large"
       barSize="tall"
       toolbar={<MediaFilterControl />}
@@ -304,17 +267,6 @@ export function PhotosApp() {
           left.current.top = scroller()?.scrollTop ?? 0
         }}
       >
-        {/* With the sidebar folded away, the drops ride along the top */}
-        <div className="vip__chips" role="group" aria-label="Drops">
-          <button type="button" className="chip" aria-pressed={drop === null} onClick={() => setDrop(null)}>
-            All Drops
-          </button>
-          {DROPS.map((name) => (
-            <button key={name} type="button" className="chip" aria-pressed={drop === name} onClick={() => setDrop(name)}>
-              {name}
-            </button>
-          ))}
-        </div>
         <div className="vip__head">
           <h2 className="vip__title">When the drops landed.</h2>
           <p className="vip__sub">{none ? 'From the people who got a drop. The first ones are on their way.' : 'Photos and videos from the people who got one.'}</p>

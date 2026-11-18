@@ -38,7 +38,7 @@ const size = (page, w, h) => page.setViewportSize({ width: w, height: h }).then(
   await t.page.screenshot({ path: path.join(OUT, '1-desk-to-phone.png') })
   await t.ctx.close()
 
-  // 2. Portfolio in front with a company picked -> the iPhone: Files, that company's sheet
+  // 2. Portfolio in front with a company picked -> the iPhone: Wallet, that company's sheet over its card
   t = await fresh('ipad-land')
   await t.page.click('.dock [data-dock-item][data-app="finder"], .dock__item[data-app="finder"]').catch(async () => {
     await t.page.click('.dock__item >> nth=0')
@@ -51,8 +51,8 @@ const size = (page, w, h) => page.setViewportSize({ width: w, height: h }).then(
   const picked = await t.page.evaluate(() => document.querySelector('.wf[data-app="finder"] [aria-selected="true"]')?.textContent?.trim().slice(0, 40) ?? null)
   await size(t.page, 600, 900)
   s = await A.state(t.page)
-  check('Portfolio in front -> iPhone: Files, unlocked', !s.locked && s.place?.app === 'finder', JSON.stringify({ s, picked }))
-  check('…with the company that was picked', !picked || (s.place?.sheet ?? '').startsWith('company:'), JSON.stringify({ sheet: s.place?.sheet, picked }))
+  check('Portfolio in front -> iPhone: Wallet, unlocked', !s.locked && s.place?.app === 'finder', JSON.stringify({ s, picked }))
+  check('…with the company that was picked, over the card of its vertical', !picked || ((s.place?.sheet ?? '').startsWith('company:') && /^v:\d+$/.test(s.place.stack.join())), JSON.stringify({ sheet: s.place?.sheet, stack: s.place?.stack, picked }))
   await t.page.screenshot({ path: path.join(OUT, '2-finder-to-phone.png') })
   // and back: the Portfolio window is in front
   await size(t.page, 1180, 820)
@@ -68,7 +68,7 @@ const size = (page, w, h) => page.setViewportSize({ width: w, height: h }).then(
   d = await desk(t.page)
   const question = await t.page.evaluate(() => document.querySelector('.wf[data-app="notes"] .faq__title')?.textContent ?? null)
   check('iPhone on a question -> desktop: FAQs in front', d.front === 'notes', JSON.stringify(d))
-  check('…on the same question', /What are drops/.test(question || ''), String(question))
+  check('…on the same question', /How do you do marketing/.test(question || ''), String(question))
   await t.page.screenshot({ path: path.join(OUT, '3-note-to-desk.png') })
   // back: still on the question, unlocked
   await size(t.page, 600, 900)

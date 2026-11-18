@@ -55,17 +55,14 @@ export type MediaFilter = 'all' | 'photo' | 'video'
 
 export interface PhotosState {
   filter: MediaFilter
-  /** Only this drop's photos and videos, or every drop. */
-  drop: string | null
   /** The photo or video opened large in the window, by its place in MEDIA; null while the grid is showing. */
   look: number | null
 }
 
-export const photos = createStore<PhotosState>({ filter: 'all', drop: null, look: null })
+export const photos = createStore<PhotosState>({ filter: 'all', look: null })
 
 // Changing what the grid shows goes back to the grid
 export const setMediaFilter = (filter: MediaFilter) => photos.set((s) => ({ ...s, filter, look: null }))
-export const setDrop = (drop: string | null) => photos.set((s) => ({ ...s, drop, look: null }))
 export const lookAt = (look: number | null) => photos.set((s) => (s.look === look ? s : { ...s, look }))
 
 // ---- FAQs (the notes window) ----
@@ -77,7 +74,7 @@ export const setNotesQuery = (query: string) => notes.set((s) => ({ ...s, query 
 
 // ---- Group chat (the messages window) ----
 
-/** A conversation: `group` is Shrug Family, where every reply is; any other is
+/** A conversation: `group` is the group chat (Testimonials), where every reply is; any other is
  * one of the easter eggs, by its id (src/data/eggs.ts). */
 export type Conversation = string
 

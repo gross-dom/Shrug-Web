@@ -1,18 +1,20 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useId, useMemo, useRef } from 'react'
 import { ArrowUpRight, ChevronDown, ChevronUp } from 'lucide-react'
-import { ANSWER_PENDING, ANSWER_PENDING_LINE, ANSWER_PLACEHOLDER, FAQS, waysOn } from '../data/faqs'
+import { ANSWER_PENDING, ANSWER_PENDING_LINE, ANSWER_PLACEHOLDER, answerOpening, answerWords, FAQS, waysOn } from '../data/faqs'
 import { DRAFT } from '../data/site'
 import { Row } from '../kit/parts/Row'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
+import { Answer } from './answer'
 import { notes, setNotesQuery, showNote, sought } from './state'
 import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 
-// The FAQs as a notes window: each question is a note. The questions are
-// real; the answers haven't been written. A visitor is told so, in a line
-// written for them, and given the way on (Shrug itself once there is an
-// address to write to, and the one-pager); the editor's view (`?draft`) shows
-// the slot the answer goes in, as the canvas drew it.
+// The FAQs as a notes window: each question is a note, and its answer is
+// Shrug's own (src/data/faqs.ts). Should a question be added before its answer
+// is written, a visitor is told so, in a line written for them, and given the
+// way on (Shrug itself once there is an address to write to, and the
+// one-pager); the editor's view (`?draft`) shows the slot the answer goes in,
+// as the canvas drew it.
 
 /** The editor's view: how long the stand-in preview line runs under a question with no answer yet. */
 const PREVIEW = [148, 132, 156, 120, 144, 136, 152]
@@ -21,10 +23,11 @@ export function NotesApp() {
   const note = useStore(notes, (s) => s.note)
   const query = useStore(notes, (s) => s.query)
   const q = query.trim().toLowerCase()
-  const shown = useMemo(() => FAQS.map((faq, i) => ({ faq, i })).filter(({ faq }) => !q || faq.question.toLowerCase().includes(q) || (faq.answer ?? '').toLowerCase().includes(q)), [q])
+  const shown = useMemo(() => FAQS.map((faq, i) => ({ faq, i })).filter(({ faq }) => !q || faq.question.toLowerCase().includes(q) || (faq.answer ? answerWords(faq.answer) : '').toLowerCase().includes(q)), [q])
   const current = FAQS[note]!
   const step = (by: number) => showNote((note + by + FAQS.length) % FAQS.length)
   const list = useRef<HTMLDivElement>(null)
+  const titleId = useId()
 
   // The window follows the search as it is typed: when the question that is open
   // is not among those found, the first of them is shown. (Only a change to
@@ -68,7 +71,7 @@ export function NotesApp() {
                 aria-current={i === note || undefined}
                 selected={i === note}
                 title={faq.question}
-                preview={faq.answer ?? (DRAFT ? [PREVIEW[i % PREVIEW.length]!] : ANSWER_PENDING_LINE)}
+                preview={faq.answer ? answerOpening(faq.answer) : DRAFT ? [PREVIEW[i % PREVIEW.length]!] : ANSWER_PENDING_LINE}
                 onClick={() => showNote(i)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -104,15 +107,19 @@ export function NotesApp() {
           </ToolSet>
         </span>
       }
-      body={{ className: 'faq__body scrolls' }}
+      // An answer is read, and with the questions in the sidebar there is nothing in it to press: the page
+      // itself takes the keyboard, so that a long answer can be scrolled with the arrows, Space and Page Down
+      body={{ className: 'faq__body scrolls', tabIndex: 0, role: 'group', 'aria-labelledby': titleId }}
     >
       <article className="faq__note" key={note}>
         <p className="faq__meta">
           Question {note + 1} of {FAQS.length}
         </p>
-        <h2 className="faq__title">{current.question}</h2>
+        <h2 id={titleId} className="faq__title">
+          {current.question}
+        </h2>
         {current.answer ? (
-          <p className="faq__answer">{current.answer}</p>
+          <Answer text={current.answer} className="faq__answer" />
         ) : DRAFT ? (
           <p className="faq__todo">{ANSWER_PLACEHOLDER}</p>
         ) : (

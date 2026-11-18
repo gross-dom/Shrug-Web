@@ -1,0 +1,595 @@
+/* Portfolio on the phone, as the Wallet app (src/phone/apps/Wallet.tsx): the
+   verticals as a stack of cards, the card that is out of it with its
+   companies, the pile the others wait in, search, and the sheet a company
+   opens as. The bars, lists and sheets are ios.css's; this is what is the
+   Wallet's own. Sizes are iOS points. */
+
+.wallet-app {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- The cards ---- */
+
+.wallet-screen {
+  /* A company's icon and the room its name has under it make a row of a card */
+  --logo: clamp(50px, 15.4cqw, 60px);
+  --cell: calc(var(--logo) + 35px);
+  --gap: 8px;
+  /* A card's heading, and the little below its last row */
+  --head: 50px;
+  --tail: 4px;
+  /* What shows of a card while the next lies over it: its heading and its first row of icons */
+  --strip: calc(var(--head) + var(--logo) + 12px);
+  /* How cards come and go: quick away, and a long time settling */
+  --deal: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* With a card out the page's own name gives way to it, and the page holds still under it */
+.wallet-screen :is(.ios-large, .ios-large-sub) {
+  transition: opacity 0.24s ease;
+}
+
+.wallet-screen--out :is(.ios-large, .ios-large-sub) {
+  opacity: 0;
+}
+
+.wallet-screen--out > .ios-screen__scroll {
+  overflow-y: hidden;
+}
+
+/* The stack is as tall as a strip for every card but the last, which lies on top and shows whole */
+.wallet-stack {
+  position: relative;
+  display: block;
+  width: calc(100% - 32px);
+  max-width: 420px;
+  height: calc((var(--cards) - 1) * var(--strip) + var(--head) + var(--last-rows) * (var(--cell) + var(--gap)) + var(--tail));
+  margin: 16px auto 8px;
+}
+
+.wallet-cards {
+  display: block;
+}
+
+/* Each card is placed by where it is in the list, a strip below the one before, and lies over it */
+.wallet-slot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: block;
+  transform: translateY(calc(var(--n) * var(--strip)));
+  transition: transform 0.44s var(--deal);
+  will-change: transform;
+}
+
+/* One is out: it goes to the top of the screen, under the bar, wherever the page had been scrolled to
+   (--scrolled, --origin and --view are measured as it comes out) */
+.wallet-slot[data-lying='out'] {
+  transform: translateY(calc(var(--scrolled) - var(--origin) + var(--status) + var(--bar) + 8px));
+}
+
+/* The first few of the others make a pile at the foot of the screen, each a little below the last… */
+.wallet-slot[data-lying='piled'] {
+  transform: translateY(calc(var(--scrolled) - var(--origin) + var(--view) - var(--home) - 52px + var(--slot) * 13px));
+  transition-delay: calc(var(--slot) * 14ms);
+}
+
+/* …and the rest go under the foot of it */
+.wallet-slot[data-lying='away'] {
+  transform: translateY(calc(var(--scrolled) - var(--origin) + var(--view) + 16px));
+  transition-delay: 42ms;
+}
+
+/* What shows of the pile is the tops of its cards. The one in front keeps its heading; the edges of
+   the two behind it are only their colours, and no card's icons are cut off by the foot of the screen */
+.wallet-card__toggle,
+.wallet-card__in {
+  transition: opacity 0.3s ease;
+}
+
+.wallet-slot[data-lying='piled']:not([data-front]) .wallet-card__toggle,
+.wallet-slot:is([data-lying='piled'], [data-lying='away']) .wallet-card__in {
+  opacity: 0;
+}
+
+.wallet-card {
+  /* Every row it has, under its heading */
+  --full: calc(var(--head) + var(--rows) * (var(--cell) + var(--gap)) + var(--tail));
+  position: relative;
+  display: block;
+  box-sizing: border-box;
+  /* In the stack, a strip and what the next card's corners leave showing of it */
+  height: calc(var(--strip) + 24px);
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--from), var(--to));
+  color: #fff;
+  /* The light along its top edge, and the shade it throws up onto the card it lies over */
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.38),
+    0 -2px 9px rgb(0 0 0 / 0.14);
+  transition:
+    height 0.44s var(--deal),
+    box-shadow 0.3s ease;
+}
+
+/* The card on top of the stack shows whole, and so does the one that is out */
+.wallet-slot:last-child > .wallet-card,
+.wallet-slot[data-lying='out'] > .wallet-card {
+  height: var(--full);
+}
+
+/* Out of the stack it lies on the page: on a screen too short for all of it, it scrolls inside itself */
+.wallet-slot[data-lying='out'] > .wallet-card {
+  max-height: calc(var(--view) - var(--status) - var(--bar) - var(--home) - 92px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.38),
+    0 10px 28px rgb(0 0 0 / 0.16);
+}
+
+.wallet-slot[data-lying='out'] > .wallet-card::-webkit-scrollbar {
+  display: none;
+}
+
+.wallet-card__head {
+  display: block;
+  margin: 0;
+}
+
+.wallet-card__toggle {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  height: var(--head);
+  padding: 2px 16px 0 18px;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* In the stack the whole of a card is the button that brings it out: its icons are for looking at */
+.wallet-slot:not([data-lying='out']) .wallet-card__toggle::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  content: '';
+}
+
+.wallet-card__toggle:focus-visible {
+  outline: 2.5px solid #fff;
+  outline-offset: -5px;
+  border-radius: 14px;
+}
+
+.wallet-card__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 24px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* How many it holds, set as a pass sets a field: what it is, small, over what it says */
+.wallet-card__count {
+  flex: none;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 19px;
+  text-align: right;
+}
+
+.wallet-card__count > span:first-child {
+  display: grid;
+  justify-items: end;
+}
+
+.wallet-card__label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  line-height: 12px;
+  text-transform: uppercase;
+}
+
+/* Its companies, four to a row */
+.wallet-card__in {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  row-gap: var(--gap);
+  margin: 0;
+  padding: 0 8px var(--tail);
+}
+
+.wallet-card__in > li {
+  display: block;
+  min-width: 0;
+}
+
+.wallet-co {
+  display: grid;
+  box-sizing: border-box;
+  align-content: start;
+  justify-items: center;
+  width: 100%;
+  height: var(--cell);
+  border-radius: 14px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.wallet-co:focus-visible {
+  outline: 2.5px solid #fff;
+  outline-offset: 1px;
+}
+
+/* A company's logo, as an app's icon: the size the card gives it, whatever it was drawn at */
+.wallet-co > .logo {
+  width: var(--logo) !important;
+  height: var(--logo) !important;
+  font-size: calc(var(--logo) * 0.42) !important;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.2),
+    0 4px 10px rgb(0 0 0 / 0.14);
+  transition: filter 0.2s ease;
+}
+
+/* Pressed, an icon darkens, as one does on the Home Screen */
+.wallet-co:active > .logo {
+  filter: brightness(0.78);
+  transition: none;
+}
+
+.wallet-co__name {
+  display: -webkit-box;
+  max-width: 100%;
+  margin-top: 5px;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  line-height: 15px;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* In the stack a card shows its icons and not their names, which the next card would cut through: the
+   names come up as the card comes out. The card on top of the stack shows whole, names and all */
+.wallet-co__name,
+.wallet-co__where {
+  transition: opacity 0.3s ease;
+}
+
+.wallet-slot:not([data-lying='out'], :last-child) :is(.wallet-co__name, .wallet-co__where) {
+  opacity: 0;
+}
+
+/* Two companies of one name: the line under each is its address, and its name keeps to one line */
+.wallet-co__where {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10.5px;
+  letter-spacing: 0;
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.wallet-co:has(.wallet-co__where) > .wallet-co__name {
+  -webkit-line-clamp: 1;
+}
+
+/* The pile is one button, as wide as the screen: over the cards in it, down to the foot */
+.wallet-pile {
+  position: absolute;
+  top: calc(var(--scrolled) - var(--origin) + var(--view) - var(--home) - 58px);
+  right: -16px;
+  left: -16px;
+  z-index: 2;
+  display: block;
+  height: calc(var(--home) + 58px);
+  cursor: pointer;
+}
+
+.wallet-pile:focus-visible {
+  outline-offset: -4px;
+  border-radius: 18px;
+}
+
+/* A move the browser made (its own Back), or one nothing is drawn for: the cards are simply where they go */
+.ios-nav[data-snap] :is(.wallet-slot, .wallet-card, .wallet-card__toggle, .wallet-card__in, .wallet-co__name, .wallet-co__where, .ios-large, .ios-large-sub) {
+  transition: none;
+}
+
+/* ---- Search ---- */
+
+/* The field takes the bar's whole width, with the way out of it beside it */
+.wallet-search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  /* It grows out of the corner search was asked for in */
+  transform-origin: 100% 50%;
+  animation: wallet-search-in 0.32s var(--ui);
+}
+
+.wallet-search > .ios-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+}
+
+@keyframes wallet-search-in {
+  from {
+    opacity: 0;
+    transform: scaleX(0.86);
+  }
+}
+
+/* What it finds: a small icon, the name, and the vertical in gray; hairlines from where the words start */
+.ios-large + .wallet-rows {
+  margin-top: 2px;
+}
+
+.wallet-rows {
+  display: block;
+}
+
+.wallet-rows > li {
+  display: block;
+}
+
+.wallet-row {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 16px 8px 20px;
+  text-align: left;
+}
+
+.wallet-rows > li + li > .wallet-row::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 72px;
+  height: 0.5px;
+  background: var(--sep);
+  content: '';
+}
+
+.wallet-row:active {
+  background: var(--fill);
+}
+
+/* A row that runs to the screen's edges keeps its focus ring inside itself, where it can be seen */
+.wallet-row:focus-visible {
+  outline-offset: -3px;
+}
+
+.wallet-row__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.wallet-row__name {
+  overflow: hidden;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.wallet-row__where {
+  overflow: hidden;
+  color: var(--label-2);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  line-height: 17px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* How many were found, under them */
+.wallet-count {
+  display: block;
+  margin: 22px 20px 2px;
+  color: var(--label-2);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* A search with nothing to show says so in the middle of what is left of the page */
+.wallet-screen--void > .ios-screen__scroll {
+  display: flex;
+  flex-direction: column;
+}
+
+.wallet-screen--void .ios-empty {
+  flex: 1;
+  align-content: center;
+  padding-top: 0;
+  padding-bottom: 56px;
+}
+
+/* ---- A company ---- */
+
+.wallet-sheet .ios-sheet__body {
+  padding-bottom: calc(var(--home) + 20px);
+}
+
+.wallet-sheet .ios-empty {
+  padding-top: 96px;
+}
+
+.wallet-company {
+  display: grid;
+  justify-items: center;
+  padding: 18px 24px 0;
+  text-align: center;
+}
+
+/* Its icon, large, lying on the sheet */
+.wallet-company > .logo {
+  margin-bottom: 20px;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 12px 32px rgb(0 0 0 / 0.1);
+}
+
+.wallet-company__name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  line-height: 34px;
+  overflow-wrap: anywhere;
+}
+
+.wallet-company__kind {
+  margin-top: 3px;
+  color: var(--label-2);
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+}
+
+.wallet-company__blurb {
+  max-width: 32ch;
+  margin-top: 14px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  text-wrap: balance;
+}
+
+/* The one thing to do with it */
+.wallet-visit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 50px;
+  margin-top: 22px;
+  padding: 0 26px;
+  border-radius: 25px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition: opacity 0.15s ease;
+}
+
+.wallet-visit:active {
+  opacity: 0.6;
+  transition: none;
+}
+
+/* A company with no site to visit: the line that stands where the button would be */
+.wallet-fate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 44px;
+  margin-top: 22px;
+  padding: 10px 22px;
+  border-radius: 22px;
+  background: var(--fill, rgb(120 120 128 / 0.12));
+  color: var(--label-2);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 21px;
+  text-wrap: balance;
+}
+
+/* What is known about it. On a white sheet the group is the gray; what a row
+   is is written in gray and what it says in ink */
+.wallet-info {
+  padding-top: 30px;
+}
+
+.wallet-info .ios-section__header {
+  margin: 0 4px 10px;
+  color: var(--label);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 25px;
+}
+
+.wallet-info .ios-section__rows {
+  background: var(--grouped);
+}
+
+.wallet-info .ios-cell__title {
+  color: var(--label-2);
+}
+
+.wallet-info .ios-cell__text {
+  flex: none;
+}
+
+.wallet-info .ios-cell__value {
+  flex: 1;
+  max-width: none;
+  color: var(--label);
+  text-align: right;
+}
+
+/* Its vertical, with the colour of the card it is on */
+.wallet-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+.wallet-dot {
+  display: block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-slot,
+  .wallet-card,
+  .wallet-card__toggle,
+  .wallet-card__in,
+  .wallet-co__name,
+  .wallet-co__where,
+  .wallet-visit,
+  .wallet-co > .logo,
+  .wallet-screen :is(.ios-large, .ios-large-sub) {
+    transition: none;
+  }
+
+  .wallet-search {
+    animation: none;
+  }
+}

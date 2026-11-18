@@ -1,11 +1,11 @@
-import { finder, inbox, notes, openConversation, photos, pickCompany, setDrop, showNote } from '../apps/state'
+import { finder, inbox, notes, openConversation, pickCompany, showNote } from '../apps/state'
 import { COMPANIES } from '../data/portfolio'
 import { FAQS } from '../data/faqs'
-import { companySheet, conversationView, FAQS_FOLDER, noteView, PORTFOLIO_FOLDER } from '../phone/apps/routes'
-import { arriveIn, sys, topOf, unlock } from '../phone/system'
+import { cardsFor, companySheet, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
+import { arriveIn, onPhone, sys, topOf, unlock } from '../phone/system'
 import { APP_IDS } from './apps'
 import { dockPoint } from './dom'
-import { atCompany, atConversation, atDrop, atQuestion, companyAt, conversationAt, dropAt, questionAt, type Spot } from './place'
+import { atCompany, atConversation, atQuestion, companyAt, conversationAt, questionAt, type Spot } from './place'
 import { activeApp, openApp, wm } from './wm'
 
 // The site changes layout under a visit that is already going: a tablet is
@@ -20,7 +20,7 @@ function fromDesk(app: (typeof APP_IDS)[number]): { stack?: string[]; sheet?: st
   if (app === 'notes') return { stack: [FAQS_FOLDER, noteView(notes.get().note)] }
   if (app === 'finder') {
     const { picked } = finder.get()
-    return { stack: [PORTFOLIO_FOLDER], sheet: picked ? companySheet(picked) : null }
+    return { stack: cardsFor(picked), sheet: picked ? companySheet(picked) : null }
   }
   return {}
 }
@@ -28,8 +28,9 @@ function fromDesk(app: (typeof APP_IDS)[number]): { stack?: string[]; sheet?: st
 /** Now the iPhone: its app is the window that was in front, at the same place. */
 function toPhone() {
   const front = activeApp(wm.get())
-  // No window in front: the Home Screen. The same app already open on the phone: as the phone left it
-  if (!front || sys.get().app === front) return unlock()
+  // No window in front, or one the phone has no app for (About Shrug): the Home Screen. The same app
+  // already open on the phone: as the phone left it
+  if (!front || !onPhone(front) || sys.get().app === front) return unlock()
   const { stack, sheet } = fromDesk(front)
   arriveIn(front, stack, sheet ?? null)
 }
@@ -70,7 +71,6 @@ export function spotOfDesk(): Spot | null {
   if (front === 'finder') return { app: front, at: atCompany(finder.get().picked) }
   // The FAQs window always shows a question; the first is where it opens anyway
   if (front === 'notes') return { app: front, at: notes.get().note > 0 ? atQuestion(notes.get().note) : null }
-  if (front === 'photos') return { app: front, at: atDrop(photos.get().drop) }
   return { app: front, at: null }
 }
 
@@ -79,7 +79,6 @@ export function showOnDesk(spot: Spot) {
   if (spot.app === 'messages') openConversation(conversationAt(spot.at) ?? 'group')
   if (spot.app === 'finder' && companyAt(spot.at)) pickCompany(companyAt(spot.at))
   if (spot.app === 'notes' && questionAt(spot.at) !== null) showNote(questionAt(spot.at)!)
-  if (spot.app === 'photos' && dropAt(spot.at)) setDrop(dropAt(spot.at))
 }
 
 /** The layout has just changed to the iPhone (`compact`) or to the desktop. */

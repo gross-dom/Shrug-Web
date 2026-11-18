@@ -6,7 +6,7 @@ import { ALIASES, APP_IDS, type AppId } from '../os/apps'
 import { dockPoint } from '../os/dom'
 import { createStore, useStore } from '../os/store'
 import { openApp, wm } from '../os/wm'
-import { launch } from '../phone/system'
+import { launchApp } from '../os/launch'
 
 // Case studies, in a terminal. They're private: listing them works, reading
 // one is refused, and the shell asks whether to request access. It never asks
@@ -80,7 +80,7 @@ function yes(): Line[] {
   return [{ kind: 'ok', text: way.kind === 'email' ? 'ok. over to your mail app.' : 'ok. over to your messages.' }, wayOn(), ...publicOnes('meanwhile, ')]
 }
 
-const no = (question: string): Line[] => [out(`ok. they’ll be here. ${SITE.mark}`), { kind: 'ask', text: question }]
+const no = (question: string): Line[] => [out('ok. they’ll be here.'), { kind: 'ask', text: question }]
 
 /** The apps `open` knows, by the names a person would try. */
 const OPENS: Record<string, AppId> = { ...Object.fromEntries(APP_IDS.map((id) => [id, id])), ...ALIASES, about: 'about' }
@@ -162,7 +162,7 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
     case 'cd':
       return { lines: [out('there’s nowhere else to go. it’s all in here.')] }
     case 'sudo':
-      return { lines: [{ kind: 'err', text: `nice try. ${SITE.mark}` }] }
+      return { lines: [{ kind: 'err', text: 'nice try.' }] }
     case 'echo':
       return { lines: [out(value.slice(4).trim())] }
     case 'clear':
@@ -175,15 +175,16 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
       return { lines: [out('hi.')] }
     case 'thanks':
     case 'thank':
+      return { lines: [out('any time.')] }
     case 'shrug':
-      return { lines: [out(SITE.mark)] }
+      return { lines: [out('that’s us.')] }
   }
   return { lines: [{ kind: 'err', text: `command not found: ${word}` }, { kind: 'dim', text: step === 'ask' ? 'y or n answers the question. help lists the rest.' : 'help lists what there is.' }] }
 }
 
 /** Opens an app from the shell: its window on the desktop, the app itself on the phone. */
 function openIt(app: AppId) {
-  if (wm.get().compact) launch(app)
+  if (wm.get().compact) launchApp(app)
   else openApp(app, dockPoint(app))
 }
 

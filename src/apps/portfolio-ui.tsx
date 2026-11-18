@@ -31,15 +31,18 @@ if (typeof window !== 'undefined') window.addEventListener('online', () => missi
 const noteMissing = (logo: string) => missing.set((gone) => (gone.has(logo) ? gone : new Set(gone).add(logo)))
 
 /** A company's logo as an app icon: its own mark on a rounded tile, or its
- * initial where no logo could be confirmed, or where the file did not arrive. */
-export function CompanyLogo({ company, size = 56 }: { company: Company; size?: number }) {
+ * initial where no logo could be confirmed, or where the file did not arrive.
+ * A logo is asked for when it comes into sight; `eager` asks for it at once,
+ * for one that is kept out of sight until it is wanted all of a sudden (a card
+ * of the Wallet shows one row of its companies, and the rest as it comes out). */
+export function CompanyLogo({ company, size = 56, eager }: { company: Company; size?: number; eager?: boolean }) {
   const logo = company.logo
   const gone = useStore(missing, (s) => !!logo && s.has(logo))
   const shown = logo && !gone
   return (
     <span className="logo" data-empty={shown ? undefined : ''} style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }} aria-hidden>
       {shown ? (
-        <img src={`${import.meta.env.BASE_URL}logos/${logo}`} width={size} height={size} alt="" loading="lazy" decoding="async" draggable={false} onError={() => noteMissing(logo)} />
+        <img src={`${import.meta.env.BASE_URL}logos/${logo}`} width={size} height={size} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => noteMissing(logo)} />
       ) : (
         company.name.trim()[0]?.toUpperCase()
       )}

@@ -105,7 +105,7 @@ exports.unlock = async (page) => {
 }
 
 /** Goes to a place on the iPhone through history, which the phone follows: at(page, 'notes', ['f:faqs', 'n:2']),
- * at(page, 'finder', ['f:all'], 'company:Varda'), at(page, null, [], 'folder:portfolio') (Home Screen, folder open),
+ * at(page, 'finder', ['v:0'], 'company:Varda') (a company over its card), at(page, null, [], 'folder:portfolio') (Home Screen, folder open),
  * at(page, null, []) (Home Screen). Drawn without motion. */
 exports.at = async (page, app, stack = [], sheet = null, wait = 900) => {
   await page.evaluate(([app, stack, sheet]) => {
@@ -135,35 +135,19 @@ exports.PHONE_SCREENS = [
   ['messages', 'messages', []],
   ['messages-group', 'messages', ['c:group']],
   ['messages-details', 'messages', ['c:group'], 'details'],
-  ['messages-egg', 'messages', ['c:mom']],
-  ['files-portfolio', 'finder', ['f:all']],
-  ['files-company', 'finder', ['f:all'], 'company:Varda'],
-  ['files-root', 'finder', []],
-  ['files-tag', 'finder', ['f:4']],
-  ['files-deleted', 'finder', ['f:deleted']],
+  ['messages-egg', 'messages', ['c:founder']],
+  ['wallet-cards', 'finder', []],
+  ['wallet-card', 'finder', ['v:4']],
+  ['wallet-company', 'finder', ['v:0'], 'company:Varda'],
   ['notes-faqs', 'notes', ['f:faqs']],
   ['notes-note', 'notes', ['f:faqs', 'n:0']],
   ['notes-folders', 'notes', []],
   ['notes-newfolder', 'notes', [], 'new-folder'],
   ['notes-own', 'notes', ['f:notes']],
   ['vip-library', 'photos', []],
-  ['vip-album', 'photos', ['a:Billboards']],
   ['vip-viewer', 'photos', ['m:0']],
   ['vip-info', 'photos', ['m:0'], 'info'],
-  ['vip-albums', 'photos', ['albums']],
-  ['vip-videos', 'photos', ['videos']],
-  ['vip-favorites', 'photos', ['favorites']],
   ['terminal', 'terminal', []],
-  ['settings', 'about', []],
-  ['settings-account', 'about', ['account']],
-  ['settings-general', 'about', ['general']],
-  ['settings-about', 'about', ['general', 'about']],
-  ['settings-notifications', 'about', ['notifications']],
-  ['settings-previews', 'about', ['notifications', 'previews']],
-  ['settings-display', 'about', ['display']],
-  ['settings-autolock', 'about', ['display', 'autolock']],
-  ['settings-sounds', 'about', ['sounds']],
-  ['settings-privacy', 'about', ['privacy']],
 ]
 
 /** A picture, saved under audit/shots. Returns its path. */

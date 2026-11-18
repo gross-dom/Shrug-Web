@@ -1,18 +1,29 @@
 // Draws the icons a phone uses for the site when it is added to a Home Screen:
-// Shrug's face on its dark tile, square and full to the edges (the phone rounds
-// the corners itself). Needs Playwright.
-// And the icon a browser asks for by name when it will not take the SVG one: the
-// same face on its rounded tile, at three sizes in one favicon.ico.
-//   node tools/icons.cjs      (writes public/apple-touch-icon.png, icon-192.png, icon-512.png, favicon.ico)
+// Shrug's logo, the s in white on its black tile, square and full to the edges
+// (the phone rounds the corners itself). Needs Playwright.
+// And the tab's icon: public/favicon.svg, the same tile with its corners
+// rounded, and the pictures of it a browser asks for by name when it will not
+// take the SVG one, at three sizes in one favicon.ico.
+//   node tools/icons.cjs      (writes public/apple-touch-icon.png, icon-192.png, icon-512.png, favicon.svg, favicon.ico)
 const fs = require('fs')
 const { chromium } = require('playwright')
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3a40"/><stop offset="1" stop-color="#0c0c0e"/></linearGradient></defs>
-  <rect width="100" height="100" fill="url(#bg)"/>
-  <g fill="none" stroke="#fff" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M28 36.500l5.600 11"/><path d="M42.500 32.500l5.500 11"/><path d="M70.500 32.500c-1.200 15.600-11.200 25.600-28.700 28.800"/>
+// The one drawing of the logo (src/data/logo.ts): the s, and how it sits on its tile
+const logo = fs.readFileSync('src/data/logo.ts', 'utf8')
+const S = /export const S = '([^']+)'/.exec(logo)[1]
+const ON_TILE = /export const ON_TILE = '([^']+)'/.exec(logo)[1]
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" fill="#000"/><path fill="#fff" transform="${ON_TILE}" d="${S}"/></svg>`
+fs.writeFileSync(
+  'public/favicon.svg',
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <clipPath id="tile"><rect width="180" height="180" rx="40"/></clipPath>
+  <g clip-path="url(#tile)">
+    <rect width="180" height="180" fill="#000"/>
+    <path fill="#fff" transform="${ON_TILE}" d="${S}"/>
   </g>
-</svg>`
+</svg>
+`,
+)
+console.log('wrote public/favicon.svg')
 ;(async () => {
   const browser = await chromium.launch()
   for (const [file, size] of [['apple-touch-icon.png', 180], ['icon-192.png', 192], ['icon-512.png', 512]]) {

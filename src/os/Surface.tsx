@@ -13,6 +13,7 @@ import { dockPoint } from './dom'
 import { focusFirst } from './focus'
 import { DocumentIcon, FolderIcon } from './icons'
 import { MenuBar } from './MenuBar'
+import { Notifications } from './Notifications'
 import { saver } from './saver'
 import { ScreenSaver } from './ScreenSaver'
 import { useStore } from './store'
@@ -211,6 +212,7 @@ export default function Surface() {
             )
           })}
         </main>
+        <Notifications />
         <Dock />
       </div>
       <ScreenSaver />

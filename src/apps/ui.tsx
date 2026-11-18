@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { Search, X } from 'lucide-react'
-import { Face } from '../os/icons'
+import { LogoDisc } from '../os/icons'
 
 // Parts the app windows share: the glass toolbar buttons of a current macOS
 // window (a capsule with its label under it), a real search field in the
@@ -111,11 +111,11 @@ export function SearchField({ value, onChange, placeholder = 'Search', label, on
   )
 }
 
-/** Shrug in a conversation: the face from the shrug on a black disc. */
+/** Shrug in a conversation: the logo in a black disc. */
 export function ShrugAvatar({ size = 28 }: { size?: number }) {
   return (
     <span className="shrug-avatar" style={{ width: size, height: size }} aria-hidden>
-      <Face size={Math.round(size * 0.62)} stroke={2.2} />
+      <LogoDisc size="100%" />
     </span>
   )
 }

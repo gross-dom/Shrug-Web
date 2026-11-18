@@ -71,7 +71,7 @@
   /* Results pass out of sight softly at both ends */
   -webkit-mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 22px), transparent);
   mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 22px), transparent);
-  animation: spot-rise 0.4s var(--glide) both;
+  animation: spot-rise 0.32s var(--glide) both;
 }
 
 .spot-scroll::-webkit-scrollbar {
@@ -97,7 +97,7 @@
   align-items: center;
   gap: 10px;
   /* It grows out of the Home Screen's Search pill */
-  animation: spot-grow 0.42s var(--glide) both;
+  animation: spot-grow 0.34s var(--glide) both;
   transition: bottom 0.3s var(--glide);
 }
 

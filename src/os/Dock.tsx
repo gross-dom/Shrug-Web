@@ -95,7 +95,7 @@ export function Dock() {
             <span className="dock__icon">
               <AppIcon id={id} />
               {id === 'messages' && unread > 0 && (
-                <span className="dock__badge" aria-hidden>
+                <span className="dock__badge" data-digits={String(unread).length} aria-hidden>
                   {unread}
                 </span>
               )}

@@ -1,6 +1,7 @@
-// Fixer I: every fix in the iPhone's shared parts (screens, bars, sheets, menus), Settings and the desktop's About.
+// Fixer I: every fix in the iPhone's shared parts (screens, bars, sheets, menus), what the phone does now that it has
+// no Settings app, and the desktop's About.
 //   node ios-parts.cjs [base] [only]        base defaults to the dev server; exits 1 if anything fails
-//   only: touch | keys | settings | about (one group of checks)
+//   only: touch | keys | replies | about (one group of checks)
 const A = require('./lib.cjs')
 const BASE = process.argv[2] || process.env.BASE || 'http://127.0.0.1:5173/'
 const only = process.argv[3]
@@ -19,13 +20,32 @@ const where = (page) =>
 
 ;(async () => {
   const browser = await A.launch()
-  // `quiet`: no banners (they drop over the top bar, where some of these checks press), by the visitor's own kept setting
+  const PAUSE = '.sb-slot[data-front] .ios-sheet .ios-switch[aria-label="Pause Replies"]'
+  // `quiet`: no banners (they drop over the top bar, where some of these checks press). The phone has no Settings to
+  // turn them off in, so it is done the way a visitor can: Pause Replies, in the conversation's details
   const fresh = async (device, query = 'still', opts = {}) => {
     const t = await A.open(browser, { device, dpr: 1, base: BASE, query, ...opts, goto: false })
-    if (opts.quiet) await t.page.addInitScript(() => { try { localStorage.setItem('shrug:settings', JSON.stringify({ notifications: false })) } catch {} })
     await t.page.goto(BASE + (query ? '?' + query : ''), { waitUntil: 'load', timeout: 90000 })
     await A.unlock(t.page)
+    if (opts.quiet) {
+      await A.at(t.page, 'messages', ['c:group'], 'details', 900)
+      // a click, which a finger makes too: one of these runs has a keyboard and no touch screen
+      await t.page.locator(PAUSE).click()
+      await t.sleep(300)
+      if ((await t.page.locator(PAUSE).getAttribute('aria-checked')) !== 'true') throw new Error('could not pause the replies')
+      await A.at(t.page, null, [], null, 700)
+      // a banner that was already down goes back up by itself
+      await t.page.waitForFunction(() => !document.querySelector('.sb-banner'), null, { timeout: 12000 }).catch(() => {})
+    }
     return t
+  }
+  /** The Wallet's search, up over its cards, with `query` typed into it. */
+  const walletSearch = async (t, query) => {
+    await A.at(t.page, 'finder', [], null, 800)
+    if (!(await t.page.$(`${TOP} .ios-search__input`))) await t.page.locator(`${TOP} .ios-bar button[aria-label="Search"]`).click()
+    await t.sleep(400)
+    await t.page.locator(`${TOP} .ios-search__input`).fill(query)
+    await t.sleep(400)
   }
   const swipe = async (t, x, y0, y1, steps = 12) => {
     await t.cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] })
@@ -42,8 +62,9 @@ const where = (page) =>
     let t = await fresh('iphone', 'still', { quiet: true })
     let { page } = t
 
-    // PH-8: the fade above a foot bar takes no touches
-    await A.at(page, 'finder', ['f:all'], null, 800)
+    // PH-8: the fade above a foot bar takes no touches (the Wallet's search, with most of the portfolio listed under it)
+    await walletSearch(t, 'a')
+    await page.evaluate(() => document.activeElement?.blur())
     const edge = await page.evaluate((TOP) => {
       const e = document.querySelector(`${TOP} .ios-foot__edge`).getBoundingClientRect()
       return { top: e.top, pe: getComputedStyle(document.querySelector(`${TOP} .ios-foot__edge`)).pointerEvents }
@@ -58,7 +79,7 @@ const where = (page) =>
       const bar = [...document.querySelectorAll(`${TOP} .ios-foot > :not(.ios-foot__edge)`)].map((k) => k.getBoundingClientRect().top)
       // a company whose middle is in the fade, above the bar's own controls
       const y = fade.top + 12
-      const r = [...sc.querySelectorAll('button.files-item')].find((b) => { const q = b.getBoundingClientRect(); return q.top < y && q.bottom > y && q.left < 80 })
+      const r = [...sc.querySelectorAll('button.wallet-row')].find((b) => { const q = b.getBoundingClientRect(); return q.top < y && q.bottom > y })
       if (!r) return null
       const b = r.getBoundingClientRect()
       return { x: b.left + Math.min(60, b.width / 2), y, label: r.textContent.trim().slice(0, 24), inFade: y > fade.top && y < Math.min(...bar) }
@@ -67,10 +88,9 @@ const where = (page) =>
     await t.sleep(900)
     let s = await A.state(page)
     check('PH-8 a row showing through the fade can be pressed', !!row && row.inFade && (s.place.sheet || '').startsWith('company:'), `${JSON.stringify(row)} -> ${s.place.sheet}`)
-    await A.at(page, 'finder', ['f:all'], null, 600)
 
     // PH-12: the clear button in a search bar takes a finger
-    await A.at(page, 'about', [], null, 800)
+    await walletSearch(t, '')
     await page.locator(`${TOP} .ios-search__input`).tap()
     await page.keyboard.type('gen')
     await t.sleep(300)
@@ -104,21 +124,24 @@ const where = (page) =>
     check('MK-6 a 400-letter word in search: "No Results" stays on the screen, the quote cut short', empty && empty.kids.every(([l, r]) => l >= 0 && r <= empty.w) && empty.title < 70, JSON.stringify(empty))
     await page.locator(`${TOP} .ios-search__input`).fill('')
     await page.evaluate(() => document.activeElement?.blur())
+    await page.locator(`${TOP} button[aria-label="Close search"]`).tap()
+    await t.sleep(500)
+    check('the Wallet\'s search is put away by its own Close, back to the cards', !(await page.$(`${TOP} .ios-search__input`)) && (await page.locator(`${TOP} .wallet-card`).count()) === 13, String(await page.locator(`${TOP} .wallet-card`).count()))
 
     // MK-8: a sheet is pulled away by its contents
-    await A.at(page, 'finder', ['f:all'], 'company:Varda', 900)
+    await A.at(page, 'finder', ['v:0'], 'company:Varda', 900)
     const body = await page.locator('.sb-slot[data-front] .ios-sheet__body').boundingBox()
     await swipe(t, body.x + body.width / 2, body.y + 120, body.y + 420)
     await t.sleep(500)
     s = await A.state(page)
     check('MK-8 a pull down on a sheet\'s contents carries it away', s.place.sheet === null && !(await page.$('.sb-slot[data-front] .ios-sheet:not([data-closing])')), JSON.stringify(s.place))
     // a short pull puts it back
-    await A.at(page, 'finder', ['f:all'], 'company:Varda', 900)
+    await A.at(page, 'finder', ['v:0'], 'company:Varda', 900)
     await swipe(t, body.x + body.width / 2, body.y + 120, body.y + 170)
     s = await A.state(page)
     const back = await page.evaluate(() => getComputedStyle(document.querySelector('.sb-slot[data-front] .ios-sheet__panel')).transform)
     check('MK-8 a short pull lets it settle back', s.place.sheet === 'company:Varda' && (back === 'none' || /matrix\(1, 0, 0, 1, 0, 0\)/.test(back)), back)
-    await A.at(page, 'finder', ['f:all'], null, 600)
+    await A.at(page, 'finder', [], null, 600)
 
     // MK-14: New Folder again straight after Done comes up fresh
     await A.at(page, 'notes', [], 'new-folder', 900)
@@ -139,7 +162,7 @@ const where = (page) =>
     // PH-4: on its side, a menu fits the screen and sits over the foot bar
     t = await fresh('se1-land', 'still', { quiet: true })
     page = t.page
-    for (const [name, app, stack] of [['Files More', 'finder', ['f:all']], ['Notes More', 'notes', ['f:faqs']], ['VIP Sort and Filter', 'photos', []]]) {
+    for (const [name, app, stack] of [['Notes More', 'notes', ['f:faqs']], ['VIP Sort and Filter', 'photos', []]]) {
       await A.at(page, app, stack, null, 800)
       await page.locator(`${TOP} .ios-bar .ios-menu > button`).first().tap()
       await t.sleep(600)
@@ -174,22 +197,21 @@ const where = (page) =>
     await page.keyboard.press('Escape')
     await t.sleep(300)
 
-    // PH-10: on its side with the keyboard up, something of what was found shows
-    await A.at(page, 'about', [], null, 800)
+    // PH-10: on its side with the keyboard up, something of what was found shows (the Wallet's search)
+    await walletSearch(t, 'a')
     await page.locator(`${TOP} .ios-search__input`).tap()
-    await page.keyboard.type('a')
     await page.setViewportSize({ width: 568, height: 150 })
     await t.sleep(700)
     const kb = await page.evaluate((TOP) => {
       const bar = document.querySelector(`${TOP} .ios-bar`).getBoundingClientRect()
-      const foot = document.querySelector(`${TOP} .ios-foot`).getBoundingClientRect()
       const field = document.querySelector(`${TOP} .ios-search`).getBoundingClientRect()
-      const rows = [...document.querySelectorAll(`${TOP} .ios-cell`)].filter((r) => { const b = r.getBoundingClientRect(); const el = document.elementFromPoint(b.left + 60, b.top + b.height / 2); return el && r.contains(el) && b.top + b.height / 2 > bar.bottom - 4 && b.top + b.height / 2 < field.top })
+      const rows = [...document.querySelectorAll(`${TOP} button.wallet-row`)].filter((r) => { const b = r.getBoundingClientRect(); const el = document.elementFromPoint(b.left + 60, b.top + b.height / 2); return el && r.contains(el) && b.top + b.height / 2 > bar.bottom - 4 && b.top + b.height / 2 < field.top })
       const large = document.querySelector(`${TOP} .ios-large`)?.getBoundingClientRect()
       return { h: innerHeight, bar: Math.round(bar.bottom), field: [Math.round(field.top), Math.round(field.bottom)], rowsShowing: rows.length, largeHeight: large ? Math.round(large.height) : null, name: getComputedStyle(document.querySelector(`${TOP} .ios-bar__name`)).opacity }
     }, TOP)
     await A.shot(page, 'fix-I-kb-land')
-    check('PH-10 on its side with the keyboard up (568x150): a result shows between the bars, the title is in the bar', kb.rowsShowing >= 1 && kb.field[1] <= kb.h && kb.name === '1', JSON.stringify(kb))
+    check('PH-10 on its side with the keyboard up (568x150): a company that was found shows between the bars, the title is in the bar', kb.rowsShowing >= 1 && kb.field[1] <= kb.h && kb.name === '1', JSON.stringify(kb))
+    await page.setViewportSize({ width: 568, height: 320 })
     check('land run: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
     await t.ctx.close()
   }
@@ -200,8 +222,8 @@ const where = (page) =>
     const { page } = t
 
     // AX-7 / AX-16: a pushed screen is named; Back returns the keyboard to what pushed it
-    await A.at(page, 'about', [], null, 900)
-    await page.locator(`${TOP} button.ios-cell`, { hasText: 'General' }).focus()
+    await A.at(page, 'notes', [], null, 900)
+    await page.locator(`${TOP} button.ios-cell`, { hasText: 'FAQs' }).focus()
     await page.keyboard.press('Enter')
     await t.sleep(900)
     const pushed = await page.evaluate((TOP) => {
@@ -209,11 +231,11 @@ const where = (page) =>
       const h = document.getElementById(p.getAttribute('aria-labelledby'))
       return { focusOnPage: document.activeElement === p, role: p.getAttribute('role'), named: h?.textContent ?? null, heading: h?.tagName ?? null }
     }, TOP)
-    check('AX-16 a pushed screen takes the keyboard and is named by its heading', pushed.focusOnPage && pushed.role === 'group' && pushed.named === 'General' && pushed.heading === 'H2', JSON.stringify(pushed))
+    check('AX-16 a pushed screen takes the keyboard and is named by its heading', pushed.focusOnPage && pushed.role === 'group' && pushed.named === 'FAQs' && pushed.heading === 'H2', JSON.stringify(pushed))
     await page.locator(`${TOP} button[aria-label="Back"]`).focus()
     await page.keyboard.press('Enter')
     await t.sleep(900)
-    check('AX-7 Back puts the keyboard on the row that pushed the screen', /"General"/.test(await where(page)), await where(page))
+    check('AX-7 Back puts the keyboard on the row that pushed the screen', /"FAQs/.test(await where(page)), await where(page))
 
     // AX-16: every screen has a heading that names it
     const headings = []
@@ -257,8 +279,8 @@ const where = (page) =>
     check('AX-7 choosing a row that changes the screen in place returns the keyboard to the button', /"More"/.test(await where(page)), await where(page))
 
     // AX-9 / AX-23 / AX-7: a sheet holds the keyboard, has one Close, and gives the keyboard back
-    await A.at(page, 'finder', ['f:all'], null, 900)
-    const company = page.locator(`${TOP} button.files-item`).nth(2)
+    await A.at(page, 'finder', ['v:0'], null, 900)
+    const company = page.locator(`${TOP} .wallet-slot[data-lying="out"] button.wallet-co`).nth(2)
     await company.focus()
     const companyName = await where(page)
     await page.keyboard.press('Enter')
@@ -278,11 +300,11 @@ const where = (page) =>
     check('AX-7 closing a sheet returns the keyboard to the row that opened it', (await where(page)) === companyName && !(await page.evaluate((TOP) => document.querySelector(TOP).hasAttribute('inert'), TOP)), `${await where(page)} (was ${companyName})`)
 
     // a sheet named by something the app has no sheet for shuts nothing off
-    await A.at(page, 'about', [], 'no-such-sheet', 700)
+    await A.at(page, 'notes', [], 'no-such-sheet', 700)
     check('a sheet that does not exist leaves the screen usable', !(await page.evaluate((TOP) => document.querySelector(TOP).hasAttribute('inert'), TOP)))
 
     // MK-15: Escape in a search field: clear, let go, then the phone's own
-    await A.at(page, 'about', [], null, 800)
+    await A.at(page, 'notes', [], null, 800)
     const field = page.locator(`${TOP} .ios-search__input`)
     await field.click()
     await page.keyboard.type('varda')
@@ -294,10 +316,24 @@ const where = (page) =>
     await page.keyboard.press('Escape')
     await t.sleep(900)
     const e3 = (await A.state(page)).place.app
-    check('MK-15 Escape in search: clears, then lets go of the field, then is the phone\'s own', e1.v === '' && e1.f && !e2.f && stay === 'about' && e3 === null, JSON.stringify({ e1, e2, stay, e3 }))
+    check('MK-15 Escape in search: clears, then lets go of the field, then is the phone\'s own', e1.v === '' && e1.f && !e2.f && stay === 'notes' && e3 === null, JSON.stringify({ e1, e2, stay, e3 }))
+    // …and in the Wallet, whose search is up over its cards: the third Escape puts the search away, the fourth leaves the app
+    await walletSearch(t, 'varda')
+    await page.locator(`${TOP} .ios-search__input`).focus()
+    await page.keyboard.press('Escape')
+    const w1 = await page.evaluate((TOP) => ({ v: document.querySelector(`${TOP} .ios-search__input`).value, f: document.activeElement === document.querySelector(`${TOP} .ios-search__input`) }), TOP)
+    await page.keyboard.press('Escape')
+    const w2 = await page.evaluate((TOP) => ({ f: document.activeElement === document.querySelector(`${TOP} .ios-search__input`) }), TOP)
+    await page.keyboard.press('Escape')
+    await t.sleep(600)
+    const w3 = { search: !!(await page.$(`${TOP} .ios-search__input`)), app: (await A.state(page)).place.app }
+    await page.keyboard.press('Escape')
+    await t.sleep(900)
+    const w4 = (await A.state(page)).place.app
+    check('MK-15 Escape in the Wallet\'s search: clears, lets go, puts the search away, then is the phone\'s own', w1.v === '' && w1.f && !w2.f && !w3.search && w3.app === 'finder' && w4 === null, JSON.stringify({ w1, w2, w3, w4 }))
 
     // MK-17: fields and titles take the direction of what they hold
-    await A.at(page, 'about', [], null, 800)
+    await A.at(page, 'notes', [], null, 800)
     const dirs = await page.evaluate((TOP) => ['.ios-search__input', '.ios-large', '.ios-cell__title'].map((sel) => document.querySelector(`${TOP} ${sel}`)?.getAttribute('dir')), TOP)
     check('MK-17 fields and titles are dir="auto"', dirs.every((d) => d === 'auto'), dirs.join())
     check('keys run: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
@@ -305,7 +341,7 @@ const where = (page) =>
 
     // AX-13: with reduced motion a sheet closes without sliding
     const r = await fresh('iphone', 'still', { reducedMotion: true })
-    await A.at(r.page, 'finder', ['f:all'], 'company:Varda', 700)
+    await A.at(r.page, 'finder', ['v:0'], 'company:Varda', 700)
     await r.page.evaluate(() => {
       window.__moves = []
       const panel = document.querySelector('.sb-slot[data-front] .ios-sheet__panel')
@@ -320,115 +356,95 @@ const where = (page) =>
     await r.ctx.close()
   }
 
-  // ------------------------------------------------------------------ settings
-  if (!only || only === 'settings') {
+  // ------------------------------------------------------------------ replies, and a phone with no Settings
+  if (!only || only === 'replies') {
     let t = await fresh('iphone')
     let { page } = t
-    const text = () => page.evaluate((TOP) => document.querySelector(TOP).innerText, TOP)
-
-    // UX-6, UX-1: who Shrug is; ways on
-    await A.at(page, 'about', ['account'], null, 800)
-    const account = await text()
-    check('UX-6 Settings › Shrug Capital says who Shrug is', /Shrug Capital is an early.stage venture fund\./.test(account), account.replace(/\n/g, ' | ').slice(0, 160))
-    check('UX-1 no contact row while there is no address; the one-pager is there', /One-pager/.test(account) && !/Email Shrug|Text Shrug/.test(account))
-    const links = await page.evaluate((TOP) => [...document.querySelectorAll(`${TOP} a.ios-cell`)].map((a) => [a.textContent.trim(), a.getAttribute('target'), a.getAttribute('href')]), TOP)
-    check('UX-19 a row that leaves says it opens in a new tab', links.length >= 1 && links.every(([txt]) => /opens in a new tab/.test(txt)), JSON.stringify(links))
-
-    // UX-19 / UX-5: wording, counts
-    await A.at(page, 'about', ['general'], null, 700)
-    check('UX-19 General: "What this iPhone is, and what is on it."', /What this iPhone is, and what is on it\./.test(await text()))
-    await A.at(page, 'about', ['general', 'about'], null, 700)
-    const about = await text()
-    check('UX-5 About counts no photos or videos until one has arrived', /Drops\s*\n?\s*11/.test(about) && !/Photos|Videos/.test(about), about.replace(/\n/g, ' ').slice(0, 200))
-    await A.at(page, 'about', [], null, 700)
-    await page.locator(`${TOP} .ios-search__input`).fill('zzzz')
-    await t.sleep(300)
-    const none = await text()
-    check('UX-19 Settings search with nothing found: one shape', /No Results for “zzzz”/.test(none) && /Check the spelling or try a new search\./.test(none), none.replace(/\n/g, ' | ').slice(0, 120))
-    await page.locator(`${TOP} .ios-search__input`).fill('contact')
-    await t.sleep(300)
-    check('UX-1 searching Settings for "contact" finds Shrug Capital', /Shrug Capital/.test(await text()))
-    await page.locator(`${TOP} .ios-search__input`).fill('')
-
-    // MK-7: Privacy says what is true now
-    await A.at(page, 'about', ['privacy'], null, 700)
-    const privacy = await text()
-    check('MK-7 Privacy says what is kept, where, and how to clear it', /kept in this browser, on this device/.test(privacy) && /Clearing this site’s data/.test(privacy) && !/saves nothing/.test(privacy), privacy.replace(/\n/g, ' ').slice(-230))
-
-    // AX-20: Pause Replies in Settings
-    await A.at(page, 'about', ['notifications'], null, 700)
-    const sw = page.locator(`${TOP} .ios-switch[aria-label="Pause Replies"]`)
     const replied = () => page.evaluate(() => Number(document.querySelector('.sb-dock .sb-badge')?.textContent || 0))
+
+    // AX-20: Pause Replies, in the conversation's details, is the one switch there is for it
     await t.sleep(2500)
+    await A.at(page, 'messages', ['c:group'], 'details', 900)
+    const sw = page.locator(PAUSE)
     await sw.tap()
     await t.sleep(400)
+    const paused = await sw.getAttribute('aria-checked')
+    await A.at(page, null, [], null, 700)
     const b0 = await replied()
     await t.sleep(6500)
     const b1 = await replied()
-    check('AX-20 Pause Replies in Settings › Notifications stops the replies (the badge holds still)', (await sw.getAttribute('aria-checked')) === 'true' && b1 === b0, `badge ${b0} -> ${b1}`)
+    check('AX-20 Pause Replies in a conversation\'s details stops the replies (nothing more is counted on the badge)', paused === 'true' && b1 === b0, `paused ${paused}, badge ${b0} -> ${b1}`)
+    const noBanner = await page.evaluate(() => !document.querySelector('.sb-banner'))
+    check('AX-20 …and no banner comes down while they are paused', noBanner)
     await A.at(page, 'messages', ['c:group'], 'details', 900)
-    const inDetails = await page.locator('.sb-slot[data-front] .ios-sheet .ios-switch[aria-label="Pause Replies"]').getAttribute('aria-checked')
-    check('AX-20 it is the same switch as in the conversation\'s details', inDetails === 'true', String(inDetails))
-    await A.at(page, 'about', ['notifications'], null, 700)
     await sw.tap()
+    await t.sleep(300)
+    await A.at(page, null, [], null, 700)
     await t.sleep(5000)
-    check('AX-20 switched off again, replies carry on', (await replied()) > b1 || (await page.evaluate(() => !!document.querySelector('.sb-dock'))), `badge ${await replied()}`)
+    const b2 = await replied()
+    check('AX-20 switched off again, the replies carry on', b2 > b1, `badge ${b1} -> ${b2}`)
 
-    // AX-17: the settings are remembered
-    await A.at(page, 'about', ['display', 'autolock'], null, 700)
-    await page.locator(`${TOP} button.ios-cell`, { hasText: 'Never' }).tap()
-    await A.at(page, 'about', ['notifications'], null, 600)
-    await page.locator(`${TOP} .ios-switch[aria-label="Allow Notifications"]`).tap()
-    await t.sleep(200)
-    const stored = await page.evaluate(() => localStorage.getItem('shrug:settings'))
-    await page.reload({ waitUntil: 'load' })
-    await page.waitForFunction(() => !!document.querySelector('.os[data-booted]'), null, { timeout: 20000 })
-    await t.sleep(800)
-    await A.at(page, 'about', ['display'], null, 800)
-    const lockRow = await text()
-    await A.at(page, 'about', ['notifications'], null, 700)
-    const allowed = await page.locator(`${TOP} .ios-switch[aria-label="Allow Notifications"]`).getAttribute('aria-checked')
-    check('AX-17 Auto-Lock: Never and Allow Notifications: off are still set after a reload', /Auto-Lock\s*\n?\s*Never/.test(lockRow) && allowed === 'false', `${stored} | ${lockRow.replace(/\n/g, ' ').slice(0, 60)} | allowed ${allowed}`)
-    check('settings run: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
+    // The phone has no Settings app: not on the Home Screen, not in the Dock, not in the App Switcher's reach
+    const names = await page.evaluate(() => [...document.querySelectorAll('.sb-home .sb-icon, .sb-dock .sb-icon, .sb-home [data-app], .sb-dock [data-app]')].map((e) => (e.getAttribute('aria-label') || e.textContent || '').trim()))
+    check('the phone has no Settings app on its Home Screen or in its Dock', names.length >= 4 && !names.some((n) => /^(Settings|About)/i.test(n)), names.join(' / ').slice(0, 200))
+    // A step in history that the older build left at Settings is the Home Screen now, and still a working one
+    await A.at(page, 'about', ['general', 'about'], null, 900)
+    let s = await A.state(page)
+    const home = await page.evaluate(() => ({ home: !!document.querySelector('.sb-home'), front: document.querySelector('.sb-slot[data-front]')?.getAttribute('data-app') ?? null }))
+    check('a step in history left at Settings by the older build shows the Home Screen', home.home && home.front === null && !s.locked, JSON.stringify({ ...home, place: s.place }))
+    await page.locator('.sb-dock [aria-label^="Notes"], .sb-home [aria-label^="Notes"], .sb-dock [aria-label^="FAQs"], .sb-home [aria-label^="FAQs"]').first().tap().catch(() => {})
+    await t.sleep(900)
+    s = await A.state(page)
+    check('…from which an app still opens', s.front !== null, JSON.stringify(s.place))
+    check('replies run: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
     await t.ctx.close()
 
-    // ?idle= wins while it is in the address, and is not itself kept; nonsense in storage is ignored
+    // What the older build kept from its Settings is not read: with notifications kept "off" there, a banner still comes
     t = await A.open(browser, { device: 'iphone', dpr: 1, base: BASE, goto: false })
     page = t.page
-    await page.addInitScript(() => { try { localStorage.setItem('shrug:settings', JSON.stringify({ autoLock: 300, haptics: 'yes', previews: false })) } catch {} })
-    await page.goto(BASE + '?still&idle=45', { waitUntil: 'load' })
+    await page.addInitScript(() => { try { localStorage.setItem('shrug:settings', JSON.stringify({ notifications: false, autoLock: null, previews: false })) } catch {} })
+    await page.goto(BASE + '?still', { waitUntil: 'load' })
     await A.unlock(page)
-    await A.at(page, 'about', ['display'], null, 800)
-    const idle = await text()
-    await A.at(page, 'about', ['notifications'], null, 700)
-    const prev = await text()
-    await A.at(page, 'about', ['sounds'], null, 700)
-    const hap = await page.locator(`${TOP} .ios-switch[aria-label="System Haptics"]`).getAttribute('aria-checked')
-    check('AX-17 ?idle=45 wins over the kept Auto-Lock; a kept value of the wrong kind is ignored', /45 seconds/.test(idle) && /Show Previews\s*\n?\s*Never/.test(prev) && hap === 'true', `${idle.replace(/\n/g, ' ').slice(0, 50)} | ${prev.replace(/\n/g, ' ').slice(-40)} | haptics ${hap}`)
-    const keptIdle = await page.evaluate(() => JSON.parse(localStorage.getItem('shrug:settings')).autoLock)
-    check('AX-17 …and ?idle is not written over what was kept', keptIdle === 300, String(keptIdle))
+    let banner = null
+    for (let i = 0; i < 80 && !banner; i++) {
+      await t.sleep(250)
+      banner = await page.evaluate(() => document.querySelector('.sb-banner')?.innerText || null)
+    }
+    check('what the older build kept from Settings is not read: a reply is still announced, with what it says', !!banner && banner.replace(/\s+/g, ' ').length > 40, String(banner).replace(/\n/g, ' | ').slice(0, 120))
     await t.ctx.close()
   }
 
   // ------------------------------------------------------------------ about (desktop)
   if (!only || only === 'about') {
-    for (const [name, w, h, mark] of [['1440x900', 1440, 900, true], ['1280x500', 1280, 500, false], ['900x480', 900, 480, false]]) {
+    // What is in it is 522px tall in full; with the smaller icon, 484px; with its rows closer, 452px; shorter than that, it scrolls
+    for (const [name, w, h, icon, fits] of [['1440x900', 1440, 900, 84, true], ['1366x700', 1366, 700, 84, true], ['1366x650', 1366, 650, 60, true], ['1280x620', 1280, 620, 60, true], ['1280x500', 1280, 500, 60, false], ['900x480', 900, 480, 60, false]]) {
       const t = await A.open(browser, { device: { w, h, dpr: 1 }, base: BASE, query: 'still&open=about' })
       await t.page.waitForSelector('.wf[data-app="about"] .about__body', { timeout: 20000 })
       await t.sleep(1200)
       const m = await t.page.evaluate(() => {
         const win = document.querySelector('.wf[data-app="about"]')
         const b = win.querySelector('.about__body')
-        const mk = win.querySelector('.about__mark')
-        const rgb = getComputedStyle(mk).color.match(/\d+/g).map(Number)
-        const bg = getComputedStyle(win.querySelector('.ss-window')).backgroundColor.match(/\d+/g).map(Number)
-        const lum = (c) => { const [r, g, bl] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }); return 0.2126 * r + 0.7152 * g + 0.0722 * bl }
-        const ratio = (lum(bg) + 0.05) / (lum(rgb) + 0.05)
-        const cut = [...b.children].filter((c) => getComputedStyle(c).display !== 'none').some((c) => c.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5)
-        return { line: win.querySelector('.about__kind').textContent, fits: b.scrollHeight <= b.clientHeight, cut, mark: getComputedStyle(mk).display !== 'none', ratio: Math.round(ratio * 100) / 100, links: [...win.querySelectorAll('.about__link')].map((a) => a.textContent.trim()) }
+        const shown = () => [...b.children].filter((c) => getComputedStyle(c).display !== 'none')
+        const cut = shown().some((c) => c.getBoundingClientRect().bottom > b.getBoundingClientRect().bottom + 0.5)
+        // what is left under its last row (12px is the window's own margin there)
+        const foot = Math.round(b.getBoundingClientRect().bottom - shown().at(-1).getBoundingClientRect().bottom)
+        const facts = [...win.querySelectorAll('.about__fact--said')].map((f) => f.querySelector('dt').textContent.trim())
+        const rows = [...win.querySelectorAll('button.about__fact')].map((f) => f.textContent.trim())
+        // scrolled to its foot, the last thing in it is inside the window
+        b.scrollTop = b.scrollHeight
+        const last = shown().at(-1).getBoundingClientRect().bottom <= b.getBoundingClientRect().bottom + 0.5
+        const out = { line: win.querySelector('.about__kind').textContent, fits: b.scrollHeight <= b.clientHeight, cut, foot, last, scrolls: getComputedStyle(b).overflowY, icon: Math.round(win.querySelector('.about__icon').getBoundingClientRect().height), facts, rows, emoticon: /\(ツ\)/.test(win.textContent), links: [...win.querySelectorAll('.about__link')].map((a) => a.textContent.trim()) }
+        b.scrollTop = 0
+        return out
       })
-      check(`About at ${name}: says who Shrug is, nothing cut at its foot`, /early.stage venture fund/.test(m.line) && m.fits && !m.cut && m.mark === mark, JSON.stringify(m))
-      if (mark) check('AX-15 About\'s shrug is 4.5:1 or better', m.ratio >= 4.5, String(m.ratio))
+      check(`About at ${name}: says who Shrug is${fits ? ', nothing cut at its foot' : ', and scrolls to its last row'}`, /early.stage venture fund/.test(m.line) && m.icon === icon && (fits ? m.fits && !m.cut : m.scrolls === 'auto' && m.last), JSON.stringify(m))
+      if (w === 1440) {
+        check('About at its own size is as tall as what is in it: no band of nothing at its foot', m.foot >= 11 && m.foot <= 16, `foot ${m.foot}px`)
+        check('About says more about Shrug: when it started, who runs it, which fund this is, what it backs', m.facts.length >= 4 && m.facts.includes('Backs'), m.facts.join(' / '))
+        check('About counts what is on the site, each row a button', m.rows.length === 4 && /89 people/.test(m.rows[0]) && /81 companies/.test(m.rows[1]), m.rows.join(' / '))
+        check('About has no shrug emoticon in it', !m.emoticon && !(await t.page.$('.wf[data-app="about"] .about__mark')))
+        check('About: the one-pager says it opens in a new tab', m.links.some((l) => /One-pager, opens in a new tab/.test(l)), m.links.join(' / '))
+      }
       await t.ctx.close()
     }
   }

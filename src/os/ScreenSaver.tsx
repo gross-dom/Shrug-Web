@@ -2,17 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { chat } from '../apps/chat'
 import { inbox } from '../apps/state'
 import { PEOPLE, type Person } from '../data/people'
-import { SITE } from '../data/site'
 import { formatter } from './dates'
-import { prefersReducedMotion } from './dom'
 import { useReturnFocus } from './focus'
 import { idleSeconds, saver, startSaver, startsItself, wakeSaver } from './saver'
 import { useStore } from './store'
 import { isShowing, wm } from './wm'
 
-// The screen saver. The shrug drifts across a dark screen and turns at the
-// edges, the clock sits where a lock screen keeps it, and the people from the
-// group chat pass by one at a time, each with what they said. Any key, press
+// The screen saver. A dark screen: the clock sits where a lock screen keeps
+// it, and the people from the group chat pass by one at a time, each with
+// what they said. Any key, press
 // or movement wakes the desk, and whatever woke it does nothing else. It
 // waits for a still desk: a conversation that is arriving where it can be
 // read is not one. A phone has none: nobody should be locked out of a page
@@ -28,9 +26,6 @@ const clockOf = (now: Date) =>
     .map((part) => part.value)
     .join('')
     .trim()
-
-/** The colors the shrug takes, one after another, each time it turns. */
-const TINTS = ['#ffffff', '#9fd0ff', '#ffd66b', '#ff9d8a', '#b9a4ff', '#8ee6b8']
 
 /** The most of what someone said that can be read as it passes. */
 const SHORT = 140
@@ -56,7 +51,6 @@ export function ScreenSaver() {
   turned.current = who
   /** The main pointer is a finger: there is nothing to move and no key to press. */
   const [finger] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
-  const mark = useRef<HTMLDivElement>(null)
   const root = useRef<HTMLDivElement>(null)
   const clock = useRef<HTMLDivElement>(null)
   const foot = useRef<HTMLDivElement>(null)
@@ -144,7 +138,7 @@ export function ScreenSaver() {
   }, [])
 
   // While it's on: it has the keyboard (so a screen reader is where a sighted
-  // visitor is), the clock ticks, the people turn over, the shrug drifts
+  // visitor is), the clock ticks and the people turn over
   useEffect(() => {
     if (!on) return
     root.current?.focus({ preventScroll: true })
@@ -162,55 +156,9 @@ export function ScreenSaver() {
       )
     }
     next()
-    const el = mark.current
-    const box = root.current
-    let frame = 0
-    if (el && box && !prefersReducedMotion()) {
-      const size = { w: el.offsetWidth, h: el.offsetHeight }
-      // Its room: under the clock, over the names, edge to edge
-      const band = () => {
-        const top = clock.current ? clock.current.offsetTop + clock.current.offsetHeight : 0
-        const bottom = foot.current ? foot.current.offsetTop : box.clientHeight
-        const minY = Math.min(top, Math.max(0, box.clientHeight - size.h))
-        return { maxX: Math.max(0, box.clientWidth - size.w), minY, maxY: Math.max(minY, bottom - size.h) }
-      }
-      const start = band()
-      let x = start.maxX * 0.3
-      let y = start.minY + (start.maxY - start.minY) * 0.5
-      let vx = 46
-      let vy = 30
-      let tint = 0
-      let last = performance.now()
-      const loop = (t: number) => {
-        const dt = Math.min(0.05, (t - last) / 1000)
-        last = t
-        const { maxX, minY, maxY } = band()
-        x += vx * dt
-        y += vy * dt
-        let turnedBack = false
-        if (x <= 0 || x >= maxX) {
-          vx = x <= 0 ? Math.abs(vx) : -Math.abs(vx)
-          x = Math.min(maxX, Math.max(0, x))
-          turnedBack = true
-        }
-        if (y <= minY || y >= maxY) {
-          vy = y <= minY ? Math.abs(vy) : -Math.abs(vy)
-          y = Math.min(maxY, Math.max(minY, y))
-          turnedBack = true
-        }
-        if (turnedBack) {
-          tint = (tint + 1) % TINTS.length
-          el.style.color = TINTS[tint]!
-        }
-        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`
-        frame = requestAnimationFrame(loop)
-      }
-      frame = requestAnimationFrame(loop)
-    }
     return () => {
       clearInterval(tick)
       clearTimeout(turn)
-      cancelAnimationFrame(frame)
     }
   }, [on, compact])
 
@@ -238,9 +186,6 @@ export function ScreenSaver() {
       <div ref={clock} className="saver__clock">
         <div className="saver__date">{DATE.format(now)}</div>
         <div className="saver__time">{clockOf(now)}</div>
-      </div>
-      <div ref={mark} className="saver__mark" aria-hidden>
-        {SITE.mark}
       </div>
       <div ref={foot} className="saver__foot">
         <div className="saver__who" key={who} style={{ animationDuration: `${stayFor(said)}ms` }}>

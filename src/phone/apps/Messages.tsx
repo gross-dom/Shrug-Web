@@ -1,26 +1,26 @@
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUp, ChevronLeft, ChevronRight, ListFilter, Mic, Plus, SquarePen, Video } from 'lucide-react'
-import { chat, deleteMessage, finishChat, replayChat, sendMessage, sentMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
-import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, NOT_DELIVERED, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
+import { chat, finishChat, replayChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
+import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
 import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
 import { eggOf } from '../../data/eggs'
 import { PEOPLE } from '../../data/people'
-import { reach, SITE } from '../../data/site'
+import { SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
-import { APPS, type AppId } from '../../os/apps'
+import { APPS } from '../../os/apps'
 import { prefersReducedMotion } from '../../os/dom'
 import { focusLost, holdFocus } from '../../os/focus'
 import { useStore } from '../../os/store'
 import { OnePagerIcon, PhoneIcon } from '../icons'
-import { closeSheet, launch, launchAt, openSheet, pop, push, sys, topOf } from '../system'
+import { closeSheet, launch, openSheet, pop, push, sys, topOf, type PhoneApp } from '../system'
 import { useNewCount } from '../unread'
 import { BackButton, Cell, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 import { conversationView, GROUP_VIEW } from './routes'
 import '../../styles/phone/messages.css'
 
 // Messages, as the iPhone has it. It is Shrug's own phone, as the desktop is
-// Shrug's own Mac: the list of conversations (Shrug Family, where every reply
+// Shrug's own Mac: the list of conversations (Testimonials, where every reply
 // is, and then a handful of others to find, from src/data/eggs.ts), a
 // conversation with its header floating over the thread and the message field
 // at its foot, and the group's details sheet behind its name.
@@ -29,8 +29,8 @@ import '../../styles/phone/messages.css'
 
 // ---- Which conversation is which ----
 
-/** The conversation a screen's name stands for: `c:group` is Shrug Family and
- * `c:mom` one of the others. Any other name (a person's own thread, from when
+/** The conversation a screen's name stands for: `c:group` is the group chat and
+ * `c:drops` one of the others. Any other name (a person's own thread, from when
  * there were such things) is the group too: that is where their reply is. */
 function conversationOf(view: string | null): Conversation | null {
   if (!view?.startsWith('c:')) return null
@@ -118,7 +118,7 @@ function ListScreen() {
   const [filter, setFilter] = useState<Filter>('all')
   const query = useStore(inbox, (s) => s.query)
   const all = useConversationRows()
-  // Only Shrug Family is ever unread: the others were read long ago
+  // Only the group is ever unread: the others were read long ago
   const rows = filter === 'unread' ? all.filter((row) => row.unread) : all
   /** The conversation that is open over the list, if one is. */
   const picked = useStore(sys, (s) => s.stacks.messages[0] ?? null)
@@ -193,7 +193,7 @@ function Back() {
 }
 
 /** The rest of the site, behind the plus: where Messages keeps its apps. */
-const MORE: AppId[] = ['finder', 'notes', 'terminal', 'photos']
+const MORE: PhoneApp[] = ['finder', 'notes', 'terminal', 'photos']
 
 function More() {
   const [open, setOpen] = useState(false)
@@ -410,7 +410,7 @@ function ConversationScreen({ conversation, view }: { conversation: Conversation
       {/* Older messages blur and fade as they pass up under the header */}
       <div className="msg-edge" aria-hidden />
       <Thread>
-        <Transcript conversation={conversation} source={target} active={showing} onFailed={(key) => openSheet(whyOf(key))} />
+        <Transcript conversation={conversation} source={target} active={showing} />
       </Thread>
     </Screen>
   )
@@ -538,9 +538,8 @@ function DetailsSheet() {
 
 // ---- Alerts ----
 
-/** The names two alerts go by in the phone's history, where a sheet's name goes (`sys.sheet`). */
+/** The name the alert goes by in the phone's history, where a sheet's name goes (`sys.sheet`). */
 const FACETIME = 'facetime'
-const whyOf = (key: string) => `undelivered:${key}`
 
 interface AlertAction {
   label: string
@@ -660,28 +659,6 @@ function FaceTime() {
   return <Alert name={FACETIME} title="FaceTime Unavailable" message={`${name} is not available for FaceTime.`} actions={[{ label: 'OK', bold: true }]} />
 }
 
-/** A message that didn't go, asked why: the truth (nothing typed here leaves
- * the page), and where to take the words instead: to Shrug for real, when
- * there is a way (they go along as the message), and to the one-pager. */
-function Undelivered({ name }: { name: string }) {
-  const key = name.slice(whyOf('').length)
-  // Its words, as they were when it opened: deleted from here, it is still what this alert was about while it fades
-  const [message] = useState(() => sentMessage(key))
-  // A message that is no longer there (the page was loaded again) has nothing to say: the alert goes
-  useEffect(() => {
-    if (!message) closeSheet(false)
-  }, [message])
-  if (!message) return null
-  const way = reach(message.text)
-  const actions: AlertAction[] = [
-    ...(way.kind === 'doc' ? [] : [{ label: way.label, href: way.href }]),
-    { label: 'Read the One-pager', href: SITE.onePager, newTab: true },
-    { label: 'Delete Message', destructive: true, onSelect: () => deleteMessage(key) },
-    { label: 'Cancel', bold: true },
-  ]
-  return <Alert name={name} title={NOT_DELIVERED.title} message={NOT_DELIVERED.message} actions={actions} />
-}
-
 // ---- The app ----
 
 export function MessagesApp() {
@@ -695,7 +672,7 @@ export function MessagesApp() {
           return view === null || conversation === null ? <ListScreen /> : <ConversationScreen conversation={conversation} view={view} />
         }}
       </NavStack>
-      <SheetHost>{(name) => (name === 'details' ? <DetailsSheet /> : name === FACETIME ? <FaceTime /> : name.startsWith(whyOf('')) ? <Undelivered key={name} name={name} /> : null)}</SheetHost>
+      <SheetHost>{(name) => (name === 'details' ? <DetailsSheet /> : name === FACETIME ? <FaceTime /> : null)}</SheetHost>
     </>
   )
 }

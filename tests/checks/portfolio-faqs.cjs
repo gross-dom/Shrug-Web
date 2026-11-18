@@ -1,4 +1,4 @@
-// Fixer P's checks: Portfolio / Finder / Files, FAQs / Notes, and the desktop's search field.
+// Fixer P's checks: Portfolio / Finder / Wallet, FAQs / Notes, and the desktop's search field.
 //   node portfolio-faqs.cjs [base]        (base defaults to the dev server; the main session runs it on :4173)
 // Exits non-zero if anything fails. Findings covered are named beside each check.
 const A = require('./lib.cjs')
@@ -150,18 +150,28 @@ const BRACKET = '[Shrug’s answer goes here'
     const field = win.locator('.search__input')
     const body = async () => (await win.locator('.faq__note').innerText()).replace(/\s+/g, ' ')
     const text = await body()
-    check('UX-4 FAQs: an unanswered question tells the visitor so, with the one-pager as the way on', text.includes(PENDING) && text.includes('Read the One-pager') && !(await win.innerText()).includes(BRACKET), text.slice(0, 140))
-    const way = await win.locator('.faq__way').first().evaluate((a) => ({ href: a.href, target: a.target, says: a.textContent }))
-    check('UX-4 FAQs: that link is the one-pager, in a new tab, and says so', /docsend\.com/.test(way.href) && way.target === '_blank' && /, opens in a new tab$/.test(way.says), JSON.stringify(way))
+    // Every question has Shrug's answer now: nothing is on its way, and nothing is left for the editor to fill in
+    check('UX-4 FAQs: a question is answered in Shrug’s own words, with nothing left to come', text.includes('Shrug V is the fifth fund') && !text.includes(PENDING) && !(await win.innerText()).includes(BRACKET) && (await win.locator('.faq__pending, .faq__todo, .faq__way').count()) === 0, text.slice(0, 140))
     const previews = await win.locator('.faq-row .ss-row__preview').allInnerTexts()
-    check('UX-4 FAQs: each row says "Answer on its way"', previews.length === 7 && previews.every((p) => p.trim() === 'Answer on its way'), previews.join(' | '))
-    check('AX-15 FAQs: "Question 1 of 7" is the readable grey', (await win.locator('.faq__meta').evaluate((el) => getComputedStyle(el).color)) === 'rgb(99, 100, 107)')
+    check('UX-4 FAQs: each row says how its answer begins', previews.length === 10 && previews.every((p) => p.trim().length > 12 && p.trim() !== 'Answer on its way'), previews.map((p) => p.trim().slice(0, 18)).join(' | '))
+    check('AX-15 FAQs: "Question 1 of 10" is the readable grey', /^Question 1 of 10$/.test((await win.locator('.faq__meta').innerText()).trim()) && (await win.locator('.faq__meta').evaluate((el) => getComputedStyle(el).color)) === 'rgb(99, 100, 107)', await win.locator('.faq__meta').innerText())
+    // An answer keeps its shape: what it lists is a list, and a link in it is a link
+    await win.locator('.faq-row').nth(4).click()
+    await t.sleep(250)
+    const listed = await win.locator('.faq__note ul.answer__list > li').count()
+    check('FAQs: an answer that lists things is set as a list', listed === 15 && (await win.locator('.faq__note .answer > p').count()) >= 2, `${listed} items`)
+    await win.locator('.faq-row').nth(6).click()
+    await t.sleep(250)
+    const out = await win.locator('.faq__note a.answer__link').first().evaluate((a) => ({ href: a.href, target: a.target, rel: a.rel, says: a.textContent }))
+    check('FAQs: a link out of an answer opens in a new tab, and says so', /foundersfund\.com/.test(out.href) && out.target === '_blank' && out.rel === 'noreferrer' && /^Good Quests, opens in a new tab$/.test(out.says), JSON.stringify(out))
+    await win.locator('.faq-row').first().click()
+    await t.sleep(200)
 
     // DK-10: the window follows the search
     await field.click()
-    await field.pressSequentially('drops')
+    await field.pressSequentially('small fund')
     await t.sleep(300)
-    check('DK-10 FAQs: the window follows the search as it is typed', (await win.locator('.faq__title').innerText()).trim() === 'What are drops?', await win.locator('.faq__title').innerText())
+    check('DK-10 FAQs: the window follows the search as it is typed', (await win.locator('.faq__title').innerText()).trim() === 'Why should a founder make room for a small fund?', await win.locator('.faq__title').innerText())
     await field.press('Enter')
     check('DK-10 FAQs: Return goes to the first question found', /faq-row/.test(await t.page.evaluate(() => document.activeElement?.className ?? '')), await focusOf(t.page))
     await field.focus()
@@ -170,7 +180,7 @@ const BRACKET = '[Shrug’s answer goes here'
     // Next question still goes where it says while a search is in
     await win.locator('[aria-label="Next question"]').click()
     await t.sleep(200)
-    check('DK-10 FAQs: Next still steps on while a search is in the field', (await win.locator('.faq__title').innerText()).trim() === 'What is VIP?', await win.locator('.faq__title').innerText())
+    check('DK-10 FAQs: Next still steps on while a search is in the field', (await win.locator('.faq__title').innerText()).trim() === 'Do you lead rounds or take board seats?', await win.locator('.faq__title').innerText())
     await field.focus()
     await field.press('Escape')
     check('DK-10 FAQs: Escape empties the search and keeps the caret in it', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', await focusOf(t.page))
@@ -180,13 +190,21 @@ const BRACKET = '[Shrug’s answer goes here'
     check('UX-19 FAQs: an empty search says "No Results for “x”" and what to try', none === 'No Results for “zzzz” Check the spelling or try a new search.', none)
     await win.locator('.search__clear').click()
     check('DK-10 / tb-10 FAQs: the clear button keeps the caret in the field', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', await focusOf(t.page))
+    // A link in an answer to the site's own chat opens the chat, in front
+    await win.locator('.faq-row').nth(8).click()
+    await t.sleep(250)
+    await win.locator('.faq__note button.answer__link').click()
+    await t.sleep(700)
+    const chat = await t.page.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.getAttribute('data-app') ?? null, open: !!document.querySelector('.wf[data-app="messages"][data-open]') }))
+    check('FAQs: a link in an answer to the site’s own chat opens the chat', chat.front === 'messages' && chat.open, JSON.stringify(chat))
     check('FAQs: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 200))
     await t.ctx.close()
 
+    // The editor's view has nothing left to show here: an answered question reads the same
     const d = await desk('open=faqs&draft')
     const dw = d.page.locator('.wf[data-app="notes"]')
     const dt = (await dw.locator('.faq__note').innerText()).replace(/\s+/g, ' ')
-    check('UX-4 FAQs with ?draft: the editor\'s note, in its dashed box, as before', dt.includes(BRACKET) && !dt.includes(PENDING) && (await dw.locator('.faq__todo').count()) === 1, dt.slice(0, 120))
+    check('UX-4 FAQs with ?draft: an answered question reads the same, with no note for the editor', dt.includes('Shrug V is the fifth fund') && !dt.includes(BRACKET) && (await dw.locator('.faq__todo').count()) === 0, dt.slice(0, 120))
     await d.ctx.close()
   }
 
@@ -197,7 +215,7 @@ const BRACKET = '[Shrug’s answer goes here'
     await t.page.goto(BASE + '?still' + (device === 'laptop' ? '&open=portfolio' : ''))
     if (device === 'iphone') {
       await A.unlock(t.page)
-      await A.at(t.page, 'finder', ['f:all'])
+      await A.at(t.page, 'finder', [])
     } else {
       await up(t.page)
       await t.sleep(1500)
@@ -271,19 +289,26 @@ const BRACKET = '[Shrug’s answer goes here'
     // UX-4 / AX-23: Notes
     await A.at(t.page, 'notes', ['f:faqs'])
     const rows = await t.page.locator(`${front} .notes-row`).evaluateAll((els) => els.map((el) => ({ seen: el.innerText.replace(/\s+/g, ' ').trim(), read: el.textContent.replace(/\s+/g, ' ').trim() })))
-    check('UX-4 Notes: each question\'s row says "Answer on its way"', rows.length === 7 && rows.every((r) => /Answer on its way$/.test(r.seen)) && !rows.some((r) => /No additional text/.test(r.seen)), rows[0]?.seen)
-    check('AX-23 Notes: a row\'s parts are set apart for a screen reader', rows.every((r) => /\?\s?, .+, Answer on its way$/.test(r.read)), rows[0]?.read)
+    check('UX-4 Notes: each question\'s row says how its answer begins', rows.length === 10 && rows.every((r) => !/Answer on its way|No additional text/.test(r.seen) && r.seen.length > 40), rows[0]?.seen)
+    check('AX-23 Notes: a row\'s parts are set apart for a screen reader', rows.every((r) => /\?\s?, [^,]+, .{12,}$/.test(r.read)), rows[0]?.read)
     await A.at(t.page, 'notes', ['f:faqs', 'n:3'])
     const note = (await t.page.locator(`${front} .notes-note`).innerText()).replace(/\s+/g, ' ')
-    check('UX-4 Notes: an unanswered question tells the visitor so, with the one-pager as the way on', note.includes(PENDING) && note.includes('Read the One-pager') && !note.includes(BRACKET) && (await t.page.locator(`${front} .notes-slot`).count()) === 0, note.slice(0, 160))
-    const way = await t.page.locator(`${front} .notes-way`).first().evaluate((a) => ({ href: a.href, target: a.target, h: Math.round(a.getBoundingClientRect().height), says: a.textContent }))
-    check('UX-4 Notes: that link is the one-pager, 44 tall, and says it opens in a new tab', /docsend\.com/.test(way.href) && way.target === '_blank' && way.h >= 44 && /, opens in a new tab$/.test(way.says), JSON.stringify(way))
+    check('UX-4 Notes: a question is answered in Shrug’s own words, with nothing left to come', note.includes('Where do you find opportunities?') && note.length > 200 && !note.includes(PENDING) && !note.includes(BRACKET) && (await t.page.locator(`${front} .notes-slot, ${front} .notes-way`).count()) === 0 && (await t.page.locator(`${front} .notes-note .answer > p`).count()) >= 1, note.slice(0, 160))
+    await A.at(t.page, 'notes', ['f:faqs', 'n:4'])
+    check('Notes: an answer that lists things is set as a list', (await t.page.locator(`${front} .notes-note ul.answer__list > li`).count()) === 15)
+    await A.at(t.page, 'notes', ['f:faqs', 'n:6'])
+    const out = await t.page.locator(`${front} .notes-note a.answer__link`).first().evaluate((a) => ({ href: a.href, target: a.target, says: a.textContent }))
+    check('Notes: a link out of an answer opens in a new tab, and says so', /foundersfund\.com/.test(out.href) && out.target === '_blank' && /, opens in a new tab$/.test(out.says), JSON.stringify(out))
+    await A.at(t.page, 'notes', ['f:faqs', 'n:8'])
+    await t.page.locator(`${front} .notes-note button.answer__link`).tap()
+    await t.sleep(1100)
+    check('Notes: a link in an answer to the site’s own chat opens Messages', (await A.state(t.page)).place?.app === 'messages', JSON.stringify((await A.state(t.page)).place))
 
-    // UX-16: Files, a company with no site
-    await A.at(t.page, 'finder', ['f:all'], 'company:Drumroll')
+    // UX-16: Wallet, a company with no site
+    await A.at(t.page, 'finder', ['v:4'], 'company:Drumroll')
     const sheet = '.sb-slot[data-front] .ios-sheet'
-    const fate = t.page.locator(`${sheet} .files-fate`)
-    check('UX-16 Files: a company with no site says so where the button would be', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && (await t.page.locator(`${sheet} .files-open`).count()) === 0)
+    const fate = t.page.locator(`${sheet} .wallet-fate`)
+    check('UX-16 Wallet: a company with no site says so where the button would be', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && (await t.page.locator(`${sheet} .wallet-visit`).count()) === 0)
     await t.page.evaluate(() => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }) })
     const shareAndRead = async () => {
       await t.page.evaluate(() => navigator.clipboard.writeText('—'))
@@ -292,44 +317,41 @@ const BRACKET = '[Shrug’s answer goes here'
       return t.page.evaluate(() => navigator.clipboard.readText())
     }
     let sent = await shareAndRead()
-    check('UX-16 Files: Share on it sends its name with no address', sent === 'Drumroll', sent)
-    check('UX-16 Files: and says "Copied", not "Link copied"', (await t.page.locator(`${sheet} .files-file [role="status"]`).innerText().catch(() => '')) === 'Copied')
-    await A.at(t.page, 'finder', ['f:all'], 'company:Clubhouse')
+    check('UX-16 Wallet: Share on it sends its name with no address', sent === 'Drumroll', sent)
+    check('UX-16 Wallet: and says "Copied", not "Link copied"', (await t.page.locator(`${sheet} .wallet-company [role="status"]`).innerText().catch(() => '')) === 'Copied')
+    await A.at(t.page, 'finder', ['v:11'], 'company:Clubhouse')
     sent = await shareAndRead()
-    check('UX-16 Files: one with a line sends the name and the line, no address', sent === 'Clubhouse: A space for casual, drop-in audio conversations', sent)
-    await A.at(t.page, 'finder', ['f:all'], 'company:Varda')
+    check('UX-16 Wallet: one with a line sends the name and the line, no address', sent === 'Clubhouse: A space for casual, drop-in audio conversations', sent)
+    await A.at(t.page, 'finder', ['v:0'], 'company:Varda')
     sent = await shareAndRead()
-    check('Files: Share on a company with a site still sends its address', /varda\.com/.test(sent), sent)
-    const open = await t.page.locator(`${sheet} .files-open`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
-    check('UX-26 Files: a company link is rel="noopener" and says it opens in a new tab', open.rel === 'noopener' && open.target === '_blank' && /, opens in a new tab$/.test(open.says), JSON.stringify(open))
+    check('Wallet: Share on a company with a site still sends its address', /varda\.com/.test(sent), sent)
+    const open = await t.page.locator(`${sheet} .wallet-visit`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
+    check('UX-26 Wallet: a company link is rel="noopener" and says it opens in a new tab', open.rel === 'noopener' && open.target === '_blank' && /, opens in a new tab$/.test(open.says), JSON.stringify(open))
+    const info = (await t.page.locator(`${sheet} .wallet-info`).innerText()).replace(/\s+/g, ' ').trim()
+    check('Wallet: a company\'s sheet says its vertical and its site, and nothing of folders or tags', /Vertical Deep tech/.test(info) && /Website varda\.com/.test(info) && !/Tags|Kind|Where/.test(info), info)
 
-    // UX-19: Files, an empty search
-    await A.at(t.page, 'finder', ['f:all'])
+    // UX-19: Wallet, an empty search
+    await A.at(t.page, 'finder', [])
     await t.page.locator(`${front} [aria-label="Search"]`).tap()
     await t.sleep(400)
     await t.page.keyboard.type('zzzz')
     await t.sleep(300)
     const empty = (await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .ios-empty').innerText()).replace(/\s+/g, ' ').trim()
-    check('UX-19 Files: an empty search says "No Results for “x”" and what to try', empty === 'No Results for “zzzz” Check the spelling or try a new search.', empty)
+    check('UX-19 Wallet: an empty search says "No Results for “x”" and what to try', empty === 'No Results for “zzzz” Check the spelling or try a new search.', empty)
     await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [aria-label="Close search"]').tap()
     await t.sleep(300)
-    // The one-pager under Shared
-    await A.at(t.page, 'finder', [])
-    await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [role="tab"]:has-text("Shared"), .sb-slot[data-front] .ios-page[data-pos="top"] button:has-text("Shared")').first().tap()
-    await t.sleep(400)
-    const shared = await t.page.locator('.sb-slot[data-front] .files-item--shared').evaluate((a) => ({ rel: a.rel, says: a.textContent })).catch(() => null)
-    check('UX-19 Files: the one-pager under Shared says it opens in a new tab (and keeps noreferrer)', !!shared && shared.rel === 'noreferrer' && /, opens in a new tab$/.test(shared.says), JSON.stringify(shared))
+    // The cards are all there is: nothing of Files is left (no tabs, no Recents, Shared or Browse)
+    const left = await t.page.evaluate(() => { const app = document.querySelector('.sb-slot[data-front]'); return { tabs: app.querySelectorAll('.ios-tabs, [role="tablist"]').length, words: /Recents|Shared|Browse|Recently Deleted/.test(app.textContent), cards: app.querySelectorAll('.wallet-slot').length } })
+    check('Wallet: the cards are all there is: no tabs, no Recents, Shared or Browse', left.tabs === 0 && !left.words && left.cards === 13, JSON.stringify(left))
     check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 200))
     await t.ctx.close()
 
+    // The editor's view has nothing left to show in Notes: an answered question reads the same
     const d = await A.open(browser, { device: 'iphone', base: BASE, query: 'still&draft' })
     await A.unlock(d.page)
     await A.at(d.page, 'notes', ['f:faqs', 'n:3'])
     const dn = (await d.page.locator(`${front} .notes-note`).innerText()).replace(/\s+/g, ' ')
-    check('UX-4 Notes with ?draft: the editor\'s note, in its dashed box, as before', dn.includes(BRACKET) && !dn.includes(PENDING) && (await d.page.locator(`${front} .notes-slot`).count()) === 1, dn.slice(0, 120))
-    await A.at(d.page, 'notes', ['f:faqs'])
-    const dr = await d.page.locator(`${front} .notes-row`).first().innerText()
-    check('UX-4 Notes with ?draft: rows say what Notes says of a note that is only a title', /No additional text/.test(dr), dr.replace(/\s+/g, ' '))
+    check('UX-4 Notes with ?draft: an answered question reads the same, with no note for the editor', dn.length > 200 && !dn.includes(BRACKET) && (await d.page.locator(`${front} .notes-slot`).count()) === 0, dn.slice(0, 120))
     await d.ctx.close()
 
     // PH-7: the narrowest phone
@@ -439,9 +461,9 @@ const BRACKET = '[Shrug’s answer goes here'
     const where = () => k.page.evaluate((front) => {
       const page = document.querySelector(front)
       const field = page?.querySelector('.ios-search__input')
-      return { searching: !!page?.querySelector('.files-screen--search'), value: field?.value ?? null, focused: !!field && document.activeElement === field }
+      return { searching: !!page?.querySelector('.wallet-screen--search'), value: field?.value ?? null, focused: !!field && document.activeElement === field }
     }, front)
-    await A.at(k.page, 'finder', ['f:all'])
+    await A.at(k.page, 'finder', [])
     await k.page.locator(`${front} [aria-label="Search"]`).click()
     await k.sleep(400)
     await k.page.keyboard.type('varda')
@@ -452,14 +474,14 @@ const BRACKET = '[Shrug’s answer goes here'
       await k.sleep(700)
       steps.push({ ...(await where()), stack: (await A.state(k.page)).place?.stack?.join() ?? null, app: (await A.state(k.page)).place?.app ?? null })
     }
-    check('MK-15 Files: Escape empties the search', steps[1].searching && steps[1].value === '' && steps[1].focused, JSON.stringify(steps[1]))
-    check('MK-15 Files: then lets go of the field', steps[2].searching && !steps[2].focused, JSON.stringify(steps[2]))
-    check('MK-15 Files: then leaves search, for the folder it was opened over', !steps[3].searching && steps[3].app === 'finder' && steps[3].stack === 'f:all', JSON.stringify(steps[3]))
-    check('MK-15 Files: and only then goes Back', steps[4].app === 'finder' && steps[4].stack === '', JSON.stringify(steps[4]))
+    check('MK-15 Wallet: Escape empties the search', steps[1].searching && steps[1].value === '' && steps[1].focused, JSON.stringify(steps[1]))
+    check('MK-15 Wallet: then lets go of the field', steps[2].searching && !steps[2].focused, JSON.stringify(steps[2]))
+    check('MK-15 Wallet: then leaves search, for the cards it was opened over', !steps[3].searching && steps[3].app === 'finder' && steps[3].stack === '', JSON.stringify(steps[3]))
+    check('MK-15 Wallet: and only then leaves the app', steps[4].app === null, JSON.stringify(steps[4]))
 
     await A.at(k.page, 'notes', ['f:faqs'])
     await k.page.locator(`${front} .ios-search__input`).click()
-    await k.page.keyboard.type('drops')
+    await k.page.keyboard.type('gifts')
     await k.sleep(300)
     const nwhere = async () => ({ ...(await k.page.evaluate((front) => { const f = document.querySelector(`${front} .ios-search__input`); return { value: f?.value ?? null, focused: !!f && document.activeElement === f } }, front)), stack: (await A.state(k.page)).place?.stack?.join() ?? null })
     const n = []
@@ -470,6 +492,43 @@ const BRACKET = '[Shrug’s answer goes here'
     }
     check('MK-15 Notes: Escape empties the search, then lets go, then goes Back', n[0].value === '' && n[0].focused && !n[1].focused && n[1].stack === 'f:faqs' && n[2].stack === '', JSON.stringify(n))
     await k.ctx.close()
+
+    // A long answer can be read to its end from the keyboard: the page of a note takes the keyboard itself,
+    // and is named by its question (there is nothing in an answer to press, so nothing else in it could)
+    {
+      const w = await A.open(browser, { device: 'laptop', base: BASE, query: 'still&open=faqs' })
+      await up(w.page)
+      await w.sleep(1300)
+      await w.page.locator('.wf[data-app="notes"] .faq-row').nth(4).click()
+      await w.sleep(300)
+      const pane = w.page.locator('.wf[data-app="notes"] .faq__body')
+      const said = await pane.evaluate((el) => ({ tab: el.tabIndex, role: el.getAttribute('role'), name: document.getElementById(el.getAttribute('aria-labelledby') || '')?.textContent?.trim() ?? null, scrolls: el.scrollHeight > el.clientHeight + 40 }))
+      await pane.focus()
+      await w.page.keyboard.press('End')
+      await w.sleep(500)
+      const read = await pane.evaluate((el) => ({ top: Math.round(el.scrollTop), end: el.scrollHeight - el.clientHeight, ring: el.matches(':focus-visible') ? getComputedStyle(el).outlineStyle : 'none' }))
+      check('the desktop: a long answer\'s page takes the keyboard, is named by its question, and End reads it to its foot', said.tab === 0 && said.role === 'group' && said.name === 'How do you do marketing?' && said.scrolls && read.top > 40 && Math.abs(read.top - read.end) <= 2 && read.ring === 'solid', JSON.stringify({ said, read }))
+      await w.ctx.close()
+
+      const ph = await A.open(browser, { device: { w: 600, h: 900, dpr: 1 }, base: BASE, query: 'still' })
+      await A.unlock(ph.page)
+      await A.at(ph.page, 'notes', ['f:faqs', 'n:4'])
+      const page = ph.page.locator(`${front} [data-scroller]`)
+      const psaid = await page.evaluate((el) => ({ tab: el.tabIndex, role: el.getAttribute('role'), name: document.getElementById(el.getAttribute('aria-labelledby') || '')?.textContent?.trim() ?? null, scrolls: el.scrollHeight > el.clientHeight + 40 }))
+      await ph.page.keyboard.press('Tab')
+      const onPage = await page.evaluate((el) => document.activeElement === el)
+      await ph.page.keyboard.press('End')
+      await ph.sleep(500)
+      const pread = await page.evaluate((el) => ({ top: Math.round(el.scrollTop), end: el.scrollHeight - el.clientHeight }))
+      check('the phone: a question\'s note takes Tab first, is named by its question, and End reads it to its foot', psaid.tab === 0 && psaid.role === 'group' && psaid.name === 'How do you do marketing?' && psaid.scrolls && onPage && pread.top > 40 && Math.abs(pread.top - pread.end) <= 2, JSON.stringify({ psaid, onPage, pread }))
+      // a note of the visitor's own has a field in it, which is what takes the keyboard there
+      await A.at(ph.page, 'notes', [])
+      await ph.page.locator(`${front} button[aria-label="New Note"]`).first().click()
+      await ph.sleep(900)
+      const own = await ph.page.locator(`${front} [data-scroller]`).evaluate((el) => ({ tab: el.getAttribute('tabindex'), field: !!el.querySelector('textarea, [contenteditable]') }))
+      check('…and a note of the visitor\'s own keeps the keyboard in its field, not on its page', own.tab === null && own.field, JSON.stringify(own))
+      await ph.ctx.close()
+    }
 
     // MK-17: the desktop's search field is dir="auto" too
     const d = await A.open(browser, { device: 'laptop', base: BASE, query: 'still&open=portfolio' })

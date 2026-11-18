@@ -28,8 +28,10 @@ Run against a build (`all.sh` does), not only the dev server: the dev server kee
 | `portfolio-faqs`, `terminal-vip`, `messages`, `folders-search`, `ios-parts`, `phone-shell`, `desktop-shell` | Each of the audit's fixes, by area |
 | `forced-colours` | Windows High Contrast (Chromium's emulation), and the kit's parts under reduced motion |
 | `*-webkit` | The same in Safari's engine |
-| `phone-axe` | axe-core over every iPhone screen |
+| `phone-axe` | axe-core over every iPhone screen. It prints what it finds and does not fail the run: read its last lines, which should be "no violations" |
 
 `live.cjs` runs any one of them against the deployed site from a machine whose way out is a proxy (`node tests/checks/live.cjs place.cjs https://shrug-web.vercel.app/`).
 
 `lib.cjs` is what they share: opening the site as a given device, reaching any iPhone screen through history, and a few detectors (spills, small targets, console errors). No real phone, Firefox, or screen reader is involved: what those add is not covered here.
+
+Two things to know when adding to them. Replies land a little over once a second and each drops a banner over the top bar of whatever app is showing, so a check that presses things there first pauses the replies the way a visitor can (Pause Replies in the conversation's details: `quiet` in `ios-parts.cjs`); the phone has no Settings app to turn banners off in. And a bubble is still growing out of its typing dots for a moment after it lands, so a measurement of the thread's height takes the least of a few looks (`spareOf` in `desktop-flow.cjs`).

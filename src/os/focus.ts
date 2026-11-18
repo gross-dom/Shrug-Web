@@ -6,6 +6,18 @@ import { useLayoutEffect, useRef } from 'react'
 // so the next Tab carries on from there and a screen reader has something to
 // read. Without this it falls to the page itself, which is nowhere.
 
+// Whose hand is on the page. The site gives the keyboard to things itself (the first thing on the
+// Home Screen as the phone opens, a screen that has just been pushed), and a browser draws a ring
+// round whatever is given it that way. That ring is for someone using a keyboard: after a touch
+// there is nobody to show it to, and a ring round a widget nobody tabbed to is only a mark on the
+// screen. The page says which it was last (`data-input` on the root), and the stylesheets leave
+// the ring off after a touch (base.css). The next key pressed brings it back.
+if (typeof window !== 'undefined') {
+  const root = document.documentElement
+  window.addEventListener('touchstart', () => root.setAttribute('data-input', 'touch'), { passive: true, capture: true })
+  window.addEventListener('keydown', () => root.removeAttribute('data-input'), true)
+}
+
 /** Can take the keyboard: on the page, drawn, and not shut off. */
 export const takesFocus = (el: Element | null | undefined): el is HTMLElement =>
   el instanceof HTMLElement && el.isConnected && !el.closest('[inert]') && el.getClientRects().length > 0

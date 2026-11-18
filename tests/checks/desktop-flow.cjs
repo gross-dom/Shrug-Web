@@ -10,11 +10,24 @@ const { chromium } = require('playwright')
   const ok = (label, pass, detail = '') => console.log(`${pass ? 'PASS' : 'FAIL'}  ${label}${detail ? `  (${detail})` : ''}`)
   await page.goto((process.argv[2] || 'http://127.0.0.1:5173/') + '?open=portfolio,faqs,case-studies,vip')
   // ---- what this round changed
-  await page.waitForTimeout(2500)
+  // (Looked at as soon as it is there: the first reply is under three seconds away)
+  await page.waitForSelector('.conv', { timeout: 20000 }); await page.waitForTimeout(250)
   const bar = await page.evaluate(() => ({ menus: [...document.querySelectorAll('.menubar__title')].map((t) => t.textContent.trim()), status: document.querySelector('.menubar__status').textContent.trim(), links: document.querySelectorAll('.menubar__status a, .menubar__status button').length }))
   ok('the menu bar has no Help, reply count or one-pager', !bar.menus.includes('Help') && bar.links === 0 && !/replied|pager/i.test(bar.status), JSON.stringify(bar))
   const list = await page.evaluate(() => ({ rows: document.querySelectorAll('.conv').length, first: document.querySelector('.conv .ss-row__title')?.textContent, replies: document.querySelectorAll('.chat__thread [data-person]').length }))
-  ok('the left panel has Shrug Family and the five easter-egg conversations, before anyone has replied', list.rows === 6 && list.first === 'Shrug Family' && list.replies === 0, JSON.stringify(list))
+  ok('the left panel has Testimonials and the three easter-egg conversations, before anyone has replied', list.rows === 4 && list.first === 'Testimonials' && list.replies === 0, JSON.stringify(list))
+  // The shrug is drawn in one place on the desktop: the corner of the menu bar. It is the emoticon there, not the logo
+  const mark = await page.evaluate(() => { const el = document.querySelector('[data-menu-mark]'); const shrug = '¯\\_(ツ)_/¯'; const rest = document.body.innerText.split(shrug).length - 1; return { text: el?.textContent.trim(), drawn: !!el?.querySelector('svg'), times: rest } })
+  ok('the corner of the menu bar is the shrug emoticon, and that is the only place it is', mark.text === '¯\\_(ツ)_/¯' && !mark.drawn && mark.times === 1, JSON.stringify(mark))
+  // The Dock: air between its icons, and the one-pager as a sheet of paper as tall as they are
+  const dock = await page.evaluate(() => {
+    const icons = [...document.querySelectorAll('.dock__item .dock__icon')].map((el) => el.getBoundingClientRect())
+    const apps = icons.slice(0, 5)
+    const gaps = apps.slice(1).map((r, i) => Math.round(r.left - apps[i].right))
+    const paper = document.querySelector('.dock__icon--doc svg')?.getBoundingClientRect()
+    return { gaps, app: Math.round(apps[0].height), paper: paper ? Math.round(paper.height) : 0, sheet: !!document.querySelector('.dock__icon--doc') }
+  })
+  ok('the Dock keeps a quarter of an icon between two, and the one-pager is its sheet of paper, as tall as they are', dock.gaps.every((g) => g >= 12 && g <= 18) && dock.sheet && Math.abs(dock.paper - dock.app) <= 4, JSON.stringify(dock))
   // every reply is written, then sent, at one pace
   const times = await page.evaluate(() => new Promise((done) => {
     const seen = new Map(); const typed = new Set(); const t0 = performance.now()
@@ -51,20 +64,32 @@ const { chromium } = require('playwright')
   // typing to the group
   await page.fill('.wf[data-app="messages"] .composer__input', 'hello from a visitor')
   await page.keyboard.press('Enter'); await page.waitForTimeout(1200)
-  const failed = await page.evaluate(() => ({ bubble: document.querySelector('.chat-failed .ss-bubble__text')?.textContent, note: document.querySelector('.chat-undelivered')?.textContent }))
-  ok('a typed message is shown as not delivered', failed.bubble === 'hello from a visitor' && failed.note === 'Not Delivered', JSON.stringify(failed))
+  const sent = await page.evaluate(() => { const rows = [...document.querySelectorAll('.wf[data-app="messages"] .chat__thread > *')]; const at = rows.findIndex((el) => el.textContent.includes('hello from a visitor')); return { there: at >= 0, under: at >= 0 ? rows[at + 1]?.textContent.trim() : null, failed: document.querySelectorAll('.chat-failed, .chat-undelivered, .chat-why').length } })
+  ok('a typed message is sent and marked Delivered, as any message is', sent.there && sent.under === 'Delivered' && sent.failed === 0, JSON.stringify(sent))
 
   // the list: keyboard moves between conversations
   await page.focus('.conv-list'); await page.keyboard.press('ArrowDown'); await page.waitForTimeout(500)
   const open1 = await page.evaluate(() => ({ selected: document.querySelector('.conv[data-selected]')?.getAttribute('data-conversation'), name: document.querySelector('.chat-id__name span')?.textContent, bubbles: document.querySelectorAll('.chat__thread .ss-bubble').length }))
-  ok('arrow keys open the next conversation', open1.selected === 'founder' && open1.bubbles === 4, JSON.stringify(open1))
+  ok('arrow keys open the next conversation', open1.selected === 'founder' && open1.name === 'Akash Nigam' && open1.bubbles === 3, JSON.stringify(open1))
   // away from the group, its replies are new: the row is marked and the Dock counts them
   await page.waitForTimeout(3600)
   const away = await page.evaluate(() => ({ unread: !!document.querySelector('.conv[data-conversation="group"][data-unread]'), badge: document.querySelector('.dock__badge')?.textContent ?? null }))
-  ok('with another conversation open, new replies mark Shrug Family and the Dock counts them', away.unread && +away.badge >= 1, JSON.stringify(away))
+  ok('with another conversation open, new replies mark Testimonials and the Dock counts them', away.unread && +away.badge >= 1, JSON.stringify(away))
+  // A reply that lands while its conversation is not the one in front is news: it drops in at the top right
+  const note = await page.waitForSelector('.notify__card', { timeout: 15000 }).then((el) => el.evaluate((card) => { const r = card.getBoundingClientRect(); return { from: card.querySelector('.notify__from')?.textContent, right: Math.round(innerWidth - r.right), top: Math.round(r.top) } })).catch(() => null)
+  ok('a reply that lands meanwhile drops in at the top right corner, under the menu bar', !!note && note.from === 'Testimonials' && note.right <= 20 && note.top >= 24 && note.top <= 60, JSON.stringify(note))
+  // The count on the Dock is a circle, as a badge is
+  const badge = await page.evaluate(() => { const r = document.querySelector('.dock__badge')?.getBoundingClientRect(); return r ? { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10 } : null })
+  ok('the count on the Dock is a circle', !!badge && Math.abs(badge.w - badge.h) < 0.6, JSON.stringify(badge))
   await page.click('.conv[data-conversation="group"]'); await page.waitForTimeout(500)
   const backIn = await page.evaluate(() => ({ unread: !!document.querySelector('.conv[data-conversation="group"][data-unread]'), badge: document.querySelector('.dock__badge')?.textContent ?? null }))
-  ok('opening Shrug Family again clears both', !backIn.unread && backIn.badge === null, JSON.stringify(backIn))
+  ok('opening Testimonials again clears both', !backIn.unread && backIn.badge === null, JSON.stringify(backIn))
+  // In the list, the name and the last message are set against the middle of the face beside them
+  const rows = await page.evaluate(() => [...document.querySelectorAll('.conv')].map((row) => {
+    const face = row.querySelector('.ss-row__lead > *').getBoundingClientRect(); const head = row.querySelector('.ss-row__head').getBoundingClientRect(); const said = row.querySelector('.ss-row__preview').getBoundingClientRect()
+    return Math.round(Math.abs((face.top + face.bottom) / 2 - (head.top + said.bottom) / 2) * 10) / 10
+  }))
+  ok('in the list, a name and its last message are level with the middle of the face', rows.length === 4 && rows.every((off) => off <= 1), `off by ${rows.join(', ')}`)
   // details of the group: a person's card, and show in group
   await page.click('.chat-id'); await page.waitForTimeout(400)
   await page.click('.details__person'); await page.waitForTimeout(400)
@@ -78,10 +103,54 @@ const { chromium } = require('playwright')
   ok('Show in group chat brings the reply into view and rings it', shown.flashed && shown.inView && shown.group === 'group', JSON.stringify(shown))
   // search
   await page.fill('.chat-side .search__input', 'pentatonix'); await page.waitForTimeout(400)
-  ok('searching finds people in Shrug Family by role', (await page.locator('.conv-found [data-row]').count()) === 1 && /Kevin Olusola/.test(await page.locator('.conv-found').innerText()), (await page.locator('.conv-found').innerText()).replace(/\s+/g, ' ').slice(0, 80))
+  ok('searching finds people in Testimonials by role', (await page.locator('.conv-found [data-row]').count()) === 1 && /Kevin Olusola/.test(await page.locator('.conv-found').innerText()), (await page.locator('.conv-found').innerText()).replace(/\s+/g, ' ').slice(0, 80))
   await page.fill('.chat-side .search__input', ''); await page.waitForTimeout(300)
   const root = await page.evaluate(() => ({ top: document.querySelector('.os').scrollTop, left: document.querySelector('.os').scrollLeft, doc: document.scrollingElement.scrollTop }))
   ok('nothing scrolled the desktop itself', !root.top && !root.left && !root.doc, JSON.stringify(root))
+  // Closed while replies are coming in and opened again later, the thread is at its newest message, with nothing under it.
+  // (A reply that turned from its dots into its words while the window was shut once kept the dots' size, its words run a
+  // long way out of it: the thread came back scrolled into a screen of nothing.)
+  await page.waitForFunction(() => !!document.querySelector('.wf[data-app="messages"] .chat__thread [data-typing]'), null, { timeout: 8000 }).catch(() => {})
+  await page.click('.wf[data-app="messages"] button[aria-label*="Close" i]'); await page.waitForTimeout(5000)
+  await page.click('[data-dock-app="messages"]'); await page.waitForTimeout(1600)
+  // What is left under the thread once it has settled. A reply growing out of its dots runs past its own box for a
+  // moment (they land more than once a second now), so it is the least of a few looks that counts: space that stays
+  const spareOf = () => page.evaluate(async () => {
+    const el = document.querySelector('.wf[data-app="messages"] .chat__scroll'); const flow = el.querySelector('.chat__flow')
+    let spare = Infinity
+    for (let i = 0; i < 8; i++) { spare = Math.min(spare, el.scrollHeight - flow.offsetHeight); await new Promise((r) => setTimeout(r, 150)) }
+    return spare
+  })
+  const again = { spare: await spareOf(), ...(await page.evaluate(() => {
+    const el = document.querySelector('.wf[data-app="messages"] .chat__scroll'); const box = el.getBoundingClientRect()
+    const said = [...el.querySelectorAll('.chat__thread [data-person]:not([data-typing])')]; const last = said[said.length - 1].getBoundingClientRect()
+    const stuck = said.filter((b) => b.getBoundingClientRect().width < 70 && (b.textContent || '').length > 20).length
+    return { lastInView: last.bottom > box.top + 40 && last.top < box.bottom, stuck, said: said.length }
+  })) }
+  ok('closed while replies come in and opened again, the conversation is at its newest message with no empty space under it', again.spare < 60 && again.lastInView && again.stuck === 0, JSON.stringify(again))
+  // Only minimised, with the reader part-way up the conversation, it comes back where they were: the way to the newest
+  // is offered, and nothing is moved for them
+  {
+    const box = await page.locator('.wf[data-app="messages"] .chat__scroll').boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.wheel(0, -700); await page.waitForTimeout(700)
+    const left = await page.evaluate(() => Math.round(document.querySelector('.wf[data-app="messages"] .chat__scroll').scrollTop))
+    await page.click('.wf[data-app="messages"] button[aria-label^="Minimize"]'); await page.waitForTimeout(4000)
+    await page.click('[data-dock-app="messages"]'); await page.waitForTimeout(1600)
+    const back = { ...(await page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"] .chat__scroll'); const more = document.querySelector('.wf[data-app="messages"] .chat__new'); return { top: Math.round(el.scrollTop), more: more.hasAttribute('data-show') ? more.textContent.trim() : null } })), spare: await spareOf() }
+    ok('minimised part-way up and brought back, the conversation is where it was left, with the way to the newest offered', Math.abs(back.top - left) < 4 && back.spare < 60 && /new/.test(back.more || ''), JSON.stringify({ left, back }))
+    // …and closed from there, it opens again at the newest message all the same
+    await page.click('.wf[data-app="messages"] button[aria-label^="Close"]'); await page.waitForTimeout(2500)
+    await page.click('[data-dock-app="messages"]'); await page.waitForTimeout(1600)
+    const fresh = await page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"] .chat__scroll'); const box = el.getBoundingClientRect(); const said = [...el.querySelectorAll('.chat__thread [data-person]:not([data-typing])')]; const last = said[said.length - 1].getBoundingClientRect(); return { lastInView: last.bottom > box.top + 40 && last.top < box.bottom, more: document.querySelector('.wf[data-app="messages"] .chat__new').hasAttribute('data-show') } })
+    fresh.spare = await spareOf()
+    ok('closed from part-way up and opened again, it is at the newest message, with nothing left to be offered and no empty space under it', fresh.lastInView && !fresh.more && fresh.spare < 60, JSON.stringify(fresh))
+  }
+  // Every reply at once, from the head of the conversation
+  const pill = page.locator('.wf[data-app="messages"] .chat__all[data-show]')
+  ok('while replies are still coming, the conversation offers them all at once', (await pill.count()) === 1 && /Load all 89 replies/.test(await pill.textContent()), await pill.textContent().catch(() => 'no pill'))
+  await pill.click(); await page.waitForTimeout(800)
+  const all = await page.evaluate(() => ({ people: document.querySelectorAll('.wf[data-app="messages"] .chat__thread [data-person]').length, pill: !!document.querySelector('.wf[data-app="messages"] .chat__all[data-show]'), tail: [...document.querySelectorAll('.wf[data-app="messages"] .chat__thread [data-from="me"] .ss-bubble__text')].map((b) => b.textContent).slice(-2) }))
+  ok('pressed, all eighty-nine are there and the offer goes; the last reply is the end of the conversation', all.people === 89 && !all.pill && !all.tail.some((t) => /anyway|ツ|portfolio|one-pager/i.test(t)), JSON.stringify(all))
 
   // ---- Finder
   await page.click('[data-dock-app="finder"]'); await page.waitForTimeout(600)
@@ -107,6 +176,7 @@ const { chromium } = require('playwright')
   await page.click('[data-dock-app="photos"]'); await page.waitForTimeout(500)
   await page.click('.seg [data-target="video"]'); await page.waitForTimeout(400)
   ok('VIP filters to videos', (await page.locator('.vip-tile').count()) === (await page.locator('.vip-tile[data-kind="video"]').count()))
+  ok('VIP is one grid: no sidebar of drops, no row of them along the top', (await page.locator('.wf[data-app="photos"] .side, .wf[data-app="photos"] .vip__chips, .wf[data-app="photos"] .chip').count()) === 0)
   // screen saver
   await page.click('[data-menu-title="mark"]'); await page.click('.menu__item:has-text("Start Screen Saver")'); await page.waitForTimeout(1200)
   ok('the screen saver starts', (await page.locator('.saver[data-on]').count()) === 1)

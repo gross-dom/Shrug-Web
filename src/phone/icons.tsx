@@ -1,8 +1,9 @@
 import { useId, type ReactNode } from 'react'
+import { VIP_LETTERS } from '../data/logo'
 import type { PhoneApp } from './system'
 
 // The iPhone's app icons. Each is drawn here, after the icon of the iOS app it
-// stands for (Messages, Files, Notes, Settings), in the continuous-corner tile
+// stands for (Messages, Wallet, Notes), in the continuous-corner tile
 // iOS cuts its icons to; Case Studies and VIP, which are Shrug's own, have
 // icons of their own. No file from an operating system is used.
 
@@ -56,20 +57,29 @@ function Messages() {
   )
 }
 
-/** Files: the blue folder on white. */
-function Files() {
+/** Wallet: cards of four colours standing in a pocket, on black. */
+function Wallet() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#ffffff" to="#f1f3f7" sheen={0.9}>
+    <Tile from="#2c2c30" to="#0b0b0d" sheen={0.28}>
       <defs>
-        <linearGradient id={`${id}-front`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#5fc0ff" />
-          <stop offset="1" stopColor="#1f8ff5" />
+        <linearGradient id={`${id}-pocket`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3a3a40" />
+          <stop offset="1" stopColor="#1b1b1f" />
         </linearGradient>
+        <clipPath id={`${id}-in`}>
+          <rect x="15" y="22" width="70" height="58" rx="9" />
+        </clipPath>
       </defs>
-      <path d="M18 33.500a6.500 6.500 0 0 1 6.500-6.500h14.200a6.500 6.500 0 0 1 4.900 2.200l3.100 3.600H75.500a6.500 6.500 0 0 1 6.500 6.500V48H18z" fill="#1a7fe8" />
-      <rect x="18" y="38.500" width="64" height="37" rx="7.500" fill={`url(#${id}-front)`} />
-      <rect x="18" y="38.500" width="64" height="1.800" rx="0.900" fill="#fff" opacity="0.4" />
+      <g clipPath={`url(#${id}-in)`}>
+        <rect x="15" y="22" width="70" height="58" rx="9" fill="#2f9bf6" />
+        <rect x="15" y="31" width="70" height="49" rx="9" fill="#f7c531" />
+        <rect x="15" y="40" width="70" height="40" rx="9" fill="#37c95d" />
+        <rect x="15" y="49" width="70" height="31" rx="9" fill="#f4505e" />
+        {/* The pocket's front, with the notch a thumb takes a card out by */}
+        <path d="M15 57h20.500a4 4 0 0 1 3.600 2.300 12 12 0 0 0 21.800 0A4 4 0 0 1 64.500 57H85v23H15z" fill={`url(#${id}-pocket)`} />
+        <path d="M15 57h20.500a4 4 0 0 1 3.600 2.300 12 12 0 0 0 21.800 0A4 4 0 0 1 64.500 57H85" fill="none" stroke="#fff" strokeOpacity="0.16" strokeWidth="0.800" />
+      </g>
     </Tile>
   )
 }
@@ -96,40 +106,11 @@ function Notes() {
   )
 }
 
-/** VIP: the star it has on the desktop, white on purple. It is Shrug's own app, so it has no iOS icon to be drawn after. */
+/** VIP: black, with its name in white capitals, as on the desktop. It is Shrug's own app, so it has no iOS icon to be drawn after. */
 function Vip() {
   return (
-    <Tile from="#b9a2ff" to="#5a2fd8" sheen={0.4}>
-      <path d="M50 23.5l7.7 16.4 18 2.3-13.2 12.4 3.4 17.8L50 63.7l-15.9 8.7 3.4-17.8-13.2-12.4 18-2.3z" fill="#fff" stroke="#fff" strokeWidth="4" strokeLinejoin="round" />
-    </Tile>
-  )
-}
-
-/** Settings: gears on gray. */
-function Settings() {
-  const id = useId().replace(/:/g, '')
-  return (
-    <Tile from="#b6b6bb" to="#77777d" sheen={0.35}>
-      <defs>
-        <linearGradient id={`${id}-disc`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#4a4a4e" />
-          <stop offset="1" stopColor="#1f1f22" />
-        </linearGradient>
-      </defs>
-      {/* The outer gear: a ring of teeth around its rim */}
-      <circle cx="50" cy="50" r="33.500" fill="none" stroke="#e6e6ea" strokeWidth="6" strokeDasharray="3.510 3.510" />
-      <circle cx="50" cy="50" r="30.500" fill="#e6e6ea" />
-      <circle cx="50" cy="50" r="27" fill={`url(#${id}-disc)`} />
-      {/* The inner gear: a toothed ring, three spokes and a hub */}
-      <circle cx="50" cy="50" r="20.500" fill="none" stroke="#d4d4d9" strokeWidth="3.200" strokeDasharray="2.150 2.150" />
-      <circle cx="50" cy="50" r="18.200" fill="none" stroke="#d4d4d9" strokeWidth="2.200" />
-      <g stroke="#d4d4d9" strokeWidth="3.400" strokeLinecap="round">
-        <path d="M50 50V32.500" />
-        <path d="M50 50l15.200 8.700" />
-        <path d="M50 50l-15.200 8.700" />
-      </g>
-      <circle cx="50" cy="50" r="5.600" fill="#d4d4d9" />
-      <circle cx="50" cy="50" r="2.300" fill="#2a2a2d" />
+    <Tile from="#2a2a2e" to="#000000" sheen={0.3}>
+      <path d={VIP_LETTERS} fill="#fff" fillRule="evenodd" />
     </Tile>
   )
 }
@@ -148,11 +129,10 @@ function Terminal() {
 
 const ICONS: Record<PhoneApp, () => ReactNode> = {
   messages: Messages,
-  finder: Files,
+  finder: Wallet,
   notes: Notes,
   photos: Vip,
   terminal: Terminal,
-  about: Settings,
 }
 
 /** An app's icon on the iPhone. */
@@ -172,20 +152,5 @@ export function OnePagerIcon() {
         <path d="M39 55h23M39 63h23M39 71h15" stroke="#c4c8d2" />
       </g>
     </Tile>
-  )
-}
-
-/** The glyphs on the Lock Screen's two round buttons: solid shapes with cut-outs, after the flashlight and camera symbols iOS uses there. */
-const LOCK_GLYPHS = {
-  torch: { size: 22, d: 'M7.6 1.6h8.8a1.6 1.6 0 0 1 1.6 1.6v1.9H6V3.2a1.6 1.6 0 0 1 1.6-1.6ZM6 6h12l-2.6 4v10.4a2 2 0 0 1-2 2h-2.8a2 2 0 0 1-2-2V10ZM10.6 14a1.4 1.4 0 1 0 2.8 0 1.4 1.4 0 1 0-2.8 0Z' },
-  camera: { size: 24, d: 'M4.6 6.6h3.3l1.2-1.8a1.3 1.3 0 0 1 1.1-.6h3.6a1.3 1.3 0 0 1 1.1.6l1.2 1.8h3.3A2.6 2.6 0 0 1 22 9.2v8.6a2.6 2.6 0 0 1-2.6 2.6H4.6A2.6 2.6 0 0 1 2 17.8V9.2a2.6 2.6 0 0 1 2.6-2.6ZM7.5 13.4a4.5 4.5 0 1 0 9 0 4.5 4.5 0 1 0-9 0ZM9 13.4a3 3 0 1 0 6 0 3 3 0 1 0-6 0Z' },
-}
-
-export function LockGlyph({ name }: { name: keyof typeof LOCK_GLYPHS }) {
-  const { size, d } = LOCK_GLYPHS[name]
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden>
-      <path fill="currentColor" fillRule="evenodd" d={d} />
-    </svg>
   )
 }

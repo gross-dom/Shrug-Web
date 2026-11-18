@@ -4,9 +4,9 @@ export const SITE = {
   legalName: 'Shrug Capital',
   mark: '¯\\_(ツ)_/¯',
   face: 'ツ',
-  /** What Shrug is, in a sentence: under the name in About and in Settings,
-   * and what a search engine, a link preview or a browser that cannot draw
-   * the site reads. This one says no more than the site's own testimonials
+  /** What Shrug is, in a sentence: under the name in About Shrug, and what a
+   * search engine, a link preview or a browser that cannot draw the site
+   * reads. This one says no more than the site's own testimonials
    * do; Shrug's own sentence belongs here. */
   line: 'Shrug Capital is an early-stage venture fund.',
   /** Where the site lives. The link preview's addresses are written from this (vite.config.ts). */
@@ -17,6 +17,18 @@ export const SITE = {
    * yet, so both are null and `reach` falls back on the one-pager. The day
    * one is written here, every place that offers a way to Shrug uses it. */
   contact: { sms: null as string | null, email: null as string | null },
+}
+
+/** What About Shrug says of the firm (the window on the desktop). Each is said in Shrug's own FAQs
+ * (faqs.ts): if one changes there, it changes here. */
+export const ABOUT = {
+  facts: [
+    { label: 'Started', value: '2017' },
+    { label: 'Partners', value: 'Niv Dror, Dom Santry' },
+    { label: 'Fund', value: 'Shrug V, the fifth' },
+  ],
+  /** What it backs: a row of its own, under the others. */
+  backs: 'Defense, space, energy, manufacturing and consumer brands',
 }
 
 export interface Reach {

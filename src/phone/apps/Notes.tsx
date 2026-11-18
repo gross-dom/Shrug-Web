@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { ArrowUpRight, Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, SquarePen, Trash2, X } from 'lucide-react'
 import { showNote, sought } from '../../apps/state'
+import { Answer } from '../../apps/answer'
 import { ANSWER_PENDING, ANSWER_PLACEHOLDER, FAQS, waysOn } from '../../data/faqs'
 import { DRAFT, SITE } from '../../data/site'
 import { useStore } from '../../os/store'
@@ -568,6 +569,8 @@ function NoteScreen({ entry, editing = false, children }: { entry: Entry; editin
       // Notes keeps a note's bar clear: its title is the first line of the page
       center={<></>}
       className="notes-screen notes-screen--note"
+      // One of the site's questions is only read: its page takes the keyboard so that a long answer can be scrolled with it
+      readable={entry.faq !== null}
       leading={<BackButton onClick={leave} />}
       trailing={
         <span className="notes-contents" onMouseDown={keepKeyboard}>
@@ -634,7 +637,7 @@ function FaqNote({ index }: { index: number }) {
         <p className="notes-note__date">{pageDate(entry.edited)}</p>
         <h2 className="notes-note__title">{faq.question}</h2>
         {faq.answer ? (
-          <p className="notes-note__body">{faq.answer}</p>
+          <Answer text={faq.answer} className="notes-note__body" />
         ) : DRAFT ? (
           <p className="notes-slot">{ANSWER_PLACEHOLDER}</p>
         ) : (

@@ -17,8 +17,9 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   const front = '.sb-slot[data-front] .ios-page[data-pos="top"]'
   await page.goto(base)
   await page.waitForSelector('.sb-lock', { timeout: 15000 })
-  await sleep(700)
-  await page.locator('.sb-lock__hint').tap(); await sleep(900)
+  // Straight in: the first reply is little more than a second away
+  await sleep(120)
+  await page.locator('.sb-lock__hint').tap(); await sleep(420)
   let s = await state()
   say(s.badge === null && s.widget === 0, 'before anyone has replied, Messages has no badge', JSON.stringify(s))
   await page.screenshot({ path: path.join(__dirname, '..', 'audit', 'shots', 'badge-0.png') })
@@ -39,7 +40,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator('.sb-slot[data-front] [data-conversation="group"]').tap(); await sleep(1500)
   await home()
   s = await state()
-  say(s.badge === null || +s.badge <= 1, 'reading Shrug Family clears the badge', JSON.stringify(s))
+  say(s.badge === null || +s.badge <= 1, 'reading Testimonials clears the badge', JSON.stringify(s))
   await sleep(4500)
   const later = await state()
   say(later.badge !== null && +later.badge >= 1 && +later.badge < later.widget, 'and replies that come in afterwards tick it up again from there', JSON.stringify(later))
@@ -47,7 +48,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator('.sb-icon[aria-label^="Messages"]').first().tap(); await sleep(1200)
   // (Messages comes back on the conversation it was left in: step back to the list)
   if (await page.locator(`${front} button[aria-label^="Back"]`).count()) { await page.locator(`${front} button[aria-label^="Back"]`).first().tap(); await sleep(900) }
-  await page.locator('.sb-slot[data-front] [data-conversation="mom"]').tap(); await sleep(4200)
+  await page.locator('.sb-slot[data-front] [data-conversation="founder"]').tap(); await sleep(4200)
   const back = await page.locator(`${front} button[aria-label^="Back"]`).first().getAttribute('aria-label')
   say(/^Back\. \d+ unread$/.test(back || ''), 'inside an easter egg, Back counts the replies that have come in to the group', back)
   const seen = [...new Set(errors)].filter((e) => !/Failed to load resource|\[vite\]/.test(e))

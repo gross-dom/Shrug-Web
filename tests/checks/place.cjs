@@ -36,16 +36,20 @@ const windows = (page) =>
   check('phone, Home Screen: the address names no app', tail(t.page) === '/?still', tail(t.page))
   await t.page.locator('.sb-dock [data-app="finder"], .sb-dock .sb-icon >> nth=1').first().tap()
   await settle(t.page, 1100)
-  check('phone, Files: ?open=portfolio, the other switch kept', tail(t.page) === '/?still&open=portfolio', tail(t.page))
-  await A.at(t.page, 'finder', ['f:all'], 'company:Eight Sleep')
-  // a place reached through history keeps whatever address that step had; one the visitor moves to gets its own:
-  await t.page.goBack(); await settle(t.page, 900)
-  await t.page.locator('.files-grid [data-company="Eight Sleep"], .files-item:has-text("Eight Sleep")').first().tap().catch(() => {})
-  await settle(t.page, 1000)
+  check('phone, Wallet: ?open=portfolio, the other switch kept', tail(t.page) === '/?still&open=portfolio', tail(t.page))
+  // A card out of the stack is the portfolio still: the address names a company, when one is open
+  await t.page.locator('.sb-slot[data-front] .wallet-card__toggle', { hasText: 'Health' }).tap(); await settle(t.page, 1000)
   let s = await A.state(t.page)
+  check('phone, a card out of the stack: the address is the portfolio still', s.place?.stack.join() === 'v:3' && tail(t.page) === '/?still&open=portfolio', `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  await t.page.locator('.sb-slot[data-front] .wallet-slot[data-lying="out"] .wallet-co', { hasText: 'Eight Sleep' }).tap(); await settle(t.page, 1000)
+  s = await A.state(t.page)
   check('phone, a company open: &at=eight-sleep', s.place?.sheet === 'company:Eight Sleep' && tail(t.page) === '/?still&open=portfolio&at=eight-sleep', `${tail(t.page)} ${JSON.stringify(s.place)}`)
   await t.page.goBack(); await settle(t.page, 900)
-  check('phone, Back: the address goes back with it', tail(t.page) === '/?still&open=portfolio', tail(t.page))
+  s = await A.state(t.page)
+  check('phone, Back: the address goes back with it, and the card is still out', tail(t.page) === '/?still&open=portfolio' && s.place?.sheet === null && s.place?.stack.join() === 'v:3', `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  await t.page.goBack(); await settle(t.page, 900)
+  s = await A.state(t.page)
+  check('phone, Back again: the card is back in the stack', tail(t.page) === '/?still&open=portfolio' && s.place?.app === 'finder' && s.place.stack.length === 0, `${tail(t.page)} ${JSON.stringify(s.place)}`)
   await t.page.goBack(); await settle(t.page, 900)
   check('phone, Back to the Home Screen: no app named', tail(t.page) === '/?still', tail(t.page))
   await t.page.goForward(); await settle(t.page, 900)
@@ -55,14 +59,15 @@ const windows = (page) =>
 
   // A link opens where it says
   for (const [link, app, stack, sheet] of [
-    ['?open=portfolio&at=eight-sleep', 'finder', 'f:all', 'company:Eight Sleep'],
-    ['?open=portfolio&at=atoms-atoms-co', 'finder', 'f:all', 'company:Atoms (atoms.co)'],
+    ['?open=portfolio&at=eight-sleep', 'finder', 'v:3', 'company:Eight Sleep'],
+    ['?open=portfolio&at=atoms-atoms-co', 'finder', 'v:9', 'company:Atoms (atoms.co)'],
     ['?open=faqs&at=4', 'notes', 'f:faqs,n:3', null],
-    ['?open=chat&at=mom', 'messages', 'c:mom', null],
+    ['?open=chat&at=founder', 'messages', 'c:founder', null],
     ['?open=chat', 'messages', 'c:group', null],
-    ['?open=vip&at=billboards', 'photos', 'a:Billboards', null],
+    // (VIP is one grid: what a link names inside it is not a place there, and the grid is what opens)
+    ['?open=vip&at=billboards', 'photos', '', null],
     ['?open=faqs&at=99', 'notes', 'f:faqs', null],
-    ['?open=portfolio&at=nobody', 'finder', 'f:all', null],
+    ['?open=portfolio&at=nobody', 'finder', '', null],
   ]) {
     t = await A.open(browser, { device: 'iphone', base: BASE, query: link.slice(1) })
     await arrived(t.page)
@@ -127,7 +132,7 @@ const windows = (page) =>
   check('desktop, reload: Portfolio is where it was put', near(before.finder, after.finder), `${JSON.stringify(before.finder)} -> ${JSON.stringify(after.finder)}`)
   check('desktop, reload: FAQs is still in the Dock, Portfolio still in front', after.notes?.min === true && after.finder?.active === true, JSON.stringify(after))
   const showing = await t.page.evaluate(() => ({ picked: document.querySelector('.wf[data-app="finder"] [data-company][aria-selected="true"]')?.getAttribute('data-company') ?? null, question: document.querySelector('.wf[data-app="notes"] .faq__title')?.textContent ?? null }))
-  check('desktop, reload: the company picked and the question shown are the same', showing.picked === 'Eight Sleep' && /after the check/i.test(showing.question || ''), JSON.stringify(showing))
+  check('desktop, reload: the company picked and the question shown are the same', showing.picked === 'Eight Sleep' && /What are you investing in/i.test(showing.question || ''), JSON.stringify(showing))
   check('desktop, reload: the address is the same', tail(t.page) === addressBefore, `${addressBefore} -> ${tail(t.page)}`)
   // A visit beginning (the address gone to afresh) does not bring that desk back
   await t.page.goto(BASE + '?still')

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { startChat } from '../apps/chat'
 import { finder, inbox, notes, photos } from '../apps/state'
-import { arriveIn, startSystem, watchHistory } from '../phone/system'
+import { arriveIn, onPhone, startSystem, unlock, watchHistory } from '../phone/system'
 import { asked, isOn, opens } from './address'
 import { Boundary } from './Boundary'
 import { cross, showOnDesk, spotOfDesk } from './crossing'
@@ -112,8 +112,12 @@ export function Desktop() {
     // and for the chat, the conversation itself
     const resumed = startSystem()
     if (wm.get().compact && !resumed && named) {
-      const { stack, sheet } = placeOfSpot({ app: named, at })
-      arriveIn(named, stack, sheet)
+      if (onPhone(named)) {
+        const { stack, sheet } = placeOfSpot({ app: named, at })
+        arriveIn(named, stack, sheet)
+      }
+      // An app the phone does not have (About Shrug is the desktop's): its Home Screen, unlocked
+      else unlock()
     }
     let gone = false
     let t1: ReturnType<typeof setTimeout> | undefined

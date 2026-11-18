@@ -1,9 +1,12 @@
 import { useId, type ReactNode } from 'react'
+import { IN_DISC, ON_TILE, S, VIP_LETTERS } from '../data/logo'
 import type { AppId } from './apps'
 
-// The desktop's own icons, drawn for Shrug: app icons in the rounded-square
-// shape a Dock expects, a document, a folder, and the face from the shrug.
-// Original artwork: none of these is another product's icon.
+// The desktop's own icons, drawn here: app icons in the rounded-square shape a
+// Dock expects, a document, a folder, and Shrug's logo. The group chat's, the
+// notes' and the portfolio's are drawn after the Mac apps they stand for
+// (Messages, Notes, the Finder); Case Studies, VIP and Shrug's own are
+// Shrug's. No file from an operating system is used.
 
 /** A continuous-corner square (a superellipse), 100 units across. */
 const SQUIRCLE = (() => {
@@ -21,13 +24,28 @@ const SQUIRCLE = (() => {
   return `M${pts.join('L')}Z`
 })()
 
-/** The ツ from ¯\_(ツ)_/¯, as three strokes in a 24-unit box. */
-export function Face({ size = 24, stroke = 2.4, className }: { size?: number; stroke?: number; className?: string }) {
+/** Shrug's logo: the s on its tile, cut by it (src/data/logo.ts). A white tile and a black s, unless told otherwise. */
+export function Logo({ size = 24, ground = '#fff', ink = '#000', className }: { size?: number | string; ground?: string; ink?: string; className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M5.4 8.2l2.5 4.9" />
-      <path d="M11 6.6l2.4 4.9" />
-      <path d="M19.4 6.6c-.5 6.9-4.9 11.3-12.7 12.7" />
+    <svg viewBox="0 0 180 180" width={size} height={size} className={className} aria-hidden>
+      <rect width="180" height="180" fill={ground} />
+      <path d={S} fill={ink} transform={ON_TILE} />
+    </svg>
+  )
+}
+
+/** The logo in a disc, white on black: Shrug's face in a conversation. */
+export function LogoDisc({ size = 28, className }: { size?: number | string; className?: string }) {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg viewBox="0 0 200 200" width={size} height={size} className={className} aria-hidden>
+      <defs>
+        <clipPath id={`${id}-disc`}>
+          <circle cx="100" cy="100" r="100" />
+        </clipPath>
+      </defs>
+      <circle cx="100" cy="100" r="100" fill="#000" />
+      <path d={S} fill="#fff" transform={IN_DISC} clipPath={`url(#${id}-disc)`} />
     </svg>
   )
 }
@@ -69,14 +87,24 @@ function ChatIcon() {
   )
 }
 
+/** FAQs: Notes. A pad with its yellow binding, the perforation under it, and two ruled lines. */
 function NotesIcon() {
+  const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#ffe884" to="#ffb81f">
-      <g transform="rotate(-6 50 52)">
-        <rect x="24" y="21" width="52" height="61" rx="10" fill="#fff" />
-        <path d="M41.5 42.5c0-5.4 4-8.9 9-8.9s8.9 3.3 8.9 8.1c0 3.9-2.2 5.9-4.8 7.7-2.2 1.5-3.3 2.7-3.3 5.3" fill="none" stroke="#f0a000" strokeWidth="5.2" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="51.2" cy="66.8" r="3.3" fill="#f0a000" />
-      </g>
+    <Tile from="#ffffff" to="#f4f4f7" sheen={0.6}>
+      <defs>
+        <linearGradient id={`${id}-top`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffe35a" />
+          <stop offset="1" stopColor="#ffc905" />
+        </linearGradient>
+      </defs>
+      <rect width="100" height="30" fill={`url(#${id}-top)`} />
+      <rect y="30" width="100" height="1" fill="#000" opacity="0.1" />
+      {Array.from({ length: 21 }, (_, i) => (
+        <circle key={i} cx={6 + i * 4.4} cy="38.5" r="1.05" fill="#b4b4ba" />
+      ))}
+      <rect y="55.5" width="100" height="1.3" fill="#d4d4d9" />
+      <rect y="73" width="100" height="1.3" fill="#d4d4d9" />
     </Tile>
   )
 }
@@ -110,36 +138,51 @@ function FolderGlyph() {
   )
 }
 
+/** Portfolio: the Finder. A face in two blues, one side in profile against the other, with its two eyes and its smile. */
 function FinderIcon() {
+  const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#ffffff" to="#dfe8f5" sheen={0.9}>
-      <FolderGlyph />
+    <Tile from="#3fb4ff" to="#0a5be0" sheen={0.55}>
+      <defs>
+        <linearGradient id={`${id}-far`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#d6e6fb" />
+        </linearGradient>
+        <linearGradient id={`${id}-ink`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#13306a" />
+          <stop offset="1" stopColor="#081a40" />
+        </linearGradient>
+        {/* The far side lies over the near one, as a second pane of glass: it throws a little shade back along the profile */}
+        <filter id={`${id}-lift`} x="-20%" y="-10%" width="140%" height="120%">
+          <feDropShadow dx="-1.3" dy="0" stdDeviation="1.5" floodColor="#052a72" floodOpacity="0.42" />
+        </filter>
+      </defs>
+      {/* The far side of the face, from its profile to the edge of the tile */}
+      <path d="M57.5 -2C56 13 50.5 30.500 47.500 47.500H56.500C56.500 66 58 84 61 102H102V-2Z" fill={`url(#${id}-far)`} filter={`url(#${id}-lift)`} />
+      {/* The light the pane's own edge catches */}
+      <path d="M57.5 -2C56 13 50.5 30.500 47.500 47.500H56.500C56.500 66 58 84 61 102" fill="none" stroke="#fff" strokeOpacity="0.75" strokeWidth="0.900" />
+      <g fill="none" stroke={`url(#${id}-ink)`} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M29.500 27v12M71 27v12" strokeWidth="6.200" />
+        <path d="M20.500 60.500C32.500 80 67.500 80 79.500 60.500" strokeWidth="5.400" />
+      </g>
     </Tile>
   )
 }
 
+/** VIP: black, with its name in white capitals. */
 function VipIcon() {
   return (
-    <Tile from="#b39bff" to="#6238de">
-      <path
-        d="M50 23.5l7.7 16.4 18 2.3-13.2 12.4 3.4 17.8L50 63.7l-15.9 8.7 3.4-17.8-13.2-12.4 18-2.3z"
-        fill="#fff"
-        stroke="#fff"
-        strokeWidth="4"
-        strokeLinejoin="round"
-      />
+    <Tile from="#2a2a2e" to="#000000" sheen={0.3}>
+      <path d={VIP_LETTERS} fill="#fff" fillRule="evenodd" />
     </Tile>
   )
 }
 
+/** Shrug's own: the logo, white on a black tile. The s sits on this tile as it does on the logo's (ON_TILE, at five ninths the size). */
 function ShrugIcon() {
   return (
-    <Tile from="#3a3a40" to="#0c0c0e" sheen={0.35}>
-      <g fill="none" stroke="#fff" strokeWidth="6.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M28 36.5l5.6 11" />
-        <path d="M42.5 32.5l5.5 11" />
-        <path d="M70.5 32.5c-1.2 15.6-11.2 25.6-28.7 28.8" />
-      </g>
+    <Tile from="#2a2a2e" to="#000000" sheen={0.3}>
+      <path d={S} fill="#fff" transform="translate(-38.52 -19.63) scale(0.7963)" />
     </Tile>
   )
 }
@@ -158,7 +201,7 @@ export function AppIcon({ id }: { id: AppId }) {
   return <Glyph />
 }
 
-/** A page with a folded corner: the one-pager. */
+/** A page with a folded corner: the one-pager, as a file on the desk. */
 export function DocumentIcon() {
   const id = useId().replace(/:/g, '')
   return (

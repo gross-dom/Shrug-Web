@@ -1,7 +1,7 @@
 import type { AppId } from '../os/apps'
 import { focusFirst, holdFocus } from '../os/focus'
 import { createStore } from '../os/store'
-import { FAQS_FOLDER, PORTFOLIO_FOLDER } from './apps/routes'
+import { FAQS_FOLDER } from './apps/routes'
 import { addressable, addressOf, spotOfPlace } from '../os/place'
 
 // The phone as a system: whether it is locked, which app is in front, how far
@@ -14,15 +14,20 @@ import { addressable, addressOf, spotOfPlace } from '../os/place'
 // back. Moves made here are drawn with motion; moves the browser makes are
 // drawn at once, because the browser has already slid the page across itself.
 
-/** The apps on the phone are the desktop's windows, each redrawn as its iPhone counterpart. */
-export type PhoneApp = AppId
+/** The apps on the phone are the desktop's windows, each redrawn as its iPhone counterpart. All but
+ * one: About Shrug is a window of the desktop's own (a Mac has one; an iPhone has no such app), and
+ * the phone has nothing in its place. */
+export type PhoneApp = Exclude<AppId, 'about'>
 
-export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'photos', 'about']
+export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'photos']
+
+/** Whether an app of the site's is one the phone has. */
+export const onPhone = (app: AppId | null | undefined): app is PhoneApp => (PHONE_APPS as unknown[]).includes(app)
 
 export interface Place {
   /** The app in front, or null on the Home Screen. */
   app: PhoneApp | null
-  /** What each app has open beyond its first screen, innermost last: `['c:group']`, `['f:2', 'c:Anduril']`. */
+  /** What each app has open beyond its first screen, innermost last: `['c:group']`, `['f:faqs', 'n:3']`. */
   stacks: Record<PhoneApp, string[]>
   /** The sheet over the app in front: `details`, `request`. On the Home Screen (no app), the folder that is open: `folder:portfolio`. */
   sheet: string | null
@@ -52,9 +57,9 @@ export interface Sys extends Place {
 }
 
 /** Where each app is when it is first opened. An iPhone's apps come back to
- * where they were last used: Files inside the Portfolio folder and Notes inside
- * FAQs, each a step in from its first screen, with the way back out showing. */
-const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [PORTFOLIO_FOLDER], notes: [FAQS_FOLDER], terminal: [], photos: [], about: [] })
+ * where they were last used: Notes inside FAQs, a step in from its first
+ * screen, with the way back out showing. Wallet opens on its cards. */
+const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [FAQS_FOLDER], terminal: [], photos: [] })
 
 export const sys = createStore<Sys>({ app: null, stacks: noStacks(), sheet: null, locked: true, recents: [], switcher: false, spotlight: false, motion: false, prev: null, origin: null })
 
@@ -118,7 +123,7 @@ function apply(place: Place, motion: boolean, origin: string | null = null) {
 
 /** How long a move takes to draw, give or take: for that long after one, the screens under the visitor's
  * finger take no presses. */
-const MOVE = 450
+const MOVE = 380
 
 /** A move is being drawn. While it is, what is arriving or leaving takes no presses (src/styles/phone.css):
  * a second tap, or a third, lands on nothing instead of on whatever has just come under the finger, so

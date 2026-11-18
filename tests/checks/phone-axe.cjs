@@ -44,7 +44,6 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
     await sleep(700)
   }
   const top = () => page.locator('.sb-slot[data-front] .ios-page[data-pos="top"]')
-  const tab = async (name) => { await page.locator('.sb-slot[data-front] .ios-tabs__item:visible', { hasText: name }).first().tap(); await sleep(600) }
   await run('lock')
   await page.locator('.sb-lock__hint').tap(); await sleep(800)
   await run('home')
@@ -52,18 +51,26 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator('.ph input[aria-label*="Search" i]').last().fill('an'); await sleep(600); await run('search results')
   await page.keyboard.press('Escape'); await sleep(300); await page.keyboard.press('Escape'); await sleep(500)
   for (const [where, app, stack, sheet] of [
-    ['messages', 'messages', []], ['conversation', 'messages', ['c:group']], ['details', 'messages', ['c:group'], 'details'], ['easter egg', 'messages', ['c:mom']], ['portfolio folder', null, [], 'folder:portfolio'], ['faqs folder', null, [], 'folder:faqs'],
-    ['files folder', 'finder', ['f:all']], ['company', 'finder', ['f:all'], 'company:Anduril'], ['browse', 'finder', []], ['tag', 'finder', ['f:4']], ['recently deleted', 'finder', ['f:deleted']],
+    ['messages', 'messages', []], ['conversation', 'messages', ['c:group']], ['details', 'messages', ['c:group'], 'details'], ['easter egg', 'messages', ['c:founder']], ['portfolio folder', null, [], 'folder:portfolio'], ['faqs folder', null, [], 'folder:faqs'],
+    ['wallet', 'finder', []], ['wallet card', 'finder', ['v:4']], ['wallet last card', 'finder', ['v:12']], ['company', 'finder', ['v:0'], 'company:Varda'], ['company over the cards', 'finder', [], 'company:Anduril'],
     ['notes list', 'notes', ['f:faqs']], ['note', 'notes', ['f:faqs', 'n:4']], ['folders', 'notes', []], ['new folder', 'notes', [], 'new-folder'], ['notes folder', 'notes', ['f:notes']],
-    ['library', 'photos', []], ['album', 'photos', ['a:Billboards']], ['viewer', 'photos', ['m:0']], ['info', 'photos', ['m:0'], 'info'], ['albums', 'photos', ['albums']], ['videos', 'photos', ['videos']], ['favorites', 'photos', ['favorites']], ['recent', 'photos', ['recent']],
+    ['library', 'photos', []], ['viewer', 'photos', ['m:0']], ['info', 'photos', ['m:0'], 'info'],
     ['terminal', 'terminal', []],
-    ['settings', 'about', []], ['account', 'about', ['account']], ['general', 'about', ['general']], ['about', 'about', ['general', 'about']], ['notifications', 'about', ['notifications']], ['previews', 'about', ['notifications', 'previews']], ['display', 'about', ['display']], ['auto-lock', 'about', ['display', 'autolock']], ['sounds', 'about', ['sounds']], ['privacy', 'about', ['privacy']],
   ]) { await at(app, stack, sheet ?? null); await run(where) }
   // Screens reached by their own controls
-  await at('finder', []); await tab('Recents'); await run('recents'); await tab('Shared'); await run('shared')
-  await page.locator('.sb-slot[data-front] .ios-foot > [aria-label="Search"]:visible').first().tap().catch(() => {}); await sleep(600); await run('files search')
-  await at('photos', []); await tab('Collections'); await run('collections')
-  await page.locator('.sb-slot[data-front] .ios-foot > [aria-label="Search"]:visible').first().tap().catch(() => {}); await sleep(600); await run('photos search')
+  const must = async (what, step) => { try { await step() } catch (e) { errors.push(`could not reach ${what}: ${e.message.split('\n')[0]}`) } }
+  // The Wallet's search: up over the cards, with nothing typed, with companies found, and with none
+  await at('finder', [])
+  await must('wallet search', async () => { await top().locator('.ios-bar button[aria-label="Search"]').tap({ timeout: 8000 }); await sleep(600) }); await run('wallet search')
+  await must('wallet search results', async () => { await top().locator('.ios-search__input').fill('an', { timeout: 8000 }); await sleep(500) }); await run('wallet search results')
+  await must('wallet search with nothing found', async () => { await top().locator('.ios-search__input').fill('zzzz', { timeout: 8000 }); await sleep(500) }); await run('wallet search, nothing found')
+  await must('wallet search closing', async () => { await top().locator('button[aria-label="Close search"]').tap({ timeout: 8000 }); await sleep(500) })
+  // VIP's one menu
+  await at('photos', [])
+  await must('vip menu', async () => { await top().locator('button[aria-label="Sort and Filter"]').first().tap({ timeout: 8000 }); await sleep(500) }); await run('vip menu'); await page.keyboard.press('Escape'); await sleep(300)
+  // A message of the visitor's own, delivered
+  await at('messages', ['c:founder'])
+  await must('a sent message', async () => { await top().locator('textarea, input').first().fill('Hello', { timeout: 8000 }); await page.keyboard.press('Enter'); await sleep(1500); if (!(await top().locator('.chat-sent').count())) throw new Error('no Delivered receipt') }); await run('a sent message')
   await at('notes', ['f:faqs']); await top().locator('button[aria-label="More"]').first().tap(); await sleep(500); await run('notes menu'); await page.keyboard.press('Escape'); await sleep(300)
   await top().locator('input[aria-label*="Search" i]').fill('drop'); await sleep(500); await run('notes search')
   await at('notes', []); await top().locator('button[aria-label="New Note"]').first().tap(); await sleep(900); await page.keyboard.type('Mine'); await run('own note')

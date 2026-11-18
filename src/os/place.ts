@@ -1,9 +1,8 @@
-import { DROPS } from '../data/drops'
 import { EGGS } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { COMPANIES } from '../data/portfolio'
 import { SITE } from '../data/site'
-import { albumView, companySheet, conversationView, FAQS_FOLDER, noteView, PORTFOLIO_FOLDER } from '../phone/apps/routes'
+import { cardsFor, companySheet, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
 import { ALIASES, APP_IDS, type AppId } from './apps'
 
 // Where a visitor is, as an address says it: `?open=portfolio&at=varda` is the
@@ -14,7 +13,7 @@ import { ALIASES, APP_IDS, type AppId } from './apps'
 // with Share, opens where they were. Whatever else the address carries
 // (`?phone`, `?draft`) is left as it was.
 
-/** An app, and what is open in it: a company, a question, a conversation, a drop. */
+/** An app, and what is open in it: a company, a question, a conversation. */
 export interface Spot {
   app: AppId
   at: string | null
@@ -44,18 +43,17 @@ export const questionAt = (at: string | null) => {
 /** One of the conversations beside the group, by its id. */
 export const conversationAt = (at: string | null) => (at && EGGS.some((egg) => egg.id === at.toLowerCase()) ? at.toLowerCase() : null)
 
-export const dropAt = (at: string | null) => (at ? (DROPS.find((drop) => slug(drop) === slug(at)) ?? null) : null)
 
 export const atCompany = (key: string | null) => (key ? slug(key) : null)
 export const atQuestion = (index: number | null) => (index === null ? null : String(index + 1))
 export const atConversation = (id: string | null) => (id && id !== 'group' ? id : null)
-export const atDrop = (drop: string | null) => (drop ? slug(drop) : null)
 
 // ---- The iPhone: its place (the app in front, the screens it is on, a sheet) as a spot, and back ----
 
 interface PhonePlace {
   app: AppId | null
-  stacks: Record<AppId, string[]>
+  /** By app: the phone keeps one for each app it has (it has none for About Shrug). */
+  stacks: Partial<Record<AppId, string[]>>
   sheet: string | null
 }
 
@@ -64,14 +62,13 @@ const innermost = (stack: string[], kind: string) => [...stack].reverse().find((
 export function spotOfPlace(place: PhonePlace): Spot | null {
   const app = place.app
   if (!app) return null
-  const stack = place.stacks[app]
+  const stack = place.stacks[app] ?? []
   if (app === 'finder') return { app, at: atCompany(companyAt(place.sheet?.startsWith('company:') ? place.sheet.slice('company:'.length) : null)) }
   if (app === 'notes') {
     const note = innermost(stack, 'n:')
     return { app, at: note && /^\d+$/.test(note) && Number(note) < FAQS.length ? atQuestion(Number(note)) : null }
   }
   if (app === 'messages') return { app, at: atConversation(conversationAt(innermost(stack, 'c:'))) }
-  if (app === 'photos') return { app, at: atDrop(dropAt(innermost(stack, 'a:'))) }
   return { app, at: null }
 }
 
@@ -80,15 +77,11 @@ export function placeOfSpot(spot: Spot): { stack?: string[]; sheet: string | nul
   if (spot.app === 'messages') return { stack: [conversationView(conversationAt(spot.at) ?? 'group')], sheet: null }
   if (spot.app === 'finder') {
     const key = companyAt(spot.at)
-    return { stack: [PORTFOLIO_FOLDER], sheet: key ? companySheet(key) : null }
+    return { stack: cardsFor(key), sheet: key ? companySheet(key) : null }
   }
   if (spot.app === 'notes') {
     const question = questionAt(spot.at)
     return { stack: question === null ? [FAQS_FOLDER] : [FAQS_FOLDER, noteView(question)], sheet: null }
-  }
-  if (spot.app === 'photos') {
-    const drop = dropAt(spot.at)
-    return { stack: drop ? [albumView(drop)] : undefined, sheet: null }
   }
   return { sheet: null }
 }

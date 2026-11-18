@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { formatter } from '../os/dates'
+import { formatter, shortDay } from '../os/dates'
 
 // The time, as the phone shows it: in the status bar and on the lock screen.
 
-const DATE = formatter({ weekday: 'long', month: 'long', day: 'numeric' })
 const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
 
 /** The hour and minute alone, as the status bar and the lock screen write them: 9:41, never 9:41 AM. */
@@ -14,8 +13,8 @@ export const clockOf = (t: number) =>
     .join('')
     .trim()
 
-/** The day, as the lock screen writes it: Monday, November 16. */
-export const dateOf = (t: number) => DATE.format(t)
+/** The day, as the lock screen writes it: Wed 18 Nov. */
+export const dateOf = (t: number) => shortDay(t)
 
 /** Now, to the minute: it changes when the minute does. */
 export function useNow() {

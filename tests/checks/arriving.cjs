@@ -26,6 +26,13 @@ const stalled = (page) =>
     return s ? { title: s.querySelector('.stalled__title').textContent, say: s.querySelector('.stalled__say').textContent, buttons: [...s.querySelectorAll('.stalled__button')].map((b) => b.textContent.trim()) } : null
   })
 const drawn = (page) => page.evaluate(() => !!document.querySelector('.ph, .dock') && !!document.querySelector('.os[data-booted]'))
+/** Does `go`, and waits for the page it loads afresh: a new document, not a step in this one's history. (The
+ * desktop writes its address half a second after it arrives, which is a navigation too, and not the one meant.) */
+const afresh = async (page, go) => {
+  await page.evaluate(() => { window.__before = true }).catch(() => {})
+  await go()
+  await page.waitForFunction(() => !window.__before && document.readyState === 'complete', null, { timeout: 15000 }).catch(() => {})
+}
 
 ;(async () => {
   const browser = await A.launch()
@@ -54,11 +61,11 @@ const drawn = (page) => page.evaluate(() => !!document.querySelector('.ph, .dock
     check(`${device}: half missing -> card`, s && s.title === 'This didn’t load' && s.buttons.join() === 'Try Again,Read the one-pager', JSON.stringify(s))
     await t.page.screenshot({ path: path.join(OUT, `${device}-half-missing.png`) })
     // another go is the page afresh (once the site answers): still blocked, so the card again
-    await Promise.all([t.page.waitForNavigation({ timeout: 8000 }).catch(() => {}), t.page.click('.stalled__button--lead')])
+    await afresh(t.page, () => t.page.click('.stalled__button--lead'))
     await t.page.waitForSelector('.stalled', { timeout: 15000 }).catch(() => {})
     check(`${device}: another go, still blocked -> card again`, !!(await stalled(t.page)))
     await t.page.unroute(half)
-    await Promise.all([t.page.waitForNavigation({ timeout: 8000 }).catch(() => {}), t.page.click('.stalled__button--lead')])
+    await afresh(t.page, () => t.page.click('.stalled__button--lead'))
     await t.page.waitForFunction(() => !!document.querySelector('.ph, .dock') && !!document.querySelector('.os[data-booted]'), null, { timeout: 15000 }).catch(() => {})
     check(`${device}: another go, unblocked -> the site`, (await drawn(t.page)) && !(await stalled(t.page)))
     await t.ctx.close()
@@ -83,7 +90,8 @@ const drawn = (page) => page.evaluate(() => !!document.querySelector('.ph, .dock
       const m = document.querySelector('#root > .plain')
       if (!m) return null
       const r = m.getBoundingClientRect()
-      return { h1: m.querySelector('h1')?.textContent, quotes: m.querySelectorAll('blockquote').length, companies: m.querySelectorAll('li').length, scrolls: m.scrollHeight > m.clientHeight, fills: r.width === innerWidth && r.height === innerHeight, note: !!m.querySelector('.plain-note') && getComputedStyle(m.querySelector('.plain-note')).display !== 'none' }
+      // The companies are the list under the line that counts them; an answer in the FAQs may hold a list of its own
+      return { h1: m.querySelector('h1')?.textContent, quotes: m.querySelectorAll('blockquote').length, companies: m.querySelectorAll('.plain-more + ul > li').length, answers: m.querySelectorAll('h3').length, scrolls: m.scrollHeight > m.clientHeight, fills: r.width === innerWidth && r.height === innerHeight, note: !!m.querySelector('.plain-note') && getComputedStyle(m.querySelector('.plain-note')).display !== 'none' }
     })
     check(`${device}: the plain version reads`, read && read.h1 === 'Shrug' && read.quotes === 12 && read.companies === 81 && read.scrolls && read.fills, JSON.stringify(read))
     await t.page.screenshot({ path: path.join(OUT, `${device}-plain.png`) })
@@ -139,7 +147,7 @@ const drawn = (page) => page.evaluate(() => !!document.querySelector('.ph, .dock
   s = await stalled(t.page)
   check('another go while offline: still the card', !!s && t.page.url().startsWith(BASE), JSON.stringify(s))
   await t.ctx.setOffline(false)
-  await Promise.all([t.page.waitForNavigation({ timeout: 8000 }).catch(() => {}), t.page.evaluate(() => window.dispatchEvent(new Event('online'))).catch(() => {})])
+  await afresh(t.page, () => t.page.evaluate(() => window.dispatchEvent(new Event('online'))).catch(() => {}))
   await t.page.waitForSelector('.ph', { timeout: 15000 }).catch(() => {})
   check('back online: the phone arrives without being asked', !!(await t.page.$('.ph')) && !(await stalled(t.page)))
   check('no page errors beyond the fetch that failed', A.realErrors(t.errors).filter((e) => !/requestfailed|Failed to (fetch|load)|ERR_INTERNET_DISCONNECTED|dynamically imported|Unable to preload/i.test(e)).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 400))

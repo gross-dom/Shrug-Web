@@ -1,22 +1,19 @@
-import type { EggLink } from '../data/eggs'
 import { PEOPLE } from '../data/people'
-import { SITE } from '../data/site'
 import { prefersReducedMotion } from '../os/dom'
 import { createStore } from '../os/store'
 
 // The group chat as it plays out. This is Shrug's own Messages: the question
-// is typed into the field and sent, then ninety people reply, each one
-// written and then sent at the same unhurried pace, Shrug signs off with a
-// shrug and, a beat later, says where to go from here. It runs on its own
-// clock whether or not its window is showing, and how far it has got is kept
-// for the tab, so a reload carries on where it was.
+// is typed into the field and sent, then everyone replies, each one written
+// and then sent, briskly, the way a group that has a lot to say fills a
+// thread. The last reply is the end of it. It runs on its own clock whether or
+// not its window is showing, how far it has got is kept for the tab, so a
+// reload carries on where it was, and whoever would sooner not wait can have
+// every reply at once (`finishChat`).
 
 export type ChatItem =
   /** A message from this Mac: Shrug's own, or one the visitor typed. */
   | { key: string; kind: 'me'; text: string; by: 'shrug' | 'visitor' }
   | { key: string; kind: 'person'; index: number; typing: boolean }
-  /** A bubble of Shrug's that goes somewhere: the next step, once everyone has replied. */
-  | { key: string; kind: 'link'; link: EggLink }
 
 export interface Chat {
   /** The group conversation, in order. */
@@ -29,7 +26,7 @@ export interface Chat {
   draft: string | null
   /** Shrug's question has been sent. */
   asked: boolean
-  /** Everyone has replied and Shrug has shrugged. */
+  /** Everyone has replied. */
   done: boolean
   paused: boolean
   started: boolean
@@ -46,14 +43,6 @@ export const TOTAL = PEOPLE.length
 export const QUESTION = ['ok be honest.', 'what’s it actually like working with us?']
 
 const asMine = (text: string, key: string): ChatItem => ({ key, kind: 'me', text, by: 'shrug' })
-
-/** What Shrug says once everyone has replied and the shrug has gone: where to
- * go from here. They are Shrug's messages, not replies, and are never counted. */
-const NEXT: ChatItem[] = [
-  asMine('anyway.', 'next-0'),
-  { key: 'next-1', kind: 'link', link: { label: 'See the portfolio', app: 'finder' } },
-  { key: 'next-2', kind: 'link', link: { label: 'Read the one-pager', href: SITE.onePager } },
-]
 
 const fresh = (): Chat => ({
   items: [],
@@ -79,11 +68,9 @@ function everything(from: Chat): Chat {
   const opening = QUESTION.map((text, n) => asMine(text, `ask-${n}`))
   const items = from.items.filter((i) => !asked(i.key)).map((i) => (i.kind === 'person' && i.typing ? { ...i, typing: false } : i))
   const people = PEOPLE.map((_, index): ChatItem => ({ key: `p-${index}`, kind: 'person', index, typing: false })).filter((i) => !have.has(i.key))
-  const closing = have.has('end') ? [] : [asMine(SITE.mark, 'end')]
-  const next = NEXT.filter((i) => !have.has(i.key))
   return {
     ...from,
-    items: [...opening, ...items, ...people, ...closing, ...next],
+    items: [...opening, ...items, ...people],
     replied: TOTAL,
     typing: -1,
     draft: null,
@@ -261,7 +248,7 @@ function typeAndSend(text: string, key: string, each: number, then: () => void) 
     at++
     chat.set((s) => ({ ...s, draft: text.slice(0, at) }))
     if (at < text.length) return after(paced(each, 'typing'), step)
-    after(paced(320, 'typing'), () => {
+    after(paced(200, 'typing'), () => {
       chat.set((s) => ({ ...s, draft: null, items: [...s.items, asMine(text, key)] }))
       then()
     })
@@ -270,13 +257,16 @@ function typeAndSend(text: string, key: string, each: number, then: () => void) 
 }
 
 /** Every reply keeps the same time: its dots show while it is written, it is
- * sent, and there is a breath before the next person starts. It never speeds
- * up while it is being watched; out of sight (see above) each is shorter. */
-export const WRITING = 1700
-export const BETWEEN = 1100
+ * sent, and there is a moment before the next person starts. Quick, as a
+ * group with something to say is: a reply lands a little over once a second,
+ * so the first are there within a few seconds of arriving and the thread never
+ * stands still. Out of sight (see above) each is shorter again. */
+export const WRITING = 800
+export const BETWEEN = 400
 
 function person(index: number) {
-  if (index >= TOTAL) return after(paced(BETWEEN, 'replies'), closing)
+  // The last reply is the end of the conversation
+  if (index >= TOTAL) return chat.set((s) => ({ ...s, done: true }))
   const key = `p-${index}`
   // Being written: their dots
   chat.set((s) => ({ ...s, typing: index, items: [...s.items, { key, kind: 'person', index, typing: true }] }))
@@ -291,32 +281,10 @@ function person(index: number) {
   })
 }
 
-function closing() {
-  typeAndSend(SITE.mark, 'end', 95, () => {
-    chat.set((s) => ({ ...s, done: true }))
-    after(paced(1500, 'replies'), next)
-  })
-}
-
-/** A beat after the shrug: where to go from here. One word typed, then the two places, one after the other. */
-function next() {
-  const [words, ...places] = NEXT
-  if (words?.kind !== 'me') return
-  const place = (at: number) => {
-    const item = places[at]
-    if (!item) return
-    after(paced(560, 'typing'), () => {
-      chat.set((s) => (s.items.some((i) => i.key === item.key) ? s : { ...s, items: [...s.items, item] }))
-      place(at + 1)
-    })
-  }
-  typeAndSend(words.text, words.key, 70, () => place(0))
-}
-
 function opening() {
-  typeAndSend(QUESTION[0]!, 'ask-0', 46, () =>
-    after(paced(380, 'typing'), () =>
-      typeAndSend(QUESTION[1]!, 'ask-1', 30, () => {
+  typeAndSend(QUESTION[0]!, 'ask-0', 26, () =>
+    after(paced(240, 'typing'), () =>
+      typeAndSend(QUESTION[1]!, 'ask-1', 17, () => {
         chat.set((s) => ({ ...s, asked: true }))
         after(paced(BETWEEN, 'replies'), () => person(0))
       }),
@@ -330,7 +298,6 @@ function opening() {
 function restored(was: Kept): Chat {
   const begun = was.replied > 0
   const items: ChatItem[] = begun ? [...QUESTION.map((text, n) => asMine(text, `ask-${n}`)), ...PEOPLE.slice(0, was.replied).map((_, index): ChatItem => ({ key: `p-${index}`, kind: 'person', index, typing: false }))] : []
-  if (was.done) items.push(asMine(SITE.mark, 'end'), ...NEXT)
   for (const message of was.mine) {
     const at = items.findIndex((item) => item.key === message.after)
     const item: ChatItem = { key: message.key, kind: 'me', text: message.text, by: 'visitor' }
@@ -360,12 +327,12 @@ export function startChat() {
   const was = kept()
   const base = was ? restored(was) : { ...fresh(), started: true }
   if (prefersReducedMotion()) return chat.set({ ...everything(base), whole: true })
-  // Everyone had replied: the shrug, and what follows it, are there too
+  // Everyone had replied: it is all there
   if (was?.done) return chat.set(everything(base))
   chat.set(base)
   // Under way: the next reply. Not yet begun: from the question
   if (base.asked) after(paced(BETWEEN, 'replies'), () => person(base.replied))
-  else after(paced(900, 'typing'), opening)
+  else after(paced(400, 'typing'), opening)
 }
 
 export function pauseChat() {
@@ -383,7 +350,7 @@ export const toggleChat = () => (chat.get().paused ? resumeChat() : pauseChat())
 export function replayChat() {
   reset()
   chat.set({ ...fresh(), started: true })
-  after(paced(700, 'typing'), opening)
+  after(paced(400, 'typing'), opening)
 }
 
 /** Everyone replies at once. */
@@ -413,8 +380,9 @@ function typedBefore() {
 unsent.subscribe(() => keepFor('unsent', unsent.get()))
 
 /** Something the visitor typed, into the group or into one of the other
- * conversations (by its id). Nothing leaves the page: the bubble is marked
- * Not Delivered, as Messages marks a message that didn't go. */
+ * conversations (by its id). It joins the conversation as any sent message
+ * does, and is marked Delivered. (Nothing leaves the page: the conversation is
+ * a recording, and there is nobody at the other end to answer.) */
 export function sendMessage(text: string, to = 'group') {
   const body = text.trim()
   if (!body) return
@@ -424,24 +392,4 @@ export function sendMessage(text: string, to = 'group') {
       ? { ...s, items: [...s.items, { key, kind: 'me', text: body, by: 'visitor' }] }
       : { ...s, direct: { ...s.direct, [to]: [...(s.direct[to] ?? []), { key, text: body }] } },
   )
-}
-
-/** One of the visitor's own messages, by its key: its words, wherever it was sent. */
-export function sentMessage(key: string, s: Chat = chat.get()): { text: string; to: string } | null {
-  for (const item of s.items) if (item.key === key && item.kind === 'me' && item.by === 'visitor') return { text: item.text, to: 'group' }
-  for (const [to, list] of Object.entries(s.direct)) {
-    const found = list.find((message) => message.key === key)
-    if (found) return { text: found.text, to }
-  }
-  return null
-}
-
-/** Takes one of the visitor's own messages away. */
-export function deleteMessage(key: string) {
-  chat.set((s) => {
-    const found = sentMessage(key, s)
-    if (!found) return s
-    if (found.to === 'group') return { ...s, items: s.items.filter((item) => item.key !== key) }
-    return { ...s, direct: { ...s.direct, [found.to]: (s.direct[found.to] ?? []).filter((message) => message.key !== key) } }
-  })
 }

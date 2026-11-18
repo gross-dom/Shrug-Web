@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { SITE } from '../data/site'
+import { Logo } from './icons'
 
 // What is on screen when the site itself cannot be: half of it did not arrive
 // (the desktop and the iPhone are separate downloads, fetched when a screen
@@ -74,7 +75,7 @@ export function Stalled({ kind, onRetry }: Props) {
   return (
     <div className="stalled" role="alert">
       <p className="stalled__mark" aria-hidden>
-        {SITE.mark}
+        <Logo size={44} />
       </p>
       <h2 className="stalled__title">{words.title}</h2>
       <p className="stalled__say">{words.say}</p>

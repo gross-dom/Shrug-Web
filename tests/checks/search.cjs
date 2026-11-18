@@ -36,38 +36,43 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
 
   // ---- UX-13: what comes first ----
   const firsts = [
-    ['portfolio', 'Files'], ['Portfolio', 'Files'], ['companies', 'Files'], ['faqs', 'Notes'], ['faq', 'Notes'], ['questions', 'Notes'],
-    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Messages'], ['drops', 'VIP'], ['vip', 'VIP'], ['terminal', 'Case Studies'],
-    ['settings', 'Settings'], ['about', 'Shrug Capital'], ['shrug', 'Shrug Capital'], ['website', 'Shrug Capital'],
-    ['privacy', 'Privacy & Security'], ['cookies', 'Privacy & Security'], ['notifications', 'Notifications'], ['haptics', 'Sounds & Haptics'], ['auto-lock', 'Display & Brightness'],
+    ['portfolio', 'Wallet'], ['Portfolio', 'Wallet'], ['companies', 'Wallet'], ['wallet', 'Wallet'], ['faqs', 'Notes'], ['faq', 'Notes'], ['questions', 'Notes'],
+    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'VIP'], ['vip', 'VIP'], ['terminal', 'Case Studies'],
     ['one-pager', 'One-pager'], ['one pager', 'One-pager'], ['onepager', 'One-pager'], ['deck', 'One-pager'],
     ['contact', 'Get in Touch'], ['email', 'Get in Touch'], ['reach', 'Get in Touch'], ['pitch', 'Get in Touch'], ['apply', 'Get in Touch'], ['intro', 'Get in Touch'],
-    ['varda', 'Varda'], ['kevin', 'Kevin Olusola'], ['mom', 'Mom'], ['shrug family', 'Shrug Family'],
+    ['varda', 'Varda'], ['kevin', 'Kevin Olusola'], ['akash', 'Akash Nigam'],
   ]
   for (const [q, want] of firsts) {
     await type(t, q)
     const r = await read(t.page)
     check(`"${q}" -> Top Hit ${want}`, r.top?.title === want, `got ${r.top?.title ?? 'none'} · ${r.status}`)
   }
+  // The phone has no Settings app: nothing of one is found, by its name or by what it used to hold
+  for (const q of ['settings', 'privacy', 'notifications', 'auto-lock', 'haptics']) {
+    await type(t, q)
+    const found = await read(t.page)
+    const all = [found.top?.title, ...titles(found)].filter(Boolean)
+    check(`"${q}" finds nothing of Settings: the phone has none`, !all.some((title) => /^(Settings|Shrug Capital|About|Notifications|Display & Brightness|Sounds & Haptics|Privacy & Security)$/.test(title)), all.join('/').slice(0, 120))
+  }
   // the other name is said under the app's own
   await type(t, 'portfolio')
   let r = await read(t.page)
-  check('"portfolio": Files says it is the Portfolio', /Portfolio/.test(r.top?.sub || ''), r.top?.sub)
+  check('"portfolio": Wallet says it is the Portfolio', /Portfolio/.test(r.top?.sub || ''), r.top?.sub)
   check('"portfolio": Apps and Top Hit come before what is in Messages', r.groups[0]?.name === 'Top Hit' && r.groups.findIndex((g) => g.name === 'Messages') > 0, r.groups.map((g) => g.name).join(' > '))
-  await type(t, 'about')
-  r = await read(t.page)
-  check('"about": the Settings app and its About page are both listed, above the testimonials', titles(r).includes('Settings') && titles(r).includes('About') && (r.groups.findIndex((g) => g.name === 'Messages') < 0 || r.groups.findIndex((g) => g.name === 'Apps') < r.groups.findIndex((g) => g.name === 'Messages')) && (r.groups.findIndex((g) => g.name === 'Messages') < 0 || r.groups.findIndex((g) => g.name === 'Settings') < r.groups.findIndex((g) => g.name === 'Messages')), r.groups.map((g) => g.name + ':' + g.rows.map((x) => x.title).join('/')).join(' > ').slice(0, 220))
   await type(t, 'shrug')
   r = await read(t.page)
-  check('"shrug": a placeholder album is not what comes first; the conversation is listed', r.top?.title !== 'Shrug Calendar 2020' && titles(r).includes('Shrug Family'), `${r.top?.title} · ${titles(r).slice(0, 8).join('/')}`)
+  check('"shrug": a drop nothing has arrived for is not what comes first', !!r.top && r.top.title !== 'Shrug Calendar 2020' && r.top.title !== 'Shrug Calendar 2021', `${r.top?.title} · ${titles(r).slice(0, 8).join('/')}`)
+  await type(t, 'testimonials')
+  r = await read(t.page)
+  check('"testimonials": the conversation of that name first, and Messages listed', r.top?.title === 'Testimonials' && [r.top?.title, ...titles(r)].includes('Messages'), `${r.top?.title} · ${titles(r).slice(0, 6).join('/')}`)
   await A.shot(t.page, 'fix-s2-search-shrug')
   await type(t, 'drops')
   r = await read(t.page)
-  check('"drops": VIP first, the albums listed, and the conversation of that name under Messages', r.top?.title === 'VIP' && (r.groups.find((g) => g.name === 'VIP')?.rows.length ?? 0) >= 3 && r.groups.find((g) => g.name === 'Messages')?.rows.some((x) => x.title === 'Drops'), r.groups.map((g) => g.name + ':' + g.rows.length).join(' '))
+  check('"drops": VIP first, the drops listed, and the conversation of that name under Messages', r.top?.title === 'VIP' && (r.groups.find((g) => g.name === 'VIP')?.rows.length ?? 0) >= 3 && r.groups.find((g) => g.name === 'Messages')?.rows.some((x) => x.title === 'Drops'), r.groups.map((g) => g.name + ':' + g.rows.length).join(' '))
   await type(t, 'deep')
   r = await read(t.page)
-  check('"deep": an album nothing has arrived for is found but not put first', r.top?.title !== 'Deep Tech Mat' && titles(r).includes('Deep Tech Mat'), `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 120)}`)
-  check('…and an album with nothing in it does not claim a photo', !r.groups.find((g) => g.name === 'VIP')?.rows.some((x) => /photo|video/.test(x.sub)), JSON.stringify(r.groups.find((g) => g.name === 'VIP')?.rows))
+  check('"deep": a drop nothing has arrived for is found but not put first', r.top?.title !== 'Deep Tech Mat' && titles(r).includes('Deep Tech Mat'), `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 120)}`)
+  check('…and a drop with nothing in it does not claim a photo', !r.groups.find((g) => g.name === 'VIP')?.rows.some((x) => /photo|video/.test(x.sub)), JSON.stringify(r.groups.find((g) => g.name === 'VIP')?.rows))
   await type(t, 'appl')
   r = await read(t.page)
   check('"appl": the way to Shrug is listed', [r.top?.title, ...titles(r)].includes('Get in Touch'))
@@ -89,7 +94,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await A.shot(t.page, 'fix-s2-search-none')
   await t.page.locator('.spot-row', { hasText: 'Ask in Messages' }).click(); await t.sleep(1200)
   let s = await A.state(t.page)
-  check('"Ask in Messages" opens Shrug Family', s.place?.app === 'messages' && s.place.stack.join() === 'c:group', JSON.stringify(s.place))
+  check('"Ask in Messages" opens Testimonials', s.place?.app === 'messages' && s.place.stack.join() === 'c:group', JSON.stringify(s.place))
   await A.at(t.page, null, [])
 
   // ---- Return ----
@@ -97,7 +102,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await type(t, 'varda')
   await t.page.keyboard.press('Enter'); await t.sleep(1300)
   s = await A.state(t.page)
-  check('Return with results opens the first (Varda, in Files)', s.place?.app === 'finder' && s.place.sheet === 'company:Varda', JSON.stringify(s.place))
+  check('Return with results opens the first (Varda, in Wallet, over its card)', s.place?.app === 'finder' && s.place.stack.join() === 'v:0' && s.place.sheet === 'company:Varda', JSON.stringify(s.place))
   await A.at(t.page, null, [])
   await openSearch(t)
   await type(t, 'zzzz')
@@ -122,7 +127,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
     const items = [...document.querySelectorAll('[data-spot-item]')]
     return { role: input.getAttribute('role'), expanded: input.getAttribute('aria-expanded'), auto: input.getAttribute('aria-autocomplete'), list: list?.getAttribute('role'), label: list?.getAttribute('aria-label'), options: items.length, allOptions: items.every((i) => i.getAttribute('role') === 'option' && list.contains(i)), tabbable: items.filter((i) => i.tabIndex >= 0).length, live: document.querySelectorAll('.spot-scroll [aria-live]').length, groups: [...list.querySelectorAll('[role="group"]')].map((g) => g.getAttribute('aria-label')) }
   })
-  check('AX-11 the field is a combobox with a listbox of options', ax.role === 'combobox' && ax.expanded === 'true' && ax.auto === 'list' && ax.list === 'listbox' && ax.options === 10 && ax.allOptions && ax.tabbable === 0, JSON.stringify(ax))
+  check('AX-11 the field is a combobox with a listbox of options', ax.role === 'combobox' && ax.expanded === 'true' && ax.auto === 'list' && ax.list === 'listbox' && ax.options === 9 && ax.allOptions && ax.tabbable === 0, JSON.stringify(ax))
   await type(t, 'drops')
   await t.page.keyboard.press('ArrowDown'); await t.page.keyboard.press('ArrowDown'); await t.sleep(150)
   ax = await t.page.evaluate(() => {

@@ -176,27 +176,35 @@ const booted = (page) => page.waitForFunction(() => !document.getElementById('bo
       const theirs = await paint(page, '.sb-slot[data-front] .ss-bubble-row[data-from="them"] > .ss-bubble', '::before')
       check(`[${scheme}] AX-21 iPhone: bubbles have edges, Shrug's in Highlight`, mine && theirs && is(mine.borderC, 'Highlight') && is(theirs.borderC, 'CanvasText') && mine.borderW > theirs.borderW, JSON.stringify({ mine: mine?.border, theirs: theirs?.border }))
 
+      // The Wallet's cards are told apart by colour, which is gone: each is the page's own ground, with an edge
       await A.at(page, 'finder', [])
-      const tab = await paint(page, '.sb-slot[data-front] .ios-tabs__item[aria-current="page"]')
-      const tabWords = await page.evaluate(() => [...document.querySelectorAll('.sb-slot[data-front] .ios-tabs__item[aria-current="page"] *')].map((el) => getComputedStyle(el).color))
-      check(`[${scheme}] AX-4 iPhone: the tab that is showing fills with Highlight`, tab && is(tab.bg, 'Highlight') && tabWords.every((c) => c === S.HighlightText), JSON.stringify({ bg: tab?.bg, words: [...new Set(tabWords)] }))
+      const cards = await page.evaluate(() => [...document.querySelectorAll('.sb-slot[data-front] .wallet-card')].slice(0, 4).map((el) => ({ ...window.__paint(el), image: getComputedStyle(el).backgroundImage, name: getComputedStyle(el.querySelector('.wallet-card__name')).color })))
+      check(`[${scheme}] iPhone: a card of the Wallet is the page's own ground, with an edge, its name in the page's ink`, cards.length === 4 && cards.every((c) => is(c.bg, 'Canvas') && c.image === 'none' && c.borderW >= 1 && c.name === S.CanvasText), JSON.stringify(cards.slice(0, 1).map((c) => ({ bg: c.bg, image: c.image, border: c.border, name: c.name }))))
 
-      await A.at(page, 'about', ['notifications'])
-      const rows = await paint(page, '.sb-slot[data-front] .ios-page[data-pos="top"] .ios-section__rows')
+      // A grouped list and a switch: the conversation's details
+      await A.at(page, 'messages', ['c:group'], 'details')
+      const rows = await paint(page, '.sb-slot[data-front] .ios-sheet .ios-section__rows')
       check(`[${scheme}] AX-21 iPhone: a grouped list is a card with an edge`, rows && rows.outlineW >= 1, rows?.outline)
-      const states = await page.evaluate(() =>
-        [...document.querySelectorAll('.sb-slot[data-front] .ios-page[data-pos="top"] .ios-switch')].map((el) => ({ on: el.getAttribute('aria-checked') === 'true', ...window.__paint(el), knob: window.__paint(el.querySelector('.ios-switch__knob')).bg })),
+      const read = () => page.evaluate(() =>
+        [...document.querySelectorAll('.sb-slot[data-front] .ios-sheet .ios-switch')].map((el) => ({ on: el.getAttribute('aria-checked') === 'true', ...window.__paint(el), knob: window.__paint(el.querySelector('.ios-switch__knob')).bg })),
       )
-      const on = states.find((s) => s.on)
-      const off = states.find((s) => !s.on)
+      let states = await read()
       check(`[${scheme}] AX-4 iPhone: a switch is drawn (a ring and a knob)`, states.length > 0 && states.every((s) => s.outlineW >= 1), JSON.stringify(states.map((s) => s.outline)))
-      if (on) check(`[${scheme}] AX-4 iPhone: on, it fills with Highlight`, is(on.bg, 'Highlight') && is(on.knob, 'HighlightText'), JSON.stringify({ bg: on.bg, knob: on.knob }))
+      const off = states.find((s) => !s.on)
       if (off) check(`[${scheme}] AX-4 iPhone: off, it is Canvas with a ButtonText knob`, is(off.bg, 'Canvas') && is(off.knob, 'ButtonText'), JSON.stringify({ bg: off.bg, knob: off.knob }))
-      await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .ios-switch').first().focus()
+      await page.locator('.sb-slot[data-front] .ios-sheet .ios-switch').first().focus()
       await page.keyboard.press('Shift+Tab')
       await page.keyboard.press('Tab')
       const ringed = await page.evaluate(() => window.__paint(document.activeElement))
       check(`[${scheme}] iPhone: a switch with the keyboard still gets its ring`, ringed && ringed.outlineW >= 2, JSON.stringify(ringed && ringed.outline))
+      // Switched on (Pause Replies), it fills with Highlight; then off again, so the conversation goes on
+      await page.keyboard.press('Space')
+      await page.waitForTimeout(300)
+      states = await read()
+      const on = states.find((s) => s.on)
+      check(`[${scheme}] AX-4 iPhone: on, it fills with Highlight`, !!on && is(on.bg, 'Highlight') && is(on.knob, 'HighlightText'), JSON.stringify(on && { bg: on.bg, knob: on.knob }))
+      await page.keyboard.press('Space')
+      await page.waitForTimeout(200)
 
       await A.at(page, null, [])
       const searched = await page
