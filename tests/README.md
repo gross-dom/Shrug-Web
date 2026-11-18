@@ -24,6 +24,7 @@ Run against a build (`all.sh` does), not only the dev server: the dev server kee
 | `arriving` | Something to land on however the site arrives: slow, a file missing, offline, scripts off, an old browser, an address the site does not have |
 | `crossing` | A change of layout keeps the visitor's place; a keyboard is not a change of layout |
 | `addresses` | What a phone fetches, the order of the stylesheets in a build, forgiving addresses |
+| `place` | The address follows the visitor on both layouts, a link opens where it says, Share passes that link on, and a reload brings the desktop back |
 | `portfolio-faqs`, `terminal-vip`, `messages`, `folders-search`, `ios-parts`, `phone-shell`, `desktop-shell` | Each of the audit's fixes, by area |
 | `forced-colours` | Windows High Contrast (Chromium's emulation), and the kit's parts under reduced motion |
 | `*-webkit` | The same in Safari's engine |

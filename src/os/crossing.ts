@@ -1,10 +1,11 @@
-import { finder, inbox, notes, openConversation, pickCompany, showNote } from '../apps/state'
+import { finder, inbox, notes, openConversation, photos, pickCompany, setDrop, showNote } from '../apps/state'
 import { COMPANIES } from '../data/portfolio'
 import { FAQS } from '../data/faqs'
 import { companySheet, conversationView, FAQS_FOLDER, noteView, PORTFOLIO_FOLDER } from '../phone/apps/routes'
 import { arriveIn, sys, topOf, unlock } from '../phone/system'
 import { APP_IDS } from './apps'
 import { dockPoint } from './dom'
+import { atCompany, atConversation, atDrop, atQuestion, companyAt, conversationAt, dropAt, questionAt, type Spot } from './place'
 import { activeApp, openApp, wm } from './wm'
 
 // The site changes layout under a visit that is already going: a tablet is
@@ -53,6 +54,32 @@ function toDesk() {
   // A desktop that has never had a window opens the conversation, as an arrival does
   const { wins } = wm.get()
   if (!APP_IDS.some((id) => wins[id].mounted)) openApp('messages', dockPoint('messages'))
+}
+
+// ---- The desktop as a spot (src/os/place.ts): what its address says, and what a link to it opens ----
+
+/** Where the desktop is: the window in front and what it is showing. The desk as a visit finds it
+ * (the conversation in front, or nothing open) is nowhere in particular: the site's plain address. */
+export function spotOfDesk(): Spot | null {
+  const front = activeApp(wm.get())
+  if (!front) return null
+  if (front === 'messages') {
+    const at = atConversation(inbox.get().open)
+    return at ? { app: front, at } : null
+  }
+  if (front === 'finder') return { app: front, at: atCompany(finder.get().picked) }
+  // The FAQs window always shows a question; the first is where it opens anyway
+  if (front === 'notes') return { app: front, at: notes.get().note > 0 ? atQuestion(notes.get().note) : null }
+  if (front === 'photos') return { app: front, at: atDrop(photos.get().drop) }
+  return { app: front, at: null }
+}
+
+/** Has a window show what a link names (the window is opened by whoever calls this). */
+export function showOnDesk(spot: Spot) {
+  if (spot.app === 'messages') openConversation(conversationAt(spot.at) ?? 'group')
+  if (spot.app === 'finder' && companyAt(spot.at)) pickCompany(companyAt(spot.at))
+  if (spot.app === 'notes' && questionAt(spot.at) !== null) showNote(questionAt(spot.at)!)
+  if (spot.app === 'photos' && dropAt(spot.at)) setDrop(dropAt(spot.at))
 }
 
 /** The layout has just changed to the iPhone (`compact`) or to the desktop. */

@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { startChat } from '../apps/chat'
-import { GROUP_VIEW } from '../phone/apps/routes'
+import { finder, inbox, notes, photos } from '../apps/state'
 import { arriveIn, startSystem, watchHistory } from '../phone/system'
-import { isOn, opens } from './address'
+import { asked, isOn, opens } from './address'
 import { Boundary } from './Boundary'
-import { cross } from './crossing'
+import { cross, showOnDesk, spotOfDesk } from './crossing'
+import { keepDesk, restoreDesk, returning } from './deskmemory'
 import { dockPoint } from './dom'
+import { addressable, addressOf, placeOfSpot } from './place'
 import { saver, startSaver } from './saver'
 import { Arriving, Stalled, unfetched } from './Stalled'
 import { useStore } from './store'
@@ -60,6 +62,11 @@ const fetchOther = () => {
   void fetchHalf(compact ? 'surface' : 'phone').catch(() => {})
 }
 
+/** What the address this visit arrived on asks for: the apps it names, and what is open in the last of
+ * them (`?open=portfolio&at=varda`: src/os/place.ts). Read once, as the page loads, because the address
+ * is rewritten from then on to follow the visitor. */
+const LINKED = { apps: opens(), at: asked('at') }
+
 interface Boot {
   done(): void
   styled(then: () => void): void
@@ -82,6 +89,8 @@ export function Desktop() {
   const [failure, setFailure] = useState<'fetch' | 'crash'>('fetch')
   /** The opening has played: the chat is open and under way. */
   const started = useRef(false)
+  /** The same, as something to draw on: the desk is as the visit found it, and can be kept from here on. */
+  const [settled, setSettled] = useState(false)
 
   useEffect(() => {
     const fit = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
@@ -95,14 +104,17 @@ export function Desktop() {
 
   // The desk arrives, then the group chat opens out of its icon and begins
   useEffect(() => {
-    const extra = opens()
+    const { apps: extra, at } = LINKED
+    const named = extra[extra.length - 1]
     const quiet = isOn('still')
     // A phone picks up where a reload left it; a new visit starts on its Lock Screen. A link that names
     // an app arrives in it (the last one named) with the phone already unlocked: no Lock Screen first,
     // and for the chat, the conversation itself
     const resumed = startSystem()
-    const named = extra[extra.length - 1]
-    if (wm.get().compact && !resumed && named) arriveIn(named, named === 'messages' ? [GROUP_VIEW] : undefined)
+    if (wm.get().compact && !resumed && named) {
+      const { stack, sheet } = placeOfSpot({ app: named, at })
+      arriveIn(named, stack, sheet)
+    }
     let gone = false
     let t1: ReturnType<typeof setTimeout> | undefined
     let t2: ReturnType<typeof setTimeout> | undefined
@@ -114,10 +126,14 @@ export function Desktop() {
       t2 = setTimeout(
         () => {
           started.current = true
-          if (!wm.get().compact) {
+          // A reload brings the desk back as it was left (src/os/deskmemory.ts). A visit beginning opens the
+          // conversation, and the windows its link names, the last of them showing what the link says
+          if (!wm.get().compact && !(returning() && restoreDesk())) {
             if (!isOn('empty')) openApp('messages', dockPoint('messages'))
+            if (named) showOnDesk({ app: named, at })
             extra.forEach((id) => openApp(id, dockPoint(id)))
           }
+          setSettled(true)
           // The group chat plays whichever is showing: on a phone its replies arrive as notifications
           startChat()
           if (isOn('saver') && !wm.get().compact) startSaver()
@@ -138,6 +154,31 @@ export function Desktop() {
       clearTimeout(t3)
     }
   }, [])
+
+  // On the desktop the address names the window in front and what it is showing, so a link copied from it
+  // opens there (the iPhone's does the same as it moves: src/phone/system.ts), and the desk is kept for a reload
+  useEffect(() => {
+    if (!settled || compact) return
+    const stopKeeping = keepDesk()
+    let last = ''
+    const tell = () => {
+      if (!addressable()) return
+      const address = addressOf(spotOfDesk())
+      if (address === last) return
+      last = address
+      try {
+        history.replaceState(history.state, '', address)
+      } catch {
+        // An address the page may not write: it keeps the one it has
+      }
+    }
+    const stops = [wm, finder, notes, inbox, photos].map((store) => store.subscribe(tell))
+    tell()
+    return () => {
+      stopKeeping()
+      stops.forEach((stop) => stop())
+    }
+  }, [settled, compact])
 
   // The layout changed under a visit already going: the visitor is put where
   // they were in the other one, and its conversation starts too

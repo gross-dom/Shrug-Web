@@ -541,8 +541,8 @@ function NoteScreen({ entry, editing = false, children }: { entry: Entry; editin
       if ((await share({ title: titleOf(entry), text: words, url: null })) === 'copied') setSaid('Copied')
       return
     }
-    // A link that opens on the FAQs, where the page has an address to link to
-    const url = /^https?:$/.test(location.protocol) ? `${pageUrl()}?open=faqs` : undefined
+    // A link that opens on this question
+    const url = pageUrl()
     if ((await share({ title: `${SITE.name} FAQs`, text: entry.title, url })) === 'copied') setSaid('Link copied')
   }
 

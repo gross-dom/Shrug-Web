@@ -427,6 +427,58 @@ export function setViewport(viewport: Size) {
   })
 }
 
+// ---- Kept for the tab: a reload brings the desk back as it was left (src/os/deskmemory.ts) ----
+
+/** What is kept of a window that is open: whether it is in the Dock, where the visitor put it, how it is tiled. */
+export interface KeptWin {
+  minimized: boolean
+  rect: Rect
+  fits: Size
+  tile: Tile | null
+}
+
+export interface KeptWins {
+  /** Back to front. */
+  order: AppId[]
+  wins: Partial<Record<AppId, KeptWin>>
+}
+
+/** The open windows as they are now. A closed one is not kept: it opens afresh. */
+export function keptWins(): KeptWins {
+  const { wins, order } = wm.get()
+  const kept: KeptWins['wins'] = {}
+  for (const id of APP_IDS) {
+    const win = wins[id]
+    if (win.open && win.phase !== 'closing') kept[id] = { minimized: win.minimized, rect: win.rect, fits: win.fits, tile: win.tile }
+  }
+  return { order: order.filter((id) => kept[id]), wins: kept }
+}
+
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
+const isRect = (r: Partial<Rect> | undefined): r is Rect => !!r && isNumber(r.x) && isNumber(r.y) && isNumber(r.w) && isNumber(r.h) && r.w > 0 && r.h > 0
+const isSize = (z: Partial<Size> | undefined): z is Size => !!z && isNumber(z.w) && isNumber(z.h) && z.w > 0 && z.h > 0
+
+/** Puts windows back as they were kept, with no opening played: they are simply there. What does not
+ * read as a window is left out (it was kept by another version of the site, or not by the site).
+ * Says whether any window came back. */
+export function restoreWins(kept: unknown): boolean {
+  const from = kept as Partial<KeptWins> | null
+  if (!from || typeof from !== 'object' || !from.wins || typeof from.wins !== 'object') return false
+  const back: Partial<Record<AppId, Win>> = {}
+  for (const id of APP_IDS) {
+    const win = (from.wins as Partial<Record<AppId, Partial<KeptWin>>>)[id]
+    if (!win || !isRect(win.rect) || !isSize(win.fits)) continue
+    const tile = win.tile === 'fill' || win.tile === 'left' || win.tile === 'right' ? win.tile : null
+    back[id] = { ...blank(id), mounted: true, open: true, minimized: win.minimized === true, rect: win.rect, fits: win.fits, tile }
+  }
+  const ids = APP_IDS.filter((id) => back[id])
+  if (!ids.length) return false
+  const said = Array.isArray(from.order) ? from.order.filter((id): id is AppId => ids.includes(id as AppId)) : []
+  const order = [...new Set([...ids.filter((id) => !said.includes(id)), ...said])]
+  wm.set((s) => ({ ...s, wins: { ...s.wins, ...back } as Record<AppId, Win>, order }))
+  return true
+}
+
 /** Puts the keyboard in a window: on what it marks to take it, or on the window itself. */
 export function focusWindow(id: AppId) {
   requestAnimationFrame(() => {

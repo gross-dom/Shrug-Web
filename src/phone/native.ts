@@ -1,11 +1,14 @@
 // What a phone can do that a desktop can't: the share sheet, and a tick under
 // the finger. Each does nothing where it isn't there.
 
-import { SITE } from '../data/site'
+import { linkTo, spotOfPlace } from '../os/place'
 import { settings } from './settings'
+import { sys } from './system'
 
-/** The address to pass on: this page's, or the site's where the page has none of its own (a preview opened from a file). */
-export const pageUrl = () => (/^https?:$/.test(location.protocol) ? `${location.origin}${location.pathname}` : SITE.url)
+/** The address to pass on: a link to where the phone is now (the app, and the company, question,
+ * conversation or drop that is open in it). Where the page has no address of its own (a preview
+ * opened from a file) it is the site's. */
+export const pageUrl = () => linkTo(spotOfPlace(sys.get()))
 
 /** Sends something on through the phone's own share sheet, or copies it where
  * there is none. It goes with this page's address unless given another;

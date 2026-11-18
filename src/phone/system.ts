@@ -2,6 +2,7 @@ import type { AppId } from '../os/apps'
 import { focusFirst, holdFocus } from '../os/focus'
 import { createStore } from '../os/store'
 import { FAQS_FOLDER, PORTFOLIO_FOLDER } from './apps/routes'
+import { addressable, addressOf, spotOfPlace } from '../os/place'
 
 // The phone as a system: whether it is locked, which app is in front, how far
 // into each app the visitor has gone, and the sheet over it. An iPhone keeps
@@ -140,11 +141,20 @@ function moved() {
   }, MOVE)
 }
 
-/** Writes the step the phone is on, or the one after it. */
+/** Writes the step the phone is on, or the one after it. Each step carries its address
+ * (src/os/place.ts), so the address bar says where the phone is and a link copied from it opens
+ * there. A page with no address of its own to change (opened from a file, held in a sandboxed
+ * frame) keeps the one it has. */
 function write(place: Place, n: number, push: boolean) {
   const entry = { shrug: place, n } satisfies Entry
-  if (push) history.pushState(entry, '')
-  else history.replaceState(entry, '')
+  const address = addressable() ? addressOf(spotOfPlace(place)) : undefined
+  try {
+    if (push) history.pushState(entry, '', address)
+    else history.replaceState(entry, '', address)
+  } catch {
+    if (push) history.pushState(entry, '')
+    else history.replaceState(entry, '')
+  }
   steps.set(n, place)
 }
 

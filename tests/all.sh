@@ -34,6 +34,7 @@ run "desktop: windows and apps"      node desktop-flow.cjs $BASE
 run "arriving"                       node arriving.cjs $BASE
 run "a change of layout"             node crossing.cjs $BASE
 run "addresses"                      node addresses.cjs $BASE
+run "the address follows; reload"    node place.cjs $BASE
 # What the audit found, area by area: each fix has its check
 run "portfolio and FAQs"             node portfolio-faqs.cjs $BASE
 run "terminal and VIP"               node terminal-vip.cjs $BASE
