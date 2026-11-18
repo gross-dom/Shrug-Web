@@ -504,7 +504,7 @@ const PRIVACY: { label: string; value: string }[] = [
   { label: 'Access Requests', value: reachable() ? (reach().kind === 'email' ? 'From Your Mail' : 'From Your Messages') : 'Not Sent' },
   { label: 'Cookies', value: 'None' },
   { label: 'Tracking', value: 'None' },
-  { label: 'What You Set or Write', value: 'Kept on This Device' },
+  { label: 'Kept on Device', value: 'Your Changes' },
 ]
 
 function Privacy() {

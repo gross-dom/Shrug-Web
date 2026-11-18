@@ -594,6 +594,13 @@ function restOn(apps: HTMLElement, at: number) {
   apps.style.setProperty('--pan', `${at * apps.offsetWidth * STRIDE}px`)
 }
 
+/** The card the App Switcher is resting on, as the button that takes the keyboard. The cards are in the page in
+ * the order their apps were first opened, not the order they are shown in. */
+function cardAt(apps: HTMLElement, at: number) {
+  const id = sys.get().recents[at]
+  return id ? apps.querySelector<HTMLElement>(`.sb-slot[data-app="${id}"] .sb-card__hit`) : null
+}
+
 /** Closes an app from the App Switcher: its card flies off the top, the others close up, and the keyboard
  * goes to the card that is left in its place. With none left, it is the Home Screen. */
 function throwAway(id: PhoneApp, el: HTMLElement, apps: HTMLElement) {
@@ -605,7 +612,7 @@ function throwAway(id: PhoneApp, el: HTMLElement, apps: HTMLElement) {
     const left = sys.get().recents.length
     restOn(apps, Math.min(Number(apps.dataset.at ?? 0), Math.max(0, left - 1)))
     if (!left) return goHome()
-    if (keyboard) requestAnimationFrame(() => focusFirst(apps.querySelector('.sb-card__hit')))
+    if (keyboard) requestAnimationFrame(() => focusFirst(cardAt(apps, Number(apps.dataset.at ?? 0)), apps.querySelector('.sb-card__hit')))
   }, 240)
 }
 
@@ -742,7 +749,7 @@ function Apps() {
     if (!switcher) return
     const frame = requestAnimationFrame(() => {
       const el = root.current
-      if (el && (focusLost() || document.activeElement?.closest('.sb-homebar'))) focusFirst(el.querySelector('.sb-card__hit'))
+      if (el && (focusLost() || document.activeElement?.closest('.sb-homebar'))) focusFirst(cardAt(el, 0), el.querySelector('.sb-card__hit'))
     })
     return () => cancelAnimationFrame(frame)
   }, [switcher])
