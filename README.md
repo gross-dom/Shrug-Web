@@ -15,7 +15,9 @@ Node 20.19 or newer.
 
 The build writes more than the app: the site in plain words inside the page itself, the link preview's tags, `robots.txt`, `sitemap.xml`, `llms.txt` and `404.html`, all from the data in `src/data/` (`tools/page.ts`). They carry the site's address, `SITE.url` in `src/data/site.ts`: change it there if the site is served from somewhere else.
 
-Any static host will do. It should compress what it serves, may cache `/assets/` for good (those names change with their contents) and should not cache `index.html`. For an address it does not have it can serve either `404.html` or `index.html`: both send `/portfolio` and the like to that app. The page starts with a few lines of script and style written into it (the loading screen, and asking early for what it needs), so a Content-Security-Policy, if the host sets one, has to allow them.
+It is deployed on Vercel as the project `shrug-web`, at https://shrug-web.vercel.app: `npx vercel deploy --prod` from this folder puts up what is in it (`vercel.json` has the settings: files under `/assets/` cached for good, and a `noindex` header on any `*.vercel.app` address, so that only the site's own domain is indexed once it has one). Connecting the GitHub repository in Vercel's project settings would deploy every push instead.
+
+Any other static host will do too. It should compress what it serves, may cache `/assets/` for good (those names change with their contents) and should not cache `index.html`. For an address it does not have it can serve either `404.html` or `index.html`: both send `/portfolio` and the like to that app. The page starts with a few lines of script and style written into it (the loading screen, and asking early for what it needs), so a Content-Security-Policy, if the host sets one, has to allow them.
 
 ## What's on the desktop
 
@@ -28,7 +30,7 @@ Any static host will do. It should compress what it serves, may cache `/assets/`
 | VIP | VIP | Photos and videos from the drops, with each drop as an album. |
 | About Shrug | (the menu bar's mark) | Counts taken from the data. |
 
-Windows drag by their bar, resize from any edge or corner, and close, minimize and zoom from their traffic lights. Drag one against the left, right or top edge to tile it, or rest the pointer on the green light for the same choices. A window keeps the place the visitor gave it: when the browser shrinks it is fitted in, and when the room comes back so does the window.
+Windows drag by their bar, resize from any edge or corner, and close, minimize and zoom from their traffic lights. Drag one against the left, right or top edge to tile it, or rest the pointer on the green light for the same choices. A window keeps the place the visitor gave it: when the browser shrinks it is fitted in, and when the room comes back so does the window. A reload brings the desk back as it was left: which windows are open and where, which is in front, which are in the Dock, and what each is showing (kept for the tab, `src/os/deskmemory.ts`; a visit beginning starts as any visit does).
 
 - **With a keyboard**: everything is reachable with Tab, the arrow keys, Return and Escape. F6 steps between the menu bar, the window in front and the Dock; with a window focused, Alt and the arrows move it and Alt, Shift and the arrows size it. Focus goes into whatever opens and back to what opened it when it closes.
 - **With a finger** (an iPad, a touch laptop): one tap opens anything; the lights, the menus and the window's edges are finger-sized wherever a touch screen is present; holding the green light shows the tiling choices.
@@ -102,6 +104,7 @@ Whatever happens on the way in, there is something on screen and a way on.
 ### Links
 
 - `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, it arrives in the last one named, already unlocked; `chat` arrives in the conversation itself). Names: `chat`, `portfolio` (or `files`), `faqs` (or `notes`), `case-studies`, `vip` (or `photos`), `about` (or `settings`).
+- **The address follows the visitor.** On both layouts it names where they are: the app, and the company, question, conversation or drop open in it (`?open=portfolio&at=eight-sleep`, `?open=faqs&at=4`, `?open=chat&at=mom`, `?open=vip&at=billboards`). The iPhone writes it with each step it takes through history, the desktop as its front window changes, so the link in the address bar, or one passed on with Share, opens there. Whatever else the address carries (`?phone`, `?draft`) is left as it was (`src/os/place.ts`). The desk as a visit finds it, the Lock Screen and the Home Screen are the site's plain address.
 - Addresses are read forgivingly (`src/os/address.ts`): the switches answer in any case (`?OPEN=Portfolio`), names can be set apart with commas, semicolons, plus signs or spaces, a path or a hash names an app too (`/portfolio`, `#faqs`), and a switch can be turned off (`?phone=0`). On a host that serves `404.html` for an address it does not have, that page sends `/portfolio` and the like to the app and anything else to the site.
 - `?phone` shows the iPhone whatever the size of the screen, drawn in its frame. `?phone=hand` draws it edge to edge instead, as a real phone gets it, for trying that layout in a browser on a computer.
 - `?saver` starts on the screen saver (desktop only). `?idle=20` sets how many seconds of stillness start it, and lock the phone.
@@ -161,9 +164,10 @@ src/
   os/       the site's root (Desktop.tsx: which layout, arriving, and the card
             for when half of the site cannot be had, Stalled.tsx), what the two
             layouts share (crossing.ts: keeping the place across a change of
-            layout; address.ts: what the address asks for; focus.ts, title.ts,
-            dates.ts) and the desktop itself (Surface.tsx): window manager,
-            menu bar, Dock, icons, screen saver
+            layout; address.ts: what the address asks for; place.ts: the
+            address that follows the visitor; deskmemory.ts: the desk kept
+            for a reload; focus.ts, title.ts, dates.ts) and the desktop itself
+            (Surface.tsx): window manager, menu bar, Dock, icons, screen saver
   apps/     one file per window, plus what windows and phone screens share
             (chat.ts: the chat's clock; chat-ui.tsx: the conversation;
             portfolio-ui.tsx: the companies and their logos; state.ts)

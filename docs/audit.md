@@ -51,7 +51,7 @@ Severity: **P0** blocked or blank · **P1** clearly wrong for many people · **P
 | UX-18 | P2 | 60 company links are http | Left: the 60 links could not be reached from where this was built, and a wrong https is a dead link. **To verify** from a machine with a network. |
 | UX-19 | P2 | Copy inconsistencies | Fixed: each line |
 | UX-20 | P3 | Testimonial slips | **For Shrug:** two slips to check against the authors' own text (Ashton Kutcher, Maggie Norris); `caseStudies.ts` lists Feastables, which is not among the companies. |
-| UX-21 | P3 | Address never changes | Not done. Proposed: keep `?open=…` in the address in step with where the visitor is, so a copied link opens there. |
+| UX-21 | P3 | Address never changes | Fixed afterwards: the address follows the visitor on both layouts (`?open=portfolio&at=eight-sleep`), so a copied link, or Share, opens where they were. |
 | UX-22 | P3 | Terminal answers "y or n." to everything | Fixed: help, ls, open, clear, whoami |
 | UX-23 | P3 | Conversation ends with nothing after it | Fixed: a closing link bubble |
 | UX-24 | P3 | Screen saver shows a name without the words | Fixed: the words over the name |
@@ -180,7 +180,7 @@ Severity: **P0** blocked or blank · **P1** clearly wrong for many people · **P
 | RS-14 | P2 | 60 company links are http | Left (see UX-18). |
 | RS-15 | P2 | Saver over a conversation still arriving | Fixed |
 | RS-16 | P3 | No robots.txt | Fixed (see UX-9). |
-| RS-17 | P3 | Reload restarts the conversation; desktop forgets windows | Fixed for the conversation, the visitor's notes, favourites, drafts and settings. Left: the desktop's windows are not restored after a reload. |
+| RS-17 | P3 | Reload restarts the conversation; desktop forgets windows | Fixed for the conversation, the visitor's notes, favourites, drafts and settings; and afterwards for the desktop, whose windows come back after a reload as they were left. |
 | RS-18 | P3 | Layout chunk waits for the main script; phone carries desktop styles | Fixed: the half a screen needs is asked for alongside the first script. Left: moving stylesheets between the downloads (it would reorder the cascade). |
 | RS-19 | P3 | Address switches could forgive more | Fixed |
 | RS-20 | P3 | `?open=` shows the Lock Screen first | Fixed |

@@ -30,4 +30,6 @@ Run against a build (`all.sh` does), not only the dev server: the dev server kee
 | `*-webkit` | The same in Safari's engine |
 | `phone-axe` | axe-core over every iPhone screen |
 
+`live.cjs` runs any one of them against the deployed site from a machine whose way out is a proxy (`node tests/checks/live.cjs place.cjs https://shrug-web.vercel.app/`).
+
 `lib.cjs` is what they share: opening the site as a given device, reaching any iPhone screen through history, and a few detectors (spills, small targets, console errors). No real phone, Firefox, or screen reader is involved: what those add is not covered here.
