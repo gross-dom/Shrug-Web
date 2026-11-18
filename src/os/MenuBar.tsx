@@ -249,9 +249,12 @@ export function MenuBar() {
   }
 
   return (
-    <header
+    // A navigation landmark, not a banner: the page's one banner is its hidden heading (Desktop.tsx),
+    // and the clock sits inside this landmark with the menus, as it sits in the bar
+    <nav
       ref={bar}
       className="menubar"
+      aria-label="Menu bar"
       data-open={open ? '' : undefined}
       data-compact={compact || undefined}
       onPointerDown={(e) => {
@@ -263,7 +266,7 @@ export function MenuBar() {
           so that nothing under it (a window, a Dock icon) does. It goes on the click, not the press: a
           finger's click comes after its press, and would land on whatever was underneath by then */}
       {open && <div className="menubar__shade" aria-hidden onClick={() => setOpen(null)} />}
-      <nav className="menubar__menus" aria-label="Menu bar">
+      <div className="menubar__menus">
         {menus.map((menu) => {
           const shown = open === menu.id
           return (
@@ -362,13 +365,13 @@ export function MenuBar() {
             </div>
           )
         })}
-      </nav>
+      </div>
       <div className="menubar__status">
         <time className="menubar__clock" dateTime={now.toISOString()}>
           <span>{DAY.format(now)}</span>
           <span>{TIME.format(now)}</span>
         </time>
       </div>
-    </header>
+    </nav>
   )
 }

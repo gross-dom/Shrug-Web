@@ -87,10 +87,11 @@
    Two icons tall is the size a folder has where the screen is tall enough for
    the Messages widget, a row of folders that size, a row of icons, Search and
    the Dock. How tall that is goes by the width, because an icon's size does
-   (268px and six icons and 3.3% of the width: 610px at 360 wide, 642 at 393,
-   677 at 430), so the rule below is stepped by width; each step is the most
-   its widths need, so nothing ever overlaps and a folder is at worst a few
-   points late in growing. On its side the Home Screen is laid out for the
+   (268px and six icons and 3.3% of the width, less what a narrow phone's
+   folder gives up to keep to its columns: 604px at 360 wide, 638 at 393, 676
+   at 430), so the rule below is stepped by width; each step is the most its
+   widths need, so nothing ever overlaps and a folder is at worst a few points
+   late in growing. On its side the Home Screen is laid out for the
    width (src/styles/phone.css) and the measure is different: the large size
    needs the two columns a folder has to be about as wide as it is tall, and
    room under it for the row of icons and Search.
@@ -109,7 +110,7 @@
   }
 }
 
-@container ((not ((min-aspect-ratio: 5 / 4) and (max-height: 520px))) and ((height < 604px) or ((width > 353px) and (height < 611px)) or ((width > 360px) and (height < 625px)) or ((width > 375px) and (height < 634px)) or ((width > 384px) and (height < 642px)) or ((width > 393px) and (height < 651px)) or ((width > 402px) and (height < 662px)) or ((width > 414px) and (height < 677px)) or ((width > 430px) and (height < 691px)) or ((width > 444px) and (height < 701px)))) or ((min-aspect-ratio: 5 / 4) and (max-height: 520px) and ((width < 720px) or (height < 320px) or ((width >= 760px) and (height < 328px)) or ((width >= 800px) and (height < 335px)))) {
+@container ((not ((min-aspect-ratio: 5 / 4) and (max-height: 520px))) and ((height < 580px) or ((width > 300px) and (height < 586px)) or ((width > 320px) and (height < 592px)) or ((width > 340px) and (height < 597px)) or ((width > 353px) and (height < 604px)) or ((width > 360px) and (height < 619px)) or ((width > 375px) and (height < 629px)) or ((width > 384px) and (height < 638px)) or ((width > 393px) and (height < 647px)) or ((width > 402px) and (height < 660px)) or ((width > 414px) and (height < 676px)) or ((width > 430px) and (height < 691px)) or ((width > 444px) and (height < 701px)))) or ((min-aspect-ratio: 5 / 4) and (max-height: 520px) and ((width < 720px) or (height < 320px) or ((width >= 760px) and (height < 328px)) or ((width >= 800px) and (height < 335px)))) {
   .sb-widget.sb-folder {
     grid-column: span 1;
     width: var(--icon);
@@ -159,6 +160,16 @@
 
   .sb-folder .sb-folder__titles span:last-child {
     width: 84%;
+  }
+
+  /* Forced colours take backgrounds away, and these lines are nothing else: they are said again in the system's own */
+  @media (forced-colors: active) {
+    .sb-folder .sb-folder__titles span,
+    .sb-folder .sb-folder__titles span + span,
+    .sb-folder .sb-folder__titles span:first-child {
+      background: CanvasText;
+      forced-color-adjust: none;
+    }
   }
 }
 

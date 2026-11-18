@@ -117,7 +117,7 @@ function apply(place: Place, motion: boolean, origin: string | null = null) {
 
 /** How long a move takes to draw, give or take: for that long after one, the screens under the visitor's
  * finger take no presses. */
-const MOVE = 400
+const MOVE = 450
 
 /** A move is being drawn. While it is, what is arriving or leaving takes no presses (src/styles/phone.css):
  * a second tap, or a third, lands on nothing instead of on whatever has just come under the finger, so
@@ -125,11 +125,19 @@ const MOVE = 400
 export const moving = createStore(false)
 
 let settling: ReturnType<typeof setTimeout> | undefined
+let drawn = 0
 
 function moved() {
   moving.set(true)
   clearTimeout(settling)
-  settling = setTimeout(() => moving.set(false), MOVE)
+  cancelAnimationFrame(drawn)
+  // The time, and then two frames really drawn: on a phone too busy to keep up, a press made during the
+  // move is still waiting when the time is up, and is dealt with (and dropped) before those frames are
+  settling = setTimeout(() => {
+    drawn = requestAnimationFrame(() => {
+      drawn = requestAnimationFrame(() => moving.set(false))
+    })
+  }, MOVE)
 }
 
 /** Writes the step the phone is on, or the one after it. */

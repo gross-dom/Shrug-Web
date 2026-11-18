@@ -35,12 +35,21 @@ function Tile({ slot, index }: { slot: MediaSlot; index: number }) {
   // Arrived: a press opens it large
   if (hasFile(slot))
     return (
-      <button type="button" className="vip-tile vip-tile--open" data-kind={slot.kind} data-span={span} data-tile={index} aria-label={`${describe(slot)}. Open it.`} onClick={() => lookAt(index)}>
+      <button type="button" className="vip-tile vip-tile--open" data-kind={slot.kind} data-span={span} data-tile={index} onClick={() => lookAt(index)}>
         {video ? <video className="vip-tile__media" src={slot.src!} muted playsInline preload="metadata" tabIndex={-1} /> : <img className="vip-tile__media" src={slot.src!} alt="" loading="lazy" draggable={false} />}
         {video && <Play className="vip-tile__play" size={16} strokeWidth={0} fill="currentColor" aria-hidden />}
+        {/* What it is called is what its caption says, then what kind of thing it is and what a press does */}
         <span className="vip-tile__cap">
-          {slot.from && <b>{slot.from}</b>}
-          <span>{slot.drop}</span>
+          {slot.from && (
+            <b>
+              {slot.from}
+              <span className="sr-only">, </span>
+            </b>
+          )}
+          <span>
+            {slot.drop}
+            <span className="sr-only">: {video ? 'video' : 'photo'}. Open it.</span>
+          </span>
         </span>
       </button>
     )
@@ -306,10 +315,10 @@ export function PhotosApp() {
             </button>
           ))}
         </div>
-        <header className="vip__head">
+        <div className="vip__head">
           <h2 className="vip__title">When the drops landed.</h2>
           <p className="vip__sub">{none ? 'From the people who got a drop. The first ones are on their way.' : 'Photos and videos from the people who got one.'}</p>
-        </header>
+        </div>
         <MediaGrid />
       </div>
       {looking && <Look index={look!} run={run} />}

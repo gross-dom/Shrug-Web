@@ -182,7 +182,8 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
           {children}
         </div>
       )}
-      <header className="ios-bar">
+      {/* Not a <header>: that would make every screen's bar a banner for the whole page, which has one of its own */}
+      <div className="ios-bar">
         <div className="ios-bar__edge" aria-hidden />
         <div className="ios-bar__side">{leading !== undefined ? leading : depth > 0 && <BackButton />}</div>
         {/* Under a large title the bar's own name is that title again, for the eye once the page has scrolled: read out once */}
@@ -201,7 +202,7 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
             ))}
         </div>
         <div className="ios-bar__side ios-bar__side--end">{trailing}</div>
-      </header>
+      </div>
       {foot && (
         <div className="ios-foot">
           <div className="ios-foot__edge" aria-hidden />

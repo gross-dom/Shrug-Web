@@ -598,6 +598,13 @@
   inset: -6px -4px;
 }
 
+/* A finger that lands on a light and moves is dragging the window
+   (WindowFrame.tsx): the browser must not take that for a scroll */
+.wf__lights,
+.wf__light {
+  touch-action: none;
+}
+
 .wf__light[data-kind='close'] {
   background: #ff5f57;
 }

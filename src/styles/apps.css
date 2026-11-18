@@ -1111,6 +1111,20 @@
   }
 }
 
+/* Forced colours take shadows away, and two of the conversation's focus marks
+   are drawn with one: they are outlines there, in the system's own colour */
+@media (forced-colors: active) {
+  .chat__pane:has(> .chat__scroll:focus-visible)::after {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  .conv-list:focus-visible .conv[data-selected] {
+    outline: 2px solid Highlight;
+    outline-offset: -4px;
+  }
+}
+
 /* Where there is a touch screen (a tablet, or a laptop that has one:
    `any-pointer`, since there the trackpad is the main pointer), what a finger
    presses in the conversation is finger-sized */

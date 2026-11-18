@@ -139,6 +139,8 @@
   .menu__item:focus-visible,
   .composer__app:hover,
   .composer__app:focus-visible,
+  .chat-why__act:hover,
+  .chat-why__act:focus-visible,
   .tile-menu__option:hover,
   .tile-menu__option:focus-visible,
   .tile-menu__option[aria-pressed='true'] {
@@ -258,6 +260,8 @@
   .menu__item:not([aria-disabled='true']):focus-visible *,
   .composer__app:hover *,
   .composer__app:focus-visible *,
+  .chat-why__act:hover *,
+  .chat-why__act:focus-visible *,
   .conv[data-selected] :not(.ss-avatar, .ss-avatar *, .shrug-avatar, .shrug-avatar *),
   .side-item[aria-current] *,
   .chip[aria-pressed='true'] *,
@@ -389,6 +393,21 @@
 
   .chat-failed::after {
     outline: 1px solid CanvasText;
+  }
+
+  /* Why a message did not go: the choices under the words are parted from them by a line,
+     and on the iPhone, where it is an alert, the alert is a sheet with an edge */
+  .chat-why__acts,
+  .msg-alert__act {
+    border-top: 1px solid CanvasText;
+  }
+
+  .msg-alert__box {
+    outline: 1px solid CanvasText;
+  }
+
+  .ph .msg-alert__box {
+    background-color: Canvas;
   }
 
   /* -- The iPhone: the Lock Screen and the Home Screen --

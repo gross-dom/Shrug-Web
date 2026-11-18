@@ -661,6 +661,17 @@
   outline-offset: -3px;
 }
 
+/* Forced colours take the alert's ground and shadow away: it keeps an edge, and a rule between what it offers */
+@media (forced-colors: active) {
+  .msg-alert__box {
+    border: 1px solid CanvasText;
+  }
+
+  .msg-alert__act {
+    border-top: 1px solid CanvasText;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .msg-alert__shade,
   .msg-alert__box {

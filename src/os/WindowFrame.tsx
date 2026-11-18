@@ -190,7 +190,12 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
   const startDrag = (e: ReactPointerEvent) => {
     if (e.button !== 0 || live.current.compact) return
     const target = e.target as HTMLElement
-    if (!target.closest(DRAG) || target.closest(NO_DRAG)) return
+    // A finger that comes down beside the lights is given to the nearest of
+    // them (a browser's help for small targets), and with it would go most of
+    // the bar's free end: so a finger that lands on a light and then moves is
+    // dragging the window, as it meant to. A mouse lands where it points.
+    const onLight = e.pointerType !== 'mouse' && !!target.closest('.wf__lights')
+    if (!onLight && (!target.closest(DRAG) || target.closest(NO_DRAG))) return
     const el = ref.current
     if (!el) return
     const { geo: start, win: w, viewport: vp } = live.current
@@ -204,8 +209,13 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
       e,
       (dx, dy, ev) => {
         if (!moved) {
-          if (Math.hypot(dx, dy) < 4) return null
+          // From a light it takes a real pull: a finger wobbles as it presses
+          if (Math.hypot(dx, dy) < (onLight ? 10 : 4)) return null
           moved = true
+          // Not a press on the light after all, nor a hold on the green one
+          clearTimeout(holdTimer.current)
+          clearTimeout(tileTimer.current)
+          setTiles(false)
           el.setAttribute('data-moving', 'drag')
           document.documentElement.setAttribute('data-wm-busy', 'drag')
           // Pulled out of a tile, it takes its own size back under the pointer

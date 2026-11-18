@@ -380,7 +380,10 @@ export function Scroller({ label, nodes, jump, onJumped, active = true, foot, on
       dots.setAttribute('role', 'img')
       dots.setAttribute('aria-label', person ? `${person.name} is typing` : 'Typing')
     })
+    // The dots grow into the words in the same element: what was said of the dots is taken back
+    el.querySelectorAll<HTMLElement>('.ss-bubble__text[role]').forEach((text) => text.removeAttribute('role'))
     el.querySelectorAll<HTMLElement>('.ss-bubble__text:not([dir])').forEach((text) => text.setAttribute('dir', 'auto'))
+    el.querySelectorAll<HTMLElement>('.ss-bubble__dots[dir]').forEach((dots) => dots.removeAttribute('dir'))
   })
 
   // A bubble growing out of its typing dots, or the window being resized,
