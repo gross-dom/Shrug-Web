@@ -215,6 +215,8 @@ function Lock() {
       if ((e.target as HTMLElement).closest?.('.sb-note, button')) return
       if (tapped.current && e.timeStamp - tapped.current < 2000) {
         haptic()
+        // If it is still falling back from the first tap, it goes up from where it is
+        root.current?.removeAttribute('data-nudge')
         return unlock()
       }
       tapped.current = e.timeStamp

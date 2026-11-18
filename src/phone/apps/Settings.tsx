@@ -26,12 +26,12 @@ import { Cell, Empty, GlassButton, List, NavStack, quoted, Screen, SearchBar, Se
 
 // ---- The pages ----
 
-type PageId = 'account' | 'general' | 'about' | 'notifications' | 'previews' | 'display' | 'autolock' | 'sounds' | 'privacy'
+export type PageId = 'account' | 'general' | 'about' | 'notifications' | 'previews' | 'display' | 'autolock' | 'sounds' | 'privacy'
 
 /** The pages reached from the first screen's list, each with a tile of its own. */
 type TopId = 'general' | 'display' | 'notifications' | 'sounds' | 'privacy'
 
-interface Page {
+export interface Page {
   title: string
   /** What the app's stack holds while the page is showing: the pages that lead to it, itself last. */
   path: PageId[]
@@ -41,7 +41,9 @@ interface Page {
   words: string
 }
 
-const PAGES: Record<PageId, Page> = {
+/** Every page of Settings. Exported for whatever else finds things on the phone (search on the Home
+ * Screen): a page is opened with `launchAt('about', PAGES[id].path)`. */
+export const PAGES: Record<PageId, Page> = {
   account: { title: SITE.legalName, path: ['account'], top: null, words: 'about shrug one-pager website contact reach email pitch get in touch' },
   general: { title: 'General', path: ['general'], top: 'general', words: '' },
   about: { title: 'About', path: ['general', 'about'], top: 'general', words: `name replies companies verticals faqs case studies drops${arrived() ? ' photos videos' : ''}` },
@@ -57,12 +59,12 @@ const PAGES: Record<PageId, Page> = {
 const TOP: TopId[] = ['general', 'display', 'notifications', 'sounds', 'privacy']
 
 /** In search, in the order the pages come in Settings. */
-const SEARCHED: PageId[] = ['account', 'general', 'about', 'display', 'autolock', 'notifications', 'previews', 'sounds', 'privacy']
+export const SEARCHED: PageId[] = ['account', 'general', 'about', 'display', 'autolock', 'notifications', 'previews', 'sounds', 'privacy']
 
 const isPage = (view: string): view is PageId => Object.prototype.hasOwnProperty.call(PAGES, view)
 
 /** A page's place in Settings, as search writes it under a result: "General › About". */
-const trailOf = (page: Page) => page.path.map((id) => PAGES[id].title).join(' › ')
+export const trailOf = (page: Page) => page.path.map((id) => PAGES[id].title).join(' › ')
 
 // ---- Tiles ----
 

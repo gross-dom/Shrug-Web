@@ -31,9 +31,23 @@ const PageHeadingContext = createContext<string | undefined>(undefined)
 /** For a screen that draws its heading in the page itself (`ownHeading`): the id to give that heading. */
 export const usePageHeadingId = () => useContext(PageHeadingContext)
 
-/** The apps that have a sheet up. What is behind a sheet is shut off while it is up: a sheet is a dialog,
- * and the keyboard and a screen reader stay in it. */
-const sheetsUp = createStore<Partial<Record<PhoneApp, boolean>>>({})
+/** How many things each app has up over its screens: a sheet, an alert of its own. What is behind one is
+ * shut off while it is up: it is a dialog, and the keyboard and a screen reader stay in it. */
+const covers = createStore<Partial<Record<PhoneApp, number>>>({})
+const cover = (app: PhoneApp, by: 1 | -1) => covers.set((up) => ({ ...up, [app]: Math.max(0, (up[app] ?? 0) + by) }))
+
+/** For something of an app's own that goes over its screens as a sheet does (an alert, a prompt): while
+ * `up`, the app's screens are shut off behind it, as they are behind a sheet, and come back when it has
+ * gone. Draw the thing itself beside the app's `NavStack` (where its `SheetHost` is), not inside a
+ * screen: a screen that is shut off takes everything in it with it. */
+export function useCovering(up: boolean) {
+  const { app } = useApp()
+  useLayoutEffect(() => {
+    if (!up) return
+    cover(app, 1)
+    return () => cover(app, -1)
+  }, [app, up])
+}
 
 /** How much the phone is scaled on the page: 1 on a real phone, less where it
  * is drawn inside a frame. Anything that turns a finger's movement into a
@@ -233,8 +247,8 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
   const first = useRef(true)
   const fresh = useRef(new Set<string>())
   const nav = useRef<HTMLDivElement>(null)
-  // A sheet is up over the app: the screen behind it is shut off until it has gone
-  const covered = useStore(sheetsUp, (up) => !!up[app])
+  // A sheet (or an alert of the app's own) is up over the app: the screen behind it is shut off until it has gone
+  const covered = useStore(covers, (up) => (up[app] ?? 0) > 0)
   /** What had the keyboard on each screen when another was pushed over it, by the screen's depth. */
   const openers = useRef(new Map<number, HTMLElement>())
   /** How deep the stack was when the keyboard was last placed. */
@@ -706,7 +720,6 @@ export interface SheetProps {
 /** A sheet over the app: a grabber to drag it away by, a close button, and what it holds. */
 export function Sheet({ label, title, detent = 'large', leading, trailing, tone = 'grouped', className, children }: SheetProps) {
   const closing = useContext(SheetContext)
-  const { app } = useApp()
   const motion = useStore(sys, (s) => s.motion)
   const sheet = useRef<HTMLDivElement>(null)
   const panel = useRef<HTMLDivElement>(null)
@@ -850,12 +863,8 @@ export function Sheet({ label, title, detent = 'large', leading, trailing, tone 
     if (closing) returnFocus()
   }, [closing]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // While it is up, the screen behind it is shut off (see NavStack)
-  useLayoutEffect(() => {
-    if (closing) return
-    sheetsUp.set((up) => ({ ...up, [app]: true }))
-    return () => sheetsUp.set((up) => ({ ...up, [app]: false }))
-  }, [app, closing])
+  // While it is up, the screen behind it is shut off (see NavStack). On its way out it no longer is
+  useCovering(!closing)
 
   return (
     <div ref={sheet} className={`ios-sheet${className ? ` ${className}` : ''}`} data-detent={detent} data-tone={tone} data-closing={closing || undefined} data-snap={!motion || undefined} role="dialog" aria-modal="true" aria-label={label} {...(closing ? ({ inert: '' } as object) : null)}>

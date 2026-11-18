@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUpLeft, AtSign, LayoutGrid, Lightbulb, MessageCircle, Search, X } from 'lucide-react'
+import { chat } from '../apps/chat'
 import { ConversationAvatar, GROUP_NAME, PersonAvatar } from '../apps/chat-ui'
 import { ALL, CompanyLogo, hostOf } from '../apps/portfolio-ui'
 import { showInGroup } from '../apps/state'
@@ -197,7 +198,7 @@ const askInMessages = (): Hit => ({
   open: () => launchAt('messages', [GROUP_VIEW]),
 })
 
-function find(raw: string): Found {
+function find(raw: string, replied: number): Found {
   const q = raw.trim().toLowerCase()
   if (!q) return { top: null, groups: [] }
   const byScore = (a: Hit, b: Hit) => a.score - b.score
@@ -244,7 +245,8 @@ function find(raw: string): Found {
     const named = rank(GROUP_NAME, q)
     if (named >= 0) people.push({ key: 'group', kind: 'person', score: named, lead: (size) => <ConversationAvatar conversation="group" size={size} />, title: <Marked text={GROUP_NAME} q={q} />, subtitle: `${PEOPLE.length} people`, open: () => launchAt('messages', [GROUP_VIEW]) })
   }
-  PEOPLE.forEach((person, i) => {
+  // Only those who have replied so far: what someone has yet to say is not there to be found
+  PEOPLE.slice(0, replied).forEach((person, i) => {
     const named = rank(person.name, q)
     const role = named < 0 ? rank(person.role, q) : -1
     const said = named < 0 && role < 0 && !!person.quote && person.quote.toLowerCase().includes(q)
@@ -434,7 +436,8 @@ export function Spotlight() {
     }
   }, [on])
 
-  const found = useMemo(() => find(query), [query])
+  const replied = useStore(chat, (c) => c.replied)
+  const found = useMemo(() => find(query, replied), [query, replied])
   const typed = query.trim().length > 0
   const first = found.top ?? found.groups[0]?.hits[0] ?? null
   /** How many things were found, as the list shows them. */

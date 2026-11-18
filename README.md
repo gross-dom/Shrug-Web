@@ -13,18 +13,26 @@ npm run preview  # serves the build
 
 Node 20.19 or newer.
 
+The build writes more than the app: the site in plain words inside the page itself, the link preview's tags, `robots.txt`, `sitemap.xml`, `llms.txt` and `404.html`, all from the data in `src/data/` (`tools/page.ts`). They carry the site's address, `SITE.url` in `src/data/site.ts`: change it there if the site is served from somewhere else.
+
 ## What's on the desktop
 
 | Window | In the Dock as | What it holds |
 | --- | --- | --- |
-| Group chat | Group chat | Shrug's own Messages. Shrug asks the group what it's like to work with them, and ninety people reply. |
+| Group Chat | Group Chat | Shrug's own Messages. Shrug asks the group what it's like to work with them, and ninety people reply. |
 | Portfolio | Portfolio | Every company under its logo, in Shrug's own order or by vertical, as icons or a list, with search, Back/Forward and a preview of the one selected. |
 | FAQs | FAQs | Each question as a note. |
-| Case Studies | Case Studies | A terminal that lists the case studies and takes an access request. |
+| Case Studies | Case Studies | A terminal that lists the case studies, links the two that are public, and says how to ask for the rest. |
 | VIP | VIP | Photos and videos from the drops, with each drop as an album. |
 | About Shrug | (the menu bar's mark) | Counts taken from the data. |
 
-Windows drag by their bar, resize from any edge or corner, and close, minimise and zoom from their traffic lights. Drag one against the left, right or top edge to tile it, or rest the pointer on the green light for the same choices. The screen saver starts after two and a half minutes of stillness, or from the mark's menu.
+Windows drag by their bar, resize from any edge or corner, and close, minimize and zoom from their traffic lights. Drag one against the left, right or top edge to tile it, or rest the pointer on the green light for the same choices. A window keeps the place the visitor gave it: when the browser shrinks it is fitted in, and when the room comes back so does the window.
+
+- **With a keyboard**: everything is reachable with Tab, the arrow keys, Return and Escape. F6 steps between the menu bar, the window in front and the Dock; with a window focused, Alt and the arrows move it and Alt, Shift and the arrows size it. Focus goes into whatever opens and back to what opened it when it closes.
+- **With a finger** (an iPad, a touch laptop): one tap opens anything; the lights, the menus and the window's edges are finger-sized wherever a touch screen is present; holding the green light shows the tiling choices.
+- **The desktop's icons** open on a second click (or Return), as well as a double-click.
+- **The screen saver** starts after two and a half minutes of stillness, or from the mark's menu, where it can also be set to Never (remembered). It waits while the conversation is still arriving in a window that is showing. Any key, a click, a tap or a movement wakes it, and that key or tap does nothing else.
+- **The page's title** names the window in front.
 
 ### The group chat
 
@@ -37,50 +45,69 @@ It is laid out as an iMessage group conversation, seen from Shrug's side:
 - The name in the bar, or the Details button, opens the details: pause the replies, show them all, play it again, and everyone in the group. A person there opens their card, with Show in Shrug Family.
 - The easter eggs are short conversations of Shrug's own (a founder at an odd hour, an unknown number, Mom, a drop on its way, a verification code), in `src/data/eggs.ts`. They were written for this site as placeholders: edit them, add to them or take them out there.
 - The plus beside the field opens the rest of the site.
-- Anything a visitor types is shown as Not Delivered, as Messages marks a message that didn't go. Nothing is sent and nobody replies.
+- Anything a visitor types is shown as Not Delivered, as Messages marks a message that didn't go. Nothing is sent and nobody replies; pressing the red mark says so, and offers the way on: Shrug's address once there is one (with the visitor's words already in it), the one-pager, or deleting the message.
+- After the ninetieth reply Shrug says "anyway." and leaves two links: the portfolio and the one-pager.
+- A reload (or a tab a phone threw away and brought back) picks the conversation up where it was: the replies that had come in, what the visitor typed, and what had been read. Play From the Start starts it over.
+- A screen reader is told when the first reply lands and then every tenth; each message is read as who, then what.
+- With reduced motion set, the conversation is all there at once, opened at its top.
 
 ### On a phone
 
-Below 760px wide (or 480px tall) the site is an iPhone, in the look of the current iOS. Everything on the desktop is there, as the app an iPhone has in its place, under that app's own name and icon and laid out the way that app is. Case Studies and VIP are Shrug's own, and keep their names and their icons:
+Below 740px wide (or 480px tall) the site is an iPhone, in the look of the current iOS (every tablet is wide enough to be a desktop, both ways up). Everything on the desktop is there, as the app an iPhone has in its place, under that app's own name and icon and laid out the way that app is. Case Studies and VIP are Shrug's own, and keep their names and their icons:
 
 | On the desktop | On the iPhone |
 | --- | --- |
-| The screen saver | **The Lock Screen.** The time and date, and the group's replies arriving as notifications, stacked as iOS stacks a conversation's. Swipe up to open it, or tap a notification to go straight to the conversation. Left alone for two minutes the phone locks again (Settings › Display & Brightness › Auto-Lock changes that). |
+| The screen saver | **The Lock Screen.** The time and date, and the group's replies arriving as notifications, stacked as iOS stacks a conversation's. Swipe up to open it, or tap a notification to go straight to the conversation; a tap anywhere lifts it and says how, and a second tap opens it. The torch lights, and the camera opens VIP. Left alone for two minutes the phone locks again (Settings › Display & Brightness › Auto-Lock changes that, and the choice is remembered), though never under someone reading a note or a conversation. |
 | The desk, its icons and the Dock | **The Home Screen.** The newest reply as a Messages widget; two folders, Portfolio and FAQs, as an iPhone has folders (frosted glass with a little of what is inside showing through, the name underneath); the icons (Case Studies, the one-pager, Settings and VIP); a Dock of Messages, Files and Notes; and Search. The badge on Messages counts the replies as they come in. |
 | Group chat | **Messages.** The list of conversations (Shrug Family, then the easter eggs), a conversation with its floating header and the message field, and the group's details sheet with Pause Replies, Show Every Reply, Play From the Start and everyone in it. |
 | Portfolio (a Finder window) | **Files.** It opens inside the Portfolio folder: every company under its logo, in Shrug's own order (or grouped by vertical, from the menu), as icons or a list. Back leads out to Browse, where Portfolio is a location and the verticals are tags. A company opens as a sheet over the folder, with its link. Recents keeps the companies that have been looked at; Shared holds the one-pager. |
 | FAQs (Notes) | **Notes.** It opens inside the FAQs folder: the questions as notes, grouped by date the way Notes groups them, each opening on its own page. Back leads out to Folders. Search is at the foot, and the compose button starts a note of the visitor's own, which is kept for the visit and sent nowhere. |
-| Case Studies (Terminal) | **A terminal**, with keys over the keyboard so nobody has to type to ask for access. |
-| VIP (Photos) | **VIP.** An app of its own beside Settings, under the star it has on the desktop, and laid out the way Photos is: the Library as a grid, with Photos' Sort and Filter menu; Collections, with the drops as albums, Favorites, Media Types and Recently Viewed; search; and a full-screen viewer to swipe through. |
-| About Shrug | **Settings.** Shrug is where the account would be; General › About has the counts, each opening its app; and the switches work: Notifications (banners, and what they show), Auto-Lock, System Haptics. |
-| Moving, minimising and closing windows | **The home indicator.** Swipe it up to go to the Home Screen; swipe up and pause for the App Switcher, where a tap goes to an app and a flick upward closes it. |
+| Case Studies (Terminal) | **A terminal**, with keys over the keyboard so nobody has to type. It answers `help`, `ls`, `open portfolio` and the like, links the two public case studies and says how to ask for the rest. |
+| VIP (Photos) | **VIP.** An app of its own beside Settings, under the star it has on the desktop, and laid out the way Photos is: the Library as a grid, with Photos' Sort and Filter menu; Collections, with the drops as albums, Favorites, Media Types and Recently Viewed; search; and a full-screen viewer to swipe through. A picture that has not come in yet is a quiet tile with its drop's name. |
+| About Shrug | **Settings.** Shrug is where the account would be; General › About has the counts, each opening its app; and the switches work and are remembered: Notifications (banners, what they show, and Pause Replies), Auto-Lock, System Haptics. |
+| Moving, minimising and closing windows | **The home indicator.** Swipe it up to go to the Home Screen; swipe up and pause (or press and hold) for the App Switcher, where a tap goes to an app and a flick upward, its ×, or Delete closes it. |
 | A reply landing while another window is in front | **A banner** at the top of the screen. Tap it to open the conversation. |
 
 - **On a real phone the phone is the frame.** The screen is drawn edge to edge under the phone's own status bar, and the browser's bars are painted to match what is showing. The home indicator at the foot is the site's own: the phone's is below the browser, and leaves it.
-- **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed.
+- **Anywhere else it is drawn inside an iPhone**: in a narrow window on a computer, or with `?phone` in the address at any size. The frame, the status bar, the island and the home indicator are the kit's `Phone`, at the real proportions. There, a field that takes the keyboard brings up the kit's iOS keyboard, and its keys pop as the computer's are typed. Where a window cannot hold the frame at a readable size (a short window, or a laptop zoomed to 200%), the phone is drawn edge to edge instead, so nothing is cut off and zooming makes the type larger.
 - **The badge on Messages counts what is new.** It starts at nothing, ticks up with each reply that comes in to Shrug Family, and is cleared by reading the conversation, as a badge is on an iPhone. The number beside Back inside an easter egg is the same count (`useNewReplies` in `src/apps/state.ts`; the desktop's Dock counts the same way).
 - **Out of the conversation, the replies come a little quicker**: one every 1.9 seconds in place of 2.8, and the first of them sooner. On the Lock Screen and the Home Screen a reply is a notification or a line in the widget, with no message field to watch being typed into and no dots to watch being written, so those waits are cut short (`UNSEEN` in `src/apps/chat.ts`). Open the conversation and it keeps the desktop's time.
-- **A folder opens where it is**, as one does on an iPhone: the Home Screen falls out of focus behind it and it grows into a larger piece of glass with its name over it. Portfolio shows the companies nine to a page, each under its logo the way a folder holds apps, and turns sideways; FAQs lists the questions. Picking one opens it in its app (a company in Files, a question in Notes), and a tap outside, the home bar or the browser's back closes the folder (`src/phone/Folder.tsx`). On a screen too short for them the folders are left off: Files and Notes are in the Dock.
-- **Every move is a step in the browser's history.** Safari's swipe from the left edge (or an Android back button) is the phone's Back: it goes back a screen inside an app, closes a sheet, and leaves an app for the Home Screen. A reload comes back to where it was, unlocked.
+- **A folder opens where it is**, as one does on an iPhone: the Home Screen falls out of focus behind it and it grows into a larger piece of glass with its name over it. Portfolio shows the companies nine to a page, each under its logo the way a folder holds apps, and turns sideways; FAQs lists the questions. Picking one opens it in its app (a company in Files, a question in Notes), and a tap outside, the home bar or the browser's back closes the folder (`src/phone/Folder.tsx`). The strip of dots under Portfolio's pages steps back and on from its left and right halves. The folders are large wherever they fit; on a shorter screen they are icon-sized folders among the icons, and only on a very short one are they left off (Files and Notes are in the Dock).
+- **Every move is a step in the browser's history.** Safari's swipe from the left edge (or an Android back button) is the phone's Back: it goes back a screen inside an app, closes a sheet, and leaves an app for the Home Screen. Search and the App Switcher are steps too, so Back closes them. A reload comes back to where it was, unlocked, with what the visitor had made: their notes and folders, their favourites in VIP, their settings, and the conversation as far as it had got (kept in the browser for the tab, or in the settings' case for the next visit; nothing is sent anywhere).
+- **While something is opening, closing or sliding, presses on what is under it are ignored**, as on an iPhone, so a double tap does what one tap does.
+- **A change of layout keeps the visitor's place.** Turn a tablet, drag a window across the line, or open a split view, and the app that was in front is in front in the other layout, on the same conversation, company or question, with no Lock Screen in between (`src/os/crossing.ts`). A keyboard that shortens the page is not a change of layout.
 - **Apps open where an iPhone would have left them**: Files inside the Portfolio folder and Notes inside FAQs, each one step in from its first screen, with Back leading out. After that they stay as they were left, as they do on an iPhone, until they are flicked out of the App Switcher. An app that fails does what one does on an iPhone: it closes to the Home Screen and starts afresh next time; the rest of the phone carries on.
 - **Turned on its side**, the apps reflow as apps do. A real iPhone keeps its Lock Screen and Home Screen upright; a page turns with the browser, so those two are laid out for the width instead, with the Dock down the trailing edge.
 - **Small gray type is a shade darker than iOS's own** (in the conversation on the desktop too), so that it meets the contrast guidance. The blue is iOS's, which on white falls a little short of that guidance for small text, as it does on an iPhone.
 - **Added to a phone's Home Screen** the site has Shrug's icon (`public/apple-touch-icon.png`, drawn by `tools/icons.cjs`) and still opens in the browser. Running it full screen from there is left off (`"display": "browser"` in `public/manifest.webmanifest`): in that mode the phone's status bar keeps one colour of ink, which can't be right over both the wallpaper and a white app. It also hasn't been tried on a real phone.
-- **Search** (the pill above the Dock, or a pull down on the Home Screen) looks through the people, the companies, the questions and the drops, and opens the app at what was found.
+- **Search** (the pill above the Dock, or a pull down on the Home Screen) looks through the people who have replied so far, the companies, the questions, the drops, the apps under either of their names (Files is also "portfolio", Notes is "faqs"), the pages of Settings and the one-pager, and opens the app at what was found. "contact", "email" and the like find the way to Shrug. With nothing found there are still two things to press: the one-pager, and Ask in Messages.
 - **The link preview** is the conversation's opening (`public/og.png`, taken by `tools/og.cjs`), so the address unfolds as the chat when it is texted.
-- **Reaching Shrug for real** would need a number or an address in `SITE.contact` (`src/data/site.ts`); nothing on the phone uses one yet.
+- **The page's title** names the screen (the conversation, the company, the app), so each step in the browser's history, and a screen reader arriving, says where it is.
 
 To send someone the site as a single file they can open on a phone or in a browser: `node tools/preview.cjs shrug.html`. Opened on a computer, the file shows the iPhone, with a button for the desktop.
 
+### Arriving, and when it goes wrong
+
+Whatever happens on the way in, there is something on screen and a way on.
+
+- **While it loads**: the mark and a bar on the dark ground, in place of an empty page (nothing is drawn at all if the site arrives within half a second). After ten seconds it says it is still loading and offers the one-pager; after thirty it offers another go. It is plain HTML and CSS in `index.html`, so it is there before any script.
+- **If a script or stylesheet does not arrive**, or arrives and cannot run: "Shrug didn’t load", with Try Again, the one-pager and the plain version.
+- **In a browser too old to draw the site** (it needs `:has()`, `color-mix()`, container units and `inert`: Safari 16.4, Chrome 111, Firefox 121, or newer): "Shrug needs a newer browser", with the one-pager and the plain version, and Continue Anyway if the site did manage to start underneath.
+- **The plain version** is the site in plain words: who Shrug is, twelve of the testimonials, every company with its link and line, the answered FAQs, the one-pager. It is written into `#root` at build time from the data, so it is what a browser with scripts off shows, what a search engine or a link preview reads, and what the two cards above uncover. The site replaces it when it starts. `llms.txt` is the same in full, as text.
+- **The desktop and the iPhone are separate downloads**, and the page asks for the one its screen needs alongside the first script. The other is fetched once things are quiet, so a turned tablet or a narrowed window has it to hand. If it still cannot be had (the connection has gone, or a new version of the site has replaced the files), a card says so over the wallpaper, tries again by itself when the connection returns, and never trades itself for the browser's own error page; going back to the size that was working brings that layout back.
+- **Phones fetch only what a phone shows** (not the desktop's wallpaper), and where Apple's own type is not installed the site's is asked for at once and never swapped in under a reader.
+
 ### Links
 
-- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, it arrives unlocked with the last one named open). Names: `chat`, `portfolio` (or `files`), `faqs` (or `notes`), `case-studies`, `vip` (or `photos`), `about` (or `settings`).
+- `?open=portfolio,faqs` opens those windows as well as the group chat (on a phone, it arrives in the last one named, already unlocked; `chat` arrives in the conversation itself). Names: `chat`, `portfolio` (or `files`), `faqs` (or `notes`), `case-studies`, `vip` (or `photos`), `about` (or `settings`).
+- Addresses are read forgivingly (`src/os/address.ts`): the switches answer in any case (`?OPEN=Portfolio`), names can be set apart with commas, semicolons, plus signs or spaces, a path or a hash names an app too (`/portfolio`, `#faqs`), and a switch can be turned off (`?phone=0`). On a host that serves `404.html` for an address it does not have, that page sends `/portfolio` and the like to the app and anything else to the site.
 - `?phone` shows the iPhone whatever the size of the screen, drawn in its frame. `?phone=hand` draws it edge to edge instead, as a real phone gets it, for trying that layout in a browser on a computer.
 - `?saver` starts on the screen saver (desktop only). `?idle=20` sets how many seconds of stillness start it, and lock the phone.
+- `?draft` is the editor's view: what Shrug has still to supply (an FAQ's answer, a VIP picture) is drawn as the note that says so. Without it a visitor is shown a line written for them (see Content).
 
 ## Content
 
-Everything on the site comes from `src/data/`.
+Everything on the site comes from `src/data/`. `site.ts` holds the facts that are said in more than one place: the name, the address, the one-pager, one sentence on what Shrug is (`SITE.line`: under the name in About and in Settings, and what a search engine and a link preview read; the one there now says no more than the testimonials do, and Shrug's own sentence belongs in its place), and how to reach Shrug (`SITE.contact`).
 
 | File | What it holds | Where it came from |
 | --- | --- | --- |
@@ -91,32 +118,48 @@ Everything on the site comes from `src/data/`.
 | `faqs.ts` | The seven questions | The design |
 | `drops.ts` | The drops | The design |
 
-Still to come, and marked as such on screen:
+Still to come. A visitor never reads a note written for Shrug: until a thing is supplied they get a line written for them and a way on, and the editor's note shows only with `?draft` in the address.
 
-| File | Missing | What shows until then |
-| --- | --- | --- |
-| `faqs.ts` | All seven answers (`answer: null`) | The bracketed slot from the design |
-| `eggs.ts` | Shrug's own words for the easter eggs | Five short conversations written as placeholders |
-| `drops.ts` | Every photo and video (`src`, `from`) | "Photo slot" and "Video slot" tiles |
-| `portfolio.ts` | 10 logos (`logo: null`) | The company's initial on a gray tile |
+| File | Missing | What a visitor sees until then | With `?draft` |
+| --- | --- | --- | --- |
+| `site.ts` | A way to reach Shrug (`contact.email` or `contact.sms`) | Every place that would offer it offers the one-pager instead | The same |
+| `site.ts` | Shrug's own sentence (`line`) | "Shrug Capital is an early-stage venture fund." | The same |
+| `faqs.ts` | All seven answers (`answer: null`) | "Shrug hasn’t written this one down yet.", with the one-pager; "Answer on its way" in the list | The bracketed slot from the design |
+| `eggs.ts` | Shrug's own words for the easter eggs | Five short conversations written as placeholders | The same |
+| `drops.ts` | Every photo and video (`src`, `from`) | A quiet tile with the drop's name; "On its way" when opened; nothing counted that is not there | "Photo slot" and "Video slot" tiles |
+| `portfolio.ts` | 10 logos (`logo: null`) | The company's initial on a gray tile | The same |
+| `portfolio.ts` | A line for the seven companies with no site (`NOTES`: "Acquired by …") | "No website listed" where the link would be | The same |
 
 Fill in a field and the real thing replaces its placeholder; nothing else needs to change. To add a logo, put a square image in `public/logos/` and name it in the company's entry.
 
+**Reaching Shrug.** `reach()` in `site.ts` is the one way to Shrug everything uses: an email if `SITE.contact.email` is set, a text if `contact.sms` is, and with neither the one-pager. The day an address is written there, these all use it with no other change: the sheet behind Not Delivered (the visitor's words go with them), the terminal (`y` opens a message asking for access), an unanswered FAQ, Settings and About (a contact row appears), and search ("contact", "email").
+
+**To check from a machine that can reach them:** 60 of the companies' links are `http://`, as shrug.vc's portfolio page has them. They were left so because they could not be tried from where this was built, and a wrong `https://` is a dead link where a browser would have upgraded the `http://` one itself. Two testimonials have slips to check against their authors' own text (Ashton Kutcher: "a entrepreneurs mind"; Maggie Norris: "a trusted sounding board and mentors"), and `caseStudies.ts` lists Feastables, which is not among the 81 companies.
+
 The 10 companies without a logo are RTFKT, Cloud23, Opal, Mona Lee Solar, BloxSnacks, Loyal, Drumroll, Poparazzi, YOLO and Sprinter: their sites have no icon the two icon services could find, or serve one that isn't their logo (a host's default, a parked page, an emoji, a placeholder), and no site could be confirmed for Drumroll. Lula's is the icon of lula.com, which a funding profile gives as its address; the Shrug page links only to its case study. About a quarter of the other logos come from small icons (32 to 48px) and are soft at the preview's size; a proper logo file replaces any of them the same way.
 
-Nothing leaves the page yet. A message typed into the group chat and an email given to the terminal are shown on screen and go nowhere, on the desktop and on the iPhone alike. Wire them up in `src/apps/chat.ts` (`sendMessage`) and `src/apps/Terminal.tsx` (`answer`): the iPhone's Messages and terminal call the same two. The iPhone's Settings › Privacy & Security says that nothing is sent, stored or loaded from elsewhere, which is true of the code as it stands; change what it says (`PRIVACY` in `src/phone/apps/Settings.tsx`) when that stops being so, analytics added by a host included.
+Nothing leaves the page. A message typed into the group chat is shown on screen and goes nowhere, on the desktop and on the iPhone alike, and the terminal no longer asks for an email it has nowhere to send. What a visitor makes or sets (their notes, favourites, drafts, settings, how far the conversation had got) is kept in their own browser so that a reload does not lose it, and is sent nowhere. The iPhone's Settings › Privacy & Security says so; change what it says (`PRIVACY` in `src/phone/apps/Settings.tsx`) if that stops being true, analytics added by a host included.
 
 ## Where things are
 
 ```
-public/        the companies' logos (logos/), the wallpaper, and the link preview (og.png)
-tools/         wallpaper.py draws the wallpaper; og.cjs takes the link preview;
-               icons.cjs draws the Home Screen icons; preview.cjs makes the site
-               into one file to send
+index.html     the page: the loading screen (and what it says when the site
+               cannot be drawn), and the marks tools/page.ts writes at
+public/        the companies' logos (logos/), the wallpaper, the link preview
+               (og.png) and the icons
+tools/         page.ts writes the plain page, the link preview's tags, robots.txt,
+               sitemap.xml, llms.txt and 404.html from the data, and has the
+               built page ask early for what it needs; wallpaper.py draws the
+               wallpaper; og.cjs takes the link preview; icons.cjs draws the
+               icons; preview.cjs makes the site into one file to send
 src/
   data/     the site's content
-  os/       the site's root (Desktop.tsx) and the desktop itself (Surface.tsx):
-            window manager, menu bar, Dock, icons, screen saver
+  os/       the site's root (Desktop.tsx: which layout, arriving, and the card
+            for when half of the site cannot be had, Stalled.tsx), what the two
+            layouts share (crossing.ts: keeping the place across a change of
+            layout; address.ts: what the address asks for; focus.ts, title.ts,
+            dates.ts) and the desktop itself (Surface.tsx): window manager,
+            menu bar, Dock, icons, screen saver
   apps/     one file per window, plus what windows and phone screens share
             (chat.ts: the chat's clock; chat-ui.tsx: the conversation;
             portfolio-ui.tsx: the companies and their logos; state.ts)
@@ -124,7 +167,8 @@ src/
             are built from, and the apps themselves (apps/)
   styles/   base.css, os.css (the desktop), apps.css (the windows), phone.css
             (the iPhone's own screens), ios.css (the parts its apps share),
-            and a stylesheet per iPhone app (phone/)
+            a stylesheet per iPhone app (phone/), and access.css (forced
+            colours, and the kit's parts under reduced motion)
   kit/      the Stageshow kit, copied in unmodified
 ```
 
@@ -135,6 +179,22 @@ src/
 - **A new app on the iPhone**: write it in `phone/apps/` from the parts in `phone/ui.tsx`, name it in `phone/apps/index.tsx`, draw its icon in `phone/icons.tsx`, and put it on the Home Screen or in the Dock (`DOCKED`, `ON_HOME`).
 - **The wallpaper** is a picture, `public/wallpaper.webp` for the desktop and `public/wallpaper-phone.webp` for the iPhone, drawn by `tools/wallpaper.py` (`python3 tools/wallpaper.py public/wallpaper.webp 2880 1800 86 glass` and `… public/wallpaper-phone.webp 900 1560 86 glass`; it needs numpy and Pillow), so the colours and shapes can be changed there. It can draw four: `glass` (the one in use: a deep blue ground crossed by petals of light), `sheets`, `dusk` and `present` (the one the site had before). The colours that follow the wallpaper are the fallbacks under it in `os.css` and `phone.css`, `WALLPAPER_TOP` in `src/phone/chrome.ts` (what the Lock Screen and Home Screen tint the browser's bar with), and `theme-color` in `index.html`. To use a photograph instead, put it in `public/` and set `--wallpaper: url('/wallpaper.jpg')` on `.os`.
 - **The look** is a set of kit tokens on `.os` in `os.css`: accent, grays, type, window radius.
+- **Dates and times** are written in English whatever the browser's language, with the visitor's own clock, 12 hours or 24 (`os/dates.ts`: every formatter comes from there).
+- **The focus ring** is one rule in `base.css`: the accent, solid. A surface it would not show against (the wallpaper, the Dock, a dark window) sets `--ring: #fff`.
+
+## Accessibility
+
+- **Keyboard.** Both layouts work without a pointer. Menus and lists answer the arrow keys; sheets, folders, menus and the screen saver hold the keyboard while they are up and give it back to what opened them. The iPhone has two buttons only a keyboard or a screen reader meets, Home Screen and App Switcher, which show when they have focus.
+- **Screen readers.** The page's title names the place; every screen has a heading; the conversation reads as who then what, and says when replies have come in without reading out ninety of them.
+- **Time.** Nothing on the site times out for good: the screen saver can be set to Never and waits for the conversation; Auto-Lock can be set to Never (remembered) and does not lock under a reader; replies can be paused from the conversation, the mark's menu and Settings.
+- **Reduced motion.** Nothing zooms, slides or glides; the conversation arrives whole.
+- **Forced colours** (Windows High Contrast): edges, states and controls are drawn in the system's colours (`styles/access.css`).
+- **Zoom.** The desktop holds together to 200% on a laptop; past that the site is the iPhone, drawn edge to edge, which reflows.
+- **Contrast.** Small gray type is a shade darker than the systems' own so that it passes; iOS's blue on white falls a little short for small text, as it does on an iPhone.
+
+## What it was tested on
+
+Playwright's Chromium at every size from 280px phones to a 4K desktop, with touch, with a keyboard only, slowed down, throttled to 3G, offline, with scripts off, with reduced motion and with forced colours; and WebKitGTK (Safari's engine) for the things engines differ on. Not on real iPhones, Androids or iPads, not in Firefox, and not with a real screen reader: what a real device adds (its keyboard, its safe areas, its own gestures) is emulated or argued in the code's comments.
 
 ## The kit
 
