@@ -218,10 +218,15 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
 
   return (
     <div className={`ios-screen${className ? ` ${className}` : ''}`} data-tone={tone} data-ground={groundFoot ? '' : undefined} data-scrolled={scrolled || undefined} data-folded={folded || !large || undefined} data-foot={foot ? '' : undefined} style={groundFoot ? ({ '--page': groundFoot, '--page-top': groundTop } as CSSProperties) : undefined}>
-      {!big && center !== undefined && !ownHeading && (
-        <h2 id={headingId} className="sr-only" dir="auto">
-          {title}
-        </h2>
+      {/* Without a large title the heading comes first, read and not seen (what the bar shows of it is for the
+          eye, further on): a page's headings then run in order, its own before any that part its rows */}
+      {!big && !ownHeading && (
+        <>
+          <h2 id={headingId} className="sr-only" dir="auto">
+            {title}
+          </h2>
+          {subtitle && center === undefined && <p className="sr-only">{subtitle}</p>}
+        </>
       )}
       {fixed ? (
         <div className="ios-screen__body">{children}</div>
@@ -241,23 +246,16 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
       <div className="ios-bar">
         <div className="ios-bar__edge" aria-hidden />
         <div className="ios-bar__side">{leading !== undefined ? leading : depth > 0 && <BackButton />}</div>
-        {/* Under a large title the bar's own name is that title again, for the eye once the page has scrolled: read out once */}
-        <div className="ios-bar__title" aria-hidden={big && center === undefined ? true : undefined}>
-          {center ??
-            (big ? (
-              <span className="ios-bar__name" dir="auto">
+        {/* The bar's own name is for the eye: the screen's heading (its large title, or the one that is only read) says it once */}
+        <div className="ios-bar__title" aria-hidden={center === undefined ? true : undefined}>
+          {center ?? (
+            <span className="ios-bar__name">
+              <span className="ios-bar__heading" dir="auto">
                 {title}
-                {subtitle && <span className="ios-bar__sub">{subtitle}</span>}
               </span>
-            ) : (
-              // The heading is the name alone: the line under it is said after it, not as part of it
-              <div className="ios-bar__name">
-                <h2 id={headingId} className="ios-bar__heading" dir="auto">
-                  {title}
-                </h2>
-                {subtitle && <p className="ios-bar__sub">{subtitle}</p>}
-              </div>
-            ))}
+              {subtitle && <span className="ios-bar__sub">{subtitle}</span>}
+            </span>
+          )}
         </div>
         <div className="ios-bar__side ios-bar__side--end">{trailing}</div>
       </div>

@@ -76,8 +76,10 @@ const where = (page) =>
       const fade = document.querySelector(`${TOP} .ios-foot__edge`).getBoundingClientRect()
       const bar = [...document.querySelectorAll(`${TOP} .ios-foot > :not(.ios-foot__edge)`)].map((k) => k.getBoundingClientRect().top)
       // a company whose middle is in the fade, above the bar's own controls
-      const y = fade.top + 12
-      const r = [...sc.querySelectorAll('button.contacts-row')].find((b) => { const q = b.getBoundingClientRect(); return q.top < y && q.bottom > y })
+      // (the rows touch: should the list have come to rest with the line between two of them exactly here, a few points on is inside one)
+      const under = (y) => [...sc.querySelectorAll('button.contacts-row')].find((b) => { const q = b.getBoundingClientRect(); return q.top < y && q.bottom > y })
+      let y = fade.top + 12
+      const r = under(y) ?? under((y += 5))
       if (!r) return null
       const b = r.getBoundingClientRect()
       return { x: b.left + Math.min(60, b.width / 2), y, label: r.textContent.trim().slice(0, 24), inFade: y > fade.top && y < Math.min(...bar) }

@@ -290,7 +290,7 @@
   transition: opacity 0.2s ease;
 }
 
-/* (Where the name is the screen's heading it is a line of its own inside this, cut short the same way) */
+/* (The name is a line of its own inside this, cut short the same way) */
 .ios-bar__heading {
   display: block;
   overflow: hidden;
