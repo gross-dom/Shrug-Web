@@ -131,7 +131,8 @@ const touchOf = (t) => ({
       const r = (n) => Math.round(n * 1000) / 1000
       return { says: el.textContent, figures: paths.length, hidden: el.querySelector('svg').getAttribute('aria-hidden'), tall: r((bottom - top) / innerWidth), wide: r((right - left) / innerWidth), middle: Math.round((left + right) / 2 - innerWidth / 2), underDate: Math.round(top - baseOf(document.querySelector('.sb-lock .sb-lock__date'))), dateDown: Math.round(baseOf(document.querySelector('.sb-lock .sb-lock__date'))) }
     })
-    const perFigure = clock.figures === 5 ? [0.69, 0.74] : [0.5, 0.64]
+    // (how wide it is goes by the time: 11:11 is half the screen across and 04:44 five sixths of it; 20:15, as on the screenshots, is 72%)
+    const perFigure = clock.figures === 5 ? [0.5, 0.85] : [0.38, 0.66]
     say(/^\d{1,2}:\d\d$/.test(clock.says) && clock.figures === clock.says.length && clock.hidden === 'true' && clock.tall > 0.205 && clock.tall < 0.222 && clock.wide > perFigure[0] && clock.wide < perFigure[1] && Math.abs(clock.middle) <= 2 && clock.underDate >= 13 && clock.underDate <= 19 && clock.dateDown >= 39 && clock.dateDown <= 43, 'the clock is the size an iPhone draws its own: drawn figures a little over a fifth of the screen across tall, in the middle, 16 points under the date, which is 41 under where the status bar ends', JSON.stringify(clock))
     const box = await p.locator('.sb-lock').boundingBox()
     const at = [box.x + box.width / 2, box.y + box.height * 0.45]
