@@ -175,8 +175,8 @@ function mixed(a: string, b: string, share: number) {
 const headTop = (index: number) => (MEDIA[index]!.src ? '#1c1c1e' : mixed(hueOf(MEDIA[index]!.drop), '#17171c', 0.5))
 
 /** The head of the library, as a collection's is in Photos: its first picture, large, with the name and the
- * count over its foot and a button that starts from the first. The name is the page's heading. */
-function Head({ index, line, onPlay, innerRef }: { index: number; line: ReactNode; onPlay: () => void; innerRef: Ref<HTMLDivElement> }) {
+ * count over its foot. The name is the page's heading. */
+function Head({ index, line, innerRef }: { index: number; line: ReactNode; innerRef: Ref<HTMLDivElement> }) {
   const headingId = usePageHeadingId()
   const slot = MEDIA[index]!
   return (
@@ -193,9 +193,6 @@ function Head({ index, line, onPlay, innerRef }: { index: number; line: ReactNod
         </h2>
         <p className="photos-head__line">{line}</p>
       </div>
-      <button type="button" className="photos-head__play" aria-label="Play, from the first" onClick={onPlay}>
-        <Play size={19} strokeWidth={0} fill="currentColor" aria-hidden />
-      </button>
     </div>
   )
 }
@@ -260,7 +257,7 @@ function Library() {
       ground={past ? undefined : { top: headTop(first), foot: '#ffffff' }}
       foot={sorter}
     >
-      <Head innerRef={head} index={first} line={line} onPlay={() => view(first, shown)} />
+      <Head innerRef={head} index={first} line={line} />
       <Grid indices={shown} />
       {/* How Photos ends its library: what is in it, and a quieter line under that. Nothing is
           counted that has not arrived: until something has, the quieter line says so by itself */}

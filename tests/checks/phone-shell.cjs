@@ -282,15 +282,31 @@ const touchOf = (t) => ({
       const at = await mid(p, sel)
       if (!at) { say(false, `${name}: not found`); continue }
       const points = [at, [196, 380], [196, 700], [60, 120]]
-      const sampling = probe(points, [90, 180, 270, 350])
+      const sampling = probe(points, [40, 90])
       await t.touch.tap(...at)
       const got = await sampling
       const live = got.filter(([, inside]) => inside)
-      say(live.length === 0, `${name}: for 350ms after the tap, a second tap would land on nothing`, JSON.stringify(live.slice(0, 4)))
+      say(live.length === 0, `${name}: for the first moment after the tap, a second tap would land on nothing anywhere`, JSON.stringify(live.slice(0, 4)))
       await p.waitForTimeout(700)
       const after = await p.evaluate(() => document.querySelector('.ph').hasAttribute('data-moving'))
       say(!after, `${name}: and then the screen takes presses again`)
     }
+    // while the move is still being drawn, a second tap where the first was is turned away...
+    await A.at(p, 'notes', ['f:faqs', 'n:1'], null, 900)
+    const back = await mid(p, '.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label="Back"]')
+    await t.touch.tap(...back); await p.waitForTimeout(230); await t.touch.tap(...back)
+    await p.waitForTimeout(900)
+    let stack = (await st(p)).place?.stacks?.notes
+    say(JSON.stringify(stack) === '["f:faqs"]', 'two taps a quarter of a second apart on Back go back one screen, not two', JSON.stringify(stack))
+    // ...and a press anywhere else is taken at once: Back, while the note is still sliding in
+    const row = await mid(p, '.sb-slot[data-front] .ios-page[data-pos="top"] .notes-row, .sb-slot[data-front] .ios-page[data-pos="top"] .notes-list button')
+    if (row) {
+      await t.touch.tap(...row); await p.waitForTimeout(230)
+      const into = (await st(p)).place?.stacks?.notes
+      await t.touch.tap(...back); await p.waitForTimeout(900)
+      stack = (await st(p)).place?.stacks?.notes
+      say(into?.length === 2 && JSON.stringify(stack) === '["f:faqs"]', 'Back is taken while the screen it is on is still sliding in', `${JSON.stringify(into)} -> ${JSON.stringify(stack)}`)
+    } else say(false, 'a note to press was not found')
     // and for real: two taps on the Portfolio folder open the folder, not a company in Contacts
     await A.at(p, null, [], null, 800)
     const folder = await mid(p, '.sb-folder')
@@ -307,7 +323,7 @@ const touchOf = (t) => ({
     const r = await fresh('iphone', 'still', { reducedMotion: true })
     await A.unlock(r.page); await r.page.waitForTimeout(700)
     const at = await mid(r.page, '.sb-dock .sb-icon[aria-label^="Contacts"]')
-    const watching = r.page.evaluate(() => new Promise((done) => { document.addEventListener('pointerdown', () => setTimeout(() => done(document.querySelector('.ph').hasAttribute('data-moving')), 200), { capture: true, once: true }) }))
+    const watching = r.page.evaluate(() => new Promise((done) => { document.addEventListener('pointerdown', () => setTimeout(() => done(document.querySelector('.ph').hasAttribute('data-moving')), 70), { capture: true, once: true }) }))
     await r.touch.tap(...at)
     say(await watching, 'with motion turned down the same holds')
     await r.ctx.close()

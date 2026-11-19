@@ -35,6 +35,18 @@
   --ui: cubic-bezier(0.3, 0.75, 0.1, 1);
   /* A thrown page or sheet */
   --glide: cubic-bezier(0.25, 1, 0.5, 1);
+  /* What iOS moves its screens with: a spring with no bounce in it. Off from a standstill, most of the
+     way there in the first third of the time, then a long soft landing. An app opening and closing, a
+     screen pushed over another and the Home Screen falling back into place all follow it. (This is its
+     nearest plain curve, for a browser without `linear()`; the spring itself is set below.) */
+  --spring: cubic-bezier(0.22, 0.86, 0.24, 1);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  .ph {
+    /* 1 - (1 + wt) e^(-wt), w = 9.2 over the move: critically damped */
+    --spring: linear(0, 0.011 2%, 0.078 5%, 0.152 7.5%, 0.235 10%, 0.401 15%, 0.549 20%, 0.669 25%, 0.762 30%, 0.831 35%, 0.882 40%, 0.918 45%, 0.944 50%, 0.974 60%, 0.988 70%, 0.995 80%, 0.998 90%, 1);
+  }
 }
 
 /* ---- Glass ---- */
@@ -246,7 +258,8 @@
   align-items: center;
   gap: 8px;
   height: calc(var(--status) + var(--bar));
-  padding: var(--status) var(--edge) 0;
+  /* (`--bar-top`: on a real phone the bar's buttons start a little down, clear of the strip along the page's top edge: phone.css) */
+  padding: calc(var(--status) + var(--bar-top, 0px)) var(--edge) 0;
   pointer-events: none;
 }
 
@@ -496,7 +509,7 @@
   position: absolute;
   inset: 0;
   transition:
-    transform 0.38s var(--glide),
+    transform 0.5s var(--spring),
     visibility 0s;
 }
 
@@ -505,8 +518,8 @@
   transform: translateX(-30%);
   visibility: hidden;
   transition:
-    transform 0.38s var(--glide),
-    visibility 0s 0.38s;
+    transform 0.5s var(--spring),
+    visibility 0s 0.4s;
 }
 
 .ios-page[data-pos='gone'] {
@@ -519,7 +532,7 @@
 }
 
 .ios-page[data-enter] {
-  animation: ios-push 0.38s var(--glide);
+  animation: ios-push 0.5s var(--spring);
 }
 
 @keyframes ios-push {

@@ -15,8 +15,14 @@ export const SITE = {
   /** How a visitor gets hold of Shrug for real: a number to text
    * (international form, '+1...') or an address to email. Neither is known
    * yet, so both are null and `reach` falls back on the one-pager. The day
-   * one is written here, every place that offers a way to Shrug uses it. */
-  contact: { sms: null as string | null, email: null as string | null },
+   * one is written here, every place that offers a way to Shrug uses it.
+   *
+   * `inbox` is where a message written to Shrug on the phone is sent, with the
+   * files that go with it (a deck, a one-pager: Messages, the compose button):
+   * an address that takes a form by POST, the words as `text` and each file as
+   * `files`, and answers 2xx once it has them. There is none yet, so a message
+   * written there says it was not delivered, and nothing leaves the page. */
+  contact: { sms: null as string | null, email: null as string | null, inbox: null as string | null },
 }
 
 /** What About Shrug says of the firm (the window on the desktop). Each is said in Shrug's own FAQs

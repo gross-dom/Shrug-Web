@@ -57,7 +57,9 @@ export function HomeFolder({ id }: { id: FolderId }) {
         ) : (
           <span className="sb-folder__titles" aria-hidden>
             {FAQS.slice(0, 3).map((f) => (
-              <span key={f.question}>{f.question}</span>
+              <span key={f.question}>
+                <i>{f.question}</i>
+              </span>
             ))}
           </span>
         )}

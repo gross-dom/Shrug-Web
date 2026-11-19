@@ -28,11 +28,12 @@
   user-select: text;
 }
 
-/* One press, one move. While a move is being drawn (src/phone/system.ts marks
-   it, for about as long as it takes), what is arriving and what is leaving take
-   no presses: a second tap lands on nothing, not on whatever has just come
-   under the finger. Not the home indicator, which is how to change one's mind;
-   and with motion turned down too, where the second tap would land all the same */
+/* One press, one move. For the first moment of a move (src/phone/system.ts marks
+   it), what is arriving and what is leaving take no presses at all; for the rest
+   of it only a second tap where the first was is turned away, there, so that it
+   lands on nothing and not on whatever has just come under the finger. Not the
+   home indicator, which is how to change one's mind; and with motion turned
+   down too, where the second tap would land all the same */
 .ph[data-moving] :is(.sb-home, .sb-open, .sb-apps),
 .ph[data-moving] :is(.sb-home, .sb-open, .sb-apps) * {
   pointer-events: none !important;
@@ -49,17 +50,13 @@
   --side-r: env(safe-area-inset-right, 0px);
   --home: calc(34px + var(--below));
   --foot-gap: calc(29px + var(--below));
-  /* The page starts where the phone's own status bar ends. A browser may have a bar of its own there:
-     the buttons keep a little clear of it */
-  --bar: 48px;
+  /* The page starts where the phone's own status bar ends, and along its top edge is the strip the
+     browser's bar takes its colour from (below: 7 points of it show, over everything). A screen's buttons
+     start clear of that strip, or it cuts the tops off them. Where the page runs under the status bar
+     instead (added to the Home Screen), the status bar's own height has already put them clear */
+  --bar-top: max(0px, 9px - var(--status));
+  --bar: calc(46px + var(--bar-top));
   background: #000;
-}
-
-/* Added to the Home Screen, the page is the whole screen and the status bar is over it */
-@media (display-mode: standalone), (display-mode: fullscreen) {
-  .ph--bleed {
-    --bar: 46px;
-  }
 }
 
 /* Everything that can be pressed keeps inside those bands. The wallpaper runs
@@ -77,6 +74,14 @@
   --below: 0px;
   --home: 0px;
   --foot-gap: 8px;
+}
+
+/* The keyboard is on its way out (the field has let go of it): the screen has its whole height back
+   already, under the keyboard, and stays at the top of whatever part of the page is showing until it has gone */
+.ph--bleed[data-keyboard-going] {
+  top: var(--vv-top, 0px);
+  bottom: auto;
+  height: 100%;
 }
 
 /* The desktop's wallpaper is behind a phone drawn in a frame; a real phone covers it, so it isn't drawn */
@@ -576,10 +581,14 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   --row-gap: 17px;
   --name-size: 12px;
   --name-line: 14px;
-  /* The Dock: how far in from the sides and up from the foot it sits, and the room over and under its icons */
-  --dock-inset: 3.3cqw;
+  /* The Dock: how far in from the sides and up from the foot it sits, the room over and under its icons,
+     and the room at either end of them. Across, it is an iPhone's own at every size: 17.5 points in on a
+     402-point screen, its four icons 19.6 in from its ends (so 88 apart, a little closer than the columns
+     of icons above them) */
+  --dock-inset: 4.35cqw;
   --dock-lift: 3.3cqw;
   --dock-pad: 17px;
+  --dock-in: 4.88cqw;
   /* How far over the Dock the Search pill floats, and how tall it is */
   --search-gap: 14px;
   --search-tall: 30px;
@@ -589,15 +598,20 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   /* Nothing here scrolls: a drag on it is the pull that brings up search, not the browser's to pan */
   touch-action: none;
   transition:
-    transform 0.4s var(--glide),
-    opacity 0.26s ease,
+    transform 0.5s var(--spring),
+    opacity 0.22s ease,
     filter 0.26s ease;
 }
 
-/* An app is in front: the icons fall back behind it */
+/* An app is in front: the icons have gone out past it, towards the eye, as an iPhone's do when an app
+   opens out of one of them; they fall back into place from there when it is put away */
 .sb-home[data-covered] {
-  transform: scale(0.9);
+  transform: scale(1.16);
   opacity: 0;
+  transition:
+    transform 0.5s var(--spring),
+    opacity 0.16s ease,
+    filter 0.26s ease;
 }
 
 /* Locked: the icons wait a little way out, and fly in when it opens */
@@ -614,20 +628,24 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   opacity: 0.2;
 }
 
-/* Under a finger dragging an app away, they are already there */
+/* Under a finger carrying an app away they come into sight as it is carried (`--carry`, from nothing to
+   the whole way up the screen: Springboard.tsx), nearly in place by the time it is a third of the way */
 .ph[data-dragging] .sb-home[data-covered] {
-  transform: scale(0.95);
-  opacity: 1;
+  transform: scale(max(1.045, 1.16 - var(--carry, 0) * 0.4));
+  opacity: calc(var(--carry, 0) * 5);
   transition: none;
 }
 
-/* A screen with the height for it (an iPhone's own, or most of it) is laid out to an iPhone 17 Pro's
-   measure, read off one: on its 402 points an icon is 63.4 across, the first is 30.6 in from the edge and
-   90 down the screen (28 under the status bar), a row is 100.3 from the last, and the Dock is 17.5 in from
-   either side, 18.5 up from the foot and 101 tall, with Search 22 over it. A shorter screen (a phone's
-   browser with its bars showing) keeps the closer measure above, which is what lets the folders fit there
-   (src/styles/phone/folder.css) */
-@container (min-height: 750px) {
+/* A screen with the height for it is laid out to an iPhone 17 Pro's measure, read off one: on its 402
+   points an icon is 63.4 across, the first is 30.6 in from the edge and 90 down the screen (28 under the
+   status bar), a row is 100.3 from the last, and the Dock is 17.5 in from either side, 18.5 up from the
+   foot and 101 tall, with Search 22 over it. How much height that takes goes by the screen's width (the
+   icons are sized by it), so the rule is in steps: each width up to a step's own, at the height that
+   width needs (687 points at 402 across; the lowest thing in the grid is then 8 clear of Search). An
+   iPhone's browser, bars and all, leaves that much on most of them. A shorter screen
+   keeps the closer measure above, which is what lets the folders fit there (src/styles/phone/folder.css).
+   Search's field, over the Dock, is placed by the same measure (it is given it here, with the rest) */
+@container (min-height: 750px) or ((max-width: 500px) and (min-height: 726px)) or ((max-width: 444px) and (min-height: 721px)) or ((max-width: 430px) and (min-height: 716px)) or ((max-width: 414px) and (min-height: 699px)) or ((max-width: 402px) and (min-height: 687px)) or ((max-width: 393px) and (min-height: 677px)) or ((max-width: 384px) and (min-height: 667px)) or ((max-width: 375px) and (min-height: 658px)) or ((max-width: 360px) and (min-height: 642px)) or ((max-width: 353px) and (min-height: 634px)) or ((max-width: 340px) and (min-height: 622px)) or ((max-width: 320px) and (min-height: 615px)) or ((max-width: 300px) and (min-height: 609px)) {
   .sb-home {
     --icon: clamp(54px, 15.8cqw, 68px);
     --margin: 7.6cqw;
@@ -635,11 +653,15 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
     --row-gap: 14.9px;
     --name-size: 13px;
     --name-line: 16px;
-    --dock-inset: 4.35cqw;
     --dock-lift: 4.6cqw;
     --dock-pad: 18.8px;
     --search-gap: 21.8px;
     --search-tall: 29px;
+  }
+
+  .ph .spot {
+    --icon: clamp(54px, 15.8cqw, 68px);
+    --foot: calc(4.6cqw + var(--icon) + 37.6px + 16px + var(--below, 0px));
   }
 }
 
@@ -878,7 +900,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   display: flex;
   justify-content: space-between;
   height: calc(var(--icon) + 2 * var(--dock-pad));
-  padding: var(--dock-pad) calc(var(--margin) - var(--inset)) 0;
+  padding: var(--dock-pad) var(--dock-in) 0;
   border-radius: 9.6cqw;
   /* A tray of glass, as the Dock is now: clear enough that the wallpaper is seen through it (it is
      blurred only a little), brighter along its top edge where the light catches, and lifted off the
@@ -893,7 +915,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
     0 10px 30px rgb(8 10 60 / 0.16);
 }
 
-/* Four apps line up with the columns of icons above them; fewer share the Dock out evenly, as iOS does */
+/* Four apps run from end to end of it; fewer share the Dock out evenly, as iOS does */
 .sb-dock:not([data-full]) {
   justify-content: space-evenly;
 }
@@ -1015,17 +1037,20 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   pointer-events: auto;
 }
 
-/* An app's window, the app in it and its icon's picture over it (Zoom.tsx): the three that move when
-   one opens. The app keeps a layer of its own for good, so its words never re-set when it lands */
+/* An app and its icon's picture over it (Zoom.tsx): the two that move when one opens, by a transform and
+   nothing else, so that the browser draws the move off the page's own thread. The app keeps a layer of
+   its own for good, so its words never re-set when it lands. Its ground is its launch screen: what is
+   seen of it, flat, until its own screens have been drawn (below) */
 .sb-zoom {
   position: absolute;
   inset: 0;
-  overflow: hidden;
 }
 
 .sb-zoom__app {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  overflow: clip;
   transform-origin: 0 0;
   background-color: var(--zoom-bg, #fff);
   will-change: transform;
@@ -1037,6 +1062,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   left: 0;
   transform-origin: 0 0;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .sb-zoom__face > * {
@@ -1049,7 +1075,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 /* Shut, it is no more than its icon: it takes no touches, and once it has landed it isn't drawn */
 .sb-app[data-shut] {
   pointer-events: none;
-  animation: sb-rest 0s 0.34s forwards;
+  animation: sb-rest 0s 0.45s forwards;
 }
 
 /* Shut without having flown there, it isn't drawn at all */
@@ -1067,7 +1093,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 /* From one app straight into another: the new one slides in from the right, over the one it came from */
 .sb-slot[data-slide='in'] > .sb-card {
   box-shadow: -12px 0 32px rgb(0 0 0 / 0.16);
-  animation: sb-slide-in 0.4s var(--glide);
+  animation: sb-slide-in 0.46s var(--spring);
 }
 
 @keyframes sb-slide-in {
@@ -1077,7 +1103,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 }
 
 .sb-slot[data-slide='under'] > .sb-card {
-  animation: sb-slide-under 0.4s var(--glide) forwards;
+  animation: sb-slide-under 0.46s var(--spring) forwards;
 }
 
 @keyframes sb-slide-under {
@@ -1086,38 +1112,60 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   }
 }
 
-/* What a finger on the home indicator carries off: the app, whole */
+/* The whole of an app: what takes the keyboard when it opens and has no screen of its own yet to give it to */
 .sb-drag {
   position: absolute;
   inset: 0;
   overflow: hidden;
   overflow: clip;
-  transition:
-    transform 0.4s var(--glide),
-    border-radius 0.4s var(--glide);
 }
 
-.ph[data-dragging] .sb-drag {
-  transition: none;
-}
-
-/* It takes the keyboard when its app opens and has no screen of its own to give it to: nothing to show for that */
 .ph .sb-drag:focus-visible {
   outline: none;
 }
 
-.ph[data-dragging] .sb-app {
-  clip-path: none !important;
+/* The app's own screens. The first time it is opened they are drawn while it is already on its way out of
+   its icon, and come up over its launch screen; after that they are simply there */
+.sb-live {
+  position: absolute;
+  inset: 0;
 }
 
-.ph[data-dragging] .sb-zoom__app {
-  background-color: transparent !important;
+.sb-live[data-fresh] {
+  animation: sb-live-in 0.22s ease both;
 }
 
+@keyframes sb-live-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* What an app opens out of when that is not its icon. A notification, a row: a plain card the shape of it */
 .sb-face--card {
   display: block;
   border-radius: 23px;
   background: rgb(255 255 255 / 0.92);
+}
+
+/* A company's logo, out of the folder it is kept in */
+.sb-face--logo {
+  display: block;
+}
+
+.sb-face--logo .logo {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 23% !important;
+}
+
+/* The widget, for the conversation opened from it: as it is on the Home Screen, less what it does there */
+.sb-zoom__face > .sb-widget__face {
+  box-shadow: none;
+}
+
+.sb-zoom__face .sb-chat__reply {
+  animation: none;
 }
 
 /* ---- The App Switcher ---- */
@@ -1500,6 +1548,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   .sb-stack > .sb-note,
   .sb-chat__reply,
   .sb-badge,
+  .sb-live[data-fresh],
   .sb-slot[data-slide] > .sb-card {
     animation: none;
     transition: none;

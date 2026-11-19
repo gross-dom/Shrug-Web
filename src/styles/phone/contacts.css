@@ -318,6 +318,18 @@
   color: #fff;
 }
 
+/* Shrug's own card is black, as the ground of its logo is: its panes and buttons are the grays a dark
+   card on an iPhone has, since a share of black is still black */
+.ios-screen.contacts-screen--mine {
+  --pane: #1c1c1e;
+  --act: #2c2c2e;
+  --rim: rgb(255 255 255 / 0.2);
+}
+
+.ios-screen.contacts-screen--mine .ios-glass {
+  --glass: rgb(44 44 46 / 0.86);
+}
+
 /* Its glass buttons are the page's own colour, lit round the edge */
 .ios-screen.contacts-screen--card .ios-glass {
   --glass: color-mix(in srgb, var(--page) 95%, #fff);

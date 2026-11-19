@@ -9,6 +9,9 @@ import { COMPANIES } from '../../data/portfolio'
 export const conversationView = (conversation: Conversation) => `c:${conversation}`
 export const GROUP_VIEW = conversationView('group')
 
+/** Messages: a message to Shrug, started with the compose button. */
+export const NEW_MESSAGE = 'new'
+
 /** Contacts: a company's card, pushed over the list of them (`co:Varda`). It is named by the company's
  * key: its name, for all but the one that shares a name (`co:Atoms (atoms.co)`). */
 export const companyView = (key: string) => `co:${key}`

@@ -47,6 +47,10 @@ const over = (a, b, slack = 0.5) => a.l < b.r - slack && b.l < a.r - slack && a.
     [402, 647, 'large'], [402, 646, 'small'], [412, 800, 'large'], [412, 660, 'large'], [412, 659, 'small'], [414, 660, 'large'], [414, 659, 'small'], [414, 562, 'small'], [414, 561, 'none'],
     [430, 840, 'large'], [430, 676, 'large'], [430, 675, 'small'], [430, 660, 'small'], [430, 575, 'small'], [430, 574, 'none'],
     [444, 691, 'large'], [444, 690, 'small'], [444, 586, 'small'], [444, 585, 'none'], [500, 700, 'small'], [500, 701, 'large'], [500, 596, 'small'], [500, 595, 'none'],
+    // the roomier measure (an iPhone's own), which each width takes at the height it needs: the last width of each step
+    // at the step's own height (laid out so, with the grid clear of Search) and a point shorter (the closer measure still)
+    [300, 609, 'large'], [320, 615, 'large'], [340, 622, 'large'], [353, 634, 'large'], [353, 633, 'large'], [360, 642, 'large'], [360, 641, 'large'], [375, 658, 'large'], [375, 657, 'large'],
+    [384, 667, 'large'], [393, 677, 'large'], [393, 676, 'large'], [402, 687, 'large'], [402, 686, 'large'], [414, 699, 'large'], [414, 698, 'large'], [430, 716, 'large'], [430, 715, 'large'], [444, 721, 'large'], [444, 720, 'large'], [500, 726, 'large'], [500, 725, 'large'], [520, 750, 'large'],
     // on its side
     [568, 320, 'small'], [568, 270, 'small'], [640, 280, 'small'], [640, 360, 'small'], [667, 375, 'small'], [719, 400, 'small'], [720, 320, 'large'], [720, 319, 'small'], [736, 414, 'large'],
     [760, 340, 'large'], [760, 327, 'small'], [800, 334, 'small'], [800, 360, 'large'], [844, 390, 'large'], [932, 380, 'large'], [932, 430, 'large'], [932, 334, 'small'],

@@ -195,7 +195,7 @@
   right: 0;
   left: 0;
   z-index: 3;
-  height: calc(var(--status) + 120px);
+  height: calc(var(--status) + var(--bar-top, 0px) + 120px);
   background: linear-gradient(rgb(255 255 255 / 0.96) 0%, rgb(255 255 255 / 0.92) 56%, rgb(255 255 255 / 0) 100%);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
@@ -224,7 +224,7 @@
 }
 
 .msg-convo .chat__flow {
-  padding: calc(var(--status) + 100px) 16px calc(var(--foot-gap) + 44px + 18px) 10px;
+  padding: calc(var(--status) + var(--bar-top, 0px) + 100px) 16px calc(var(--foot-gap) + 44px + 18px) 10px;
 }
 
 /* Bubbles at the size iOS sets them */
@@ -293,7 +293,7 @@
 
 /* Every reply at once: the same glass, under the conversation's name */
 .msg-convo .chat__all {
-  top: calc(var(--status) + 94px);
+  top: calc(var(--status) + var(--bar-top, 0px) + 94px);
   gap: 5px;
   height: 34px;
   padding: 0 15px 0 11px;
@@ -687,4 +687,363 @@
   .msg-more__button > svg {
     transition: none;
   }
+}
+
+/* ---- A message to Shrug (the compose button) ---- */
+
+/* Shrug's own face: its mark on its black disc */
+.msgn-face {
+  display: block;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #000;
+}
+
+.msgn-face > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The browser's own file picker is behind the plus: the field itself is never seen */
+.msgn-picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Who it is to, on a line under the bar: one name, in the blue Messages gives someone it can reach */
+.msgn-to {
+  position: absolute;
+  top: calc(var(--status) + var(--bar) + 4px);
+  right: 0;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  box-shadow: 0 0.5px 0 var(--sep);
+  color: var(--label-2);
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.msgn-to b {
+  color: #0070e0;
+  font-weight: 400;
+}
+
+/* The conversation: the whole height of the screen, under the header and the field */
+.msgn-thread {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(var(--status) + var(--bar) + 60px) 16px calc(var(--foot-gap) + 44px + 18px);
+  scrollbar-width: none;
+}
+
+.msgn-thread::-webkit-scrollbar {
+  display: none;
+}
+
+.msgn-thread[data-started] {
+  padding-top: calc(var(--status) + var(--bar-top, 0px) + 106px);
+}
+
+/* Files waiting in the field make it taller: the conversation keeps clear of them */
+.msgn:has(.msgn-picked) .msgn-thread {
+  padding-bottom: calc(var(--foot-gap) + 44px + 18px + 76px);
+}
+
+/* What the conversation is for, said where an empty one has nothing to show */
+.msgn-hint {
+  display: grid;
+  gap: 3px;
+  margin: auto 28px;
+  color: var(--label-2);
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.msgn-hint b {
+  color: var(--label);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+}
+
+.msgn-stamp {
+  display: grid;
+  margin: 0 0 9px;
+  color: var(--label-2);
+  font-size: 11px;
+  letter-spacing: 0;
+  line-height: 15px;
+  text-align: center;
+}
+
+.msgn-stamp b {
+  font-weight: 600;
+}
+
+/* One message: its files, its words, and under them how it went */
+.msgn-sent {
+  position: relative;
+  display: grid;
+  flex: none;
+  justify-items: end;
+  margin-top: 8px;
+}
+
+/* One that did not go keeps room beside it for the mark that says so */
+.msgn-sent[data-state='failed'] {
+  padding-right: 34px;
+}
+
+.msgn-sent__parts {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 0;
+  max-width: 76%;
+}
+
+.msgn-bubble {
+  display: block;
+  padding: 7px 14px 8px;
+  border-radius: 19px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Still on its way, a message is paler, as one that is sending is */
+.msgn-sent[data-state='sending'] .msgn-sent__parts {
+  opacity: 0.72;
+}
+
+.msgn-pic {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  max-height: 300px;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
+.msgn-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 10px 14px 10px 10px;
+  border-radius: 18px;
+  background: #e9e9eb;
+  color: var(--label);
+}
+
+.msgn-file > svg {
+  flex: none;
+  color: #0070e0;
+}
+
+.msgn-file__words,
+.msgn-pick__words {
+  display: grid;
+  min-width: 0;
+}
+
+.msgn-file__words b,
+.msgn-pick__words b {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 19px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.msgn-file__words span,
+.msgn-pick__words span {
+  color: var(--label-2);
+  font-size: 13px;
+  line-height: 16px;
+}
+
+/* Beside a message that did not go: the mark Messages puts there, which says why when pressed */
+.msgn-alert {
+  position: absolute;
+  top: calc(50% - 8px);
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--red);
+  transform: translateY(-50%);
+}
+
+.msgn-alert::after {
+  position: absolute;
+  inset: -8px;
+  content: '';
+}
+
+.msgn-alert:active {
+  opacity: 0.6;
+}
+
+.msgn-receipt {
+  display: block;
+  margin: 3px 2px 0;
+  color: var(--label-2);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 14px;
+}
+
+/* (A red that small type can be read in) */
+.msgn-receipt[data-failed] {
+  color: #c4001d;
+}
+
+/* The field, with what has been picked to go waiting in it over the words */
+.msg-field.msgn-field {
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  min-height: 44px;
+  padding: 0;
+}
+
+.msgn-field__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 6px 0 16px;
+}
+
+.msgn-picked {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  padding: 12px 12px 2px;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.msgn-picked::-webkit-scrollbar {
+  display: none;
+}
+
+.msgn-pick {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  max-width: 200px;
+  height: 60px;
+  padding: 0 14px 0 10px;
+  border-radius: 14px;
+  background: rgb(120 120 128 / 0.14);
+  color: var(--label);
+}
+
+.msgn-pick > svg {
+  flex: none;
+  color: #0070e0;
+}
+
+.msgn-pick[data-picture] {
+  width: 60px;
+  padding: 0;
+}
+
+.msgn-pick > img {
+  display: block;
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.msgn-pick__words b {
+  font-size: 13px;
+  line-height: 17px;
+}
+
+.msgn-pick__words span {
+  font-size: 12px;
+  line-height: 15px;
+}
+
+/* Takes a file back out: on its corner, 44 points under a finger */
+.msgn-pick__drop {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(60 60 67 / 0.78);
+  color: #fff;
+}
+
+.msgn-pick__drop::after {
+  position: absolute;
+  inset: -12px;
+  content: '';
+}
+
+/* A file that was turned away: said over the field, briefly */
+.msgn-refused {
+  position: absolute;
+  bottom: calc(var(--foot-gap) + 44px + 22px);
+  left: 50%;
+  z-index: 6;
+  display: block;
+  max-width: calc(100% - 48px);
+  padding: 7px 14px;
+  border-radius: 16px;
+  background: rgb(28 28 30 / 0.86);
+  color: #fff;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  line-height: 17px;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.msgn:has(.msgn-picked) .msgn-refused {
+  bottom: calc(var(--foot-gap) + 44px + 22px + 76px);
 }

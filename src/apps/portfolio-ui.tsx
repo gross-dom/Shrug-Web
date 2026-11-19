@@ -38,6 +38,33 @@ export function useLogo(company: Company) {
   return logo && !gone ? { src: `${import.meta.env.BASE_URL}logos/${logo}`, onError: () => noteMissing(logo) } : null
 }
 
+/** The logos that have been fetched ahead of being shown, kept so that the browser keeps them too. */
+const warmed: HTMLImageElement[] = []
+let warming = false
+
+/** Fetches every company's logo ahead of its being shown, a few at a time and only while nothing else is
+ * going on, so that a list of companies opens with its pictures in it instead of filling in row by row.
+ * Not for a visitor who has asked their browser to save data. */
+export function warmLogos() {
+  if (warming || typeof window === 'undefined') return
+  if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return
+  warming = true
+  const files = [...new Set(COMPANIES.map((company) => company.logo).filter((logo): logo is string => !!logo))]
+  const idle = (run: () => void) => ('requestIdleCallback' in window ? window.requestIdleCallback(run, { timeout: 1500 }) : setTimeout(run, 200))
+  let at = 0
+  const some = () => {
+    for (const logo of files.slice(at, at + 6)) {
+      const image = new Image()
+      image.decoding = 'async'
+      image.src = `${import.meta.env.BASE_URL}logos/${logo}`
+      warmed.push(image)
+    }
+    at += 6
+    if (at < files.length) idle(some)
+  }
+  idle(some)
+}
+
 /** A company's logo as an app icon: its own mark on a rounded tile, or its
  * initial where no logo could be confirmed, or where the file did not arrive.
  * A logo is asked for when it comes into sight; `eager` asks for it at once,
@@ -50,7 +77,7 @@ export function CompanyLogo({ company, size = 56, eager }: { company: Company; s
   return (
     <span className="logo" data-empty={shown ? undefined : ''} style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }} aria-hidden>
       {shown ? (
-        <img src={`${import.meta.env.BASE_URL}logos/${logo}`} width={size} height={size} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={() => noteMissing(logo)} />
+        <img src={`${import.meta.env.BASE_URL}logos/${logo}`} width={size} height={size} alt="" loading={eager ? 'eager' : 'lazy'} decoding={eager ? 'sync' : 'async'} draggable={false} onError={() => noteMissing(logo)} />
       ) : (
         company.name.trim()[0]?.toUpperCase()
       )}

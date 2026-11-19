@@ -394,8 +394,8 @@ export function Spotlight() {
   const [at, setAt] = useState(-1)
   const root = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
-  /** Where a finger came down on the results while they were at their top: a pull down from there closes search. */
-  const pull = useRef<number | null>(null)
+  /** Where a finger came down on the results (`from`), and whether they were at their top then: a pull down from there closes search. */
+  const pull = useRef<{ from: number; top: boolean } | null>(null)
   if (on && !shown) setShown(true)
 
   useEffect(() => {
@@ -478,15 +478,18 @@ export function Spotlight() {
         className="spot-scroll"
         // A tap on the bare ground between results closes it, as a tap on the wallpaper does
         onClick={(e) => (e.target === e.currentTarget || (e.target as HTMLElement).id === 'spot-list') && close()}
-        onTouchStart={(e) => (pull.current = e.currentTarget.scrollTop <= 0 ? e.touches[0]!.clientY : null)}
-        // Reaching for the results puts the keyboard away
-        onTouchMove={() => document.activeElement === input.current && input.current?.blur()}
+        onTouchStart={(e) => (pull.current = { from: e.touches[0]!.clientY, top: e.currentTarget.scrollTop <= 0 })}
+        // Dragging the results puts the keyboard away, as it does on an iPhone. A drag, not a tap whose finger shook
+        onTouchMove={(e) => {
+          if (pull.current && Math.abs(e.touches[0]!.clientY - pull.current.from) > 10 && document.activeElement === input.current) input.current?.blur()
+        }}
         // Pulled down from its top, the list goes back where it came from: search closes
         onTouchEnd={(e) => {
-          const from = pull.current
+          const began = pull.current
           pull.current = null
-          if (from !== null && e.changedTouches[0]!.clientY - from > 96 && e.currentTarget.scrollTop <= 0) close()
+          if (began?.top && e.changedTouches[0]!.clientY - began.from > 96 && e.currentTarget.scrollTop <= 0) close()
         }}
+        onTouchCancel={() => (pull.current = null)}
       >
         {typed && !first && (
           <div className="spot-none">

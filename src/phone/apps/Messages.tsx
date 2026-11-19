@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, ChevronLeft, ChevronRight, ListFilter, Mic, Plus, Video } from 'lucide-react'
+import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, FileText, Mic, Plus, Video, X } from 'lucide-react'
 import { chat, finishChat, replayChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
 import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
 import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
@@ -9,14 +9,16 @@ import { SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
 import { APPS } from '../../os/apps'
+import { LogoDisc } from '../../os/icons'
 import { prefersReducedMotion } from '../../os/dom'
 import { focusLost, holdFocus } from '../../os/focus'
 import { useStore } from '../../os/store'
 import { OnePagerIcon, PhoneIcon } from '../icons'
-import { closeSheet, launch, openSheet, pop, push, sys, topOf, type PhoneApp } from '../system'
+import { closeSheet, goHome, launch, openSheet, pop, push, sys, topOf, type PhoneApp } from '../system'
 import { useNewCount } from '../unread'
-import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
-import { conversationView, GROUP_VIEW } from './routes'
+import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
+import { LIMITS, outbox, pick, resend, sendToShrug, setDraft, sizeOf, unpick, type Sent } from './outbox'
+import { conversationView, GROUP_VIEW, NEW_MESSAGE } from './routes'
 import '../../styles/phone/messages.css'
 
 // Messages, as the iPhone has it. It is Shrug's own phone, as the desktop is
@@ -112,14 +114,42 @@ const ConversationRow = memo(
   (a, b) => a.picked === b.picked && a.row.key === b.row.key && a.row.unread === b.row.unread && a.row.when === b.row.when && a.row.preview === b.row.preview,
 )
 
-type Filter = 'all' | 'unread'
+/** The conversation with Shrug, once something has been written to it: at the head of the list, as the
+ * newest is. */
+function ShrugRow({ picked }: { picked: boolean }) {
+  const last = useStore(outbox, (s) => s.sent[s.sent.length - 1] ?? null)
+  if (!last) return null
+  const open = () => push(NEW_MESSAGE)
+  const said = last.text || (last.files.length === 1 ? last.files[0]!.name : `${last.files.length} Attachments`)
+  return (
+    <Row
+      className="msg-row"
+      role="button"
+      tabIndex={0}
+      data-row="shrug"
+      data-picked={picked || undefined}
+      lead={<ShrugFace size={46} />}
+      title={SITE.name}
+      meta={
+        <>
+          now
+          <ChevronRight size={15} strokeWidth={2.6} aria-hidden />
+        </>
+      }
+      preview={last.state === 'failed' ? `Not Delivered: ${said}` : said}
+      onClick={open}
+      onKeyDown={(e: KeyboardEvent) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return
+        e.preventDefault()
+        open()
+      }}
+    />
+  )
+}
 
 function ListScreen() {
-  const [filter, setFilter] = useState<Filter>('all')
   const query = useStore(inbox, (s) => s.query)
-  const all = useConversationRows()
-  // Only the group is ever unread: the others were read long ago
-  const rows = filter === 'unread' ? all.filter((row) => row.unread) : all
+  const rows = useConversationRows()
   /** The conversation that is open over the list, if one is. */
   const picked = useStore(sys, (s) => s.stacks.messages[0] ?? null)
   const q = query.trim()
@@ -129,19 +159,14 @@ function ListScreen() {
 
   return (
     <Screen
-      title={filter === 'unread' ? 'Unread' : 'Messages'}
+      title="Messages"
       large
       className="msg-list"
+      // The way out: this is as far back as the app goes, and the Home Screen is next
       trailing={
-        <Menu
-          label="Filter conversations"
-          items={[
-            { label: 'Messages', checked: filter === 'all', onSelect: () => setFilter('all') },
-            { label: 'Unread', checked: filter === 'unread', onSelect: () => setFilter('unread') },
-          ]}
-        >
-          <ListFilter size={22} strokeWidth={2.2} aria-hidden />
-        </Menu>
+        <GlassButton label="Exit to the Home Screen" wide onClick={goHome}>
+          Exit
+        </GlassButton>
       }
       foot={
         <>
@@ -149,9 +174,9 @@ function ListScreen() {
           <GlassButton
             label="New message"
             onClick={() => {
-              // A new message goes to the family: its conversation opens with the field ready
+              // A new message, to Shrug: its screen opens with the field ready
               primeKeyboard()
-              push(GROUP_VIEW)
+              push(NEW_MESSAGE)
             }}
           >
             <ComposeGlyph />
@@ -160,6 +185,7 @@ function ListScreen() {
       }
     >
       <div className="msg-rows">
+        {!q && <ShrugRow picked={picked === NEW_MESSAGE} />}
         {talks.map((row) => (
           <ConversationRow key={row.key} row={row} picked={picked === conversationView(row.conversation)} />
         ))}
@@ -174,7 +200,7 @@ function ListScreen() {
           </div>
         </section>
       )}
-      {rows.length === 0 && (q ? <Empty title="No Results">for “{q}”</Empty> : <Empty title="No Unread Messages" />)}
+      {rows.length === 0 && q && <Empty title="No Results">for “{q}”</Empty>}
     </Screen>
   )
 }
@@ -413,6 +439,239 @@ function ConversationScreen({ conversation, view }: { conversation: Conversation
         <Transcript conversation={conversation} source={target} active={showing} />
       </Thread>
     </Screen>
+  )
+}
+
+// ---- A message to Shrug ----
+
+/** Shrug's own face in Messages: its mark, on its black disc. */
+function ShrugFace({ size }: { size: number }) {
+  return (
+    <span className="msgn-face" style={{ width: size, height: size }} aria-hidden>
+      <LogoDisc size="100%" />
+    </span>
+  )
+}
+
+/** The name the alert that explains an undelivered message goes by in the phone's history. */
+const UNDELIVERED = 'undelivered'
+
+/** Which message that alert is about. */
+let asked: string | null = null
+
+/** One message as the conversation shows it: its files, its words, and under them how it went. */
+function SentMessage({ message, last }: { message: Sent; last: boolean }) {
+  const failed = message.state === 'failed'
+  return (
+    <div className="msgn-sent" data-state={message.state}>
+      <div className="msgn-sent__parts">
+        {message.files.map((file, i) =>
+          file.url ? (
+            <img key={i} className="msgn-pic" src={file.url} alt={file.name} draggable={false} />
+          ) : (
+            <span key={i} className="msgn-file">
+              <FileText size={26} strokeWidth={1.7} aria-hidden />
+              <span className="msgn-file__words">
+                <b dir="auto">{file.name}</b>
+                <span>{sizeOf(file.size)}</span>
+              </span>
+            </span>
+          ),
+        )}
+        {message.text && (
+          <p className="msgn-bubble" dir="auto">
+            {message.text}
+          </p>
+        )}
+      </div>
+      {failed && (
+        <button
+          type="button"
+          className="msgn-alert"
+          aria-label="Not delivered. Details"
+          onClick={() => {
+            asked = message.id
+            openSheet(UNDELIVERED)
+          }}
+        >
+          <CircleAlert size={24} strokeWidth={2.2} aria-hidden />
+        </button>
+      )}
+      {(failed || last) && (
+        <p className="msgn-receipt" data-failed={failed || undefined}>
+          {failed ? 'Not Delivered' : message.state === 'sent' ? 'Delivered' : message.files.length ? `Sending… ${Math.round(message.part * 100)}%` : 'Sending…'}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** A message to Shrug: the one conversation here that is the visitor's to start. The compose button opens
+ * it. Shrug is the only one it can be sent to; it can carry files, picked with the browser's own picker
+ * (a phone offers its photos, its camera and its files there). Where it goes is in outbox.ts. */
+function NewMessageScreen() {
+  const { active } = useApp()
+  const onTop = useStore(sys, (s) => topOf(s, 'messages') === NEW_MESSAGE)
+  const showing = active && onTop
+  const { draft, picked, sent, refused } = useStore(outbox, (s) => s)
+  const input = useRef<HTMLInputElement>(null)
+  const files = useRef<HTMLInputElement>(null)
+  const scroller = useRef<HTMLDivElement>(null)
+  const started = sent.length > 0
+  const ready = draft.trim().length > 0 || picked.length > 0
+
+  // Asked for by the compose button: the field takes the keyboard as its screen arrives
+  useEffect(() => {
+    if (!showing || !wantsField) return
+    wantsField = false
+    input.current?.focus({ preventScroll: true })
+    dropPrimer()
+  }, [showing])
+
+  // The newest is kept in sight: what was just sent, and how it went
+  const lastState = sent[sent.length - 1]?.state
+  useEffect(() => {
+    const el = scroller.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [sent.length, lastState, picked.length])
+
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!ready) return
+    sendToShrug()
+    input.current?.focus({ preventScroll: true })
+  }
+
+  const full = picked.length >= LIMITS.files
+  return (
+    <Screen
+      title={started ? SITE.name : 'New Message'}
+      fixed
+      className="msg-convo msg-convo--person msgn"
+      leading={started ? <Back /> : null}
+      center={
+        started ? (
+          <span className="msg-head msg-head--plain">
+            <span className="msg-head__face" aria-hidden>
+              <ShrugFace size={50} />
+            </span>
+            <span className="ios-glass msg-head__name">{SITE.name}</span>
+          </span>
+        ) : undefined
+      }
+      trailing={
+        started ? undefined : (
+          <GlassButton label="Cancel" wide onClick={pop}>
+            Cancel
+          </GlassButton>
+        )
+      }
+      foot={
+        <>
+          {/* The browser's own picker: a phone offers its photos, its camera and its files */}
+          <input
+            ref={files}
+            className="msgn-picker"
+            type="file"
+            multiple
+            tabIndex={-1}
+            aria-hidden
+            onChange={(e) => {
+              pick([...(e.target.files ?? [])])
+              e.target.value = ''
+              input.current?.focus({ preventScroll: true })
+            }}
+          />
+          <button type="button" className="ios-glass ios-button msg-more__button" aria-label="Add files" aria-disabled={full || undefined} onClick={() => !full && files.current?.click()} {...keepsCaret}>
+            <Plus size={23} strokeWidth={2.2} aria-hidden />
+          </button>
+          <form className="ios-glass msg-field msgn-field" onSubmit={submit}>
+            {picked.length > 0 && (
+              <ul className="msgn-picked" aria-label="Attached">
+                {picked.map((p) => (
+                  <li key={p.id} className="msgn-pick" data-picture={p.url ? '' : undefined}>
+                    {p.url ? (
+                      <img src={p.url} alt={p.file.name} draggable={false} />
+                    ) : (
+                      <>
+                        <FileText size={22} strokeWidth={1.8} aria-hidden />
+                        <span className="msgn-pick__words">
+                          <b dir="auto">{p.file.name}</b>
+                          <span>{sizeOf(p.file.size)}</span>
+                        </span>
+                      </>
+                    )}
+                    <button type="button" className="msgn-pick__drop" aria-label={`Remove ${p.file.name}`} onClick={() => unpick(p.id)} {...keepsCaret}>
+                      <X size={12} strokeWidth={3.4} aria-hidden />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <span className="msgn-field__row">
+              <input ref={input} className="msg-field__input" type="text" dir="auto" placeholder={picked.length ? 'Add comment or Send' : 'iMessage'} aria-label={`Message to ${SITE.name}`} autoComplete="off" autoCorrect="on" enterKeyHint="send" value={draft} onChange={(e) => setDraft(e.target.value)} />
+              <span className="msg-field__mic" data-off={ready || undefined} aria-hidden>
+                <Mic size={20} strokeWidth={2} />
+              </span>
+              <button type="submit" className="msg-field__send" aria-label="Send" data-ready={ready || undefined} aria-disabled={!ready} tabIndex={ready ? 0 : -1} {...keepsCaret}>
+                <ArrowUp size={19} strokeWidth={3} aria-hidden />
+              </button>
+            </span>
+          </form>
+        </>
+      }
+    >
+      <div className="msg-edge" aria-hidden />
+      {/* Who it is to. There is one answer, so it is said, not asked */}
+      {!started && (
+        <p className="msgn-to">
+          <span>To:</span>
+          <b>{SITE.name}</b>
+        </p>
+      )}
+      <div ref={scroller} className="msgn-thread" data-started={started || undefined} role="log" aria-label={`Messages to ${SITE.name}`}>
+        {started ? (
+          <>
+            <p className="msgn-stamp">
+              <b>iMessage</b>
+              <span>Today</span>
+            </p>
+            {sent.map((message, i) => (
+              <SentMessage key={message.id} message={message} last={i === sent.length - 1} />
+            ))}
+          </>
+        ) : (
+          // What this is for, where an empty conversation has nothing to show
+          <p className="msgn-hint">
+            <b>Got a deck or a one-pager?</b>
+            Send it to {SITE.name} here. Tap + to add files.
+          </p>
+        )}
+      </div>
+      {/* Said aloud: a file turned away, and how the last message went */}
+      <span className="sr-only" role="status">
+        {refused ?? (lastState === 'failed' ? 'Not delivered.' : lastState === 'sent' ? 'Delivered.' : '')}
+      </span>
+      {refused && (
+        <p className="msgn-refused" aria-hidden>
+          {refused}
+        </p>
+      )}
+    </Screen>
+  )
+}
+
+/** Why a message to Shrug did not go, behind the mark beside it. */
+function Undelivered() {
+  const [message] = useState(() => outbox.get().sent.find((m) => m.id === asked) ?? null)
+  const closed = message?.why !== 'failed'
+  return (
+    <Alert
+      name={UNDELIVERED}
+      title="Not Delivered"
+      message={closed ? `${SITE.name} can’t take messages here yet, so this was not sent. Nothing has left your phone.` : 'This message could not be sent. Check your connection and try again.'}
+      actions={closed ? [{ label: 'OK', bold: true }] : [{ label: 'Try Again', onSelect: () => message && resend(message.id) }, { label: 'Cancel', bold: true }]}
+    />
   )
 }
 
@@ -668,11 +927,12 @@ export function MessagesApp() {
     <>
       <NavStack>
         {(view) => {
+          if (view === NEW_MESSAGE) return <NewMessageScreen />
           const conversation = conversationOf(view)
           return view === null || conversation === null ? <ListScreen /> : <ConversationScreen conversation={conversation} view={view} />
         }}
       </NavStack>
-      <SheetHost>{(name) => (name === 'details' ? <DetailsSheet /> : name === FACETIME ? <FaceTime /> : null)}</SheetHost>
+      <SheetHost>{(name) => (name === 'details' ? <DetailsSheet /> : name === FACETIME ? <FaceTime /> : name === UNDELIVERED ? <Undelivered /> : null)}</SheetHost>
     </>
   )
 }

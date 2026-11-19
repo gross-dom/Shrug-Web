@@ -121,19 +121,36 @@ function apply(place: Place, motion: boolean, origin: string | null = null) {
 
 // ---- One press, one move ----
 
-/** How long a move takes to draw, give or take: for that long after one, the screens under the visitor's
- * finger take no presses. */
+/** How long a move takes to draw, give or take. */
 const MOVE = 380
 
-/** A move is being drawn. While it is, what is arriving or leaving takes no presses (src/styles/phone.css):
- * a second tap, or a third, lands on nothing instead of on whatever has just come under the finger, so
- * two taps do what one does. An iPhone does the same. */
+/** For this long after a move nothing under the visitor's finger takes a press at all: the tap that made
+ * the move is still being dealt with, and whatever it was on has not been drawn gone. */
+const HELD = 120
+
+/** A move is being drawn, and has only just begun: what is arriving or leaving takes no presses
+ * (src/styles/phone.css). After that, and until the move is done, only a press where the last one was is
+ * turned away (`echoes`, below): the second tap of two lands on nothing instead of on whatever has just
+ * come under the finger, so two taps do what one does, while a press anywhere else is taken at once. An
+ * iPhone is the same: Back can be pressed while a screen is still sliding in, and another app opened
+ * while the last is on its way into its icon. */
 export const moving = createStore(false)
 
 let settling: ReturnType<typeof setTimeout> | undefined
 let drawn = 0
 
+const NOWHERE = { x: -1e5, y: -1e5, t: 0 }
+/** Where the visitor last pressed, and when. */
+let pressed = NOWHERE
+/** The press that made the last move, and when that move was made. */
+let madeBy = NOWHERE
+let movedAt = -1e5
+
 function moved() {
+  const now = performance.now()
+  // A move made from the keyboard, or by the browser's own Back, was made by no press
+  madeBy = now - pressed.t < 700 ? pressed : NOWHERE
+  movedAt = now
   moving.set(true)
   clearTimeout(settling)
   cancelAnimationFrame(drawn)
@@ -143,7 +160,32 @@ function moved() {
     drawn = requestAnimationFrame(() => {
       drawn = requestAnimationFrame(() => moving.set(false))
     })
-  }, MOVE)
+  }, HELD)
+}
+
+/** Whether a press at this point is the second tap of two: the press that made the move now being drawn, again. */
+const echoes = (x: number, y: number) => performance.now() - movedAt < MOVE && Math.hypot(x - madeBy.x, y - madeBy.y) < 44
+
+/** Watches where the visitor presses, and turns away the second tap of two (see `moving`). The home
+ * indicator is left alone: it is how to change one's mind. */
+function watchPresses() {
+  const down = (e: PointerEvent) => {
+    pressed = { x: e.clientX, y: e.clientY, t: performance.now() }
+  }
+  const click = (e: MouseEvent) => {
+    const on = e.target as Element | null
+    // (A click with no place is the keyboard's)
+    if (!e.detail || !on?.closest?.('.ph') || on.closest('.sb-homebar')) return
+    if (!echoes(e.clientX, e.clientY)) return
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  document.addEventListener('pointerdown', down, true)
+  document.addEventListener('click', click, true)
+  return () => {
+    document.removeEventListener('pointerdown', down, true)
+    document.removeEventListener('click', click, true)
+  }
 }
 
 /** Writes the step the phone is on, or the one after it. Each step carries its address
@@ -418,7 +460,11 @@ export function watchHistory() {
     apply(entry?.shrug ?? { app: null, stacks: sys.get().stacks, sheet: null }, motion)
   }
   window.addEventListener('popstate', onPop)
-  return () => window.removeEventListener('popstate', onPop)
+  const unwatch = watchPresses()
+  return () => {
+    window.removeEventListener('popstate', onPop)
+    unwatch()
+  }
 }
 
 // ---- Reading it ----

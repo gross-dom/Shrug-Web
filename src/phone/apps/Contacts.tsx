@@ -3,11 +3,12 @@ import { Check, Search, UserRound, X } from 'lucide-react'
 import { companiesIn, companyKeyed, fateOf, hostOf, tellApart, useLogo, type Listed } from '../../apps/portfolio-ui'
 import { sought } from '../../apps/state'
 import { LOGO_COLOURS, PLAIN_PAGE, POSTER_COLOURS } from '../../data/logoColours'
-import { COMPANY_COUNT, VERTICALS } from '../../data/portfolio'
+import { COMPANY_COUNT, VERTICALS, type Company } from '../../data/portfolio'
 import { ABOUT, reach, reachable, SITE } from '../../data/site'
 import { LogoDisc } from '../../os/icons'
 import { linkTo } from '../../os/place'
 import { useStore } from '../../os/store'
+import type { Ground, Tone } from '../chrome'
 import { haptic, share } from '../native'
 import { push, sys, topOf } from '../system'
 import { Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, ShareGlyph, usePageHeadingId } from '../ui'
@@ -170,7 +171,8 @@ function Face({ company, size, eager }: { company: Listed; size?: number; eager?
   const ground = company.logo ? (LOGO_COLOURS[company.logo]?.ground ?? null) : null
   return (
     <span className="contact-face" data-empty={logo ? undefined : ''} data-full={logo && !ground ? '' : undefined} style={{ ...(size ? { width: size, height: size, fontSize: Math.round(size * 0.45) } : null), ...(logo && ground ? { background: ground } : null) }} aria-hidden>
-      {logo ? <img src={logo.src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={logo.onError} /> : company.name.trim()[0]?.toUpperCase()}
+      {/* Small and already fetched (portfolio-ui.tsx warms them): drawn with the row, not a frame after it */}
+      {logo ? <img src={logo.src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="sync" draggable={false} onError={logo.onError} /> : company.name.trim()[0]?.toUpperCase()}
     </span>
   )
 }
@@ -484,6 +486,19 @@ function Poster({ file }: { file: string }) {
 /** The colours a picture's card falls back on until tools/logo-colours.py has read the picture. */
 const UNREAD_POSTER = { top: '#1c1c1e', page: '#3a3a3c' }
 
+/** The colour a company's card is in: its photograph's own (top and foot), where it has one, or its logo's. */
+function groundOf(company: Company): Ground {
+  const shot = company.poster ? (POSTER_COLOURS[company.poster] ?? UNREAD_POSTER) : null
+  return shot ? { top: shot.top, foot: shot.page } : (company.logo && LOGO_COLOURS[company.logo]?.page) || PLAIN_PAGE
+}
+
+/** What Contacts is opening on, before its screens are there to say: a card's own colour, or the list's white. */
+export function contactsFirst(top: string | null): { tone: Tone; ground?: Ground } {
+  if (top === MY_CARD) return { tone: 'dark', ground: SHRUG_PAGE }
+  const company = top ? companyKeyed(companyOf(top) ?? '') : null
+  return company ? { tone: 'dark', ground: groundOf(company) } : { tone: 'plain' }
+}
+
 /** A company's card: what it is, the things to do with it, and what is known about it. */
 function CompanyCard({ id }: { id: string }) {
   const company = companyKeyed(id)
@@ -507,8 +522,6 @@ function CompanyCard({ id }: { id: string }) {
   }
   // The card is in the colour of its picture: a photograph's own, where the company has one, or its logo's
   const poster = company.poster
-  const shot = poster ? (POSTER_COLOURS[poster] ?? UNREAD_POSTER) : null
-  const page = (company.logo && LOGO_COLOURS[company.logo]?.page) || PLAIN_PAGE
 
   return (
     <Screen
@@ -517,7 +530,7 @@ function CompanyCard({ id }: { id: string }) {
       center={<></>}
       ownHeading
       tone="dark"
-      ground={shot ? { top: shot.top, foot: shot.page } : page}
+      ground={groundOf(company)}
       className={`contacts-screen contacts-screen--card${poster ? ' contacts-screen--poster' : ''}`}
       trailing={
         <GlassButton label="Share" onClick={send}>
@@ -562,8 +575,8 @@ function CompanyCard({ id }: { id: string }) {
   )
 }
 
-/** Shrug's own card is in the colour of its wallpaper. */
-const SHRUG_PAGE = '#5760a1'
+/** Shrug's own card is black, as the ground of its logo is: the logo's disc runs into the page. */
+const SHRUG_PAGE = '#000000'
 
 /** Shrug's own card: who Shrug is, as the desktop's About Shrug says it, and the ways on. */
 function MyCard() {
@@ -580,7 +593,7 @@ function MyCard() {
       ownHeading
       tone="dark"
       ground={SHRUG_PAGE}
-      className="contacts-screen contacts-screen--card"
+      className="contacts-screen contacts-screen--card contacts-screen--mine"
       trailing={
         <GlassButton label="Share" onClick={send}>
           {copied ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <ShareGlyph />}

@@ -14,15 +14,12 @@
   /* Over the apps, under the Lock Screen and the status bar */
   z-index: 1;
   color: #fff;
+  /* Only the list is dragged: a finger anywhere else here slides nothing (not the page under the keyboard, either) */
+  touch-action: none;
 }
 
-/* On a screen tall enough for the Home Screen's roomier measure (phone.css), the Dock is higher and the field with it */
-@container (min-height: 750px) {
-  .spot {
-    --icon: clamp(54px, 15.8cqw, 68px);
-    --foot: calc(4.6cqw + var(--icon) + 37.6px + 16px + var(--below, 0px));
-  }
-}
+/* (On a screen with the height for the Home Screen's roomier measure the Dock is higher and the field with
+   it: both of these are set again there, with the Home Screen's own, in phone.css) */
 
 /* Where there is no Dock under the field, the field sits at the foot, just
    clear of the strip that takes the swipe home: on a phone on its side (its
@@ -62,7 +59,8 @@
 
 .spot-scroll {
   position: absolute;
-  top: calc(var(--status) + 2px);
+  /* (clear of the strip along the top edge of a real phone's page: phone.css) */
+  top: max(var(--status) + 2px, 10px);
   /* On a phone on its side the shade runs through the bands at the ends of the screen; what can be pressed keeps inside them */
   right: var(--side-r, 0px);
   bottom: calc(var(--foot) + 48px + 10px);
@@ -74,6 +72,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 14px var(--edge) 22px;
   scrollbar-width: none;
   /* Results pass out of sight softly at both ends */
@@ -92,6 +91,9 @@
   flex: none;
   flex-direction: column;
   gap: 20px;
+  /* A point more than the list has room for, however little is in it: so that it always scrolls, and a
+     drag on it is the list's own (it gives under the finger and springs back) and never the page's */
+  min-height: calc(100% + 1px);
 }
 
 /* ---- The field ---- */

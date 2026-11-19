@@ -92,29 +92,104 @@ export function Phone() {
     // Lets :active show under a finger in Safari, which otherwise waits for a listener
     const touch = () => {}
     document.addEventListener('touchstart', touch, { passive: true })
-    // The keyboard takes the bottom of the screen: the phone keeps to what is
-    // left above it. A pinch-zoom is not a keyboard.
+
+    // The keyboard takes the bottom of the screen: the phone keeps to what is left above it. The browser
+    // only says how much that is once the keyboard has finished moving, which on an iPhone is a third of a
+    // second after it set off; left at that, a field is covered while the keyboard comes and then jumps
+    // clear of it, and when it goes there is a blank where it was until the screen catches up. So the
+    // screen moves when the keyboard sets off: a field taking the keyboard is put at once where the last
+    // keyboard left it (how tall a keyboard was is remembered, for each way up the phone can be), and one
+    // letting go of it gives the screen its whole height back there and then, under the keyboard as it goes.
+    const tall: Record<string, number> = {}
+    const way = () => (window.innerWidth > window.innerHeight ? 'side' : 'up')
+    /** A field has let go of the keyboard, and the keyboard has not gone yet. */
+    let going = false
+    /** A field has taken the keyboard and it has not come yet: how tall it is expected to be. */
+    let coming = 0
+    let overdue: ReturnType<typeof setTimeout> | undefined
+    const typedIn = (node: unknown): node is HTMLElement => node instanceof HTMLElement && node.matches('input:not([type="file"], [type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"]), textarea, [contenteditable]:not([contenteditable="false"])')
+
     const fit = () => {
+      // A pinch-zoom is not a keyboard
       if (!vv || Math.abs(vv.scale - 1) > 0.01) return
-      const keyboard = window.innerHeight - vv.height > 120
-      el.toggleAttribute('data-keyboard', keyboard)
+      const taken = window.innerHeight - vv.height
+      const keyboard = taken > 120
       if (keyboard) {
-        el.style.setProperty('--vv-h', `${vv.height}px`)
-        el.style.setProperty('--vv-top', `${vv.offsetTop}px`)
-      } else {
-        el.style.removeProperty('--vv-h')
+        tall[way()] = taken
+        coming = 0
+      } else going = false
+      const up = (keyboard && !going) || (!keyboard && coming > 0)
+      el.toggleAttribute('data-keyboard', up)
+      // On its way out, the keyboard may still have the page nudged up: the screen stays under the top of what shows
+      el.toggleAttribute('data-keyboard-going', keyboard && going)
+      if (up) el.style.setProperty('--vv-h', `${keyboard ? vv.height : window.innerHeight - coming}px`)
+      else el.style.removeProperty('--vv-h')
+      if (keyboard) el.style.setProperty('--vv-top', `${vv.offsetTop}px`)
+      else {
         el.style.removeProperty('--vv-top')
         // Safari can leave the page nudged up after the keyboard has gone
-        if (window.scrollY) window.scrollTo(0, 0)
+        if (!coming && window.scrollY) window.scrollTo(0, 0)
       }
     }
+
+    const taking = (e: FocusEvent) => {
+      if (!typedIn(e.target)) return
+      going = false
+      clearTimeout(overdue)
+      const expected = tall[way()]
+      if (vv && expected && window.innerHeight - vv.height <= 120) {
+        coming = expected
+        // No keyboard came after all (one is plugged in): the screen has its height back
+        overdue = setTimeout(() => {
+          coming = 0
+          fit()
+        }, 900)
+      }
+      fit()
+    }
+    const letting = (e: FocusEvent) => {
+      if (!typedIn(e.target)) return
+      // Unless another field takes it in the same breath
+      setTimeout(() => {
+        if (typedIn(document.activeElement)) return
+        clearTimeout(overdue)
+        coming = 0
+        going = true
+        fit()
+      }, 0)
+    }
+
+    // With the keyboard up there is more page than screen, and a browser will slide the page about under a
+    // finger that drags on anything that does not scroll. Only what scrolls is dragged: a list has the drag,
+    // and keeps it at its ends (it is given a point to spare where it has nothing to scroll)
+    let scrolls = false
+    const began = (e: TouchEvent) => {
+      scrolls = false
+      for (let node = e.target as Element | null; node && node !== el; node = node.parentElement) {
+        if (node.matches('input, textarea, [contenteditable]')) return void (scrolls = true)
+        if (node.scrollHeight > node.clientHeight && /auto|scroll/.test(getComputedStyle(node).overflowY)) return void (scrolls = true)
+      }
+    }
+    const dragged = (e: TouchEvent) => {
+      if (e.touches.length === 1 && e.cancelable && !scrolls && (el.hasAttribute('data-keyboard') || el.hasAttribute('data-keyboard-going'))) e.preventDefault()
+    }
+
     fit()
     vv?.addEventListener('resize', fit)
     vv?.addEventListener('scroll', fit)
+    document.addEventListener('focusin', taking)
+    document.addEventListener('focusout', letting)
+    document.addEventListener('touchstart', began, { passive: true })
+    document.addEventListener('touchmove', dragged, { passive: false })
     return () => {
+      clearTimeout(overdue)
       document.removeEventListener('touchstart', touch)
       vv?.removeEventListener('resize', fit)
       vv?.removeEventListener('scroll', fit)
+      document.removeEventListener('focusin', taking)
+      document.removeEventListener('focusout', letting)
+      document.removeEventListener('touchstart', began)
+      document.removeEventListener('touchmove', dragged)
     }
   }, [bleed])
 

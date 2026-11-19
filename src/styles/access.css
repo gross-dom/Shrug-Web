@@ -734,16 +734,10 @@
 
   .ph .photos-head__words {
     width: fit-content;
-    max-width: calc(100% - 94px);
+    max-width: calc(100% - 36px);
     padding: 0 8px;
     background-color: Canvas;
     color: CanvasText;
-  }
-
-  .ph .photos-head__play {
-    outline: 1px solid ButtonText;
-    background: Canvas;
-    color: ButtonText;
   }
 
   .ph .photos-strip__one {
