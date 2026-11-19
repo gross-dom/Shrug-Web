@@ -250,10 +250,13 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
                 {subtitle && <span className="ios-bar__sub">{subtitle}</span>}
               </span>
             ) : (
-              <h2 id={headingId} className="ios-bar__name" dir="auto">
-                {title}
-                {subtitle && <span className="ios-bar__sub">{subtitle}</span>}
-              </h2>
+              // The heading is the name alone: the line under it is said after it, not as part of it
+              <div className="ios-bar__name">
+                <h2 id={headingId} className="ios-bar__heading" dir="auto">
+                  {title}
+                </h2>
+                {subtitle && <p className="ios-bar__sub">{subtitle}</p>}
+              </div>
             ))}
         </div>
         <div className="ios-bar__side ios-bar__side--end">{trailing}</div>

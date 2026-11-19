@@ -290,6 +290,13 @@
   transition: opacity 0.2s ease;
 }
 
+/* (Where the name is the screen's heading it is a line of its own inside this, cut short the same way) */
+.ios-bar__heading {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* A line under the name in the bar: a count. The two are the same size then (15 points), the name the
    heavier, as the bar of a list in Notes has them */
 .ios-bar__name:has(.ios-bar__sub) {
