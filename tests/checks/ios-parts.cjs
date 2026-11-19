@@ -39,11 +39,9 @@ const where = (page) =>
     }
     return t
   }
-  /** The Wallet's search, up over its cards, with `query` typed into it. */
-  const walletSearch = async (t, query) => {
+  /** Contacts' list, with `query` typed into the search field at its foot. */
+  const contactsSearch = async (t, query) => {
     await A.at(t.page, 'finder', [], null, 800)
-    if (!(await t.page.$(`${TOP} .ios-search__input`))) await t.page.locator(`${TOP} .ios-bar button[aria-label="Search"]`).click()
-    await t.sleep(400)
     await t.page.locator(`${TOP} .ios-search__input`).fill(query)
     await t.sleep(400)
   }
@@ -62,8 +60,8 @@ const where = (page) =>
     let t = await fresh('iphone', 'still', { quiet: true })
     let { page } = t
 
-    // PH-8: the fade above a foot bar takes no touches (the Wallet's search, with most of the portfolio listed under it)
-    await walletSearch(t, 'a')
+    // PH-8: the fade above a foot bar takes no touches (Contacts' search, with most of the portfolio listed under it)
+    await contactsSearch(t, 'a')
     await page.evaluate(() => document.activeElement?.blur())
     const edge = await page.evaluate((TOP) => {
       const e = document.querySelector(`${TOP} .ios-foot__edge`).getBoundingClientRect()
@@ -79,7 +77,7 @@ const where = (page) =>
       const bar = [...document.querySelectorAll(`${TOP} .ios-foot > :not(.ios-foot__edge)`)].map((k) => k.getBoundingClientRect().top)
       // a company whose middle is in the fade, above the bar's own controls
       const y = fade.top + 12
-      const r = [...sc.querySelectorAll('button.wallet-row')].find((b) => { const q = b.getBoundingClientRect(); return q.top < y && q.bottom > y })
+      const r = [...sc.querySelectorAll('button.contacts-row')].find((b) => { const q = b.getBoundingClientRect(); return q.top < y && q.bottom > y })
       if (!r) return null
       const b = r.getBoundingClientRect()
       return { x: b.left + Math.min(60, b.width / 2), y, label: r.textContent.trim().slice(0, 24), inFade: y > fade.top && y < Math.min(...bar) }
@@ -87,10 +85,10 @@ const where = (page) =>
     if (row) await page.touchscreen.tap(row.x, row.y)
     await t.sleep(900)
     let s = await A.state(page)
-    check('PH-8 a row showing through the fade can be pressed', !!row && row.inFade && (s.place.sheet || '').startsWith('company:'), `${JSON.stringify(row)} -> ${s.place.sheet}`)
+    check('PH-8 a row showing through the fade can be pressed', !!row && row.inFade && s.place.stack.join().startsWith('co:'), `${JSON.stringify(row)} -> ${s.place.stack.join()}`)
 
     // PH-12: the clear button in a search bar takes a finger
-    await walletSearch(t, '')
+    await contactsSearch(t, '')
     await page.locator(`${TOP} .ios-search__input`).tap()
     await page.keyboard.type('gen')
     await t.sleep(300)
@@ -122,26 +120,25 @@ const where = (page) =>
       return { kids, w: innerWidth, title: e.querySelector('.ios-empty__title').textContent.length, text: e.querySelector('.ios-empty__title').textContent.slice(0, 22) }
     }, TOP)
     check('MK-6 a 400-letter word in search: "No Results" stays on the screen, the quote cut short', empty && empty.kids.every(([l, r]) => l >= 0 && r <= empty.w) && empty.title < 70, JSON.stringify(empty))
-    await page.locator(`${TOP} .ios-search__input`).fill('')
-    await page.evaluate(() => document.activeElement?.blur())
-    await page.locator(`${TOP} button[aria-label="Close search"]`).tap()
+    await page.locator(`${TOP} button[aria-label="Cancel"]`).tap()
     await t.sleep(500)
-    check('the Wallet\'s search is put away by its own Close, back to the cards', !(await page.$(`${TOP} .ios-search__input`)) && (await page.locator(`${TOP} .wallet-card`).count()) === 13, String(await page.locator(`${TOP} .wallet-card`).count()))
+    const whole = await page.evaluate((TOP) => ({ rows: document.querySelectorAll(`${TOP} .contacts-row`).length, typed: document.querySelector(`${TOP} .ios-search__input`).value, index: !!document.querySelector(`${TOP} .contacts-index`), cancel: !!document.querySelector(`${TOP} button[aria-label="Cancel"]`) }), TOP)
+    check('Contacts\' search is put away by its Cancel: the whole list again, and the index', whole.rows === 81 && whole.typed === '' && whole.index && !whole.cancel, JSON.stringify(whole))
 
-    // MK-8: a sheet is pulled away by its contents
-    await A.at(page, 'finder', ['v:0'], 'company:Varda', 900)
+    // MK-8: a sheet is pulled away by its contents (the details of the conversation)
+    await A.at(page, 'messages', ['c:group'], 'details', 900)
     const body = await page.locator('.sb-slot[data-front] .ios-sheet__body').boundingBox()
     await swipe(t, body.x + body.width / 2, body.y + 120, body.y + 420)
     await t.sleep(500)
     s = await A.state(page)
     check('MK-8 a pull down on a sheet\'s contents carries it away', s.place.sheet === null && !(await page.$('.sb-slot[data-front] .ios-sheet:not([data-closing])')), JSON.stringify(s.place))
     // a short pull puts it back
-    await A.at(page, 'finder', ['v:0'], 'company:Varda', 900)
+    await A.at(page, 'messages', ['c:group'], 'details', 900)
     await swipe(t, body.x + body.width / 2, body.y + 120, body.y + 170)
     s = await A.state(page)
     const back = await page.evaluate(() => getComputedStyle(document.querySelector('.sb-slot[data-front] .ios-sheet__panel')).transform)
-    check('MK-8 a short pull lets it settle back', s.place.sheet === 'company:Varda' && (back === 'none' || /matrix\(1, 0, 0, 1, 0, 0\)/.test(back)), back)
-    await A.at(page, 'finder', [], null, 600)
+    check('MK-8 a short pull lets it settle back', s.place.sheet === 'details' && (back === 'none' || /matrix\(1, 0, 0, 1, 0, 0\)/.test(back)), back)
+    await A.at(page, 'messages', ['c:group'], null, 600)
 
     // MK-14: New Folder again straight after Done comes up fresh
     await A.at(page, 'notes', [], 'new-folder', 900)
@@ -197,15 +194,15 @@ const where = (page) =>
     await page.keyboard.press('Escape')
     await t.sleep(300)
 
-    // PH-10: on its side with the keyboard up, something of what was found shows (the Wallet's search)
-    await walletSearch(t, 'a')
+    // PH-10: on its side with the keyboard up, something of what was found shows (Contacts' search)
+    await contactsSearch(t, 'a')
     await page.locator(`${TOP} .ios-search__input`).tap()
     await page.setViewportSize({ width: 568, height: 150 })
     await t.sleep(700)
     const kb = await page.evaluate((TOP) => {
       const bar = document.querySelector(`${TOP} .ios-bar`).getBoundingClientRect()
       const field = document.querySelector(`${TOP} .ios-search`).getBoundingClientRect()
-      const rows = [...document.querySelectorAll(`${TOP} button.wallet-row`)].filter((r) => { const b = r.getBoundingClientRect(); const el = document.elementFromPoint(b.left + 60, b.top + b.height / 2); return el && r.contains(el) && b.top + b.height / 2 > bar.bottom - 4 && b.top + b.height / 2 < field.top })
+      const rows = [...document.querySelectorAll(`${TOP} button.contacts-row`)].filter((r) => { const b = r.getBoundingClientRect(); const el = document.elementFromPoint(b.left + 60, b.top + b.height / 2); return el && r.contains(el) && b.top + b.height / 2 > bar.bottom - 4 && b.top + b.height / 2 < field.top })
       const large = document.querySelector(`${TOP} .ios-large`)?.getBoundingClientRect()
       return { h: innerHeight, bar: Math.round(bar.bottom), field: [Math.round(field.top), Math.round(field.bottom)], rowsShowing: rows.length, largeHeight: large ? Math.round(large.height) : null, name: getComputedStyle(document.querySelector(`${TOP} .ios-bar__name`)).opacity }
     }, TOP)
@@ -278,9 +275,9 @@ const where = (page) =>
     await t.sleep(600)
     check('AX-7 choosing a row that changes the screen in place returns the keyboard to the button', /"More"/.test(await where(page)), await where(page))
 
-    // AX-9 / AX-23 / AX-7: a sheet holds the keyboard, has one Close, and gives the keyboard back
-    await A.at(page, 'finder', ['v:0'], null, 900)
-    const company = page.locator(`${TOP} .wallet-slot[data-lying="out"] button.wallet-co`).nth(2)
+    // AX-9 / AX-23 / AX-7: a sheet holds the keyboard, has one Close, and gives the keyboard back (the conversation's details)
+    await A.at(page, 'messages', ['c:group'], null, 900)
+    const company = page.locator(`${TOP} button.msg-head`)
     await company.focus()
     const companyName = await where(page)
     await page.keyboard.press('Enter')
@@ -297,7 +294,7 @@ const where = (page) =>
     await page.locator('.sb-slot[data-front] .ios-sheet__panel').focus()
     await page.keyboard.press('Escape')
     await t.sleep(900)
-    check('AX-7 closing a sheet returns the keyboard to the row that opened it', (await where(page)) === companyName && !(await page.evaluate((TOP) => document.querySelector(TOP).hasAttribute('inert'), TOP)), `${await where(page)} (was ${companyName})`)
+    check('AX-7 closing a sheet returns the keyboard to what opened it', (await where(page)) === companyName && !(await page.evaluate((TOP) => document.querySelector(TOP).hasAttribute('inert'), TOP)), `${await where(page)} (was ${companyName})`)
 
     // a sheet named by something the app has no sheet for shuts nothing off
     await A.at(page, 'notes', [], 'no-such-sheet', 700)
@@ -317,20 +314,18 @@ const where = (page) =>
     await t.sleep(900)
     const e3 = (await A.state(page)).place.app
     check('MK-15 Escape in search: clears, then lets go of the field, then is the phone\'s own', e1.v === '' && e1.f && !e2.f && stay === 'notes' && e3 === null, JSON.stringify({ e1, e2, stay, e3 }))
-    // …and in the Wallet, whose search is up over its cards: the third Escape puts the search away, the fourth leaves the app
-    await walletSearch(t, 'varda')
+    // …and the same in Contacts
+    await contactsSearch(t, 'varda')
     await page.locator(`${TOP} .ios-search__input`).focus()
     await page.keyboard.press('Escape')
-    const w1 = await page.evaluate((TOP) => ({ v: document.querySelector(`${TOP} .ios-search__input`).value, f: document.activeElement === document.querySelector(`${TOP} .ios-search__input`) }), TOP)
+    const w1 = await page.evaluate((TOP) => ({ v: document.querySelector(`${TOP} .ios-search__input`).value, f: document.activeElement === document.querySelector(`${TOP} .ios-search__input`), rows: document.querySelectorAll(`${TOP} .contacts-row`).length }), TOP)
     await page.keyboard.press('Escape')
     const w2 = await page.evaluate((TOP) => ({ f: document.activeElement === document.querySelector(`${TOP} .ios-search__input`) }), TOP)
-    await page.keyboard.press('Escape')
-    await t.sleep(600)
-    const w3 = { search: !!(await page.$(`${TOP} .ios-search__input`)), app: (await A.state(page)).place.app }
+    const w3 = (await A.state(page)).place.app
     await page.keyboard.press('Escape')
     await t.sleep(900)
     const w4 = (await A.state(page)).place.app
-    check('MK-15 Escape in the Wallet\'s search: clears, lets go, puts the search away, then is the phone\'s own', w1.v === '' && w1.f && !w2.f && !w3.search && w3.app === 'finder' && w4 === null, JSON.stringify({ w1, w2, w3, w4 }))
+    check('MK-15 Escape in Contacts\' search: clears (the whole list is back), lets go, then is the phone\'s own', w1.v === '' && w1.f && w1.rows === 81 && !w2.f && w3 === 'finder' && w4 === null, JSON.stringify({ w1, w2, w3, w4 }))
 
     // MK-17: fields and titles take the direction of what they hold
     await A.at(page, 'notes', [], null, 800)
@@ -341,7 +336,7 @@ const where = (page) =>
 
     // AX-13: with reduced motion a sheet closes without sliding
     const r = await fresh('iphone', 'still', { reducedMotion: true })
-    await A.at(r.page, 'finder', ['v:0'], 'company:Varda', 700)
+    await A.at(r.page, 'messages', ['c:group'], 'details', 700)
     await r.page.evaluate(() => {
       window.__moves = []
       const panel = document.querySelector('.sb-slot[data-front] .ios-sheet__panel')

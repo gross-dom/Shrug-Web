@@ -105,7 +105,7 @@ exports.unlock = async (page) => {
 }
 
 /** Goes to a place on the iPhone through history, which the phone follows: at(page, 'notes', ['f:faqs', 'n:2']),
- * at(page, 'finder', ['v:0'], 'company:Varda') (a company over its card), at(page, null, [], 'folder:portfolio') (Home Screen, folder open),
+ * at(page, 'finder', ['co:Varda']) (a company's card, over the list), at(page, null, [], 'folder:portfolio') (Home Screen, folder open),
  * at(page, null, []) (Home Screen). Drawn without motion. */
 exports.at = async (page, app, stack = [], sheet = null, wait = 900) => {
   await page.evaluate(([app, stack, sheet]) => {
@@ -136,9 +136,9 @@ exports.PHONE_SCREENS = [
   ['messages-group', 'messages', ['c:group']],
   ['messages-details', 'messages', ['c:group'], 'details'],
   ['messages-egg', 'messages', ['c:founder']],
-  ['wallet-cards', 'finder', []],
-  ['wallet-card', 'finder', ['v:4']],
-  ['wallet-company', 'finder', ['v:0'], 'company:Varda'],
+  ['contacts', 'finder', []],
+  ['contacts-card', 'finder', ['co:Varda']],
+  ['contacts-mine', 'finder', ['me']],
   ['notes-faqs', 'notes', ['f:faqs']],
   ['notes-note', 'notes', ['f:faqs', 'n:0']],
   ['notes-folders', 'notes', []],

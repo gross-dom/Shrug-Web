@@ -58,7 +58,7 @@ export interface Sys extends Place {
 
 /** Where each app is when it is first opened. An iPhone's apps come back to
  * where they were last used: Notes inside FAQs, a step in from its first
- * screen, with the way back out showing. Wallet opens on its cards. */
+ * screen, with the way back out showing. Contacts opens on its list. */
 const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [FAQS_FOLDER], terminal: [], photos: [] })
 
 export const sys = createStore<Sys>({ app: null, stacks: noStacks(), sheet: null, locked: true, recents: [], switcher: false, spotlight: false, motion: false, prev: null, origin: null })

@@ -52,19 +52,20 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.keyboard.press('Escape'); await sleep(300); await page.keyboard.press('Escape'); await sleep(500)
   for (const [where, app, stack, sheet] of [
     ['messages', 'messages', []], ['conversation', 'messages', ['c:group']], ['details', 'messages', ['c:group'], 'details'], ['easter egg', 'messages', ['c:founder']], ['portfolio folder', null, [], 'folder:portfolio'], ['faqs folder', null, [], 'folder:faqs'],
-    ['wallet', 'finder', []], ['wallet card', 'finder', ['v:4']], ['wallet last card', 'finder', ['v:12']], ['company', 'finder', ['v:0'], 'company:Varda'], ['company over the cards', 'finder', [], 'company:Anduril'],
+    ['contacts', 'finder', []], ['company', 'finder', ['co:Varda']], ['company with no site', 'finder', ['co:Clubhouse']], ['my card', 'finder', ['me']],
     ['notes list', 'notes', ['f:faqs']], ['note', 'notes', ['f:faqs', 'n:4']], ['folders', 'notes', []], ['new folder', 'notes', [], 'new-folder'], ['notes folder', 'notes', ['f:notes']],
     ['library', 'photos', []], ['viewer', 'photos', ['m:0']], ['info', 'photos', ['m:0'], 'info'],
     ['terminal', 'terminal', []],
   ]) { await at(app, stack, sheet ?? null); await run(where) }
   // Screens reached by their own controls
   const must = async (what, step) => { try { await step() } catch (e) { errors.push(`could not reach ${what}: ${e.message.split('\n')[0]}`) } }
-  // The Wallet's search: up over the cards, with nothing typed, with companies found, and with none
+  // Contacts' search: with the field taken up, with companies found, and with none; and the list part-way down, a heading stuck under the bar
   await at('finder', [])
-  await must('wallet search', async () => { await top().locator('.ios-bar button[aria-label="Search"]').tap({ timeout: 8000 }); await sleep(600) }); await run('wallet search')
-  await must('wallet search results', async () => { await top().locator('.ios-search__input').fill('an', { timeout: 8000 }); await sleep(500) }); await run('wallet search results')
-  await must('wallet search with nothing found', async () => { await top().locator('.ios-search__input').fill('zzzz', { timeout: 8000 }); await sleep(500) }); await run('wallet search, nothing found')
-  await must('wallet search closing', async () => { await top().locator('button[aria-label="Close search"]').tap({ timeout: 8000 }); await sleep(500) })
+  await must('contacts scrolled', async () => { await top().locator('.contacts-index__letter[data-letter="M"]').tap({ timeout: 8000 }); await sleep(400) }); await run('contacts part-way down')
+  await must('contacts search', async () => { await top().locator('.ios-search__input').tap({ timeout: 8000 }); await sleep(500) }); await run('contacts search')
+  await must('contacts search results', async () => { await top().locator('.ios-search__input').fill('an', { timeout: 8000 }); await sleep(500) }); await run('contacts search results')
+  await must('contacts search with nothing found', async () => { await top().locator('.ios-search__input').fill('zzzz', { timeout: 8000 }); await sleep(500) }); await run('contacts search, nothing found')
+  await must('contacts search ending', async () => { await top().locator('button[aria-label="Cancel"]').tap({ timeout: 8000 }); await sleep(500) })
   // VIP's one menu
   await at('photos', [])
   await must('vip menu', async () => { await top().locator('button[aria-label="Sort and Filter"]').first().tap({ timeout: 8000 }); await sleep(500) }); await run('vip menu'); await page.keyboard.press('Escape'); await sleep(300)

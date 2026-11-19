@@ -6,7 +6,7 @@ import { eggOf } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { MEDIA } from '../data/drops'
-import { COMPANIES, VERTICALS } from '../data/portfolio'
+import { COMPANIES } from '../data/portfolio'
 import { SITE } from '../data/site'
 import type { Rect } from '../kit/measure'
 import { LockScreen, Notification } from '../kit/phone'
@@ -15,7 +15,7 @@ import { firstControl, focusFirst, focusLost } from '../os/focus'
 import { useStore } from '../os/store'
 import { setTitle } from '../os/title'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { cardOf, GROUP_VIEW } from './apps/routes'
+import { companyOf, GROUP_VIEW, MY_CARD } from './apps/routes'
 import { COLOR, carried, chrome } from './chrome'
 import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
 import { OnePagerIcon, PhoneIcon } from './icons'
@@ -966,7 +966,7 @@ function placeName(s: Sys) {
   const at = top.slice(2)
   let screen: string | null | undefined = null
   if (s.app === 'messages' && top.startsWith('c:')) screen = at === 'group' ? GROUP_NAME : eggOf(at)?.name
-  else if (s.app === 'finder') screen = s.sheet?.startsWith('company:') ? COMPANIES.find((company) => company.key === s.sheet!.slice(8))?.name : cardOf(top) !== null ? VERTICALS[cardOf(top)!]!.name : 'Portfolio'
+  else if (s.app === 'finder') screen = companyOf(top) ? COMPANIES.find((company) => company.key === companyOf(top))?.name : top === MY_CARD ? SITE.legalName : 'Portfolio'
   else if (s.app === 'notes') screen = top.startsWith('n:') ? FAQS[Number(at)]?.question : top === 'f:faqs' ? 'FAQs' : null
   else if (s.app === 'photos' && top.startsWith('m:')) screen = MEDIA[Number(at)]?.drop
   return [screen, PHONE[s.app].label].filter(Boolean).join('\n')
@@ -1018,8 +1018,8 @@ export function Springboard({ framed }: { framed: boolean }) {
   // on the screen it was opened from
   useLayoutEffect(() => {
     dropLost((app, view) => {
-      // A screen from before the portfolio was kept in Wallet (a folder of Files), or a card there is no longer
-      if (app === 'finder') return cardOf(view) === null
+      // A screen from before the portfolio was kept in Contacts (a card of the Wallet, a folder of Files), or a company that is no longer there
+      if (app === 'finder') return view !== MY_CARD && companyOf(view) === null
       if (app !== 'notes') return false
       const { notes, folders } = book.get()
       if (view.startsWith('u:')) return !notes.some((note) => note.id === view.slice(2))

@@ -1,7 +1,6 @@
 import { finder, inbox, notes, openConversation, pickCompany, showNote } from '../apps/state'
-import { COMPANIES } from '../data/portfolio'
 import { FAQS } from '../data/faqs'
-import { cardsFor, companySheet, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
+import { companyOf, contactsFor, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
 import { arriveIn, onPhone, sys, topOf, unlock } from '../phone/system'
 import { APP_IDS } from './apps'
 import { dockPoint } from './dom'
@@ -20,7 +19,7 @@ function fromDesk(app: (typeof APP_IDS)[number]): { stack?: string[]; sheet?: st
   if (app === 'notes') return { stack: [FAQS_FOLDER, noteView(notes.get().note)] }
   if (app === 'finder') {
     const { picked } = finder.get()
-    return { stack: cardsFor(picked), sheet: picked ? companySheet(picked) : null }
+    return { stack: contactsFor(picked) }
   }
   return {}
 }
@@ -46,10 +45,9 @@ function toDesk() {
       const note = Number(top.slice(2))
       if (Number.isInteger(note) && note >= 0 && note < FAQS.length) showNote(note)
     }
-    if (app === 'finder' && s.sheet?.startsWith('company:')) {
-      const key = s.sheet.slice('company:'.length)
-      if (COMPANIES.some((company) => company.key === key)) pickCompany(key)
-    }
+    // The company whose card is open in Contacts is the one picked in the window
+    const company = app === 'finder' ? companyOf(top) : null
+    if (company) pickCompany(company)
     return openApp(app, dockPoint(app))
   }
   // A desktop that has never had a window opens the conversation, as an arrival does

@@ -33,8 +33,8 @@ const noteMissing = (logo: string) => missing.set((gone) => (gone.has(logo) ? go
 /** A company's logo as an app icon: its own mark on a rounded tile, or its
  * initial where no logo could be confirmed, or where the file did not arrive.
  * A logo is asked for when it comes into sight; `eager` asks for it at once,
- * for one that is kept out of sight until it is wanted all of a sudden (a card
- * of the Wallet shows one row of its companies, and the rest as it comes out). */
+ * for one that is wanted the moment it is shown (the face at the head of a
+ * company's card). */
 export function CompanyLogo({ company, size = 56, eager }: { company: Company; size?: number; eager?: boolean }) {
   const logo = company.logo
   const gone = useStore(missing, (s) => !!logo && s.has(logo))

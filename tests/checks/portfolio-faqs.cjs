@@ -1,4 +1,4 @@
-// Fixer P's checks: Portfolio / Finder / Wallet, FAQs / Notes, and the desktop's search field.
+// Fixer P's checks: Portfolio / Finder / Contacts, FAQs / Notes, and the desktop's search field.
 //   node portfolio-faqs.cjs [base]        (base defaults to the dev server; the main session runs it on :4173)
 // Exits non-zero if anything fails. Findings covered are named beside each check.
 const A = require('./lib.cjs')
@@ -304,45 +304,49 @@ const BRACKET = '[Shrug’s answer goes here'
     await t.sleep(1100)
     check('Notes: a link in an answer to the site’s own chat opens Messages', (await A.state(t.page)).place?.app === 'messages', JSON.stringify((await A.state(t.page)).place))
 
-    // UX-16: Wallet, a company with no site
-    await A.at(t.page, 'finder', ['v:4'], 'company:Drumroll')
-    const sheet = '.sb-slot[data-front] .ios-sheet'
-    const fate = t.page.locator(`${sheet} .wallet-fate`)
-    check('UX-16 Wallet: a company with no site says so where the button would be', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && (await t.page.locator(`${sheet} .wallet-visit`).count()) === 0)
+    // UX-16: Contacts, a company with no site
+    await A.at(t.page, 'finder', ['co:Drumroll'])
+    const fate = t.page.locator(`${front} .contact-field__none`)
+    const site = await t.page.locator(`${front} .contact-act`).first().evaluate((el) => ({ tag: el.tagName, off: el.getAttribute('aria-disabled'), says: el.textContent.trim() }))
+    check('UX-16 Contacts: a company with no site says so where its address would be, and its website button is there but faint', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && site.tag === 'SPAN' && site.off === 'true' && site.says === 'website' && (await t.page.locator(`${front} .contact-field a`).count()) === 0, JSON.stringify(site))
     await t.page.evaluate(() => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }) })
-    const shareAndRead = async () => {
+    const shareAndRead = async (by = '.ios-bar [aria-label="Share"]') => {
       await t.page.evaluate(() => navigator.clipboard.writeText('—'))
-      await t.page.locator(`${sheet} [aria-label="Share"]`).tap()
+      await t.page.locator(`${front} ${by}`).tap()
       await t.sleep(300)
       return t.page.evaluate(() => navigator.clipboard.readText())
     }
     let sent = await shareAndRead()
-    check('UX-16 Wallet: Share on it sends its name with no address', sent === 'Drumroll', sent)
-    check('UX-16 Wallet: and says "Copied", not "Link copied"', (await t.page.locator(`${sheet} .wallet-company [role="status"]`).innerText().catch(() => '')) === 'Copied')
-    await A.at(t.page, 'finder', ['v:11'], 'company:Clubhouse')
+    check('UX-16 Contacts: Share on it sends its name with no address', sent === 'Drumroll', sent)
+    check('UX-16 Contacts: and says "Copied", not "Link copied"', (await t.page.locator(`${front} [role="status"]`).first().innerText().catch(() => '')) === 'Copied')
+    await A.at(t.page, 'finder', ['co:Clubhouse'])
     sent = await shareAndRead()
-    check('UX-16 Wallet: one with a line sends the name and the line, no address', sent === 'Clubhouse: A space for casual, drop-in audio conversations', sent)
-    await A.at(t.page, 'finder', ['v:0'], 'company:Varda')
+    check('UX-16 Contacts: one with a line sends the name and the line, no address', sent === 'Clubhouse: A space for casual, drop-in audio conversations', sent)
+    await A.at(t.page, 'finder', ['co:Varda'])
     sent = await shareAndRead()
-    check('Wallet: Share on a company with a site still sends its address', /varda\.com/.test(sent), sent)
-    const open = await t.page.locator(`${sheet} .wallet-visit`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
-    check('UX-26 Wallet: a company link is rel="noopener" and says it opens in a new tab', open.rel === 'noopener' && open.target === '_blank' && /, opens in a new tab$/.test(open.says), JSON.stringify(open))
-    const info = (await t.page.locator(`${sheet} .wallet-info`).innerText()).replace(/\s+/g, ' ').trim()
-    check('Wallet: a company\'s sheet says its vertical and its site, and nothing of folders or tags', /Vertical Deep tech/.test(info) && /Website varda\.com/.test(info) && !/Tags|Kind|Where/.test(info), info)
+    check('Contacts: Share on a company with a site still sends its address', /varda\.com/.test(sent), sent)
+    sent = await shareAndRead('.contact-act:has-text("share")')
+    const row = await shareAndRead('.contact-row')
+    check('Contacts: the share button on the card and its Share Contact row send the same', /varda\.com/.test(sent) && row === sent, `${sent} | ${row}`)
+    const open = await t.page.locator(`${front} a.contact-act`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
+    const link = await t.page.locator(`${front} .contact-field a`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
+    check('UX-26 Contacts: a company link is rel="noopener" and says it opens in a new tab', [open, link].every((l) => l.rel === 'noopener' && l.target === '_blank' && /, opens in a new tab$/.test(l.says)), JSON.stringify([open, link]))
+    const info = (await t.page.locator(`${front} .contact-fields`).first().innerText()).replace(/\s+/g, ' ').trim()
+    check('Contacts: a company\'s card says its site, its vertical and what it does, and nothing of folders or tags', /^website varda\.com/.test(info) && /vertical Deep tech/.test(info) && /about Space factories/.test(info) && !/Tags|Kind|Where/.test(info), info)
 
-    // UX-19: Wallet, an empty search
+    // UX-19: Contacts, an empty search
     await A.at(t.page, 'finder', [])
-    await t.page.locator(`${front} [aria-label="Search"]`).tap()
+    await t.page.locator(`${front} .ios-search__input`).tap()
     await t.sleep(400)
     await t.page.keyboard.type('zzzz')
     await t.sleep(300)
     const empty = (await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .ios-empty').innerText()).replace(/\s+/g, ' ').trim()
-    check('UX-19 Wallet: an empty search says "No Results for “x”" and what to try', empty === 'No Results for “zzzz” Check the spelling or try a new search.', empty)
-    await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [aria-label="Close search"]').tap()
+    check('UX-19 Contacts: an empty search says "No Results for “x”" and what to try', empty === 'No Results for “zzzz” Check the spelling or try a new search.', empty)
+    await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [aria-label="Cancel"]').tap()
     await t.sleep(300)
-    // The cards are all there is: nothing of Files is left (no tabs, no Recents, Shared or Browse)
-    const left = await t.page.evaluate(() => { const app = document.querySelector('.sb-slot[data-front]'); return { tabs: app.querySelectorAll('.ios-tabs, [role="tablist"]').length, words: /Recents|Shared|Browse|Recently Deleted/.test(app.textContent), cards: app.querySelectorAll('.wallet-slot').length } })
-    check('Wallet: the cards are all there is: no tabs, no Recents, Shared or Browse', left.tabs === 0 && !left.words && left.cards === 13, JSON.stringify(left))
+    // The list is all there is: nothing of Files or of the Wallet is left (no tabs, no Recents, Shared or Browse, no cards)
+    const left = await t.page.evaluate(() => { const app = document.querySelector('.sb-slot[data-front]'); return { tabs: app.querySelectorAll('.ios-tabs, [role="tablist"]').length, words: /Recents|Shared|Browse|Recently Deleted/.test(app.textContent), cards: app.querySelectorAll('.wallet-slot, .wallet-card').length, sections: app.querySelectorAll('.contacts-section').length } })
+    check('Contacts: the list is all there is: no tabs, no Recents, Shared or Browse, no cards', left.tabs === 0 && !left.words && left.cards === 0 && left.sections === 13, JSON.stringify(left))
     check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 200))
     await t.ctx.close()
 
@@ -461,23 +465,22 @@ const BRACKET = '[Shrug’s answer goes here'
     const where = () => k.page.evaluate((front) => {
       const page = document.querySelector(front)
       const field = page?.querySelector('.ios-search__input')
-      return { searching: !!page?.querySelector('.wallet-screen--search'), value: field?.value ?? null, focused: !!field && document.activeElement === field }
+      return { rows: page?.querySelectorAll('.contacts-row').length ?? 0, value: field?.value ?? null, focused: !!field && document.activeElement === field }
     }, front)
     await A.at(k.page, 'finder', [])
-    await k.page.locator(`${front} [aria-label="Search"]`).click()
+    await k.page.locator(`${front} .ios-search__input`).click()
     await k.sleep(400)
     await k.page.keyboard.type('varda')
     await k.sleep(200)
     const steps = [await where()]
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       await k.page.keyboard.press('Escape')
       await k.sleep(700)
       steps.push({ ...(await where()), stack: (await A.state(k.page)).place?.stack?.join() ?? null, app: (await A.state(k.page)).place?.app ?? null })
     }
-    check('MK-15 Wallet: Escape empties the search', steps[1].searching && steps[1].value === '' && steps[1].focused, JSON.stringify(steps[1]))
-    check('MK-15 Wallet: then lets go of the field', steps[2].searching && !steps[2].focused, JSON.stringify(steps[2]))
-    check('MK-15 Wallet: then leaves search, for the cards it was opened over', !steps[3].searching && steps[3].app === 'finder' && steps[3].stack === '', JSON.stringify(steps[3]))
-    check('MK-15 Wallet: and only then leaves the app', steps[4].app === null, JSON.stringify(steps[4]))
+    check('MK-15 Contacts: Escape empties the search, and the whole list is back', steps[0].rows === 1 && steps[1].rows === 81 && steps[1].value === '' && steps[1].focused, JSON.stringify([steps[0], steps[1]]))
+    check('MK-15 Contacts: then lets go of the field', steps[2].app === 'finder' && !steps[2].focused, JSON.stringify(steps[2]))
+    check('MK-15 Contacts: and only then leaves the app', steps[3].app === null, JSON.stringify(steps[3]))
 
     await A.at(k.page, 'notes', ['f:faqs'])
     await k.page.locator(`${front} .ios-search__input`).click()

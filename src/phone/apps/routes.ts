@@ -1,5 +1,5 @@
 import type { Conversation } from '../../apps/state'
-import { COMPANIES, VERTICALS } from '../../data/portfolio'
+import { COMPANIES } from '../../data/portfolio'
 
 // The names of the screens inside each app, as they are kept in the app's
 // stack (`sys.stacks`). They are written here so that what opens an app at a
@@ -9,28 +9,24 @@ import { COMPANIES, VERTICALS } from '../../data/portfolio'
 export const conversationView = (conversation: Conversation) => `c:${conversation}`
 export const GROUP_VIEW = conversationView('group')
 
-/** Wallet: one vertical's card, out of the stack with its companies showing (`v:2`: the third vertical).
- * With no such screen the cards are all in their stack, which is how the app opens. */
-export const cardView = (vertical: number) => `v:${vertical}`
+/** Contacts: a company's card, pushed over the list of them (`co:Varda`). It is named by the company's
+ * key: its name, for all but the one that shares a name (`co:Atoms (atoms.co)`). */
+export const companyView = (key: string) => `co:${key}`
 
-/** The vertical whose card a screen of the Wallet names, by its place in the list; null where it names none. */
-export function cardOf(view: string | null | undefined) {
-  const named = view ? /^v:(\d+)$/.exec(view) : null
-  const vertical = named ? Number(named[1]) : -1
-  return vertical >= 0 && vertical < VERTICALS.length ? vertical : null
+/** The company whose card a screen of Contacts is, by its key; null where it is no company's (or none that is there). */
+export function companyOf(view: string | null | undefined) {
+  const key = view?.startsWith('co:') ? view.slice(3) : null
+  return key && COMPANIES.some((company) => company.key === key) ? key : null
 }
 
-/** Wallet: a company, looked at over whatever the cards are doing. A sheet (`sys.sheet`), not a screen.
- * It is named by the company's key: its name, for all but the one that shares a name (`company:Anduril`). */
-export const companySheet = (key: string) => `company:${key}`
+/** Contacts: Shrug's own card, where an iPhone keeps My Card. */
+export const MY_CARD = 'me'
 
-/** The Wallet's screens for a company that is come to from outside the app (search, the Home Screen's
- * folder, a link, the desktop's window): its vertical's card is out of the stack, so that the company
- * is found among its own once its sheet is put away. For no company, the stack as it is at first. */
-export function cardsFor(key: string | null): string[] {
-  const company = key ? COMPANIES.find((c) => c.key === key) : null
-  const vertical = company ? VERTICALS.findIndex((v) => v.name === company.vertical) : -1
-  return vertical >= 0 ? [cardView(vertical)] : []
+/** The screens Contacts is on for a company that is come to from outside the app (search, the Home
+ * Screen's folder, a link, the desktop's window): its card, over the list, so that Back leads to the
+ * company among its own. For no company, the list by itself, which is how the app opens. */
+export function contactsFor(key: string | null): string[] {
+  return key && COMPANIES.some((company) => company.key === key) ? [companyView(key)] : []
 }
 
 /** Notes: the folder the questions are kept in, and one of them as a note inside it (`['f:faqs', 'n:3']`). */

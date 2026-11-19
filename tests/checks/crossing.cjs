@@ -38,7 +38,7 @@ const size = (page, w, h) => page.setViewportSize({ width: w, height: h }).then(
   await t.page.screenshot({ path: path.join(OUT, '1-desk-to-phone.png') })
   await t.ctx.close()
 
-  // 2. Portfolio in front with a company picked -> the iPhone: Wallet, that company's sheet over its card
+  // 2. Portfolio in front with a company picked -> the iPhone: Contacts, at that company's card
   t = await fresh('ipad-land')
   await t.page.click('.dock [data-dock-item][data-app="finder"], .dock__item[data-app="finder"]').catch(async () => {
     await t.page.click('.dock__item >> nth=0')
@@ -51,8 +51,8 @@ const size = (page, w, h) => page.setViewportSize({ width: w, height: h }).then(
   const picked = await t.page.evaluate(() => document.querySelector('.wf[data-app="finder"] [aria-selected="true"]')?.textContent?.trim().slice(0, 40) ?? null)
   await size(t.page, 600, 900)
   s = await A.state(t.page)
-  check('Portfolio in front -> iPhone: Wallet, unlocked', !s.locked && s.place?.app === 'finder', JSON.stringify({ s, picked }))
-  check('…with the company that was picked, over the card of its vertical', !picked || ((s.place?.sheet ?? '').startsWith('company:') && /^v:\d+$/.test(s.place.stack.join())), JSON.stringify({ sheet: s.place?.sheet, stack: s.place?.stack, picked }))
+  check('Portfolio in front -> iPhone: Contacts, unlocked', !s.locked && s.place?.app === 'finder', JSON.stringify({ s, picked }))
+  check('…at the card of the company that was picked', !picked || (s.place?.sheet === null && /^co:.+/.test(s.place.stack.join()) && picked.startsWith(s.place.stack.join().slice(3))), JSON.stringify({ sheet: s.place?.sheet, stack: s.place?.stack, picked }))
   await t.page.screenshot({ path: path.join(OUT, '2-finder-to-phone.png') })
   // and back: the Portfolio window is in front
   await size(t.page, 1180, 820)

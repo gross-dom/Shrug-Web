@@ -36,7 +36,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
 
   // ---- UX-13: what comes first ----
   const firsts = [
-    ['portfolio', 'Wallet'], ['Portfolio', 'Wallet'], ['companies', 'Wallet'], ['wallet', 'Wallet'], ['faqs', 'Notes'], ['faq', 'Notes'], ['questions', 'Notes'],
+    ['portfolio', 'Contacts'], ['Portfolio', 'Contacts'], ['companies', 'Contacts'], ['contacts', 'Contacts'], ['faqs', 'Notes'], ['faq', 'Notes'], ['questions', 'Notes'],
     ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'VIP'], ['vip', 'VIP'], ['terminal', 'Case Studies'],
     ['one-pager', 'One-pager'], ['one pager', 'One-pager'], ['onepager', 'One-pager'], ['deck', 'One-pager'],
     ['contact', 'Get in Touch'], ['email', 'Get in Touch'], ['reach', 'Get in Touch'], ['pitch', 'Get in Touch'], ['apply', 'Get in Touch'], ['intro', 'Get in Touch'],
@@ -57,7 +57,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   // the other name is said under the app's own
   await type(t, 'portfolio')
   let r = await read(t.page)
-  check('"portfolio": Wallet says it is the Portfolio', /Portfolio/.test(r.top?.sub || ''), r.top?.sub)
+  check('"portfolio": Contacts says it is the Portfolio', /Portfolio/.test(r.top?.sub || ''), r.top?.sub)
   check('"portfolio": Apps and Top Hit come before what is in Messages', r.groups[0]?.name === 'Top Hit' && r.groups.findIndex((g) => g.name === 'Messages') > 0, r.groups.map((g) => g.name).join(' > '))
   await type(t, 'shrug')
   r = await read(t.page)
@@ -102,7 +102,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await type(t, 'varda')
   await t.page.keyboard.press('Enter'); await t.sleep(1300)
   s = await A.state(t.page)
-  check('Return with results opens the first (Varda, in Wallet, over its card)', s.place?.app === 'finder' && s.place.stack.join() === 'v:0' && s.place.sheet === 'company:Varda', JSON.stringify(s.place))
+  check('Return with results opens the first (Varda, at its card in Contacts)', s.place?.app === 'finder' && s.place.stack.join() === 'co:Varda' && s.place.sheet === null, JSON.stringify(s.place))
   await A.at(t.page, null, [])
   await openSearch(t)
   await type(t, 'zzzz')

@@ -36,20 +36,23 @@ const windows = (page) =>
   check('phone, Home Screen: the address names no app', tail(t.page) === '/?still', tail(t.page))
   await t.page.locator('.sb-dock [data-app="finder"], .sb-dock .sb-icon >> nth=1').first().tap()
   await settle(t.page, 1100)
-  check('phone, Wallet: ?open=portfolio, the other switch kept', tail(t.page) === '/?still&open=portfolio', tail(t.page))
-  // A card out of the stack is the portfolio still: the address names a company, when one is open
-  await t.page.locator('.sb-slot[data-front] .wallet-card__toggle', { hasText: 'Health' }).tap(); await settle(t.page, 1000)
+  check('phone, Contacts: ?open=portfolio, the other switch kept', tail(t.page) === '/?still&open=portfolio', tail(t.page))
+  // The index brings up a vertical without leaving the list: the address names a company, when one is open
+  await t.page.locator('.sb-slot[data-front] .contacts-index__letter[data-letter="H"]').tap(); await settle(t.page, 500)
   let s = await A.state(t.page)
-  check('phone, a card out of the stack: the address is the portfolio still', s.place?.stack.join() === 'v:3' && tail(t.page) === '/?still&open=portfolio', `${tail(t.page)} ${JSON.stringify(s.place)}`)
-  await t.page.locator('.sb-slot[data-front] .wallet-slot[data-lying="out"] .wallet-co', { hasText: 'Eight Sleep' }).tap(); await settle(t.page, 1000)
+  check('phone, a vertical brought up by its letter: the address is the portfolio still', s.place?.stack.length === 0 && tail(t.page) === '/?still&open=portfolio', `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  await t.page.locator('.sb-slot[data-front] .contacts-row[data-company="Eight Sleep"]').tap(); await settle(t.page, 1000)
   s = await A.state(t.page)
-  check('phone, a company open: &at=eight-sleep', s.place?.sheet === 'company:Eight Sleep' && tail(t.page) === '/?still&open=portfolio&at=eight-sleep', `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  check('phone, a company open: &at=eight-sleep', s.place?.stack.join() === 'co:Eight Sleep' && s.place?.sheet === null && tail(t.page) === '/?still&open=portfolio&at=eight-sleep', `${tail(t.page)} ${JSON.stringify(s.place)}`)
   await t.page.goBack(); await settle(t.page, 900)
   s = await A.state(t.page)
-  check('phone, Back: the address goes back with it, and the card is still out', tail(t.page) === '/?still&open=portfolio' && s.place?.sheet === null && s.place?.stack.join() === 'v:3', `${tail(t.page)} ${JSON.stringify(s.place)}`)
-  await t.page.goBack(); await settle(t.page, 900)
+  check('phone, Back: the address goes back with it, to the list', tail(t.page) === '/?still&open=portfolio' && s.place?.app === 'finder' && s.place.stack.length === 0, `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  // Shrug's own card is a place in the app, and not a company: the address is the portfolio's
+  await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [data-scroller]').evaluate((el) => (el.scrollTop = 0)); await settle(t.page, 200)
+  await t.page.locator('.sb-slot[data-front] .contacts-me').tap(); await settle(t.page, 1000)
   s = await A.state(t.page)
-  check('phone, Back again: the card is back in the stack', tail(t.page) === '/?still&open=portfolio' && s.place?.app === 'finder' && s.place.stack.length === 0, `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  check('phone, My Card: the address is the portfolio still', s.place?.stack.join() === 'me' && tail(t.page) === '/?still&open=portfolio', `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  await t.page.goBack(); await settle(t.page, 900)
   await t.page.goBack(); await settle(t.page, 900)
   check('phone, Back to the Home Screen: no app named', tail(t.page) === '/?still', tail(t.page))
   await t.page.goForward(); await settle(t.page, 900)
@@ -59,8 +62,8 @@ const windows = (page) =>
 
   // A link opens where it says
   for (const [link, app, stack, sheet] of [
-    ['?open=portfolio&at=eight-sleep', 'finder', 'v:3', 'company:Eight Sleep'],
-    ['?open=portfolio&at=atoms-atoms-co', 'finder', 'v:9', 'company:Atoms (atoms.co)'],
+    ['?open=portfolio&at=eight-sleep', 'finder', 'co:Eight Sleep', null],
+    ['?open=portfolio&at=atoms-atoms-co', 'finder', 'co:Atoms (atoms.co)', null],
     ['?open=faqs&at=4', 'notes', 'f:faqs,n:3', null],
     ['?open=chat&at=founder', 'messages', 'c:founder', null],
     ['?open=chat', 'messages', 'c:group', null],

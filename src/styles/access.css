@@ -595,21 +595,33 @@
     outline: 1px solid ButtonText;
   }
 
-  .wallet-visit {
-    outline: 1px solid LinkText;
+  /* Contacts: what a card offers to do is a button with an edge; a vertical's name is a band of the
+     page with a line under it; the index's letters and a card's links are the system's link colour */
+  .ph .contact-act {
+    outline: 1px solid ButtonText;
+    background: Canvas;
+    color: LinkText;
   }
 
-  /* The Wallet's cards are told apart by colour, which is gone: each keeps an edge, and is the page's
-     own ground, so that what is written on it is written in the page's ink */
-  .ph .wallet-card {
-    border: 1px solid CanvasText;
+  .ph .contact-act[aria-disabled='true'] {
+    outline-color: GrayText;
+    color: GrayText;
+  }
+
+  .ph .contacts-letter {
+    border-bottom: 1px solid CanvasText;
     background: Canvas;
-    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     color: CanvasText;
   }
 
-  .ph :is(.wallet-card__toggle, .wallet-co):focus-visible {
-    outline-color: Highlight;
+  .ph :is(.contacts-index__letter, .contact-row, .contact-field__value > a) {
+    color: LinkText;
+  }
+
+  .ph .contacts-index__letter[data-empty] {
+    color: GrayText;
   }
 
   /* Lists: a grouped list is a card with an edge, its rows parted by lines. So is a sheet,
@@ -618,8 +630,7 @@
   .ios-sheet__panel,
   .ph .ios-sheet .ios-sheet__panel:focus-visible,
   .notes-tile__page,
-  .msg-card__tag,
-  .wallet-dot {
+  .msg-card__tag {
     outline: 1px solid CanvasText;
   }
 
@@ -633,7 +644,8 @@
 
   .ph .ios-cell + .ios-cell::before,
   .ph .msg-row::after,
-  .ph .wallet-rows > li + li > .wallet-row::before,
+  .ph .contacts-rows > li:not(:last-child) > .contacts-row::after,
+  .ph .contact-field + .contact-field::before,
   .ph .ios-sheet__grabber,
   .ph .msg-field__caret {
     background-color: CanvasText;

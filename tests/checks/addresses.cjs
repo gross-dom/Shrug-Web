@@ -45,7 +45,7 @@ const check = (name, ok, detail = '') => {
 
   // the cascade: the site's own stylesheet first, each half's after it (a built page that got this the
   // other way round drew every grid as one column, and no test on the dev server could see it)
-  for (const [device, half, probe] of [['iphone', /Phone-/, ['finder', [], '.wallet-card__in']], ['desktop', /Surface-/, null]]) {
+  for (const [device, half, probe] of [['iphone', /Phone-/, ['finder', [], '.contacts-row']], ['desktop', /Surface-/, null]]) {
     v = await visit(device, device === 'iphone' ? '?open=portfolio' : '')
     const order = await v.t.page.evaluate(() => [...document.styleSheets].map((sheet) => (sheet.href || 'inline').split('/').pop()))
     const main = order.findIndex((name) => /^index-/.test(name))
@@ -54,7 +54,7 @@ const check = (name, ok, detail = '') => {
     if (main >= 0) check(`${device}: the site's stylesheet comes before its half's`, halfAt < 0 || main < halfAt, order.join(' '))
     if (probe) {
       const display = await v.t.page.evaluate((sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).display : 'missing' }, probe[2])
-      check(`${device}: a card of the portfolio sets its companies in a grid`, display === 'grid', display)
+      check(`${device}: a row of the portfolio sets its logo beside its name`, display === 'flex', display)
     }
     await v.t.ctx.close()
   }
@@ -63,9 +63,10 @@ const check = (name, ok, detail = '') => {
   for (const [tail, app, stack] of [
     ['?open=chat', 'messages', 'c:group'],
     ['?OPEN=Portfolio', 'finder', ''],
+    ['?open=contacts', 'finder', ''],
     ['?open=wallet', 'finder', ''],
     ['?open=files', 'finder', ''],
-    ['?open=portfolio&at=varda', 'finder', 'v:0'],
+    ['?open=portfolio&at=varda', 'finder', 'co:Varda'],
     ['?open=portfolio;faqs', 'notes', 'f:faqs'],
     ['?open=portfolio+vip', 'photos', ''],
     ['portfolio', 'finder', ''],

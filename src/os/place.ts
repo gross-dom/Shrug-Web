@@ -2,7 +2,7 @@ import { EGGS } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { COMPANIES } from '../data/portfolio'
 import { SITE } from '../data/site'
-import { cardsFor, companySheet, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
+import { contactsFor, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
 import { ALIASES, APP_IDS, type AppId } from './apps'
 
 // Where a visitor is, as an address says it: `?open=portfolio&at=varda` is the
@@ -63,7 +63,7 @@ export function spotOfPlace(place: PhonePlace): Spot | null {
   const app = place.app
   if (!app) return null
   const stack = place.stacks[app] ?? []
-  if (app === 'finder') return { app, at: atCompany(companyAt(place.sheet?.startsWith('company:') ? place.sheet.slice('company:'.length) : null)) }
+  if (app === 'finder') return { app, at: atCompany(companyAt(innermost(stack, 'co:'))) }
   if (app === 'notes') {
     const note = innermost(stack, 'n:')
     return { app, at: note && /^\d+$/.test(note) && Number(note) < FAQS.length ? atQuestion(Number(note)) : null }
@@ -77,7 +77,7 @@ export function placeOfSpot(spot: Spot): { stack?: string[]; sheet: string | nul
   if (spot.app === 'messages') return { stack: [conversationView(conversationAt(spot.at) ?? 'group')], sheet: null }
   if (spot.app === 'finder') {
     const key = companyAt(spot.at)
-    return { stack: cardsFor(key), sheet: key ? companySheet(key) : null }
+    return { stack: contactsFor(key), sheet: null }
   }
   if (spot.app === 'notes') {
     const question = questionAt(spot.at)

@@ -19,7 +19,7 @@ const kit = () => {
   probe.style.cssText = 'position:fixed;left:-99px;top:-99px;width:1px;height:1px;forced-color-adjust:none'
   document.body.append(probe)
   const sys = {}
-  for (const name of ['Canvas', 'CanvasText', 'ButtonText', 'Highlight', 'HighlightText', 'GrayText']) {
+  for (const name of ['Canvas', 'CanvasText', 'ButtonText', 'Highlight', 'HighlightText', 'GrayText', 'LinkText']) {
     probe.style.backgroundColor = name
     sys[name] = getComputedStyle(probe).backgroundColor
   }
@@ -176,10 +176,16 @@ const booted = (page) => page.waitForFunction(() => !document.getElementById('bo
       const theirs = await paint(page, '.sb-slot[data-front] .ss-bubble-row[data-from="them"] > .ss-bubble', '::before')
       check(`[${scheme}] AX-21 iPhone: bubbles have edges, Shrug's in Highlight`, mine && theirs && is(mine.borderC, 'Highlight') && is(theirs.borderC, 'CanvasText') && mine.borderW > theirs.borderW, JSON.stringify({ mine: mine?.border, theirs: theirs?.border }))
 
-      // The Wallet's cards are told apart by colour, which is gone: each is the page's own ground, with an edge
+      // Contacts: a vertical's heading is a band of the page with a line under it, the index's letters are links,
+      // and what a card offers to do is a button with an edge
       await A.at(page, 'finder', [])
-      const cards = await page.evaluate(() => [...document.querySelectorAll('.sb-slot[data-front] .wallet-card')].slice(0, 4).map((el) => ({ ...window.__paint(el), image: getComputedStyle(el).backgroundImage, name: getComputedStyle(el.querySelector('.wallet-card__name')).color })))
-      check(`[${scheme}] iPhone: a card of the Wallet is the page's own ground, with an edge, its name in the page's ink`, cards.length === 4 && cards.every((c) => is(c.bg, 'Canvas') && c.image === 'none' && c.borderW >= 1 && c.name === S.CanvasText), JSON.stringify(cards.slice(0, 1).map((c) => ({ bg: c.bg, image: c.image, border: c.border, name: c.name }))))
+      const head = await paint(page, '.sb-slot[data-front] .contacts-letter')
+      check(`[${scheme}] iPhone: a vertical's heading in Contacts is the page's own ground, with a line under it, in the page's ink`, head && is(head.bg, 'Canvas') && head.borderBottomW >= 1 && head.color === S.CanvasText, JSON.stringify(head && { bg: head.bg, line: head.borderBottomW, ink: head.color }))
+      const letter = await paint(page, '.sb-slot[data-front] button.contacts-index__letter')
+      check(`[${scheme}] iPhone: the letters of its index are the system's link colour`, letter && is(letter.color, 'LinkText'), letter?.color)
+      await A.at(page, 'finder', ['co:Varda'])
+      const act = await paint(page, '.sb-slot[data-front] .ios-page[data-pos="top"] a.contact-act')
+      check(`[${scheme}] iPhone: what a company's card offers to do has an edge`, act && act.outlineW >= 1 && is(act.outlineC, 'ButtonText') && is(act.color, 'LinkText'), JSON.stringify(act && { outline: act.outline, ink: act.color }))
 
       // A grouped list and a switch: the conversation's details
       await A.at(page, 'messages', ['c:group'], 'details')

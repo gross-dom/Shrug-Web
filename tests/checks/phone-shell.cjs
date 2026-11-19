@@ -121,6 +121,17 @@ const touchOf = (t) => ({
     const p = t.page
     const hint = await p.evaluate(() => +getComputedStyle(document.querySelector('.sb-lock__hint')).opacity)
     say(hint > 0.8, 'the hint is there at once', hint)
+    // The clock is the size an iPhone draws its own, against the width of the screen: its figures a little under a
+    // fifth of that width tall (76pt on a screen 393pt across, in the phone's own type), and in their own proportions
+    const clock = await p.evaluate(() => {
+      const baseOf = (el) => { const mark = document.createElement('span'); mark.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.appendChild(mark); const y = mark.getBoundingClientRect().bottom; mark.remove(); return y }
+      const el = document.querySelector('.sb-lock .ss-lock__clock'); const cs = getComputedStyle(el)
+      const c = document.createElement('canvas').getContext('2d'); c.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+      const m = c.measureText(el.textContent)
+      const r = (n) => Math.round(n * 1000) / 1000
+      return { size: r(parseFloat(cs.fontSize) / innerWidth), tall: r(m.actualBoundingBoxAscent / innerWidth), wide: r((m.actualBoundingBoxLeft + m.actualBoundingBoxRight) / innerWidth), stretched: cs.transform, underDate: Math.round(baseOf(el) - m.actualBoundingBoxAscent - baseOf(document.querySelector('.sb-lock .ss-lock__date'))) }
+    })
+    say(Math.abs(clock.size - 0.275) < 0.004 && clock.tall > 0.185 && clock.tall < 0.215 && clock.stretched === 'none' && clock.wide < 0.86 && clock.underDate >= 10 && clock.underDate <= 26, 'the clock is the size an iPhone draws its own: figures about a fifth of the screen across tall, not stretched, close under the date', JSON.stringify(clock))
     const box = await p.locator('.sb-lock').boundingBox()
     const at = [box.x + box.width / 2, box.y + box.height * 0.45]
     await p.waitForTimeout(600)
@@ -187,13 +198,13 @@ const touchOf = (t) => ({
     const titles = { lock: await p.title() }
     await A.unlock(p); titles.home = await p.title()
     await A.at(p, 'messages', ['c:group']); titles.chat = await p.title()
-    await A.at(p, 'finder', []); titles.wallet = await p.title()
-    await A.at(p, 'finder', ['v:0']); titles.card = await p.title()
-    await A.at(p, 'finder', ['v:0'], 'company:Varda'); titles.company = await p.title()
+    await A.at(p, 'finder', []); titles.contacts = await p.title()
+    await A.at(p, 'finder', ['co:Varda']); titles.company = await p.title()
+    await A.at(p, 'finder', ['me']); titles.mine = await p.title()
     await A.at(p, 'notes', ['f:faqs', 'n:4']); titles.note = await p.title()
     await A.at(p, 'photos', []); titles.vip = await p.title()
     // No emoticon in the tab: the name alone on the Lock and Home Screens
-    const want = { lock: 'Shrug', home: 'Shrug', chat: 'Testimonials · Messages · Shrug', wallet: 'Portfolio · Wallet · Shrug', card: 'Deep tech · Wallet · Shrug', company: 'Varda · Wallet · Shrug', note: 'How do you do marketing? · Notes · Shrug', vip: 'VIP · Shrug' }
+    const want = { lock: 'Shrug', home: 'Shrug', chat: 'Testimonials · Messages · Shrug', contacts: 'Portfolio · Contacts · Shrug', company: 'Varda · Contacts · Shrug', mine: 'Shrug Capital · Contacts · Shrug', note: 'How do you do marketing? · Notes · Shrug', vip: 'VIP · Shrug' }
     say(Object.keys(want).every((k) => titles[k] === want[k]), 'the page is titled by where the phone is', JSON.stringify(titles))
     say(Object.values(titles).every((title) => !/ツ/.test(title)), 'and no title has the shrug emoticon in it')
     await t.ctx.close()
@@ -204,7 +215,7 @@ const touchOf = (t) => ({
     const t = await fresh('iphone')
     const p = t.page
     await A.unlock(p)
-    for (const [app, stack] of [['notes', ['f:faqs']], ['photos', []], ['finder', ['v:0']]]) await A.at(p, app, stack, null, 700)
+    for (const [app, stack] of [['notes', ['f:faqs']], ['photos', []], ['finder', ['co:Varda']]]) await A.at(p, app, stack, null, 700)
     const key = p.locator('.sb-homebar__key', { hasText: 'App Switcher' })
     await key.focus()
     await p.keyboard.press('Shift'); await p.waitForTimeout(150)
@@ -217,7 +228,7 @@ const touchOf = (t) => ({
     const card = await mid(p, '.sb-slot[data-app="finder"] .sb-card__hit')
     await t.touch.tap(...card); await p.waitForTimeout(1100)
     let s = await st(p)
-    say(s.place?.app === 'finder' && s.place.stack.join() === 'v:0' && s.place.sheet === null && !(await p.evaluate(() => !!document.querySelector('.sb-apps[data-switcher]'))), 'a tap on a card brings the app forward and presses nothing in it', JSON.stringify(s.place))
+    say(s.place?.app === 'finder' && s.place.stack.join() === 'co:Varda' && s.place.sheet === null && !(await p.evaluate(() => !!document.querySelector('.sb-apps[data-switcher]'))), 'a tap on a card brings the app forward and presses nothing in it', JSON.stringify(s.place))
     // the second card, then the screen turns: still on a card (MK-16)
     await key.focus(); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
     await p.evaluate(() => { const hits = [...document.querySelectorAll('.sb-card__hit')]; const order = (h) => +getComputedStyle(h.closest('.sb-slot')).getPropertyValue('--i'); hits.sort((a, b) => order(a) - order(b))[1].focus({ focusVisible: true }) })
@@ -259,7 +270,7 @@ const touchOf = (t) => ({
       document.addEventListener('pointerdown', on, true)
     }), [points, times])
     const cases = [
-      ['Wallet in the Dock', '.sb-dock .sb-icon[aria-label^="Wallet"]', async () => {}],
+      ['Contacts in the Dock', '.sb-dock .sb-icon[aria-label^="Contacts"]', async () => {}],
       ['the Portfolio folder', '.sb-folder', async () => {}],
       ['Back in a note', '.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label="Back"]', async () => { await A.at(p, 'notes', ['f:faqs', 'n:1']) }],
     ]
@@ -278,7 +289,7 @@ const touchOf = (t) => ({
       const after = await p.evaluate(() => document.querySelector('.ph').hasAttribute('data-moving'))
       say(!after, `${name}: and then the screen takes presses again`)
     }
-    // and for real: two taps on the Portfolio folder open the folder, not a company in the Wallet
+    // and for real: two taps on the Portfolio folder open the folder, not a company in Contacts
     await A.at(p, null, [], null, 800)
     const folder = await mid(p, '.sb-folder')
     const times = p.evaluate(() => new Promise((done) => { const ts = []; const on = () => { ts.push(performance.now()); if (ts.length === 2) { document.removeEventListener('pointerdown', on, true); done(ts[1] - ts[0]) } }; document.addEventListener('pointerdown', on, true); setTimeout(() => done(-1), 3000) }))
@@ -293,7 +304,7 @@ const touchOf = (t) => ({
     // with motion turned down too
     const r = await fresh('iphone', 'still', { reducedMotion: true })
     await A.unlock(r.page); await r.page.waitForTimeout(700)
-    const at = await mid(r.page, '.sb-dock .sb-icon[aria-label^="Wallet"]')
+    const at = await mid(r.page, '.sb-dock .sb-icon[aria-label^="Contacts"]')
     const watching = r.page.evaluate(() => new Promise((done) => { document.addEventListener('pointerdown', () => setTimeout(() => done(document.querySelector('.ph').hasAttribute('data-moving')), 200), { capture: true, once: true }) }))
     await r.touch.tap(...at)
     say(await watching, 'with motion turned down the same holds')
@@ -368,7 +379,7 @@ const touchOf = (t) => ({
     const t = await fresh('iphone')
     const p = t.page
     await A.unlock(p)
-    await A.at(p, 'finder', ['v:0'], null, 800)
+    await A.at(p, 'finder', [], null, 800)
     await p.locator('.sb-homebar__key', { hasText: 'App Switcher' }).focus(); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
     await p.evaluate(() => document.querySelector('.sb-slot[data-app="finder"] .sb-card__hit').click())
     await p.waitForTimeout(180)
@@ -435,7 +446,7 @@ const touchOf = (t) => ({
     // the only open app flicked away: Back is not left a step that changes nothing
     const q = await fresh('iphone')
     await A.unlock(q.page); await q.page.waitForTimeout(600)
-    await q.touch.tap(...(await mid(q.page, '.sb-dock .sb-icon[aria-label^="Wallet"]'))); await q.page.waitForTimeout(1200)
+    await q.touch.tap(...(await mid(q.page, '.sb-dock .sb-icon[aria-label^="Contacts"]'))); await q.page.waitForTimeout(1200)
     await q.page.locator('.sb-homebar__key', { hasText: 'App Switcher' }).focus(); await q.page.keyboard.press('Enter'); await q.page.waitForTimeout(900)
     await q.page.evaluate(() => document.querySelector('.sb-slot__close').click()); await q.page.waitForTimeout(1300)
     const h = await q.page.evaluate(() => ({ n: history.state.n, app: history.state.shrug.app, over: history.state.shrug.over ?? null, on: !!document.querySelector('.sb-apps[data-switcher]') }))
@@ -522,7 +533,7 @@ const touchOf = (t) => ({
     e = await read()
     const dark = side(e, 'top').colour
     say(dark === side(e, 'foot').colour && !['rgb(255, 255, 255)', 'rgb(15, 17, 48)'].includes(dark) && dark.match(/\d+/g).every((c) => +c < 40), 'in the terminal both are its dark ground', dark)
-    await A.at(p, 'finder', ['v:0'], 'company:Varda', 1000)
+    await A.at(p, 'messages', ['c:group'], 'details', 1000)
     e = await read()
     say(side(e, 'top').colour !== 'rgb(255, 255, 255)' && side(e, 'top').colour.match(/\d+/g).every((c) => +c < 255 && +c > 150), 'under a sheet the top is the app\'s ground with the sheet\'s shade over it', `${side(e, 'top').colour} / ${side(e, 'foot').colour}`)
     await t.ctx.close()

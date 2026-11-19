@@ -3,7 +3,7 @@ import { VIP_LETTERS } from '../data/logo'
 import type { PhoneApp } from './system'
 
 // The iPhone's app icons. Each is drawn here, after the icon of the iOS app it
-// stands for (Messages, Wallet, Notes), in the continuous-corner tile
+// stands for (Messages, Contacts, Notes), in the continuous-corner tile
 // iOS cuts its icons to; Case Studies and VIP, which are Shrug's own, have
 // icons of their own. No file from an operating system is used.
 
@@ -57,29 +57,27 @@ function Messages() {
   )
 }
 
-/** Wallet: cards of four colours standing in a pocket, on black. */
-function Wallet() {
+/** Contacts: the head and shoulders of nobody in particular, on pale gray, with the tabs of an address book down the trailing edge. */
+function Contacts() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#2c2c30" to="#0b0b0d" sheen={0.28}>
+    <Tile from="#fbfbfc" to="#e3e3e8" sheen={0.6}>
       <defs>
-        <linearGradient id={`${id}-pocket`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3a3a40" />
-          <stop offset="1" stopColor="#1b1b1f" />
+        <linearGradient id={`${id}-who`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#a9a9b1" />
+          <stop offset="1" stopColor="#7f7f88" />
         </linearGradient>
-        <clipPath id={`${id}-in`}>
-          <rect x="15" y="22" width="70" height="58" rx="9" />
-        </clipPath>
       </defs>
-      <g clipPath={`url(#${id}-in)`}>
-        <rect x="15" y="22" width="70" height="58" rx="9" fill="#2f9bf6" />
-        <rect x="15" y="31" width="70" height="49" rx="9" fill="#f7c531" />
-        <rect x="15" y="40" width="70" height="40" rx="9" fill="#37c95d" />
-        <rect x="15" y="49" width="70" height="31" rx="9" fill="#f4505e" />
-        {/* The pocket's front, with the notch a thumb takes a card out by */}
-        <path d="M15 57h20.500a4 4 0 0 1 3.600 2.300 12 12 0 0 0 21.800 0A4 4 0 0 1 64.500 57H85v23H15z" fill={`url(#${id}-pocket)`} />
-        <path d="M15 57h20.500a4 4 0 0 1 3.600 2.300 12 12 0 0 0 21.800 0A4 4 0 0 1 64.500 57H85" fill="none" stroke="#fff" strokeOpacity="0.16" strokeWidth="0.800" />
-      </g>
+      {/* The page of the book the figure is on, a shade under the tabs' side */}
+      <rect width="80" height="100" fill="#000" opacity="0.035" />
+      <circle cx="40" cy="38" r="15.5" fill={`url(#${id}-who)`} />
+      <path d="M40 58.500c-17.500 0-29.500 10.300-31 26.200-.4 4.300 0 15.300 0 15.300h62s.4-11 0-15.300C69.500 68.800 57.500 58.500 40 58.500z" fill={`url(#${id}-who)`} />
+      {/* The tabs: four, as far apart as they are tall */}
+      <rect x="80" width="20" height="100" fill="#fff" opacity="0.55" />
+      <rect x="80" width="0.800" height="100" fill="#000" opacity="0.08" />
+      {[14, 34, 54, 74].map((y, i) => (
+        <rect key={y} x="85.500" y={y} width="9" height="12" rx="2.500" fill={['#b9b9c1', '#a6a6af', '#b9b9c1', '#a6a6af'][i]} />
+      ))}
     </Tile>
   )
 }
@@ -129,7 +127,7 @@ function Terminal() {
 
 const ICONS: Record<PhoneApp, () => ReactNode> = {
   messages: Messages,
-  finder: Wallet,
+  finder: Contacts,
   notes: Notes,
   photos: Vip,
   terminal: Terminal,

@@ -184,7 +184,7 @@
 
 /* Upright and too short even for that (an old small phone with its browser's
    bars showing: under 519px at 360 wide, 545 at 393): the folders are left
-   off. Wallet and Notes, in the Dock, hold the same. */
+   off. Contacts and Notes, in the Dock, hold the same. */
 @container (not ((min-aspect-ratio: 5 / 4) and (max-height: 520px))) and ((height < 513px) or ((width > 353px) and (height < 519px)) or ((width > 360px) and (height < 531px)) or ((width > 375px) and (height < 545px)) or ((width > 393px) and (height < 562px)) or ((width > 414px) and (height < 575px)) or ((width > 430px) and (height < 586px)) or ((width > 444px) and (height < 596px))) {
   .sb-widget.sb-folder {
     display: none;

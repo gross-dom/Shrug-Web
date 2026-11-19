@@ -129,6 +129,8 @@ export interface ScreenProps {
   header?: ReactNode
   /** Floating at the foot of the screen: a search field, a tab bar, a toolbar. */
   foot?: ReactNode
+  /** Down the screen's trailing edge, over the page and between its bars: an index to slide a finger along. */
+  edge?: ReactNode
   /** plain: white. grouped: the gray that inset lists sit on. dark: black, with light ink. */
   tone?: 'plain' | 'grouped' | 'dark'
   /** The screen lays out and scrolls its own contents (a conversation, a terminal). */
@@ -145,7 +147,7 @@ export interface ScreenProps {
 
 /** One screen of an app. The bar's buttons float over the page; under them the
  * page fades and blurs as it scrolls past, as iOS's scroll edge does. */
-export function Screen({ title, large, subtitle, center, leading, trailing, header, foot, tone = 'plain', fixed, ownHeading, readable, className, scrollRef, children }: ScreenProps) {
+export function Screen({ title, large, subtitle, center, leading, trailing, header, foot, edge, tone = 'plain', fixed, ownHeading, readable, className, scrollRef, children }: ScreenProps) {
   const depth = useContext(DepthContext)
   const top = useContext(TopContext)
   const headingId = useContext(PageHeadingContext)
@@ -220,6 +222,7 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
         </div>
         <div className="ios-bar__side ios-bar__side--end">{trailing}</div>
       </div>
+      {edge && <div className="ios-edge">{edge}</div>}
       {foot && (
         <div className="ios-foot">
           <div className="ios-foot__edge" aria-hidden />
@@ -240,15 +243,8 @@ interface Gone {
 /** An app's screens, one on top of another: a new one slides in from the
  * right over the last, and goes back out that way. `children` draws the screen
  * for a view (null is the app's first screen). The stack itself is the app's
- * in `sys`: `push`, `pop`.
- *
- * `flat` is for an app whose screens are one piece that rearranges itself (the
- * Wallet: its cards part to show one of them). There is one page, which stays
- * where it is; `children` is given the innermost view, and moves what it draws
- * between one view and the next itself. A step in is still a step in the
- * stack, so Back, the keyboard and a sheet over the page all work as they do
- * for any other app. */
-export function NavStack({ children, flat }: { children: (view: string | null, depth: number) => ReactNode; flat?: boolean }) {
+ * in `sys`: `push`, `pop`. */
+export function NavStack({ children }: { children: (view: string | null, depth: number) => ReactNode }) {
   const { app, active } = useApp()
   const stack = useStore(sys, (s) => s.stacks[app])
   const motion = useStore(sys, (s) => s.motion)
@@ -269,8 +265,13 @@ export function NavStack({ children, flat }: { children: (view: string | null, d
     while (kept < seen.stack.length && kept < stack.length && seen.stack[kept] === stack[kept]) kept++
     // The row or button that pushes a screen has the keyboard as it does (it is read here, before the
     // screen it is on is shut off): going back puts the keyboard on it again
+    // (a screen that is put on from outside the app, by search or a link, was pushed by nothing here:
+    // whatever pushed one at that depth before is forgotten, or Back would go looking for it)
     const pressed = document.activeElement
-    if (stack.length > seen.stack.length && pressed instanceof HTMLElement && nav.current?.contains(pressed)) openers.current.set(seen.stack.length, pressed)
+    if (stack.length > seen.stack.length) {
+      if (pressed instanceof HTMLElement && nav.current?.contains(pressed)) openers.current.set(seen.stack.length, pressed)
+      else openers.current.delete(seen.stack.length)
+    }
     for (const depth of [...openers.current.keys()]) if (depth > stack.length) openers.current.delete(depth)
     // The screen on top when the stack got shorter stays drawn until it has slid away
     const gone = motion && seen.stack.length > kept ? [{ view: seen.stack[seen.stack.length - 1]!, depth: seen.stack.length }] : []
@@ -324,13 +325,11 @@ export function NavStack({ children, flat }: { children: (view: string | null, d
   // One list, so a screen that is leaving is the same screen it was (its place on the page, what it had scrolled to), not a new one
   return (
     <div ref={nav} className="ios-nav" data-snap={!motion || undefined}>
-      {flat
-        ? page(stack[top - 1] ?? null, 0, 'top')
-        : [
-            page(null, 0, top === 0 ? 'top' : 'under'),
-            ...stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under')),
-            ...seen.gone.filter((g) => g.depth > top).map((g) => page(g.view, g.depth, 'gone')),
-          ]}
+      {[
+        page(null, 0, top === 0 ? 'top' : 'under'),
+        ...stack.map((view, i) => page(view, i + 1, i + 1 === top ? 'top' : 'under')),
+        ...seen.gone.filter((g) => g.depth > top).map((g) => page(g.view, g.depth, 'gone')),
+      ]}
     </div>
   )
 }

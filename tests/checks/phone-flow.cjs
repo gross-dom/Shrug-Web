@@ -62,7 +62,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   say((await page.locator('.sb-widget--wide').count()) === 1 && (await page.locator('.sb-folder').count()) === 2, 'the newest reply as a widget, and the Portfolio and FAQs folders')
 
   // ---- Every app opens out of its icon and goes home on a flick ----
-  for (const [label, id] of [['Messages', 'messages'], ['Wallet', 'finder'], ['Notes', 'notes'], ['VIP', 'photos'], ['Case Studies', 'terminal']]) {
+  for (const [label, id] of [['Messages', 'messages'], ['Contacts', 'finder'], ['Notes', 'notes'], ['VIP', 'photos'], ['Case Studies', 'terminal']]) {
     await page.locator(`.sb-icon[aria-label^="${label}"]`).first().tap()
     await page.waitForSelector(`${front(id)} .ios-page[data-pos="top"] .ios-screen, ${front(id)} .ios-screen`, { timeout: 8000, state: 'attached' }).catch(() => {})
     await sleep(900)

@@ -112,6 +112,7 @@ export const ALIASES: Record<string, AppId> = {
   chat: 'messages',
   'group-chat': 'messages',
   portfolio: 'finder',
+  contacts: 'finder',
   wallet: 'finder',
   files: 'finder',
   settings: 'about',

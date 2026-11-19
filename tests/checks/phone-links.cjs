@@ -25,11 +25,12 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
 
   await search('anduril', 'Anduril')
   let s = await st()
-  say(s.app === 'finder' && s.stacks.finder.join() === 'v:0' && s.sheet === 'company:Anduril', 'search opens a company in Wallet, as a sheet over its own card', JSON.stringify({ app: s.app, stack: s.stacks.finder, sheet: s.sheet }))
+  say(s.app === 'finder' && s.stacks.finder.join() === 'co:Anduril' && s.sheet === null, 'search opens a company in Contacts, at its card', JSON.stringify({ app: s.app, stack: s.stacks.finder, sheet: s.sheet }))
   await page.screenshot({ path: path.join(__dirname, '..', 'audit', 'shots', 'links-company.png') })
-  await page.locator('.sb-slot[data-front] .ios-sheet button[aria-label="Close"]:not(.ios-sheet__shade)').first().tap(); await sleep(900)
+  await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label="Back"]').tap(); await sleep(900)
   s = await st()
-  say(s.app === 'finder' && s.sheet === null && (await page.locator('.sb-slot[data-front] .wallet-slot[data-lying="out"] .wallet-card__name').textContent()) === 'Deep tech', 'closing it leaves its card out of the stack, the company among its own', JSON.stringify({ app: s.app, sheet: s.sheet }))
+  const among = await page.evaluate(() => { const sc = document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"] [data-scroller]'); const row = [...sc.querySelectorAll('[data-company]')].find((r) => r.dataset.company === 'Anduril'); const b = sc.getBoundingClientRect(), r = row.getBoundingClientRect(); const head = row.closest('.contacts-section').querySelector('.contacts-letter').textContent; return { seen: r.top > b.top + 52 && r.bottom < b.bottom - 80, head } })
+  say(s.app === 'finder' && s.stacks.finder.length === 0 && among.seen && among.head === 'Deep tech', 'Back from it leaves the list at the company, among its own vertical', JSON.stringify({ stack: s.stacks.finder, ...among }))
   await home()
 
   await search('board seats', 'Do you lead rounds or take board seats?')

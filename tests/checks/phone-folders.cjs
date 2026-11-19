@@ -32,7 +32,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   say(dot === 1, 'a swipe turns to the next page', `dot ${dot}`)
   await page.locator('.sb-open__page').nth(1).locator('.sb-open__app', { hasText: 'Superplastic' }).tap(); await sleep(1400)
   s = await st()
-  say(s.app === 'finder' && s.stacks.finder.join() === 'v:4' && s.sheet === 'company:Superplastic', 'a company opens in Wallet, at that company, over its card', JSON.stringify({ app: s.app, stack: s.stacks.finder, sheet: s.sheet }))
+  say(s.app === 'finder' && s.stacks.finder.join() === 'co:Superplastic' && s.sheet === null, 'a company opens in Contacts, at its card', JSON.stringify({ app: s.app, stack: s.stacks.finder, sheet: s.sheet }))
   await page.screenshot({ path: out('company') })
   await page.locator('.sb-homebar .sr-only').evaluate((el) => el.click()); await sleep(1100)
   s = await st()

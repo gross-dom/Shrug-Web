@@ -306,18 +306,19 @@
   }
 }
 
-/* The clock is as wide as four digits and a colon at any size: on the narrowest
-   phones, and on a screen too short to hold it over the replies, it gives way */
+/* The clock is the size an iPhone draws its own, against the width of the screen: figures a little under
+   a fifth of that width tall (76pt on a screen 393pt across), in the type's own proportions and not
+   stretched. It is as wide as four digits and a colon at any size, and on a screen too short to hold
+   it over the replies it gives way */
 .sb-lock .ss-lock__clock {
-  font-size: min(112px, 30cqw, 30cqh);
+  font-size: min(120px, 27.5cqw, 30cqh);
 }
 
-/* The time is set in glass, as the Lock Screen sets it now: tall figures, pale and seen through,
-   brightest along their top edges where the light catches, with a line of light round each. The
+/* The time is set in glass, as the Lock Screen sets it now: pale and seen through, brightest along
+   the top edges of its figures where the light catches, with a line of light round each. The
    wallpaper behind them is a smooth ground, so what shows through is its colour */
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .sb-lock .ss-lock__clock {
-    margin-bottom: 0.1em;
     padding-top: 0.02em;
     background: linear-gradient(180deg, rgb(255 255 255 / 0.9) 4%, rgb(255 255 255 / 0.5) 46%, rgb(255 255 255 / 0.36) 72%, rgb(255 255 255 / 0.6) 100%);
     -webkit-background-clip: text;
@@ -328,9 +329,6 @@
     opacity: 1;
     -webkit-text-stroke: 0.7px rgb(255 255 255 / 0.62);
     filter: drop-shadow(0 6px 16px rgb(6 8 44 / 0.2));
-    /* Taller than the type is drawn: the figures of the glass clock are */
-    transform: scaleY(1.16);
-    transform-origin: 50% 0;
   }
 }
 
@@ -358,15 +356,16 @@
   bottom: calc(72px + var(--below, 0px));
 }
 
-/* On a real phone the page starts under the phone's own status bar */
+/* On a real phone the page starts under the phone's own status bar: the day sits as far under it as
+   it does on an iPhone's own Lock Screen */
 .ph--bleed .ss-lock__date {
-  margin-top: calc(var(--status) + 22px);
+  margin-top: calc(var(--status) + 32px);
 }
 
 /* A short screen (a phone's browser, with its bars showing) keeps the clock clear of the notifications */
 @container (max-height: 600px) {
   .sb-lock .ss-lock__clock {
-    font-size: min(92px, 30cqw, 30cqh);
+    font-size: min(92px, 27.5cqw, 30cqh);
   }
 
   .sb-lock .ss-lock__stack {
@@ -1243,7 +1242,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   }
 
   .sb-lock .ss-lock__clock {
-    font-size: min(84px, 30cqw, 30cqh);
+    font-size: min(84px, 27.5cqw, 30cqh);
   }
 
   .sb-lock .ss-lock__stack {

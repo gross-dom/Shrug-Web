@@ -1,5 +1,5 @@
 // Inside each iPhone app, as a phone in the hand (touch, 393x760). Prints PASS/FAIL per check.
-//   node phone-apps.cjs [base url] [only: wallet|notes|photos|terminal|settings|messages]
+//   node phone-apps.cjs [base url] [only: contacts|notes|photos|terminal|settings|messages]
 const { chromium } = require('playwright')
 const path = require('path')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
@@ -30,56 +30,73 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     try { await fn() } catch (e) { say(false, `${name}: the walk-through stopped`, e.message.split('\n')[0].slice(0, 160)) }
   }
 
-  // ---- Wallet (the portfolio) ----
-  await run('wallet', async () => {
-    const { ctx, page, sleep, app, top, st, title } = await open('open=wallet')
+  // ---- Contacts (the portfolio) ----
+  await run('contacts', async () => {
+    const { ctx, page, sleep, app, top, st, title } = await open('open=contacts')
     let s = await st()
-    say(s.stacks.finder.length === 0 && (await title()) === 'Portfolio', 'Wallet opens on its cards, under the name of what they hold', `[${s.stacks.finder.join()}] "${await title()}"`)
-    const lying = () => page.evaluate(() => { const n = {}; for (const el of document.querySelectorAll('.sb-slot[data-front] .wallet-slot')) n[el.dataset.lying] = (n[el.dataset.lying] ?? 0) + 1; return n })
-    let l = await lying()
-    say(l.stacked === 13 && Object.keys(l).length === 1, 'there is a card for every vertical, all of them in the stack', JSON.stringify(l))
-    say((await top.locator('.ios-large-sub').textContent()) === '81 companies in 13 verticals', 'and the page counts what they hold')
-    say((await top.locator('.wallet-co').count()) === 81 && (await top.locator('.wallet-card__in:not([inert])').count()) === 0, 'every company is on its card, and none of them is pressed while the cards are stacked: a card is one button')
-    // A card that is pressed comes out of the stack
-    await top.locator('.wallet-card__toggle', { hasText: 'Deep tech' }).tap(); await sleep(1000)
-    s = await st(); l = await lying()
-    const where = await page.evaluate(() => {
-      const r = (sel) => document.querySelector('.sb-slot[data-front] ' + sel).getBoundingClientRect()
-      const card = r('.wallet-slot[data-lying="out"] .wallet-card'), bar = r('.wallet-screen .ios-bar'), piled = [...document.querySelectorAll('.sb-slot[data-front] .wallet-slot[data-lying="piled"]')].map((el) => el.getBoundingClientRect().top), away = [...document.querySelectorAll('.sb-slot[data-front] .wallet-slot[data-lying="away"]')].map((el) => el.getBoundingClientRect().top)
-      return { card: [Math.round(card.top), Math.round(card.bottom)], bar: Math.round(bar.bottom), piled: piled.map(Math.round), away: Math.min(...away), h: innerHeight }
-    })
-    say(s.stacks.finder.join() === 'v:0' && l.out === 1 && where.card[0] >= where.bar && where.card[0] < where.bar + 24, 'a card that is pressed comes out, to the top of the screen under the bar', JSON.stringify({ stack: s.stacks.finder, ...where }))
-    say(l.piled === 3 && l.away === 9 && where.piled.every((y) => y > where.card[1] && y < where.h && y > where.h - 120) && where.away >= where.h, 'the others are put by: three in a pile at the foot of the screen, the rest below it', JSON.stringify({ l, piled: where.piled, away: where.away }))
-    say((await top.locator('.wallet-slot[data-lying="out"] .wallet-co').count()) === 9 && (await top.locator('.wallet-card__in:not([inert])').count()) === 1, 'out of the stack, its companies are there to press, each under its name')
-    say((await top.locator('.ios-large').first().evaluate((el) => getComputedStyle(el).opacity)) === '0' && (await top.locator('button[aria-label="Search"]').count()) === 0, "the page's own name and search give way to the card")
-    await top.locator('.wallet-slot[data-lying="out"] .wallet-co', { hasText: 'Anduril' }).first().tap(); await sleep(1000)
-    const card = { sheet: (await st()).sheet, links: await app.locator('.ios-sheet a[href*="anduril"], .ios-sheet button:has-text("anduril.com")').count(), name: await app.locator('.ios-sheet').getByText('Anduril').count() }
-    say(card.sheet === 'company:Anduril' && card.name > 0 && card.links > 0, 'a company opens as a sheet over its card, with its link', JSON.stringify(card))
-    await page.screenshot({ path: path.join(out, 'apps-company.png') })
-    await page.goBack(); await sleep(700)
+    say(s.stacks.finder.length === 0 && (await title()) === 'Contacts', 'Contacts opens on its list', `[${s.stacks.finder.join()}] "${await title()}"`)
+    const me = (await top.locator('.contacts-me').textContent()).replace(/\s+/g, ' ').trim()
+    say(me === 'Shrug Capital, My Card' && (await top.locator('.contacts-me svg').count()) === 1, "at its head is Shrug's own card, as My Card is", me)
+    // A section to a vertical, where Contacts has one to a letter
+    const heads = await top.locator('.contacts-letter').allTextContents()
+    say(heads.join(' | ') === 'AI | Climate and energy | Consumer | Creator | Deep tech | Enterprise | Fintech | Health | Marketplaces | Products | “Social is Hard” — Evan | Web3 | Other', 'there is a section to a vertical, in the order of their names as Contacts files everything, with Other last', heads.join(' | '))
+    const rows = await top.locator('.contacts-section .contacts-row').evaluateAll((els) => els.map((el) => ({ name: el.querySelector('.contacts-row__name').textContent, logo: !!el.querySelector('.logo'), h: Math.round(el.getBoundingClientRect().height) })))
+    say(rows.length === 81 && rows.every((r) => r.logo && r.h >= 56) && (await top.locator('.contacts-count').textContent()) === '81 Companies', 'every company is a row with its own logo, and the list counts them at its foot', `${rows.length} rows, ${await top.locator('.contacts-count').textContent()}`)
+    const deep = await top.locator('.contacts-section', { has: page.locator('.contacts-letter', { hasText: 'Deep tech' }) }).locator('.contacts-row__name').allTextContents()
+    say(deep.join(', ') === 'Varda, Hadrian, Senra, Antares, Anduril, AMCA, Merlin Labs, Galvanick, Enigma', "inside a vertical the companies keep Shrug's order", deep.join(', '))
+    const atoms = await top.locator('.contacts-row', { has: page.locator('.contacts-row__name', { hasText: /^Atoms$/ }) }).locator('.contacts-row__where').allTextContents()
+    say(atoms.length === 2 && atoms.every((w) => /atoms\.co/.test(w)) && atoms[0] !== atoms[1], 'the two companies called Atoms each say which they are, by their address', atoms.join(' | '))
+    // The index of letters down the edge is the verticals'
+    const rail = await top.locator('.contacts-index__letter').evaluateAll((els) => els.map((el) => ({ letter: el.textContent, pressed: el.tagName === 'BUTTON', says: el.getAttribute('aria-label') })))
+    say(rail.map((l) => l.letter).join('') === 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#' && rail.filter((l) => l.pressed).map((l) => l.letter).join('') === 'ACDEFHMPSW#', 'the index has every letter and #, and the ones a vertical is filed under are buttons', rail.filter((l) => l.pressed).map((l) => l.letter).join(''))
+    say(rail.find((l) => l.letter === 'C').says === 'C: Climate and energy, Consumer, Creator' && rail.find((l) => l.letter === '#').says === 'Everything else: Other', 'a letter says which verticals are under it', `${rail.find((l) => l.letter === 'C').says} / ${rail.find((l) => l.letter === '#').says}`)
+    // …and brings its vertical up under the bar
+    const atTop = () => page.evaluate(() => { const sc = document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"] [data-scroller]'); const line = sc.getBoundingClientRect().top + parseFloat(getComputedStyle(sc).paddingTop); const all = [...sc.querySelectorAll('.contacts-section')]; const sec = all.find((x) => Math.abs(x.getBoundingClientRect().top - line) < 1.5); const stuck = [...sc.querySelectorAll('.contacts-letter')].find((h) => Math.abs(h.getBoundingClientRect().top - line) < 1.5); return { section: sec?.querySelector('.contacts-letter').textContent ?? null, stuck: stuck?.textContent ?? null } })
+    const press = async (letter) => { const b = await top.locator(`.contacts-index__letter[data-letter="${letter}"]`).boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await sleep(250) }
+    await press('F')
+    let at = await atTop()
+    say(at.section === 'Fintech' && at.stuck === 'Fintech', "a letter pressed brings its vertical's heading to the top of the list, under the bar", JSON.stringify(at))
+    await press('G')
+    at = await atTop()
+    say(at.section === 'Health', 'a letter with nothing under it brings up the next that has, as Contacts does', JSON.stringify(at))
+    // (a browser that hands a tap to the nearest thing that can be pressed must not answer I as H, which is beside it)
+    await press('I')
+    at = await atTop()
+    say(at.section === 'Marketplaces', 'and the letter after one that is a button is still its own', JSON.stringify(at))
+    await press('C')
+    await top.locator('[data-scroller]').evaluate((el) => (el.scrollTop += 120)); await sleep(250)
+    at = await atTop()
+    say(at.stuck === 'Climate and energy', "a vertical's heading stays under the bar while its companies pass", JSON.stringify(at))
+    await page.screenshot({ path: path.join(out, 'apps-contacts.png') })
+    // A company opens as a contact's card does: a screen pushed over the list
+    await press('H')
+    const before = await top.locator('[data-scroller]').evaluate((el) => Math.round(el.scrollTop))
+    await top.locator('.contacts-row[data-company="Eight Sleep"]').tap(); await sleep(1100)
     s = await st()
-    say(s.sheet === null && s.stacks.finder.join() === 'v:0', "the browser's back closes the sheet, and the card is still out")
-    await top.locator('button[aria-label="Back"]').first().tap(); await sleep(1000)
-    s = await st(); l = await lying()
-    say(s.stacks.finder.length === 0 && l.stacked === 13 && (await top.locator('.ios-large').first().evaluate((el) => getComputedStyle(el).opacity)) === '1', 'Back puts the card back in the stack', JSON.stringify(l))
-    await page.screenshot({ path: path.join(out, 'apps-wallet.png') })
-    // The pile is the way back too, and so is the card's own heading
-    await top.locator('.wallet-card__toggle', { hasText: 'Climate and energy' }).tap(); await sleep(1000)
-    say((await st()).stacks.finder.join() === 'v:1' && (await top.locator('.wallet-card__toggle', { hasText: 'Climate and energy' }).getAttribute('aria-expanded')) === 'true', 'another card comes out, and says it is open')
-    await page.screenshot({ path: path.join(out, 'apps-wallet-out.png') })
-    await top.locator('.wallet-pile').tap(); await sleep(1000)
-    say((await st()).stacks.finder.length === 0 && (await lying()).stacked === 13, 'the pile at the foot of the screen puts it back')
-    await top.locator('.wallet-card__toggle', { hasText: 'Climate and energy' }).tap(); await sleep(1000)
-    await top.locator('.wallet-slot[data-lying="out"] .wallet-card__toggle').tap(); await sleep(1000)
-    say((await st()).stacks.finder.length === 0 && (await lying()).stacked === 13, "and so does the card's own heading")
-    // Search looks through every card at once
-    await top.locator('button[aria-label="Search"]').tap(); await sleep(600)
-    say((await title()) === 'Search' && (await page.evaluate(() => document.activeElement?.classList.contains('ios-search__input'))), 'search takes the place of the cards, with the keyboard in its field')
+    const card = await top.evaluate((el) => ({ name: el.querySelector('.contact-head__name')?.textContent, under: el.querySelector('.contact-head__under')?.textContent, face: !!el.querySelector('.contact-head .logo'), acts: [...el.querySelectorAll('.contact-act')].map((a) => `${a.tagName.toLowerCase()} ${a.querySelector('.contact-act__label').textContent}${a.getAttribute('href') ? ' ' + a.getAttribute('href') + ' ' + a.target + ' ' + a.rel : ''}`), fields: [...el.querySelectorAll('.contact-field')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), back: !!el.querySelector('button[aria-label="Back"]') }))
+    say(s.stacks.finder.join() === 'co:Eight Sleep' && s.sheet === null && card.name === 'Eight Sleep' && card.under === 'Health' && card.face && card.back, "a row opens the company's card: its logo, its name and its vertical, with Back to the list", JSON.stringify({ stack: s.stacks.finder, name: card.name, under: card.under }))
+    say(card.acts.length === 2 && /^a website https?:\/\/(www\.)?eightsleep\.com\/? _blank noopener$/.test(card.acts[0]) && card.acts[1] === 'button share', 'what can be done from it: its website, in a tab of its own, and passing it on', card.acts.join(' | '))
+    say(card.fields.length === 3 && /^website: eightsleep\.com, opens in a new tab$/.test(card.fields[0]) && card.fields[1] === 'vertical: Health' && /^about: .{10,}/.test(card.fields[2]), 'and what it knows: the site, the vertical, what the company does', card.fields.join(' | '))
+    await page.screenshot({ path: path.join(out, 'apps-company.png') })
+    await page.goBack(); await sleep(900)
+    s = await st()
+    say(s.stacks.finder.length === 0 && (await top.locator('[data-scroller]').evaluate((el) => Math.round(el.scrollTop))) === before, "the browser's back returns to the list, where it was")
+    // Shrug's own card
+    await top.locator('[data-scroller]').evaluate((el) => (el.scrollTop = 0)); await sleep(200)
+    await top.locator('.contacts-me').tap(); await sleep(1100)
+    s = await st()
+    const mine = await top.evaluate((el) => ({ name: el.querySelector('.contact-head__name')?.textContent, under: el.querySelector('.contact-head__under')?.textContent, fields: [...el.querySelectorAll('.contact-field')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), acts: [...el.querySelectorAll('.contact-act__label')].map((a) => a.textContent) }))
+    say(s.stacks.finder.join() === 'me' && mine.name === 'Shrug Capital' && mine.under === 'My Card' && mine.fields.some((f) => /^started: 2017$/.test(f)) && mine.fields.some((f) => /^partners: /.test(f)) && mine.fields.some((f) => /^portfolio: 81 companies in 13 verticals$/.test(f)) && mine.acts.join() === 'one-pager,share', "My Card is Shrug's: who it is, as About Shrug says it on the desktop, and the one-pager", mine.fields.map((f) => f.slice(0, 26)).join(' | '))
+    await top.locator('button[aria-label="Back"]').first().tap(); await sleep(900)
+    // Search, at the foot of the list
+    await top.locator('.ios-search__input').tap(); await sleep(300)
     await page.keyboard.type('space'); await sleep(500)
-    const found = await top.locator('.wallet-row').allTextContents()
-    say(found.length > 0 && found.some((t) => t.includes('Varda')), 'it finds a company by what it does', found.join(' | ').slice(0, 120))
-    await top.locator('button[aria-label="Close search"]').tap(); await sleep(600)
-    say((await title()) === 'Portfolio' && (await lying()).stacked === 13, 'closing it brings the cards back')
+    const found = await top.locator('.contacts-row').evaluateAll((els) => els.map((el) => el.textContent.replace(/\s+/g, ' ').trim()))
+    say(found.length > 0 && found.length < 81 && found.some((t) => /^Varda, Deep tech$/.test(t)) && (await top.locator('.contacts-index').count()) === 0 && (await top.locator('.contacts-me').count()) === 0, 'search finds a company by what it does, says which vertical it is in, and the index gives way', found.join(' | ').slice(0, 120))
+    await top.locator('button[aria-label="Cancel"]').tap(); await sleep(500)
+    say((await top.locator('.contacts-row').count()) === 81 && (await top.locator('.contacts-index').count()) === 1 && (await top.locator('.ios-search__input').inputValue()) === '', 'Cancel brings the whole list back')
+    const left = await app.evaluate((el) => ({ tabs: el.querySelectorAll('.ios-tabs, [role="tablist"]').length, cards: el.querySelectorAll('.wallet-card, .wallet-slot').length }))
+    say(left.tabs === 0 && left.cards === 0, 'the list is all there is: no tabs, and nothing of the Wallet', JSON.stringify(left))
     await ctx.close()
   })
 

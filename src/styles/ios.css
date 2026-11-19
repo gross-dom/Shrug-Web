@@ -323,6 +323,27 @@
   opacity: 1;
 }
 
+/* Down a screen's trailing edge, over the page and between its bars: an index. Only the index itself
+   takes touches; the page shows, and scrolls, either side of it */
+.ios-edge {
+  position: absolute;
+  top: calc(var(--status) + var(--bar) + 4px);
+  right: 0;
+  bottom: calc(var(--home) + 8px);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.ios-screen[data-foot] > .ios-edge {
+  bottom: calc(var(--foot-gap) + 62px + 8px);
+}
+
+.ios-edge > * {
+  pointer-events: auto;
+}
+
 .ios-foot {
   position: absolute;
   right: 0;

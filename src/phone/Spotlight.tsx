@@ -14,7 +14,7 @@ import { APPS } from '../os/apps'
 import { useStore } from '../os/store'
 import { OnePagerIcon, PhoneIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { cardsFor, companySheet, conversationView, FAQS_FOLDER, GROUP_VIEW, mediaView, noteView } from './apps/routes'
+import { contactsFor, conversationView, FAQS_FOLDER, GROUP_VIEW, mediaView, noteView } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
 import '../styles/phone/spotlight.css'
 
@@ -27,7 +27,7 @@ const shared = new Set(ALL.map((c) => c.name).filter((name, i, all) => all.index
 // opens that app at that place.
 //
 // It answers to the site's own nouns and to what a visitor is likely to type:
-// an app by either of its names (Wallet is the Portfolio, Notes the FAQs) and
+// an app by either of its names (Contacts is the Portfolio, Notes the FAQs) and
 // by the words for what it holds; the one-pager; and
 // the words for getting hold of Shrug (contact, email, pitch), which find the
 // way there is (`reach` in src/data/site.ts). A search that finds nothing
@@ -273,7 +273,7 @@ function find(raw: string, replied: number): Found {
       title: <Marked text={company.name} q={q} />,
       // Two companies share a name: for them the line under it is their address, which tells them apart
       subtitle: described ? <Marked text={around(company.blurb!, q)} q={q} /> : shared.has(company.name) && company.url ? hostOf(company.url) : <Marked text={company.vertical} q={q} />,
-      open: () => launchAt('finder', cardsFor(company.key), null, companySheet(company.key)),
+      open: () => launchAt('finder', contactsFor(company.key)),
     })
   })
 
