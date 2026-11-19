@@ -159,23 +159,28 @@
 /* ---- A folder's notes ---- */
 
 .notes-list {
-  gap: 20px;
-  padding-top: 12px;
+  gap: 28px;
+  padding-top: 17px;
 }
 
-/* Today, Yesterday, Previous 7 Days: over each group, in line with the words in it */
+/* Today, Yesterday, Previous 7 Days: over each group, in line with the edge of its card */
 .notes-group__header {
-  margin: 0 16px 8px;
-  font-size: 20px;
+  margin: 0 1px 9px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.012em;
-  line-height: 25px;
+  line-height: 26px;
 }
 
-/* A note's row: its name on one line, and under it the date and how the note starts */
+/* A note's row, 60 points of it: its name on one line, and under it the date and how the note starts.
+   The words start 28 points into the card, clear of where Notes puts a sign for a note that is shared */
 .notes-row {
-  padding-top: 11px;
-  padding-bottom: 11px;
+  min-height: 60px;
+  padding: 10px 16px 8px 28px;
+}
+
+.notes-row + .notes-row::before {
+  left: 28px;
 }
 
 .notes-row .ios-cell__title {
@@ -413,26 +418,21 @@
   outline: none;
 }
 
-/* The bar at a note's foot: Notes' tools on one piece of glass in the middle, New Note at the end */
+/* The bar at a note's foot: Notes' four tools on one piece of glass from the leading side, New Note at the other end */
 .notes-screen--note .ios-foot {
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .notes-screen--note .ios-foot > .ios-group {
-  height: 48px;
-  padding: 0 7px;
-  border-radius: 24px;
+  flex: 0 1 221.5px;
+  gap: 0;
+  min-width: 0;
 }
 
 .notes-screen--note .ios-foot > .ios-group .ios-group__part {
-  width: 48px;
-  height: 48px;
-}
-
-.notes-screen--note .ios-foot > .ios-button {
-  position: absolute;
-  right: var(--edge);
-  bottom: var(--foot-gap);
+  flex: 1;
+  width: auto;
+  min-width: 0;
 }
 
 /* ---- New Folder ---- */

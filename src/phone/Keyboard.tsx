@@ -28,6 +28,8 @@ export function SoftKeyboard({ screen }: { screen: RefObject<HTMLDivElement> }) 
   const [typed, setTyped] = useState('')
   const tone = useStore(chrome, (s) => s[sys.get().app ?? 'messages'])
   const app = useStore(sys, (s) => s.app)
+  // Under search the keyboard is the dark one, over the wallpaper, as Spotlight's is
+  const searching = useStore(sys, (s) => s.spotlight)
 
   useEffect(() => {
     const el = screen.current
@@ -70,8 +72,8 @@ export function SoftKeyboard({ screen }: { screen: RefObject<HTMLDivElement> }) 
   }, [up, screen])
 
   return (
-    <div ref={box} className="ph-kb" data-up={up || undefined} style={{ background: COLOR[app ? tone : 'plain'] }} aria-hidden>
-      <Keyboard typed={typed} suggestions={suggestions(typed)} dark={!!app && tone === 'dark'} />
+    <div ref={box} className="ph-kb" data-up={up || undefined} data-search={searching || undefined} style={searching ? undefined : { background: COLOR[app ? tone : 'plain'] }} aria-hidden>
+      <Keyboard typed={typed} suggestions={suggestions(typed)} dark={searching || (!!app && tone === 'dark')} />
     </div>
   )
 }

@@ -48,8 +48,18 @@
   --side-l: env(safe-area-inset-left, 0px);
   --side-r: env(safe-area-inset-right, 0px);
   --home: calc(34px + var(--below));
-  --foot-gap: calc(21px + var(--below));
+  --foot-gap: calc(29px + var(--below));
+  /* The page starts where the phone's own status bar ends. A browser may have a bar of its own there:
+     the buttons keep a little clear of it */
+  --bar: 48px;
   background: #000;
+}
+
+/* Added to the Home Screen, the page is the whole screen and the status bar is over it */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .ph--bleed {
+    --bar: 46px;
+  }
 }
 
 /* Everything that can be pressed keeps inside those bands. The wallpaper runs
@@ -114,6 +124,41 @@
   transform: none;
 }
 
+/* Under search it is dark glass over the wallpaper, with no row of words offered, and its Return is the
+   blue key that goes, as Spotlight's keyboard is */
+.ph-kb[data-search] {
+  background: rgb(14 16 40 / 0.5);
+  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+  backdrop-filter: blur(26px) saturate(1.5);
+}
+
+.ph-kb[data-search] .ss-kb {
+  --ss-kb-key: rgb(255 255 255 / 0.22);
+  --ss-kb-down: rgb(255 255 255 / 0.4);
+  padding-top: 8px;
+  background: rgb(20 22 46 / 0.35);
+}
+
+.ph-kb[data-search] .ss-kb__suggest {
+  display: none;
+}
+
+.ph-kb[data-search] .ss-kb__row--bottom > .ss-kb__key:last-child {
+  background: #0a84ff;
+  color: #fff;
+}
+
+.ph-kb[data-search] .ss-kb__row--bottom > .ss-kb__key:last-child > svg {
+  display: none;
+}
+
+.ph-kb[data-search] .ss-kb__row--bottom > .ss-kb__key:last-child::after {
+  width: 22px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 16' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8h17.500M13 2l6.500 6-6.500 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  content: '';
+}
+
 .ph-kb .ss-kb__suggest span {
   overflow: hidden;
   padding: 0 6px;
@@ -140,6 +185,11 @@
   overflow: clip;
 }
 
+/* The island is as wide as an iPhone 17 Pro's: 122 points */
+.ph-device {
+  --ss-island-w: 122px;
+}
+
 .ph-device .ss-phone__screen {
   /* Clipped, so that nothing can scroll the screen inside its frame */
   overflow: clip;
@@ -152,6 +202,15 @@
   transition:
     color 0.3s ease,
     opacity 0.3s ease;
+}
+
+/* It is drawn in the ink that reads at the foot of the screen, which the frame's own status bar need not share */
+.ph-device:has(.ph:not([data-dark-foot])) .ss-phone__home {
+  color: #000;
+}
+
+.ph-device:has(.ph[data-dark-foot]) .ss-phone__home {
+  color: #fff;
 }
 
 /* The Home Screen and the App Switcher have no home indicator */
@@ -306,38 +365,58 @@
   }
 }
 
-/* The clock is the size an iPhone draws its own, against the width of the screen: figures a little under
-   a fifth of that width tall (76pt on a screen 393pt across), in the type's own proportions and not
-   stretched. It is as wide as four digits and a colon at any size, and on a screen too short to hold
-   it over the replies it gives way */
-.sb-lock .ss-lock__clock {
-  font-size: min(120px, 27.5cqw, 30cqh);
+/* The day and the time, where an iPhone 17 Pro's own Lock Screen has them (read off one): the day's
+   baseline 103 points down the screen, which is 41 under the status bar, and the clock's figures from
+   120 to 203. On a real phone the page starts where the phone's own status bar ends, so both are
+   measured from there */
+.sb-lock__head {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  color: #fff;
+  text-align: center;
+  pointer-events: none;
 }
 
-/* The time is set in glass, as the Lock Screen sets it now: pale and seen through, brightest along
-   the top edges of its figures where the light catches, with a line of light round each. The
-   wallpaper behind them is a smooth ground, so what shows through is its colour */
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .sb-lock .ss-lock__clock {
-    padding-top: 0.02em;
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.9) 4%, rgb(255 255 255 / 0.5) 46%, rgb(255 255 255 / 0.36) 72%, rgb(255 255 255 / 0.6) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    opacity: 1;
-    -webkit-text-stroke: 0.7px rgb(255 255 255 / 0.62);
-    filter: drop-shadow(0 6px 16px rgb(6 8 44 / 0.2));
-  }
-}
-
-/* The day over it, short: Wed 18 Nov */
-.sb-lock .ss-lock__date {
-  font-size: 21px;
+/* The day, short: Wed 18 Nov */
+.sb-lock__date {
+  display: block;
+  margin-top: calc(var(--status) + 20.6px);
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.005em;
-  opacity: 0.9;
+  letter-spacing: -0.01em;
+  line-height: 26px;
+  opacity: 0.92;
+}
+
+/* The clock is the size an iPhone draws its own, against the width of the screen: figures a little over
+   a fifth of that width tall (83pt on a screen 402pt across), and "20:15" seven tenths of it wide. Its
+   figures are drawn as shapes (LockClock.tsx), so that it is that size on every phone; on a screen too
+   short to hold it over the replies it gives way.
+
+   The time is in glass, as the Lock Screen sets it now: pale and seen through, brightest along the top
+   edges of its figures where the light catches, with a line of light round each. The wallpaper behind
+   them is a smooth ground, so what shows through is its colour */
+.sb-lock__clock {
+  display: block;
+  margin-top: 9.4px;
+}
+
+.sb-lock__clock > svg {
+  display: block;
+  width: auto;
+  height: min(21.6cqw, 23.6cqh, 94px);
+  overflow: visible;
+  stroke: rgb(255 255 255 / 0.62);
+  stroke-width: 0.7px;
+  filter: drop-shadow(0 6px 16px rgb(6 8 44 / 0.2));
+}
+
+.sb-lock__clock path {
+  vector-effect: non-scaling-stroke;
 }
 
 /* A notification is a pane of the same glass */
@@ -356,16 +435,10 @@
   bottom: calc(72px + var(--below, 0px));
 }
 
-/* On a real phone the page starts under the phone's own status bar: the day sits as far under it as
-   it does on an iPhone's own Lock Screen */
-.ph--bleed .ss-lock__date {
-  margin-top: calc(var(--status) + 32px);
-}
-
 /* A short screen (a phone's browser, with its bars showing) keeps the clock clear of the notifications */
 @container (max-height: 600px) {
-  .sb-lock .ss-lock__clock {
-    font-size: min(92px, 27.5cqw, 30cqh);
+  .sb-lock__clock > svg {
+    height: min(21.6cqw, 23.6cqh, 70px);
   }
 
   .sb-lock .ss-lock__stack {
@@ -498,6 +571,18 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   /* An icon's size follows the screen's width, as it does from phone to phone */
   --icon: clamp(54px, 15.3cqw, 68px);
   --margin: 6.9cqw;
+  /* How far under the status bar the first row starts, how far apart the rows are, and how a name is set */
+  --grid-top: 14px;
+  --row-gap: 17px;
+  --name-size: 12px;
+  --name-line: 14px;
+  /* The Dock: how far in from the sides and up from the foot it sits, and the room over and under its icons */
+  --dock-inset: 3.3cqw;
+  --dock-lift: 3.3cqw;
+  --dock-pad: 17px;
+  /* How far over the Dock the Search pill floats, and how tall it is */
+  --search-gap: 14px;
+  --search-tall: 30px;
   position: absolute;
   inset: 0;
   color: #fff;
@@ -536,15 +621,37 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   transition: none;
 }
 
+/* A screen with the height for it (an iPhone's own, or most of it) is laid out to an iPhone 17 Pro's
+   measure, read off one: on its 402 points an icon is 63.4 across, the first is 30.6 in from the edge and
+   90 down the screen (28 under the status bar), a row is 100.3 from the last, and the Dock is 17.5 in from
+   either side, 18.5 up from the foot and 101 tall, with Search 22 over it. A shorter screen (a phone's
+   browser with its bars showing) keeps the closer measure above, which is what lets the folders fit there
+   (src/styles/phone/folder.css) */
+@container (min-height: 750px) {
+  .sb-home {
+    --icon: clamp(54px, 15.8cqw, 68px);
+    --margin: 7.6cqw;
+    --grid-top: 28.4px;
+    --row-gap: 14.9px;
+    --name-size: 13px;
+    --name-line: 16px;
+    --dock-inset: 4.35cqw;
+    --dock-lift: 4.6cqw;
+    --dock-pad: 18.8px;
+    --search-gap: 21.8px;
+    --search-tall: 29px;
+  }
+}
+
 .sb-grid {
   position: absolute;
-  top: calc(var(--status) + 14px);
+  top: calc(var(--status) + var(--grid-top));
   right: 0;
   left: 0;
   display: grid;
   grid-template-columns: repeat(4, var(--icon));
   justify-content: space-between;
-  row-gap: 17px;
+  row-gap: var(--row-gap);
   padding: 0 var(--margin);
 }
 
@@ -574,10 +681,10 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   margin: 0 -13px;
   overflow: hidden;
   color: #fff;
-  font-size: 12px;
+  font-size: var(--name-size, 12px);
   font-weight: 500;
   letter-spacing: 0;
-  line-height: 14px;
+  line-height: var(--name-line, 14px);
   text-align: center;
   text-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
   white-space: nowrap;
@@ -763,15 +870,15 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 
 /* The Dock: a strip of glass with the four apps that are always to hand */
 .sb-dock {
-  --inset: 3.3cqw;
+  --inset: var(--dock-inset);
   position: absolute;
   right: var(--inset);
-  bottom: calc(var(--inset) + var(--below, 0px));
+  bottom: calc(var(--dock-lift) + var(--below, 0px));
   left: var(--inset);
   display: flex;
   justify-content: space-between;
-  height: calc(var(--icon) + 34px);
-  padding: 17px calc(var(--margin) - var(--inset)) 0;
+  height: calc(var(--icon) + 2 * var(--dock-pad));
+  padding: var(--dock-pad) calc(var(--margin) - var(--inset)) 0;
   border-radius: 9.6cqw;
   /* A tray of glass, as the Dock is now: clear enough that the wallpaper is seen through it (it is
      blurred only a little), brighter along its top edge where the light catches, and lifted off the
@@ -797,12 +904,12 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 
 .sb-search {
   position: absolute;
-  bottom: calc(3.3cqw + var(--icon) + 34px + 14px + var(--below, 0px));
+  bottom: calc(var(--dock-lift) + var(--icon) + 2 * var(--dock-pad) + var(--search-gap) + var(--below, 0px));
   left: 50%;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 30px;
+  height: var(--search-tall);
   padding: 0 13px 0 11px;
   border-radius: 15px;
   background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.11));
@@ -1200,7 +1307,8 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   pointer-events: auto;
 }
 
-.ph[data-dark] .sb-homebar {
+/* White where the foot of the screen is dark (which need not be what the top is: a picture can head a pale page) */
+.ph[data-dark-foot] .sb-homebar {
   color: #fff;
 }
 
@@ -1236,13 +1344,18 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
    two are laid out for the width: the clock over the notifications, and the
    Dock down the trailing edge, as the larger iPhones used to turn theirs. The apps reflow on their own, as apps do. */
 @container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
-  .ph--bleed .ss-lock__date {
-    margin-top: calc(var(--status) + 8px);
+  .sb-lock__date {
+    margin-top: calc(var(--status) + 6px);
     font-size: 18px;
+    line-height: 22px;
   }
 
-  .sb-lock .ss-lock__clock {
-    font-size: min(84px, 27.5cqw, 30cqh);
+  .sb-lock__clock {
+    margin-top: 4px;
+  }
+
+  .sb-lock__clock > svg {
+    height: min(21.6cqw, 23.6cqh, 64px);
   }
 
   .sb-lock .ss-lock__stack {

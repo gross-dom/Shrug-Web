@@ -20,6 +20,9 @@ export interface Company {
   blurb: string | null
   /** A file in public/logos. */
   logo: string | null
+  /** A picture of the company's own, for the head of its contact card on the phone, as a contact's poster is:
+   * a file in public/posters, from POSTERS below. null for most, whose card is headed by the logo. */
+  poster: string | null
   /** For a company with no site to visit: what became of it, in a few words,
    * said where its link would be ("Acquired by …", "2017 to 2020"). From
    * NOTES below; null until Shrug has written one. */
@@ -47,6 +50,16 @@ type VerticalName = (typeof VERTICAL_ORDER)[number]
  * A company with no site and no line here says only that it has no website listed. */
 const NOTES: Record<string, string> = {}
 
+/** The companies with a picture to show, by key: the file in public/posters that heads the company's
+ * contact card on the phone in place of its logo. Shrug's to choose, one line each:
+ *
+ *   Varda: 'varda.webp',
+ *
+ * A picture taller than it is wide, 1200 pixels across or more, with its subject in the upper two thirds
+ * (the name and the card's buttons are set over the lower third). After adding one, run
+ * `python3 tools/logo-colours.py`, which reads the colours the card takes from it. */
+const POSTERS: Record<string, string> = {}
+
 const c = (name: string, vertical: VerticalName, url: string | null, logo: string | null, blurb: string | null = null, key = name): Company => ({
   key,
   name,
@@ -54,6 +67,7 @@ const c = (name: string, vertical: VerticalName, url: string | null, logo: strin
   url,
   blurb: blurb && typeset(blurb),
   logo,
+  poster: POSTERS[key] ?? null,
   note: NOTES[key] ? typeset(NOTES[key]) : null,
 })
 

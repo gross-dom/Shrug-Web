@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, ChevronLeft, ChevronRight, ListFilter, Mic, Plus, SquarePen, Video } from 'lucide-react'
+import { ArrowUp, ChevronLeft, ChevronRight, ListFilter, Mic, Plus, Video } from 'lucide-react'
 import { chat, finishChat, replayChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
 import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
 import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
@@ -15,7 +15,7 @@ import { useStore } from '../../os/store'
 import { OnePagerIcon, PhoneIcon } from '../icons'
 import { closeSheet, launch, openSheet, pop, push, sys, topOf, type PhoneApp } from '../system'
 import { useNewCount } from '../unread'
-import { BackButton, Cell, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
+import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 import { conversationView, GROUP_VIEW } from './routes'
 import '../../styles/phone/messages.css'
 
@@ -154,7 +154,7 @@ function ListScreen() {
               push(GROUP_VIEW)
             }}
           >
-            <SquarePen size={21} strokeWidth={2.1} aria-hidden style={{ marginTop: -1, marginLeft: 1 }} />
+            <ComposeGlyph />
           </GlassButton>
         </>
       }

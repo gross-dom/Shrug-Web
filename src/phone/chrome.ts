@@ -22,8 +22,27 @@ export const WALLPAPER_DIMMED = { switcher: { top: '#0b0c23', foot: '#5e6da0' },
 
 export const chrome = createStore<Record<PhoneApp, Tone>>({ messages: 'plain', finder: 'plain', notes: 'plain', terminal: 'dark', photos: 'plain' })
 
-/** Called by the screen on top of an app: this is what is under the status bar now. */
-export const setTone = (app: PhoneApp, tone: Tone) => chrome.set((s) => (s[app] === tone ? s : { ...s, [app]: tone }))
+/** A screen in a colour of its own (a contact's card takes its picture's): what is at its top edge and at
+ * its foot. One colour for a page that is one colour; two for one that runs from a picture down into another. */
+export type Ground = string | { top: string; foot: string }
+
+/** The colour of its own that the screen on top of each app is in, where it has one. */
+export const grounds = createStore<Partial<Record<PhoneApp, Ground>>>({})
+
+const sameGround = (a: Ground | undefined, b: Ground | undefined) => (typeof a === 'object' && typeof b === 'object' ? a.top === b.top && a.foot === b.foot : a === b)
+
+/** What the status bar's ink is chosen against on the screen on top of each app, where that is not the
+ * screen's own tone: a picture runs under the status bar there (dark: white ink), over a page that is pale
+ * further down. The home indicator, at the foot, goes by the screen's own tone all the same. */
+export const overs = createStore<Partial<Record<PhoneApp, Tone>>>({})
+
+/** Called by the screen on top of an app: this is what the screen is, what colour of its own it is in,
+ * and what is under the status bar where that differs. */
+export const setTone = (app: PhoneApp, tone: Tone, ground?: Ground, over?: Tone) => {
+  chrome.set((s) => (s[app] === tone ? s : { ...s, [app]: tone }))
+  grounds.set((s) => (sameGround(s[app], ground) ? s : { ...s, [app]: ground }))
+  overs.set((s) => (s[app] === over ? s : { ...s, [app]: over }))
+}
 
 /** An app is being carried off by a finger on the home indicator: the wallpaper is showing around it. */
 export const carried = createStore(false)

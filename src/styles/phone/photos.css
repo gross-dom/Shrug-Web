@@ -1,7 +1,8 @@
-/* VIP on the phone (src/phone/apps/Photos.tsx): the Photos app. The grid is
-   the page and runs edge to edge; the glass floats over it. The bars, lists
-   and sheets are ios.css's; this is what is Photos' own. Sizes are iOS
-   points. */
+/* VIP on the phone (src/phone/apps/Photos.tsx): the Photos app, laid out as a
+   collection is in it. The first picture heads the page, large, with the name
+   over its foot; the grid under it runs edge to edge; the glass floats over
+   both. The bars, lists and sheets are ios.css's; this is what is Photos' own.
+   Sizes are iOS points, read off an iPhone 17 Pro's own Photos. */
 
 .photos-app {
   position: absolute;
@@ -101,7 +102,7 @@
 .photos-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px;
+  gap: 1.5px;
 }
 
 .photos-tile {
@@ -109,6 +110,8 @@
   display: block;
   width: 100%;
   aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 2px;
   transition: filter 0.2s ease;
 }
 
@@ -123,13 +126,121 @@
   outline-offset: -3px;
 }
 
-/* A grid runs edge to edge, so what is over it keeps a little further off than it would from a list */
-.photos-library .ios-large {
-  margin-bottom: 12px;
+/* What floats at the foot of the library floats over the pictures themselves, as it does in Photos: nothing is faded out under it */
+.photos-library > .ios-foot > .ios-foot__edge {
+  display: none;
 }
 
-.photos-screen .ios-large-sub {
-  margin-bottom: 14px;
+/* While the picture at its head is still under the bar, nothing is faded out under the bar either */
+.ios-screen.photos-library--headed:not(.photos-library--past) > .ios-bar > .ios-bar__edge {
+  opacity: 0;
+}
+
+/* ---- The head of the library ---- */
+
+/* The first picture, large, from the very top of the screen (the status bar is over it) down to a little
+   past half way: 493 points of an iPhone's 874. Its foot is shaded, so that the name reads over any picture */
+.photos-head {
+  position: relative;
+  display: block;
+  height: calc(var(--status) + min(431px, 56cqh));
+  margin-top: calc(-1 * (var(--status) + var(--bar)));
+  margin-bottom: 1.5px;
+  overflow: hidden;
+  background: #1c1c1e;
+  color: #fff;
+}
+
+.photos-head__media {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Until its picture arrives it is the drop's own colour in the dark, with a light through it: a cover, not a
+   gap. (The colour along its top edge is the one the browser's bar is given: Photos.tsx works out the same) */
+.photos-head[data-empty] {
+  background:
+    radial-gradient(120% 70% at 78% 22%, color-mix(in srgb, var(--hue) 46%, transparent), transparent 70%),
+    linear-gradient(color-mix(in srgb, var(--hue) 50%, #17171c) 0, color-mix(in srgb, var(--hue) 50%, #17171c) 9%, color-mix(in srgb, var(--hue) 22%, #0e0e12));
+}
+
+.photos-head::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgb(0 0 0 / 0.22), transparent 26%, transparent 58%, rgb(0 0 0 / 0.46));
+  content: '';
+  pointer-events: none;
+}
+
+/* The name, as large as a collection's is, and under it what there is of it */
+.photos-head__words {
+  position: absolute;
+  right: 76px;
+  bottom: 14px;
+  left: 18.5px;
+  z-index: 1;
+  display: grid;
+  gap: 1px;
+}
+
+.photos-head__title {
+  overflow: hidden;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.006em;
+  line-height: 41px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.photos-head__line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 21px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.photos-head__line > svg {
+  flex: none;
+}
+
+/* The button that starts from the first picture: a round pane of pale glass */
+.photos-head__play {
+  position: absolute;
+  right: 16px;
+  bottom: 17px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.4);
+  color: #fff;
+  transition: transform 0.25s var(--ui);
+}
+
+.photos-head__play:active {
+  transform: scale(0.92);
+  transition-duration: 0.08s;
+}
+
+.photos-head__play:focus-visible {
+  outline-color: #fff;
 }
 
 /* The count at the end of a grid, as Photos ends its library */
@@ -175,7 +286,7 @@
 /* A page is the whole screen, and the picture is fitted to it and centred on
    it, as Photos does: the bars float over a tall one's ends */
 .photos-page {
-  --clear: calc(var(--status) + var(--bar) + 6px + var(--foot-gap) + 48px + 16px);
+  --clear: calc(var(--status) + var(--bar) + 6px + var(--foot-gap) + 47px + 19px + 30px + 12px);
   display: grid;
   flex: 0 0 100%;
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
@@ -262,23 +373,27 @@ video.photos-page__media {
   bottom: 12px;
 }
 
-/* A dark room for the picture: the shared focus ring is white in it */
+/* A white room for the picture, as Photos shows one. With the buttons put away it is a black one, and the
+   shared focus ring is white in it */
 .photos-viewer {
+  transition: background-color 0.25s ease;
+}
+
+.photos-viewer--bare {
   --ring: #fff;
 }
 
-/* A tall picture runs up under the bar: the bar's shade is always there, so its words read over anything */
-.photos-viewer > .ios-bar > .ios-bar__edge {
-  opacity: 1;
-}
-
-/* The top of the viewer: what it is, in two small lines */
+/* The top of the viewer: what it is, in two small lines on a capsule of glass, where Photos writes the day
+   a picture was taken and the hour */
 .photos-viewer__title {
   display: grid;
+  align-content: center;
   justify-items: center;
   min-width: 0;
   max-width: 100%;
-  color: #fff;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 22px;
   pointer-events: none;
 }
 
@@ -288,7 +403,7 @@ video.photos-page__media {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.015em;
-  line-height: 19px;
+  line-height: 18px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -297,28 +412,106 @@ video.photos-page__media {
   color: var(--label-2);
   font-size: 12px;
   letter-spacing: 0;
-  line-height: 15px;
+  line-height: 14px;
   white-space: nowrap;
 }
 
-/* The toolbar: one piece of glass, a little larger than a bar's buttons */
-.ios-foot > .photos-tools {
-  display: flex;
-  flex: 1;
-  justify-content: center;
-  pointer-events: none;
+/* The toolbar: what passes the picture on at one end, and in the middle one piece of glass for what is done
+   to it (53 points to a sign) */
+.photos-viewer > .ios-foot {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
 }
 
-.photos-tools > .ios-group {
-  height: 48px;
-  padding: 0 6px;
-  border-radius: 24px;
+/* (the box that holds the toolbar's things is no box of its own: they are the foot's to lay out) */
+.photos-tools {
+  display: contents;
+}
+
+.photos-tools > * {
   pointer-events: auto;
 }
 
-.photos-tools .ios-group__part {
-  width: 52px;
-  height: 48px;
+.photos-tools > .ios-button {
+  justify-self: start;
+  width: var(--control);
+  height: var(--control);
+  border-radius: calc(var(--control) / 2);
+}
+
+.photos-tools > .ios-group {
+  gap: 0;
+  height: var(--control);
+  padding: 0 0.5px;
+  border-radius: calc(var(--control) / 2);
+}
+
+.photos-tools > .ios-group .ios-group__part {
+  width: 52.5px;
+  height: var(--control);
+}
+
+/* The row of small pictures over the toolbar: every picture in the run, 20 points by 30 and 3 apart, the one
+   showing 30 across and set 10 clear of its neighbours, in the middle of the screen */
+.photos-strip {
+  position: absolute;
+  right: 0;
+  bottom: calc(var(--foot-gap) + var(--control, 47px) + 19px);
+  left: 0;
+  height: 30px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+  pointer-events: none;
+}
+
+.photos-strip__row {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: flex;
+  gap: 3px;
+  height: 30px;
+  transform: translateX(calc(-1 * (var(--at) * 23px + 25px)));
+  transition: transform 0.32s var(--glide);
+}
+
+.photos-strip__one {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 20px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 22%, #f6f6fa), color-mix(in srgb, var(--hue) 40%, #ececf2));
+  pointer-events: auto;
+  transition:
+    width 0.32s var(--glide),
+    margin 0.32s var(--glide);
+}
+
+.photos-strip__one[data-kind='video'] {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 42%, #1d1d24), color-mix(in srgb, var(--hue) 22%, #141419));
+}
+
+.photos-strip__one[data-on] {
+  width: 30px;
+  margin: 0 10px;
+}
+
+.photos-strip__one > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A phone on its side has no room for it */
+@container (max-height: 460px) {
+  .photos-strip {
+    display: none;
+  }
 }
 
 .photos-heart {
@@ -358,8 +551,11 @@ video.photos-page__media {
 
 @media (prefers-reduced-motion: reduce) {
   .photos-heart,
+  .photos-viewer,
   .photos-viewer > .ios-bar,
-  .photos-viewer > .ios-foot {
+  .photos-viewer > .ios-foot,
+  .photos-strip__row,
+  .photos-strip__one {
     transition: none;
   }
 }

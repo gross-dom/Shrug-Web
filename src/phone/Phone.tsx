@@ -6,6 +6,7 @@ import { PHONE_UNDER, wm } from '../os/wm'
 import { useEdges } from './edges'
 import { SoftKeyboard } from './Keyboard'
 import { Springboard } from './Springboard'
+import { SITE } from '../data/site'
 import { moving, sys } from './system'
 import { clockOf, useNow } from './time'
 
@@ -50,12 +51,15 @@ function framable(w: number, h: number) {
 
 export function Phone() {
   const viewport = useStore(wm, (s) => s.viewport)
-  const { dark, top, foot } = useEdges()
+  const { dark, darkFoot, top, foot } = useEdges()
   const now = useNow()
   const root = useRef<HTMLDivElement>(null)
   const bleed = inHand(viewport.w, viewport.h) || !framable(viewport.w, viewport.h)
   // A move is being drawn: the screens take no presses until it has been (phone.css)
   const busy = useStore(moving, (on) => on)
+  // While the phone is locked its status bar names the network where the time would be, as an iPhone's
+  // does (the Lock Screen's own clock is right under it): the network here is Shrug
+  const locked = useStore(sys, (s) => s.locked)
 
   // The frame's signal, Wi-Fi and battery are pictures of a status bar, not readings: nothing for a screen reader
   useEffect(() => {
@@ -117,7 +121,7 @@ export function Phone() {
   if (bleed)
     return (
       <>
-        <div ref={root} className="ph ph--bleed" data-dark={dark || undefined} data-moving={busy || undefined}>
+        <div ref={root} className="ph ph--bleed" data-dark={dark || undefined} data-dark-foot={darkFoot || undefined} data-moving={busy || undefined}>
           <Springboard framed={false} />
         </div>
         {/* The colour of the screen's top edge and of its foot, each in a strip fixed along that edge: what the
@@ -135,8 +139,8 @@ export function Phone() {
   const width = frameWidth(viewport.w, viewport.h)
   return (
     <div className="ph-desk">
-      <Device width={width} time={clockOf(now)} dark={dark} wallpaper="#000" className="ph-device">
-        <div ref={root} className="ph ph--framed" data-dark={dark || undefined} data-moving={busy || undefined}>
+      <Device width={width} time={locked ? SITE.name : clockOf(now)} dark={dark} wallpaper="#000" className="ph-device">
+        <div ref={root} className="ph ph--framed" data-dark={dark || undefined} data-dark-foot={darkFoot || undefined} data-moving={busy || undefined}>
           <Springboard framed />
         </div>
         <SoftKeyboard screen={root} />

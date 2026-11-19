@@ -16,6 +16,14 @@
   color: #fff;
 }
 
+/* On a screen tall enough for the Home Screen's roomier measure (phone.css), the Dock is higher and the field with it */
+@container (min-height: 750px) {
+  .spot {
+    --icon: clamp(54px, 15.8cqw, 68px);
+    --foot: calc(4.6cqw + var(--icon) + 37.6px + 16px + var(--below, 0px));
+  }
+}
+
 /* Where there is no Dock under the field, the field sits at the foot, just
    clear of the strip that takes the swipe home: on a phone on its side (its
    Dock is down the edge), and on a screen so short that a keyboard must have
@@ -23,13 +31,13 @@
    Android ones do, where the rule below does not hear of it). */
 @container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
   .spot {
-    --foot: calc(var(--foot-gap, 21px) + 4px);
+    --foot: calc(var(--foot-gap, 29px) - 4px);
   }
 }
 
 @container (max-height: 420px) {
   .spot {
-    --foot: calc(var(--foot-gap, 21px) + 4px);
+    --foot: calc(var(--foot-gap, 29px) - 4px);
   }
 }
 
@@ -88,11 +96,12 @@
 
 /* ---- The field ---- */
 
+/* The field runs nearly the width of the screen, 8 points in from either side, as Spotlight's does */
 .spot-foot {
   position: absolute;
-  right: calc(var(--edge) + var(--side-r, 0px));
+  right: calc(8px + var(--side-r, 0px));
   bottom: var(--foot);
-  left: calc(var(--edge) + var(--side-l, 0px));
+  left: calc(8px + var(--side-l, 0px));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -111,15 +120,48 @@
 }
 
 .spot-field {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  height: 48px;
-  padding: 0 13px 0 15px;
-  border-radius: 24px;
+  height: 47px;
+  padding: 0 14px 0 15px;
+  border-radius: 23.5px;
   cursor: text;
+}
+
+/* What Return will do with what has been typed, written after it: the typed words are set again, unseen,
+   to hold the place, and the rest follows them in a quieter ink on a faint ground */
+.spot-hint {
+  position: absolute;
+  top: 0;
+  right: 44px;
+  bottom: 0;
+  left: 41px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  white-space: pre;
+  pointer-events: none;
+}
+
+.spot-hint__typed {
+  flex: none;
+  visibility: hidden;
+}
+
+.spot-hint__does {
+  flex: none;
+  margin-left: -3px;
+  padding: 2px 6px 2px 3px;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 0.1);
+  color: rgb(255 255 255 / 0.6);
 }
 
 .spot-field__glass {
@@ -172,14 +214,35 @@
   content: '';
 }
 
+/* The button that closes search, by name. A finger closes it on the ground behind, as on an iPhone, so the
+   button is out of sight (and out of a pointer's way) until it has the keyboard; then it shows over the
+   field's trailing end and says what it does */
 .spot-close {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
-  transition: transform 0.25s var(--ui);
+  position: absolute !important;
+  right: 6px;
+  bottom: calc(100% + 8px);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.spot-close:focus-visible {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  padding: 9px 16px;
+  clip-path: none;
+  border-radius: 18px;
+  background: rgb(28 28 30 / 0.9);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 18px;
+  pointer-events: auto;
 }
 
 .spot-close:active {

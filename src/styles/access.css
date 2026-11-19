@@ -624,6 +624,43 @@
     color: GrayText;
   }
 
+  /* A company with no logo is its initial on the system's ground, with an edge. A card headed by a picture
+     has its name on a plate of that ground: the browser puts one behind words only where it knows of a picture */
+  .ph .contact-face[data-empty] {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .ph .contact-poster::before {
+    display: none;
+  }
+
+  .ph .contact-head[data-poster] .contact-head__name {
+    width: fit-content;
+    padding: 0 10px;
+    background-color: Canvas;
+  }
+
+  /* The Lock Screen's clock is drawn, not written, so no plate is put behind it over the wallpaper: it is
+     given one, and drawn in the system's ink */
+  .ph .sb-lock__clock {
+    padding: 6px 12px;
+    border-radius: 10px;
+    background-color: Canvas;
+  }
+
+  .ph .sb-lock__clock > svg {
+    stroke: none;
+    filter: none;
+    forced-color-adjust: none;
+  }
+
+  .ph .sb-lock__clock path {
+    fill: CanvasText;
+  }
+
   /* Lists: a grouped list is a card with an edge, its rows parted by lines. So is a sheet,
      which has to keep its edge while it holds the keyboard (its own rule takes the ring off it) */
   .ios-section__rows,
@@ -681,6 +718,43 @@
   .photos-big {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
+  }
+
+  /* The head of the library: until its picture arrives it is the system's ground with a line under it; over
+     a picture its words stand on a plate; the button on it has an edge. The small pictures over the viewer's
+     toolbar are edged squares, the one showing filled */
+  .ph .photos-head[data-empty] {
+    border-bottom: 1px solid CanvasText;
+    background: Canvas;
+  }
+
+  .ph .photos-head::after {
+    display: none;
+  }
+
+  .ph .photos-head__words {
+    width: fit-content;
+    max-width: calc(100% - 94px);
+    padding: 0 8px;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .ph .photos-head__play {
+    outline: 1px solid ButtonText;
+    background: Canvas;
+    color: ButtonText;
+  }
+
+  .ph .photos-strip__one {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+    background: Canvas;
+  }
+
+  .ph .photos-strip__one[data-on] {
+    background: Highlight;
+    forced-color-adjust: none;
   }
 }
 

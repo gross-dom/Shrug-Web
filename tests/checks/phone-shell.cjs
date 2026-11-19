@@ -121,17 +121,18 @@ const touchOf = (t) => ({
     const p = t.page
     const hint = await p.evaluate(() => +getComputedStyle(document.querySelector('.sb-lock__hint')).opacity)
     say(hint > 0.8, 'the hint is there at once', hint)
-    // The clock is the size an iPhone draws its own, against the width of the screen: its figures a little under a
-    // fifth of that width tall (76pt on a screen 393pt across, in the phone's own type), and in their own proportions
+    // The clock is the size an iPhone 17 Pro draws its own, against the width of the screen (read off one: figures
+    // 21.4% of the width tall, four of them and a colon 71% of it across, 16 points under the date's baseline). It is
+    // drawn, a shape to a figure, so it is that size in any type; the time is there in words for a screen reader
     const clock = await p.evaluate(() => {
       const baseOf = (el) => { const mark = document.createElement('span'); mark.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; el.appendChild(mark); const y = mark.getBoundingClientRect().bottom; mark.remove(); return y }
-      const el = document.querySelector('.sb-lock .ss-lock__clock'); const cs = getComputedStyle(el)
-      const c = document.createElement('canvas').getContext('2d'); c.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
-      const m = c.measureText(el.textContent)
+      const el = document.querySelector('.sb-lock .sb-lock__clock'); const paths = [...el.querySelectorAll('svg path')].map((x) => x.getBoundingClientRect())
+      const top = Math.min(...paths.map((b) => b.top)); const bottom = Math.max(...paths.map((b) => b.bottom)); const left = Math.min(...paths.map((b) => b.left)); const right = Math.max(...paths.map((b) => b.right))
       const r = (n) => Math.round(n * 1000) / 1000
-      return { size: r(parseFloat(cs.fontSize) / innerWidth), tall: r(m.actualBoundingBoxAscent / innerWidth), wide: r((m.actualBoundingBoxLeft + m.actualBoundingBoxRight) / innerWidth), stretched: cs.transform, underDate: Math.round(baseOf(el) - m.actualBoundingBoxAscent - baseOf(document.querySelector('.sb-lock .ss-lock__date'))) }
+      return { says: el.textContent, figures: paths.length, hidden: el.querySelector('svg').getAttribute('aria-hidden'), tall: r((bottom - top) / innerWidth), wide: r((right - left) / innerWidth), middle: Math.round((left + right) / 2 - innerWidth / 2), underDate: Math.round(top - baseOf(document.querySelector('.sb-lock .sb-lock__date'))), dateDown: Math.round(baseOf(document.querySelector('.sb-lock .sb-lock__date'))) }
     })
-    say(Math.abs(clock.size - 0.275) < 0.004 && clock.tall > 0.185 && clock.tall < 0.215 && clock.stretched === 'none' && clock.wide < 0.86 && clock.underDate >= 10 && clock.underDate <= 26, 'the clock is the size an iPhone draws its own: figures about a fifth of the screen across tall, not stretched, close under the date', JSON.stringify(clock))
+    const perFigure = clock.figures === 5 ? [0.69, 0.74] : [0.5, 0.64]
+    say(/^\d{1,2}:\d\d$/.test(clock.says) && clock.figures === clock.says.length && clock.hidden === 'true' && clock.tall > 0.205 && clock.tall < 0.222 && clock.wide > perFigure[0] && clock.wide < perFigure[1] && Math.abs(clock.middle) <= 2 && clock.underDate >= 13 && clock.underDate <= 19 && clock.dateDown >= 39 && clock.dateDown <= 43, 'the clock is the size an iPhone draws its own: drawn figures a little over a fifth of the screen across tall, in the middle, 16 points under the date, which is 41 under where the status bar ends', JSON.stringify(clock))
     const box = await p.locator('.sb-lock').boundingBox()
     const at = [box.x + box.width / 2, box.y + box.height * 0.45]
     await p.waitForTimeout(600)
@@ -462,7 +463,7 @@ const touchOf = (t) => ({
   await section('N', 'fit', async () => {
     const t = await fresh('fold')
     const p = t.page
-    const clock = await p.evaluate(() => { const r = document.createRange(); r.selectNodeContents(document.querySelector('.ss-lock__clock')); const b = r.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.right)] })
+    const clock = await p.evaluate(() => { const b = document.querySelector('.sb-lock__clock svg').getBoundingClientRect(); return [Math.round(b.left), Math.round(b.right)] })
     say(clock[0] >= 0 && clock[1] <= 280, 'at 280 wide the clock fits', JSON.stringify(clock))
     await A.unlock(p)
     const names = await p.evaluate(() => { const els = [...document.querySelectorAll('.sb-grid > .sb-icon .sb-icon__name')].map((n) => n.getBoundingClientRect()).sort((a, b) => a.top - b.top || a.left - b.left); const bad = []; for (let i = 1; i < els.length; i++) if (Math.abs(els[i].top - els[i - 1].top) < 4 && els[i].left < els[i - 1].right - 0.5) bad.push(i); return { n: els.length, bad } })

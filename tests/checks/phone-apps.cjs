@@ -23,7 +23,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     const app = page.locator('.sb-slot[data-front]')
     // The screen on top of the app in front
     const top = app.locator('.ios-page[data-pos="top"]')
-    return { ctx, page, sleep: (ms) => page.waitForTimeout(ms), app, top, st: () => page.evaluate(() => history.state?.shrug), title: () => top.locator('.ios-large').first().textContent().catch(() => null) }
+    return { ctx, page, sleep: (ms) => page.waitForTimeout(ms), app, top, st: () => page.evaluate(() => history.state?.shrug), title: () => top.evaluate((el) => { const h = el.querySelector('.ios-large, .photos-head__title, .ios-bar__name'); if (!h) return null; const sub = h.querySelector('.ios-bar__sub'); return (sub ? h.textContent.slice(0, h.textContent.length - sub.textContent.length) : h.textContent).trim() }).catch(() => null) }
   }
   const run = async (name, fn) => {
     if (only && only !== name) return
@@ -40,8 +40,8 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     // A section to a vertical, where Contacts has one to a letter
     const heads = await top.locator('.contacts-letter').allTextContents()
     say(heads.join(' | ') === 'AI | Climate and energy | Consumer | Creator | Deep tech | Enterprise | Fintech | Health | Marketplaces | Products | “Social is Hard” — Evan | Web3 | Other', 'there is a section to a vertical, in the order of their names as Contacts files everything, with Other last', heads.join(' | '))
-    const rows = await top.locator('.contacts-section .contacts-row').evaluateAll((els) => els.map((el) => ({ name: el.querySelector('.contacts-row__name').textContent, logo: !!el.querySelector('.logo'), h: Math.round(el.getBoundingClientRect().height) })))
-    say(rows.length === 81 && rows.every((r) => r.logo && r.h >= 56) && (await top.locator('.contacts-count').textContent()) === '81 Companies', 'every company is a row with its own logo, and the list counts them at its foot', `${rows.length} rows, ${await top.locator('.contacts-count').textContent()}`)
+    const rows = await top.locator('.contacts-section .contacts-row').evaluateAll((els) => els.map((el) => ({ name: el.querySelector('.contacts-row__name').textContent, logo: !!el.querySelector('.contact-face'), round: getComputedStyle(el.querySelector('.contact-face')).borderRadius === '50%', h: Math.round(el.getBoundingClientRect().height) })))
+    say(rows.length === 81 && rows.every((r) => r.logo && r.round && r.h === 60) && (await top.locator('.contacts-count').textContent()) === '81 Companies', 'every company is a row 60 points tall with its own logo in a round face, and the list counts them at its foot', `${rows.length} rows, ${await top.locator('.contacts-count').textContent()}`)
     const deep = await top.locator('.contacts-section', { has: page.locator('.contacts-letter', { hasText: 'Deep tech' }) }).locator('.contacts-row__name').allTextContents()
     say(deep.join(', ') === 'Varda, Hadrian, Senra, Antares, Anduril, AMCA, Merlin Labs, Galvanick, Enigma', "inside a vertical the companies keep Shrug's order", deep.join(', '))
     const atoms = await top.locator('.contacts-row', { has: page.locator('.contacts-row__name', { hasText: /^Atoms$/ }) }).locator('.contacts-row__where').allTextContents()
@@ -73,9 +73,16 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     const before = await top.locator('[data-scroller]').evaluate((el) => Math.round(el.scrollTop))
     await top.locator('.contacts-row[data-company="Eight Sleep"]').tap(); await sleep(1100)
     s = await st()
-    const card = await top.evaluate((el) => ({ name: el.querySelector('.contact-head__name')?.textContent, under: el.querySelector('.contact-head__under')?.textContent, face: !!el.querySelector('.contact-head .logo'), acts: [...el.querySelectorAll('.contact-act')].map((a) => `${a.tagName.toLowerCase()} ${a.querySelector('.contact-act__label').textContent}${a.getAttribute('href') ? ' ' + a.getAttribute('href') + ' ' + a.target + ' ' + a.rel : ''}`), fields: [...el.querySelectorAll('.contact-field')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), back: !!el.querySelector('button[aria-label="Back"]') }))
-    say(s.stacks.finder.join() === 'co:Eight Sleep' && s.sheet === null && card.name === 'Eight Sleep' && card.under === 'Health' && card.face && card.back, "a row opens the company's card: its logo, its name and its vertical, with Back to the list", JSON.stringify({ stack: s.stacks.finder, name: card.name, under: card.under }))
-    say(card.acts.length === 2 && /^a website https?:\/\/(www\.)?eightsleep\.com\/? _blank noopener$/.test(card.acts[0]) && card.acts[1] === 'button share', 'what can be done from it: its website, in a tab of its own, and passing it on', card.acts.join(' | '))
+    const card = await top.evaluate((el) => {
+      const screen = el.querySelector('.ios-screen'); const face = el.querySelector('.contact-head .contact-face'); const act = el.querySelector('.contact-act')
+      return { name: el.querySelector('.contact-head__name')?.textContent, face: !!face?.querySelector('img'), faceRound: face ? getComputedStyle(face).borderRadius === '50%' : false, faceWide: face ? Math.round(face.getBoundingClientRect().width) : 0, page: getComputedStyle(screen).backgroundColor, tone: screen.dataset.tone, ink: getComputedStyle(el.querySelector('.contact-head__name')).color,
+        acts: [...el.querySelectorAll('.contact-act')].map((a) => `${a.tagName.toLowerCase()} ${a.textContent.trim()}${a.getAttribute('href') ? ' ' + a.getAttribute('href') + ' ' + a.target + ' ' + a.rel : ''}`), actRound: act ? getComputedStyle(act).borderRadius === '50%' && Math.round(act.getBoundingClientRect().width) === 64 : false,
+        fields: [...el.querySelectorAll('.contact-field')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), back: !!el.querySelector('button[aria-label="Back"]') }
+    })
+    say(s.stacks.finder.join() === 'co:Eight Sleep' && s.sheet === null && card.name === 'Eight Sleep' && card.face && card.faceRound && card.back, "a row opens the company's card: its logo in a round face and its name under it, with Back to the list", JSON.stringify({ stack: s.stacks.finder, name: card.name, face: card.faceWide }))
+    // The card is a page in the colour of its picture, as a contact's is, with white words on it
+    say(card.tone === 'dark' && card.ink === 'rgb(255, 255, 255)' && !/^rgb\((0, 0, 0|255, 255, 255|242, 242, 247)\)$/.test(card.page), 'the card is in a colour of its own, taken from the logo, with its words in white', `${card.page} ${card.ink}`)
+    say(card.acts.length === 2 && /^a Website, opens in a new tab https?:\/\/(www\.)?eightsleep\.com\/? _blank noopener$/.test(card.acts[0]) && card.acts[1] === 'button Share' && card.actRound, 'what can be done from it, on round buttons: its website, in a tab of its own, and passing it on', card.acts.join(' | '))
     say(card.fields.length === 3 && /^website: eightsleep\.com, opens in a new tab$/.test(card.fields[0]) && card.fields[1] === 'vertical: Health' && /^about: .{10,}/.test(card.fields[2]), 'and what it knows: the site, the vertical, what the company does', card.fields.join(' | '))
     await page.screenshot({ path: path.join(out, 'apps-company.png') })
     await page.goBack(); await sleep(900)
@@ -85,8 +92,8 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     await top.locator('[data-scroller]').evaluate((el) => (el.scrollTop = 0)); await sleep(200)
     await top.locator('.contacts-me').tap(); await sleep(1100)
     s = await st()
-    const mine = await top.evaluate((el) => ({ name: el.querySelector('.contact-head__name')?.textContent, under: el.querySelector('.contact-head__under')?.textContent, fields: [...el.querySelectorAll('.contact-field')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), acts: [...el.querySelectorAll('.contact-act__label')].map((a) => a.textContent) }))
-    say(s.stacks.finder.join() === 'me' && mine.name === 'Shrug Capital' && mine.under === 'My Card' && mine.fields.some((f) => /^started: 2017$/.test(f)) && mine.fields.some((f) => /^partners: /.test(f)) && mine.fields.some((f) => /^portfolio: 81 companies in 13 verticals$/.test(f)) && mine.acts.join() === 'one-pager,share', "My Card is Shrug's: who it is, as About Shrug says it on the desktop, and the one-pager", mine.fields.map((f) => f.slice(0, 26)).join(' | '))
+    const mine = await top.evaluate((el) => ({ name: el.querySelector('.contact-head__name')?.textContent, fields: [...el.querySelectorAll('.contact-field')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), acts: [...el.querySelectorAll('.contact-act')].map((a) => a.textContent.trim()) }))
+    say(s.stacks.finder.join() === 'me' && mine.name === 'Shrug Capital' && mine.fields.some((f) => /^started: 2017$/.test(f)) && mine.fields.some((f) => /^partners: /.test(f)) && mine.fields.some((f) => /^portfolio: 81 companies in 13 verticals$/.test(f)) && mine.acts.join() === 'One-pager, opens in a new tab,Share', "My Card is Shrug's: who it is, as About Shrug says it on the desktop, and the one-pager", mine.fields.map((f) => f.slice(0, 26)).join(' | '))
     await top.locator('button[aria-label="Back"]').first().tap(); await sleep(900)
     // Search, at the foot of the list
     await top.locator('.ios-search__input').tap(); await sleep(300)
@@ -143,6 +150,9 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     const { ctx, page, sleep, app, top, st, title } = await open('open=vip')
     const tiles = await top.locator('.photos-tile').count()
     say(tiles === 12 && (await title()) === 'VIP', 'VIP is one grid of the twelve photos and videos', `${tiles} tiles, "${await title()}"`)
+    // Laid out as a collection is in Photos: the first picture heads the page, the name over its foot
+    const head = await top.evaluate((el) => { const h = el.querySelector('.photos-head'); const r = h?.getBoundingClientRect(); const g = el.querySelector('.photos-grid')?.getBoundingClientRect(); return h ? { top: Math.round(r.top), tall: Math.round(r.height), line: h.querySelector('.photos-head__line')?.textContent, play: !!h.querySelector('button.photos-head__play'), gridUnder: !!g && g.top >= r.bottom - 0.5, sorter: !!el.querySelector('.ios-foot button[aria-label="Sort and Filter"]') } : null })
+    say(!!head && head.top === 0 && head.tall > 300 && head.play && head.gridUnder && head.sorter && head.line === 'From the people who got a drop', 'the first picture heads the page from the very top of the screen, with the name and a Play button over it; the grid is under it, and Sort and Filter floats at the foot', JSON.stringify(head))
     say((await app.locator('.ios-tabs, .ios-tabs__item').count()) === 0 && (await app.locator('button[aria-label="Search"]').count()) === 0 && (await app.getByText(/Collections|Albums|Media Types/).count()) === 0, 'with nothing to find one’s way round: no tabs, no collections, no search')
     say((await top.getByText('The first ones are on their way.', { exact: false }).count()) === 1 && (await top.getByText('8 Photos, 4 Videos').count()) === 0, 'and counts nothing that has not arrived: the line under the grid says they are on their way')
     await page.screenshot({ path: path.join(out, 'apps-photos.png') })

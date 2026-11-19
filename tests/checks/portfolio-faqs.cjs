@@ -221,9 +221,11 @@ const BRACKET = '[Shrug’s answer goes here'
       await t.sleep(1500)
     }
     const scope = device === 'laptop' ? '.wf[data-app="finder"]' : '.sb-slot[data-front]'
+    // (a company's logo is a tile in the desktop's window, and a round face in Contacts on the phone)
+    const LOGO = device === 'laptop' ? '.logo' : '.contacts-row .contact-face'
     // go down the whole folder a screen at a time, so that each lazy picture is asked for
-    const walk = () => t.page.evaluate(async (scope) => {
-      let box = document.querySelector(`${scope} .logo`)?.parentElement
+    const walk = () => t.page.evaluate(async ([scope, LOGO]) => {
+      let box = document.querySelector(`${scope} ${LOGO}`)?.parentElement
       while (box && !(box.scrollHeight > box.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement
       if (!box) return
       for (let y = 0; y <= box.scrollHeight; y += Math.max(120, box.clientHeight - 60)) {
@@ -231,13 +233,13 @@ const BRACKET = '[Shrug’s answer goes here'
         await new Promise((r) => setTimeout(r, 220))
       }
       await new Promise((r) => setTimeout(r, 700))
-    }, scope)
+    }, [scope, LOGO])
     await walk()
-    const state = () => t.page.evaluate((scope) => {
-      const logos = [...document.querySelectorAll(`${scope} .logo`)]
+    const state = () => t.page.evaluate(([scope, LOGO]) => {
+      const logos = [...document.querySelectorAll(`${scope} ${LOGO}`)]
       const imgs = logos.map((l) => l.querySelector('img')).filter(Boolean)
       return { logos: logos.length, broken: imgs.filter((i) => i.complete && i.naturalWidth === 0).length, letters: logos.filter((l) => l.hasAttribute('data-empty') && l.textContent.trim().length === 1).length, drawn: imgs.filter((i) => i.complete && i.naturalWidth > 0).length }
-    }, scope)
+    }, [scope, LOGO])
     let s = await state()
     check(`RS-10 ${device}: logos that fail are letter tiles, never a broken picture`, s.broken === 0 && s.letters === s.logos, JSON.stringify(s))
     await t.page.unroute('**/logos/**')
@@ -308,7 +310,7 @@ const BRACKET = '[Shrug’s answer goes here'
     await A.at(t.page, 'finder', ['co:Drumroll'])
     const fate = t.page.locator(`${front} .contact-field__none`)
     const site = await t.page.locator(`${front} .contact-act`).first().evaluate((el) => ({ tag: el.tagName, off: el.getAttribute('aria-disabled'), says: el.textContent.trim() }))
-    check('UX-16 Contacts: a company with no site says so where its address would be, and its website button is there but faint', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && site.tag === 'SPAN' && site.off === 'true' && site.says === 'website' && (await t.page.locator(`${front} .contact-field a`).count()) === 0, JSON.stringify(site))
+    check('UX-16 Contacts: a company with no site says so where its address would be, and its website button is there but faint', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && site.tag === 'SPAN' && site.off === 'true' && site.says === 'Website: No website listed' && (await t.page.locator(`${front} .contact-field a`).count()) === 0, JSON.stringify(site))
     await t.page.evaluate(() => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }) })
     const shareAndRead = async (by = '.ios-bar [aria-label="Share"]') => {
       await t.page.evaluate(() => navigator.clipboard.writeText('—'))

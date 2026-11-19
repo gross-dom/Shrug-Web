@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
-import { ArrowUpRight, Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, SquarePen, Trash2, X } from 'lucide-react'
+import { ArrowUpRight, Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, Trash2, X } from 'lucide-react'
 import { showNote, sought } from '../../apps/state'
 import { Answer } from '../../apps/answer'
 import { ANSWER_PENDING, ANSWER_PLACEHOLDER, FAQS, waysOn } from '../../data/faqs'
@@ -8,7 +8,7 @@ import { useStore } from '../../os/store'
 import '../../styles/phone/notes.css'
 import { pageUrl, share } from '../native'
 import { closeSheet, launchAt, openSheet, pop, push, sys, topOf } from '../system'
-import { BackButton, Cell, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, SearchBar, Sheet, SheetHost, type MenuItem } from '../ui'
+import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, SearchBar, ShareGlyph, Sheet, SheetHost, type MenuItem } from '../ui'
 import {
   FAQS_ID,
   NAME_LENGTH,
@@ -53,11 +53,11 @@ import {
 /** Three rows, each a mark and a line; the first one ticked off. */
 function ChecklistGlyph() {
   return (
-    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden>
-      <circle cx="5.2" cy="6" r="2.4" fill="currentColor" />
-      <circle cx="5.2" cy="12" r="2.4" />
-      <circle cx="5.2" cy="18" r="2.4" />
-      <path d="M11.2 6H21M11.2 12H21M11.2 18H21" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="5.3" cy="7" r="4.3" fill="currentColor" stroke="none" />
+      <path d="m3.4 7.1 1.4 1.4 2.5-2.9" stroke="#fff" strokeWidth="1.5" />
+      <circle cx="5.3" cy="17" r="3.3" />
+      <path d="M13 7h9M13 17h9" />
     </svg>
   )
 }
@@ -65,14 +65,26 @@ function ChecklistGlyph() {
 /** The tip of a pen, in a circle. */
 function MarkupGlyph() {
   return (
-    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="9.3" />
-      <path d="M8.7 19.6 12 7.2l3.3 12.4M10.4 13.2h3.2" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9.6" />
+      <path d="M8.6 20.2 12 7.4l3.4 12.8M10.2 14h3.6" />
     </svg>
   )
 }
 
-const bar = { size: 22, strokeWidth: 2.1, 'aria-hidden': true } as const
+/** A pen across three loops: the tools that rewrite what is written. */
+function RewriteGlyph() {
+  return (
+    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <ellipse cx="11.2" cy="12.8" rx="9" ry="4.1" transform="rotate(60 11.2 12.8)" />
+      <ellipse cx="11.2" cy="12.8" rx="9" ry="4.1" transform="rotate(-60 11.2 12.8)" />
+      <ellipse cx="11.2" cy="12.8" rx="9" ry="4.1" />
+      <path d="m9.6 15.2.7-3 8.6-8.6a1.5 1.5 0 0 1 2.2 2.2l-8.6 8.6z" fill="var(--glyph-ground, #fff)" />
+    </svg>
+  )
+}
+
+const bar = { size: 24, strokeWidth: 2, 'aria-hidden': true } as const
 const inMenu = { size: 19, strokeWidth: 2.1 } as const
 
 // ---- New notes ----
@@ -185,7 +197,7 @@ function FootEnd({ search, folder }: { search: Searching; folder: string }) {
     </GlassButton>
   ) : (
     <GlassButton label="New Note" onClick={() => compose(folder)}>
-      <SquarePen {...bar} />
+      <ComposeGlyph />
     </GlassButton>
   )
 }
@@ -468,7 +480,6 @@ function NotesList({ folder }: { folder: string }) {
   return (
     <Screen
       title={name ?? 'Notes'}
-      large
       subtitle={countOf(entries.length)}
       tone="grouped"
       className="notes-screen"
@@ -576,7 +587,7 @@ function NoteScreen({ entry, editing = false, children }: { entry: Entry; editin
         <span className="notes-contents" onMouseDown={keepKeyboard}>
           <GlassGroup label="This note">
             <GroupButton label={said ?? 'Share'} disabled={!words} onClick={send}>
-              {said ? <Check size={21} strokeWidth={2.6} aria-hidden /> : <Share size={21} strokeWidth={2.1} aria-hidden style={{ marginTop: -2 }} />}
+              {said ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <ShareGlyph />}
             </GroupButton>
             <Menu part label="More" items={items}>
               <Ellipsis size={24} strokeWidth={2.3} aria-hidden />
@@ -606,14 +617,17 @@ function NoteScreen({ entry, editing = false, children }: { entry: Entry; editin
               <ChecklistGlyph />
             </GroupButton>
             <GroupButton label="Attachment" disabled>
-              <Paperclip size={21} strokeWidth={2} aria-hidden />
+              <Paperclip size={24} strokeWidth={2} aria-hidden />
             </GroupButton>
             <GroupButton label="Markup" disabled>
               <MarkupGlyph />
             </GroupButton>
+            <GroupButton label="Writing Tools" disabled>
+              <RewriteGlyph />
+            </GroupButton>
           </GlassGroup>
           <GlassButton label="New Note" onClick={() => compose(entry.folder)}>
-            <SquarePen {...bar} />
+            <ComposeGlyph />
           </GlassButton>
         </>
       }

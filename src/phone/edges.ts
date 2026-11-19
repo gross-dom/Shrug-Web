@@ -1,5 +1,5 @@
 import { useStore } from '../os/store'
-import { COLOR, WALLPAPER_DIMMED, WALLPAPER_FOOT, WALLPAPER_TOP, carried, chrome, sheeted } from './chrome'
+import { COLOR, WALLPAPER_DIMMED, WALLPAPER_FOOT, WALLPAPER_TOP, carried, chrome, grounds, overs, sheeted } from './chrome'
 import { sys } from './system'
 
 // What is at the top edge of the screen and what is at its foot, as colours. On a real phone the
@@ -27,18 +27,24 @@ function shaded(hex: string, by: number) {
 
 export function useEdges() {
   const tones = useStore(chrome, (s) => s)
+  const own = useStore(grounds, (s) => s)
+  const over = useStore(overs, (s) => s)
   const lifted = useStore(carried, (s) => s)
   const sheet = useStore(sheeted, (s) => s)
   const app = useStore(sys, (s) => (s.locked || s.switcher || s.spotlight ? null : s.app))
   // The wallpaper as it is showing: plain, behind the App Switcher's cards, or under search
   const wall = useStore(sys, (s) => (s.locked ? 'plain' : s.switcher ? 'switcher' : s.spotlight ? 'search' : 'plain'))
-  /** The status bar's ink is light: over the wallpaper, or over a dark app. */
-  const dark = !app || lifted || tones[app] === 'dark'
+  /** The status bar's ink is light: over the wallpaper, over a dark app, or over a dark picture at the top of a pale one. */
+  const dark = !app || lifted || (over[app] ?? tones[app]) === 'dark'
+  /** And the home indicator's, which is at the foot of the screen: there it is the screen's own tone that counts. */
+  const darkFoot = !app || lifted || tones[app] === 'dark'
   if (app && !lifted) {
-    const ground = COLOR[tones[app]]
-    if (!sheet.shade) return { dark, top: ground, foot: ground }
-    const under = shaded(ground, sheet.shade)
-    return { dark, top: under, foot: sheet.foot ?? under }
+    // A screen in a colour of its own gives the browser that; the rest give it their tone's
+    const ground = own[app] ?? COLOR[tones[app]]
+    const top = typeof ground === 'string' ? ground : ground.top
+    const foot = typeof ground === 'string' ? ground : ground.foot
+    if (!sheet.shade) return { dark, darkFoot, top, foot }
+    return { dark, darkFoot, top: shaded(top, sheet.shade), foot: sheet.foot ?? shaded(foot, sheet.shade) }
   }
-  return wall === 'plain' ? { dark, top: WALLPAPER_TOP, foot: WALLPAPER_FOOT } : { dark, ...WALLPAPER_DIMMED[wall] }
+  return wall === 'plain' ? { dark, darkFoot, top: WALLPAPER_TOP, foot: WALLPAPER_FOOT } : { dark, darkFoot, ...WALLPAPER_DIMMED[wall] }
 }

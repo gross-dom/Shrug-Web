@@ -48,36 +48,59 @@ function Tile({ from, to, children, sheen = 0.45 }: { from: string; to: string; 
   )
 }
 
-/** Messages: the white speech bubble on green. */
+/** Messages: the speech bubble on green, as it is drawn now: wide and of glass, white with a little of the green showing through its foot. */
 function Messages() {
+  const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#67f27f" to="#0abf2e">
-      <path d="M50 22.5c-18.5 0-33.5 12.1-33.5 27 0 9.1 5.6 17.1 14.2 22-.5 4.6-2.6 8.500-6.300 11.4-.6.5-.2 1.4.6 1.3 7-.9 12.800-3.700 16.800-7.900 2.6.5 5.400.8 8.200.8 18.500 0 33.500-12.400 33.500-27.600S68.500 22.500 50 22.500z" fill="#fff" />
+    <Tile from="#63f57c" to="#0cbf30">
+      <defs>
+        <linearGradient id={`${id}-glass`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.3" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#cdf6d6" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M50 20.500c-18.800 0-34 11.800-34 26.400 0 8.500 5.200 16.100 13.300 20.900-.600 3.700-2.400 6.900-5.300 9.500-.600.500-.200 1.400.600 1.300 6.200-.600 11.400-2.800 15.300-6.500 3.200.800 6.600 1.200 10.100 1.200 18.800 0 34-11.800 34-26.400S68.800 20.500 50 20.500z"
+        fill={`url(#${id}-glass)`}
+        transform="translate(50 49) scale(1.07) translate(-50 -49)"
+      />
     </Tile>
   )
 }
 
-/** Contacts: the head and shoulders of nobody in particular, on pale gray, with the tabs of an address book down the trailing edge. */
+/** Contacts, as it is drawn now: a warm pale tile, the head and shoulders of nobody in particular in white on
+ * a darker disc, and the tabs of an address book down the trailing edge in blue, orange and green. */
 function Contacts() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#fbfbfc" to="#e3e3e8" sheen={0.6}>
+    <Tile from="#e2e1d6" to="#cfcec2" sheen={0.7}>
       <defs>
-        <linearGradient id={`${id}-who`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#a9a9b1" />
-          <stop offset="1" stopColor="#7f7f88" />
+        <linearGradient id={`${id}-disc`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#aba89e" />
+          <stop offset="1" stopColor="#98958b" />
         </linearGradient>
+        <linearGradient id={`${id}-who`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#eeede6" />
+        </linearGradient>
+        {/* The tile is glass: towards the tabs it takes a little of their colour */}
+        <linearGradient id={`${id}-glass`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0.62" stopColor="#9fd6d2" stopOpacity="0" />
+          <stop offset="0.86" stopColor="#9fd6d2" stopOpacity="0.5" />
+        </linearGradient>
+        <clipPath id={`${id}-in`}>
+          <circle cx="44" cy="51" r="27.6" />
+        </clipPath>
       </defs>
-      {/* The page of the book the figure is on, a shade under the tabs' side */}
-      <rect width="80" height="100" fill="#000" opacity="0.035" />
-      <circle cx="40" cy="38" r="15.5" fill={`url(#${id}-who)`} />
-      <path d="M40 58.500c-17.500 0-29.500 10.300-31 26.200-.4 4.300 0 15.300 0 15.300h62s.4-11 0-15.300C69.500 68.800 57.500 58.500 40 58.500z" fill={`url(#${id}-who)`} />
-      {/* The tabs: four, as far apart as they are tall */}
-      <rect x="80" width="20" height="100" fill="#fff" opacity="0.55" />
-      <rect x="80" width="0.800" height="100" fill="#000" opacity="0.08" />
-      {[14, 34, 54, 74].map((y, i) => (
-        <rect key={y} x="85.500" y={y} width="9" height="12" rx="2.500" fill={['#b9b9c1', '#a6a6af', '#b9b9c1', '#a6a6af'][i]} />
-      ))}
+      <rect width="87" height="100" fill={`url(#${id}-glass)`} />
+      <circle cx="44" cy="51" r="30" fill={`url(#${id}-disc)`} />
+      <circle cx="44" cy="42" r="13" fill={`url(#${id}-who)`} />
+      <ellipse cx="44" cy="85" rx="27" ry="23.5" fill={`url(#${id}-who)`} clipPath={`url(#${id}-in)`} />
+      {/* The tabs: three, each a third of the edge */}
+      <rect x="87" width="13" height="34" fill="#12bdf7" />
+      <rect x="87" y="34" width="13" height="32" fill="#ff9706" />
+      <rect x="87" y="66" width="13" height="34" fill="#17d45e" />
+      <rect x="86.600" width="0.800" height="100" fill="#fff" opacity="0.5" />
     </Tile>
   )
 }
@@ -86,20 +109,21 @@ function Contacts() {
 function Notes() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#ffffff" to="#fbfbfd" sheen={0.6}>
+    <Tile from="#fefefe" to="#efeff1" sheen={0.6}>
       <defs>
         <linearGradient id={`${id}-top`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffe35a" />
-          <stop offset="1" stopColor="#ffc905" />
+          <stop offset="0" stopColor="#ffdf52" />
+          <stop offset="1" stopColor="#ffcb0a" />
         </linearGradient>
       </defs>
-      <rect width="100" height="30" fill={`url(#${id}-top)`} />
-      <rect y="30" width="100" height="1" fill="#000" opacity="0.1" />
-      {Array.from({ length: 21 }, (_, i) => (
-        <circle key={i} cx={6 + i * 4.4} cy="38.500" r="1.050" fill="#b4b4ba" />
+      <rect width="100" height="25" fill={`url(#${id}-top)`} />
+      <rect y="25" width="100" height="0.800" fill="#000" opacity="0.08" />
+      {Array.from({ length: 16 }, (_, i) => (
+        <circle key={i} cx={8.500 + i * 5.530} cy="31.500" r="1.050" fill="#b9b9bf" />
       ))}
-      <rect y="55.500" width="100" height="1.300" fill="#d4d4d9" />
-      <rect y="73" width="100" height="1.300" fill="#d4d4d9" />
+      <g stroke="#c8c8cd" strokeWidth="1.400" strokeLinecap="round">
+        <path d="M14 51h72M14 74h72" />
+      </g>
     </Tile>
   )
 }

@@ -1,26 +1,29 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { ArrowUpDown, Check, Heart, Image as ImageIcon, Images, Info, Play, Share, Video } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react'
+import { Check, Heart, Image as ImageIcon, Images, Info, Layers, ListFilter, Play, Video } from 'lucide-react'
 import { hasFile, hueOf, MEDIA, type MediaKind } from '../../data/drops'
 import { DRAFT } from '../../data/site'
 import { prefersReducedMotion } from '../../os/dom'
 import { createStore, useStore } from '../../os/store'
 import { haptic, share } from '../native'
 import { openSheet, push, swap, sys, topOf } from '../system'
-import { Cell, Empty, GlassGroup, GroupButton, List, Menu, NavStack, Screen, Section, Sheet, SheetHost, scaleOf, useApp, type MenuItem } from '../ui'
+import { Cell, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, Section, ShareGlyph, Sheet, SheetHost, scaleOf, useApp, usePageHeadingId, type MenuItem } from '../ui'
 import { mediaView } from './routes'
 import '../../styles/phone/photos.css'
 
 // VIP on the phone: one screen of photos and videos from the people who got a
-// drop, as a grid of squares the way Photos lays its library out, and nothing
-// else to find one's way round: no tabs, no albums, no search. A tap on a
-// square opens it full screen, to swipe through the rest. None of the media has
-// been supplied yet: fill in a `src` in src/data/drops.ts and the picture takes
-// its slot's place. Until then a visitor is shown a quiet tile in the drop's
-// own colour with its name on it ("On its way" when opened), and nothing is
-// counted that is not there; with `?draft` in the address (`DRAFT`) every
-// empty slot is drawn as the note that says what is missing, and counted, for
-// whoever is filling them in. Nothing here has a date, so the parts of Photos
-// that are made of dates are left out, not made up.
+// drop, laid out as Photos lays out a collection: the first picture large at
+// its head with the name and the count over its foot, then a grid of squares,
+// and what sorts and filters them floating at the foot. Nothing else to find
+// one's way round: no tabs, no albums, no search. A tap on a square opens it
+// full screen, to swipe through the rest, with the row of small pictures and
+// the toolbar Photos puts under one. None of the media has been supplied yet:
+// fill in a `src` in src/data/drops.ts and the picture takes its slot's place.
+// Until then a visitor is shown a quiet tile in the drop's own colour with its
+// name on it ("On its way" when opened), and nothing is counted that is not
+// there; with `?draft` in the address (`DRAFT`) every empty slot is drawn as
+// the note that says what is missing, and counted, for whoever is filling them
+// in. Nothing here has a date, so the parts of Photos that are made of dates
+// are left out, not made up.
 
 /** What the grid shows: all of it, or what Sort and Filter narrows it to. */
 type Filter = 'all' | 'favorites' | MediaKind
@@ -161,43 +164,114 @@ const NOTHING: Record<Exclude<Filter, 'all'>, { icon: ReactNode; title: string; 
   video: { icon: <Video size={44} strokeWidth={1.5} />, title: 'No Videos', text: 'Videos from the drops will show up here.' },
 }
 
+/** Two colours mixed: `share` of the first, the rest the second. */
+function mixed(a: string, b: string, share: number) {
+  const part = (hex: string, at: number) => parseInt(hex.slice(at, at + 2), 16)
+  return `#${[1, 3, 5].map((at) => Math.round(part(a, at) * share + part(b, at) * (1 - share)).toString(16).padStart(2, '0')).join('')}`
+}
+
+/** What is along the top edge of the picture that heads the library, which the status bar is over: a slot's
+ * is its drop's colour in the dark (photos.css draws it the same); a picture that has arrived is taken as dark. */
+const headTop = (index: number) => (MEDIA[index]!.src ? '#1c1c1e' : mixed(hueOf(MEDIA[index]!.drop), '#17171c', 0.5))
+
+/** The head of the library, as a collection's is in Photos: its first picture, large, with the name and the
+ * count over its foot and a button that starts from the first. The name is the page's heading. */
+function Head({ index, line, onPlay, innerRef }: { index: number; line: ReactNode; onPlay: () => void; innerRef: Ref<HTMLDivElement> }) {
+  const headingId = usePageHeadingId()
+  const slot = MEDIA[index]!
+  return (
+    <div ref={innerRef} className="photos-head" data-empty={!slot.src || undefined} style={{ '--hue': hueOf(slot.drop) } as CSSProperties}>
+      {slot.src &&
+        (slot.kind === 'video' ? (
+          <video className="photos-head__media" src={slot.src} muted playsInline preload="metadata" tabIndex={-1} aria-hidden />
+        ) : (
+          <img className="photos-head__media" src={slot.src} alt="" decoding="async" draggable={false} />
+        ))}
+      <div className="photos-head__words">
+        <h2 id={headingId} className="photos-head__title">
+          VIP
+        </h2>
+        <p className="photos-head__line">{line}</p>
+      </div>
+      <button type="button" className="photos-head__play" aria-label="Play, from the first" onClick={onPlay}>
+        <Play size={19} strokeWidth={0} fill="currentColor" aria-hidden />
+      </button>
+    </div>
+  )
+}
+
 function Library() {
   const filter = useStore(mine, (s) => s.filter)
   const loved = useStore(mine, (s) => s.loved)
   const shown = useMemo(() => shownBy(filter, loved), [filter, loved])
   const items: MenuItem[] = FILTERS.map((f) => ({ label: f.label, icon: f.icon, checked: f.value === filter, divided: f.value === 'favorites', onSelect: () => setFilter(f.value) }))
   const none = filter === 'all' ? NOTHING.photo : NOTHING[filter]
-  return (
-    <Screen
-      title="VIP"
-      large
-      className="photos-library"
-      trailing={
-        // Blue while it is narrowing the library, as the button is in Photos
-        <Menu label="Sort and Filter" items={items} tint={filter !== 'all'}>
-          <ArrowUpDown size={21} strokeWidth={2.4} aria-hidden />
-        </Menu>
-      }
-    >
-      {shown.length ? (
-        <>
-          <Grid indices={shown} />
-          {/* How Photos ends its library: what is in it, and a quieter line under that. Nothing is
-              counted that has not arrived: until something has, the quieter line says so by itself */}
-          {tally(shown) ? (
-            <p className="photos-note">
-              {tally(shown)}
-              <br />
-              From the people who got a drop.
-            </p>
-          ) : (
-            <p className="photos-note photos-note--plain">From the people who got a drop. The first ones are on their way.</p>
-          )}
-        </>
-      ) : (
+  const first = shown[0]
+  // The status bar is over the picture at the head until the page has scrolled it away
+  const scroll = useRef<HTMLDivElement>(null)
+  const head = useRef<HTMLDivElement>(null)
+  const [past, setPast] = useState(false)
+  const headed = first !== undefined
+  useEffect(() => {
+    const page = scroll.current
+    if (!page || !headed) return setPast(false)
+    const on = () => setPast(page.scrollTop > (head.current?.offsetHeight ?? 0) - 44)
+    on()
+    page.addEventListener('scroll', on, { passive: true })
+    return () => page.removeEventListener('scroll', on)
+  }, [headed])
+  // Blue while it is narrowing the library, as the button is in Photos
+  const sorter = (
+    <Menu label="Sort and Filter" items={items} tint={filter !== 'all'} rise>
+      <ListFilter size={24} strokeWidth={2.2} aria-hidden />
+    </Menu>
+  )
+
+  if (first === undefined)
+    return (
+      <Screen title="VIP" className="photos-library" foot={sorter}>
         <Empty icon={none.icon} title={none.title}>
           {none.text}
         </Empty>
+      </Screen>
+    )
+
+  // Under the name: how many there are, once any have arrived (nothing is counted that is not there);
+  // what is being shown, where it is not everything
+  const real = there(shown).length
+  const narrowed = filter === 'all' ? '' : FILTERS.find((f) => f.value === filter)!.label
+  const line = real ? (
+    <>
+      <Layers size={15} strokeWidth={2.3} aria-hidden />
+      {[narrowed, count(real, 'Item')].filter(Boolean).join(' · ')}
+    </>
+  ) : (
+    narrowed || 'From the people who got a drop'
+  )
+  return (
+    <Screen
+      title="VIP"
+      // The name is over the picture at the head of the page, and the bar is clear
+      center={<></>}
+      ownHeading
+      className={`photos-library photos-library--headed${past ? ' photos-library--past' : ''}`}
+      scrollRef={scroll}
+      under={past ? undefined : 'dark'}
+      ground={past ? undefined : { top: headTop(first), foot: '#ffffff' }}
+      foot={sorter}
+    >
+      <Head innerRef={head} index={first} line={line} onPlay={() => view(first, shown)} />
+      <Grid indices={shown} />
+      {/* How Photos ends its library: what is in it, and a quieter line under that. Nothing is
+          counted that has not arrived: until something has, the quieter line says so by itself */}
+      {tally(shown) ? (
+        <p className="photos-note">
+          {tally(shown)}
+          <br />
+          From the people who got a drop.
+        </p>
+      ) : (
+        <p className="photos-note photos-note--plain">The first ones are on their way.</p>
       )}
     </Screen>
   )
@@ -210,6 +284,26 @@ const GAP = 16
 
 /** A menu is open in the app: the keys are the menu's until it closes. */
 const menuOpen = () => !!document.querySelector('.sb-app[data-app="photos"] .ios-menu > [aria-expanded="true"]')
+
+/** The row of small pictures over the toolbar, as Photos has one: every picture in the run, the one showing a
+ * little wider and set apart from its neighbours, in the middle. A press on one turns to it. It says again
+ * what the pictures themselves say, so it is the pointer's alone: the arrow keys and a swipe turn the pages. */
+function Strip({ set, at, onPick }: { set: number[]; at: number; onPick: (page: number) => void }) {
+  return (
+    <div className="photos-strip" aria-hidden>
+      <div className="photos-strip__row" style={{ '--at': at } as CSSProperties}>
+        {set.map((i, page) => {
+          const item = MEDIA[i]!
+          return (
+            <button key={i} type="button" tabIndex={-1} className="photos-strip__one" data-on={page === at || undefined} data-kind={item.kind} style={{ '--hue': hueOf(item.drop) } as CSSProperties} onClick={() => onPick(page)}>
+              {item.src && item.kind === 'photo' && <img src={item.src} alt="" loading="lazy" decoding="async" draggable={false} />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function Viewer({ index }: { index: number }) {
   const { active } = useApp()
@@ -328,32 +422,39 @@ function Viewer({ index }: { index: number }) {
   return (
     <Screen
       title={`${slot.drop}, ${video ? 'video' : 'photo'}`}
-      tone="dark"
+      // A white room for the picture, as Photos shows one; with the buttons put away it is a black one
+      tone={bare ? 'dark' : 'plain'}
       fixed
       className={`photos-viewer${bare ? ' photos-viewer--bare' : ''}`}
       center={
-        <span className="photos-viewer__title">
+        // What it is, in two small lines on a piece of glass, where Photos writes the day and the hour
+        <span className="ios-glass photos-viewer__title">
           <b>{slot.drop}</b>
           <span>{video ? 'Video' : 'Photo'}</span>
         </span>
       }
       foot={
-        <div className="photos-tools">
+        <>
+          <Strip set={set} at={at} onPick={glideTo} />
+          {/* The toolbar's own things, as one set (they are laid out by the foot itself: this box is not one) */}
+          <div className="photos-tools">
+          {/* Nothing to share until the picture is there */}
+          {slot.src || DRAFT ? (
+            <GlassButton
+              label={copied ? 'Link copied' : 'Share'}
+              onClick={async () => {
+                const how = await share({ title: slot.drop, text: `${video ? 'A video' : 'A photo'} from ${slot.drop}, a Shrug drop.` })
+                if (how !== 'copied') return
+                setCopied(true)
+                setTimeout(() => setCopied(false), 1700)
+              }}
+            >
+              {copied ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <ShareGlyph />}
+            </GlassButton>
+          ) : (
+            <span aria-hidden />
+          )}
           <GlassGroup label={video ? 'Video' : 'Photo'}>
-            {/* Nothing to share until the picture is there */}
-            {(slot.src || DRAFT) && (
-              <GroupButton
-                label={copied ? 'Link copied' : 'Share'}
-                onClick={async () => {
-                  const how = await share({ title: slot.drop, text: `${video ? 'A video' : 'A photo'} from ${slot.drop}, a Shrug drop.` })
-                  if (how !== 'copied') return
-                  setCopied(true)
-                  setTimeout(() => setCopied(false), 1700)
-                }}
-              >
-                {copied ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <Share size={21} strokeWidth={2.1} aria-hidden />}
-              </GroupButton>
-            )}
             <GroupButton
               label={loved ? 'Unfavorite' : 'Favorite'}
               onClick={() => {
@@ -361,13 +462,15 @@ function Viewer({ index }: { index: number }) {
                 toggleLoved(index)
               }}
             >
-              <Heart className="photos-heart" data-on={loved || undefined} size={22} strokeWidth={2.1} fill={loved ? 'currentColor' : 'none'} aria-hidden />
+              <Heart className="photos-heart" data-on={loved || undefined} size={25} strokeWidth={2} fill={loved ? 'currentColor' : 'none'} aria-hidden />
             </GroupButton>
             <GroupButton label="Info" onClick={() => openSheet('info')}>
-              <Info size={22} strokeWidth={2.1} aria-hidden />
+              <Info size={25} strokeWidth={2} aria-hidden />
             </GroupButton>
           </GlassGroup>
-        </div>
+          <span aria-hidden />
+          </div>
+        </>
       }
     >
       <div

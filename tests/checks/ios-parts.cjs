@@ -161,7 +161,8 @@ const where = (page) =>
     page = t.page
     for (const [name, app, stack] of [['Notes More', 'notes', ['f:faqs']], ['VIP Sort and Filter', 'photos', []]]) {
       await A.at(page, app, stack, null, 800)
-      await page.locator(`${TOP} .ios-bar .ios-menu > button`).first().tap()
+      // (Notes' hangs from its bar; VIP's rises out of the button at the foot of its library)
+      await page.locator(`${TOP} .ios-menu > button`).first().tap()
       await t.sleep(600)
       const menu = await page.evaluate(async (TOP) => {
         const list = document.querySelector(`${TOP} .ios-menu__list[data-show]`)

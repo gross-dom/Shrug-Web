@@ -394,6 +394,8 @@ export function Spotlight() {
   const [at, setAt] = useState(-1)
   const root = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
+  /** Where a finger came down on the results while they were at their top: a pull down from there closes search. */
+  const pull = useRef<number | null>(null)
   if (on && !shown) setShown(true)
 
   useEffect(() => {
@@ -469,14 +471,22 @@ export function Spotlight() {
   if (!shown) return null
   return (
     <div ref={root} className="spot" data-leaving={!on || undefined} role="dialog" aria-modal="true" aria-label="Search" onKeyDown={onKey} {...(on ? null : ({ inert: '' } as object))}>
-      {/* The ground behind: a tap on it closes search. The round button beside the field is the one with a name */}
+      {/* The ground behind: a tap on it closes search, as it does on an iPhone, and so does a pull down on what is
+          found. The button that says so by name is after the field, for a keyboard and a screen reader */}
       <div className="spot-away" aria-hidden onClick={close} />
       <div
         className="spot-scroll"
         // A tap on the bare ground between results closes it, as a tap on the wallpaper does
         onClick={(e) => (e.target === e.currentTarget || (e.target as HTMLElement).id === 'spot-list') && close()}
+        onTouchStart={(e) => (pull.current = e.currentTarget.scrollTop <= 0 ? e.touches[0]!.clientY : null)}
         // Reaching for the results puts the keyboard away
         onTouchMove={() => document.activeElement === input.current && input.current?.blur()}
+        // Pulled down from its top, the list goes back where it came from: search closes
+        onTouchEnd={(e) => {
+          const from = pull.current
+          pull.current = null
+          if (from !== null && e.changedTouches[0]!.clientY - from > 96 && e.currentTarget.scrollTop <= 0) close()
+        }}
       >
         {typed && !first && (
           <div className="spot-none">
@@ -585,6 +595,13 @@ export function Spotlight() {
             }}
             onKeyDown={onFieldKey}
           />
+          {/* What Return will do with what has been typed, written after it in the field as Spotlight writes it */}
+          {typed && first && at < 0 && query.length <= 18 && (
+            <span className="spot-hint" aria-hidden>
+              <span className="spot-hint__typed">{query}</span>
+              <span className="spot-hint__does">— Open</span>
+            </span>
+          )}
           {query && (
             <button
               type="button"
@@ -601,8 +618,9 @@ export function Spotlight() {
             </button>
           )}
         </label>
-        <button type="button" className="spot-close" aria-label="Close search" onClick={close}>
-          <X size={20} strokeWidth={2.4} aria-hidden />
+        {/* Out of sight until it has the keyboard: a finger closes search on the ground behind it */}
+        <button type="button" className="spot-close" onClick={close}>
+          Close Search
         </button>
       </div>
     </div>

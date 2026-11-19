@@ -10,13 +10,14 @@ import { COMPANIES } from '../data/portfolio'
 import { SITE } from '../data/site'
 import type { Rect } from '../kit/measure'
 import { LockScreen, Notification } from '../kit/phone'
+import { LockClock } from './LockClock'
 import { Boundary } from '../os/Boundary'
 import { firstControl, focusFirst, focusLost } from '../os/focus'
 import { useStore } from '../os/store'
 import { setTitle } from '../os/title'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { companyOf, GROUP_VIEW, MY_CARD } from './apps/routes'
-import { COLOR, carried, chrome } from './chrome'
+import { COLOR, carried, chrome, grounds } from './chrome'
 import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
 import { OnePagerIcon, PhoneIcon } from './icons'
 import { haptic } from './native'
@@ -249,7 +250,12 @@ function Lock() {
       onAnimationEnd={(e) => e.target === e.currentTarget && e.currentTarget.removeAttribute('data-nudge')}
       {...(locked ? null : ({ inert: '' } as object))}
     >
-      <LockScreen date={dateOf(now)} time={clockOf(now)} controls={false}>
+      {/* The day and the time, as an iPhone's Lock Screen sets them: the kit's own are left out for these */}
+      <div className="sb-lock__head">
+        <p className="sb-lock__date">{dateOf(now)}</p>
+        <LockClock time={clockOf(now)} />
+      </div>
+      <LockScreen clock={false} controls={false}>
         {announced && replied > 0 && (
           <div className="sb-stack" data-more={replied > 1 ? (replied > 2 ? 2 : 1) : undefined}>
             <Reply key={replied} index={replied - 1} origin="lock-note" onOpen={() => openGroup('lock-note')} />
@@ -435,6 +441,9 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const motion = useStore(sys, (s) => s.motion)
   const origin = useStore(sys, (s) => (s.app === id ? s.origin : null))
   const tone = useStore(chrome, (s) => s[id])
+  // A screen in a colour of its own (a contact's card): the app is drawn out of its icon onto that colour
+  const own = useStore(grounds, (s) => s[id])
+  const ground = typeof own === 'object' ? own.foot : (own ?? COLOR[tone])
   const [zoom, setZoom] = useState<{ open: boolean; from: Rect; still: boolean }>({ open: false, from: EMPTY, still: true })
   // Cards stay drawn for a moment after the switcher closes, while they clear the screen
   const [lingering, setLingering] = useState(false)
@@ -523,7 +532,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   // Out of anything but its icon (a widget, a notification), it grows from a plain card the shape of that thing
   const card = origin !== null && !origin.startsWith('icon:')
   return (
-    <div ref={slot} className="sb-slot" data-app={id} data-front={front || undefined} data-open={(front && zoom.open) || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order, '--tone': COLOR[tone] } as CSSProperties}>
+    <div ref={slot} className="sb-slot" data-app={id} data-front={front || undefined} data-open={(front && zoom.open) || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order, '--tone': ground } as CSSProperties}>
       <div className="sb-slot__label" aria-hidden>
         <span className="sb-slot__icon">
           <PhoneIcon id={id} />
@@ -542,7 +551,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
           data-app={id}
           data-shut={!open || undefined}
           data-snap={still || undefined}
-          style={{ '--zoom-bg': COLOR[tone] } as CSSProperties}
+          style={{ '--zoom-bg': ground } as CSSProperties}
           {...(active ? null : ({ inert: '' } as object))}
         >
           <div className="sb-drag" tabIndex={-1}>

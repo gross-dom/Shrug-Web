@@ -8,12 +8,15 @@
   --status: 0px;
   /* The strip the home indicator sits in */
   --home: 34px;
-  /* The strip a screen's glass buttons sit in */
-  --bar: 52px;
+  /* The strip a screen's glass buttons sit in: they start where the status bar ends, as an iPhone's do
+     (its buttons run from 62.5 to 106.5 points down the screen) */
+  --bar: 46px;
   /* A screen's side margins */
   --edge: 16px;
-  /* How far above the screen's bottom edge a floating bar sits */
-  --foot-gap: 21px;
+  /* What floats at the foot of a screen is further in than that, and this far above the screen's
+     bottom edge: a capsule 47 points tall, 28 from either side and 29 from the foot */
+  --foot-edge: min(28px, 7cqw);
+  --foot-gap: 29px;
 
   --blue: #0a84ff;
   --red: #ff3b30;
@@ -37,8 +40,8 @@
 /* ---- Glass ---- */
 
 .ios-glass {
-  --glass: rgb(255 255 255 / 0.72);
-  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 4px 14px -4px rgb(0 0 0 / 0.18), inset 0 0.5px 0 rgb(255 255 255 / 0.9);
+  --glass: rgb(255 255 255 / 0.78);
+  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.035), 0 6px 26px -4px rgb(0 0 0 / 0.11), 0 1px 6px -1px rgb(0 0 0 / 0.05), inset 0 0.5px 0 rgb(255 255 255 / 0.9);
   background: var(--glass);
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
   backdrop-filter: blur(14px) saturate(1.6);
@@ -107,8 +110,8 @@
   display: inline-flex;
   flex: none;
   align-items: center;
+  gap: 6px;
   height: 44px;
-  padding: 0 4px;
   border-radius: 22px;
   background: none;
   -webkit-backdrop-filter: none;
@@ -132,7 +135,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 42px;
+  /* Two of them make a capsule 100 points long, each sign 23.5 in from its end */
+  width: 47px;
   height: 44px;
   transition: opacity 0.15s ease;
 }
@@ -286,15 +290,23 @@
   transition: opacity 0.2s ease;
 }
 
-/* The same line, under the title once it is in the bar */
+/* A line under the name in the bar: a count. The two are the same size then (15 points), the name the
+   heavier, as the bar of a list in Notes has them */
+.ios-bar__name:has(.ios-bar__sub) {
+  margin-top: -3px;
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 18px;
+}
+
 .ios-bar__sub {
   display: block;
   overflow: hidden;
   color: var(--label-2);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 400;
-  letter-spacing: 0;
-  line-height: 15px;
+  letter-spacing: -0.015em;
+  line-height: 18px;
   text-overflow: ellipsis;
 }
 
@@ -323,11 +335,11 @@
   opacity: 1;
 }
 
-/* Down a screen's trailing edge, over the page and between its bars: an index. Only the index itself
-   takes touches; the page shows, and scrolls, either side of it */
+/* Down a screen's trailing edge, over the page and between its bars: an index, in the middle of what is
+   between them. Only the index itself takes touches; the page shows, and scrolls, either side of it */
 .ios-edge {
   position: absolute;
-  top: calc(var(--status) + var(--bar) + 4px);
+  top: calc(var(--status) + var(--bar));
   right: 0;
   bottom: calc(var(--home) + 8px);
   z-index: 4;
@@ -337,7 +349,7 @@
 }
 
 .ios-screen[data-foot] > .ios-edge {
-  bottom: calc(var(--foot-gap) + 62px + 8px);
+  bottom: calc(var(--foot-gap) + var(--control, 47px) + 2px);
 }
 
 .ios-edge > * {
@@ -352,10 +364,10 @@
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px var(--edge) var(--foot-gap);
+  gap: 13px;
+  padding: 10px var(--foot-edge) var(--foot-gap);
   pointer-events: none;
-  --control: 48px;
+  --control: 47px;
 }
 
 /* Only the bar's own controls take touches. The fade above them is paint: a
@@ -366,9 +378,20 @@
 }
 
 /* A round button beside a bar is as tall as the bar; one with words keeps its own width */
-.ios-foot > .ios-button {
+.ios-foot > .ios-button,
+.ios-foot > .ios-menu > .ios-button,
+.ios-foot > .ios-group {
   height: var(--control);
   border-radius: calc(var(--control) / 2);
+}
+
+.ios-foot > .ios-menu > .ios-button:not([data-wide]) {
+  width: var(--control);
+}
+
+.ios-foot > .ios-group > .ios-group__part,
+.ios-foot > .ios-group > .ios-menu > .ios-group__part {
+  height: var(--control);
 }
 
 .ios-foot > .ios-button:not([data-wide]) {
@@ -391,16 +414,18 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  height: 48px;
-  padding: 0 14px 0 15px;
-  border-radius: 24px;
+  height: var(--control, 47px);
+  padding: 0 16px 0 19px;
+  border-radius: calc(var(--control, 47px) / 2);
   cursor: text;
 }
 
+/* The glass and the microphone are in the screen's ink, as the capsule at the foot of a list has them;
+   only the word that says what the field is for is gray */
 .ios-search__glass,
 .ios-search__mic {
   flex: none;
-  color: var(--label-2);
+  color: var(--label);
 }
 
 .ios-search__input {
@@ -703,6 +728,22 @@
 /* A menu hangs from a button in the bar, over everything else on the screen:
    the bar at the foot too, which it reaches on a phone on its side */
 .ios-bar:has(.ios-menu[data-up]) {
+  z-index: 6;
+}
+
+/* One that hangs from a button at the foot of a screen rises out of it instead, from its leading edge */
+.ios-menu[data-rise] > .ios-menu__list {
+  top: auto;
+  right: auto;
+  bottom: calc(100% + 10px);
+  left: 0;
+}
+
+.ios-menu[data-rise] .ios-menu__scroll {
+  max-height: calc(100cqh - var(--status) - var(--foot-gap) - var(--control, 47px) - 34px);
+}
+
+.ios-foot:has(.ios-menu[data-up]) {
   z-index: 6;
 }
 

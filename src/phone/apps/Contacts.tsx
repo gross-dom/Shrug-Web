@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
-import { Check, Compass, FileText, Search, Share, UserRound, X } from 'lucide-react'
-import { companiesIn, companyKeyed, CompanyLogo, fateOf, hostOf, tellApart, type Listed } from '../../apps/portfolio-ui'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { Check, Search, UserRound, X } from 'lucide-react'
+import { companiesIn, companyKeyed, fateOf, hostOf, tellApart, useLogo, type Listed } from '../../apps/portfolio-ui'
 import { sought } from '../../apps/state'
+import { LOGO_COLOURS, PLAIN_PAGE, POSTER_COLOURS } from '../../data/logoColours'
 import { COMPANY_COUNT, VERTICALS } from '../../data/portfolio'
 import { ABOUT, reach, reachable, SITE } from '../../data/site'
 import { LogoDisc } from '../../os/icons'
@@ -9,7 +10,7 @@ import { linkTo } from '../../os/place'
 import { useStore } from '../../os/store'
 import { haptic, share } from '../native'
 import { push, sys, topOf } from '../system'
-import { Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, usePageHeadingId } from '../ui'
+import { Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, ShareGlyph, usePageHeadingId } from '../ui'
 import { companyOf, companyView, MY_CARD } from './routes'
 import '../../styles/phone/contacts.css'
 
@@ -23,10 +24,13 @@ import '../../styles/phone/contacts.css'
 // comes last under #, where Contacts keeps whatever no letter claims. Inside a
 // vertical the companies keep the order Shrug gives them in.
 //
-// A company opens as a contact's card does, pushed over the list: its logo
-// and name, the things to do with it (its site, passing it on), and what is
-// known about it. At the head of the list is Shrug's own card, where an
-// iPhone keeps My Card. Search is at the foot.
+// A company opens as a contact's card does, pushed over the list: a page in
+// the colour of its picture, the picture and the name at its head, the things
+// to do with it in a row of round buttons (its site, passing it on), and what
+// is known about it on panes under those. The picture is the company's logo in
+// a round face, or, for a company with one to show, a photograph that fills
+// the head of the card as a contact's poster does. At the head of the list is
+// Shrug's own card, where an iPhone keeps My Card. Search is at the foot.
 
 // ---- The verticals, filed ----
 
@@ -157,7 +161,21 @@ function Index({ jump }: { jump: (group: number) => void }) {
 
 // ---- The list ----
 
-/** A company's row: its logo and its name. `where` adds the vertical it is in, for a row that is not under
+/** A company's face: round, as every face in Contacts is. Its logo sits inside the circle on the ground the
+ * logo is drawn on (so that the circle cuts nothing off it), or fills it where the logo is a picture that
+ * runs to its own edges; a company with no logo is its initial, as a contact with no photo is. `eager`
+ * asks for the logo at once, for the face at the head of a card. */
+function Face({ company, size, eager }: { company: Listed; size?: number; eager?: boolean }) {
+  const logo = useLogo(company)
+  const ground = company.logo ? (LOGO_COLOURS[company.logo]?.ground ?? null) : null
+  return (
+    <span className="contact-face" data-empty={logo ? undefined : ''} data-full={logo && !ground ? '' : undefined} style={{ ...(size ? { width: size, height: size, fontSize: Math.round(size * 0.45) } : null), ...(logo && ground ? { background: ground } : null) }} aria-hidden>
+      {logo ? <img src={logo.src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" draggable={false} onError={logo.onError} /> : company.name.trim()[0]?.toUpperCase()}
+    </span>
+  )
+}
+
+/** A company's row: its face and its name. `where` adds the vertical it is in, for a row that is not under
  * its vertical's heading. `stop` is the row Tab stops on (the arrows walk the rest: see the list). */
 function Row({ company, where, stop, onStop }: { company: Listed; where?: string; stop: boolean; onStop: (key: string) => void }) {
   // Two companies can have one name: each says which it is, by its address
@@ -166,7 +184,7 @@ function Row({ company, where, stop, onStop }: { company: Listed; where?: string
   return (
     <li>
       <button type="button" className="contacts-row" data-company={company.key} tabIndex={stop ? 0 : -1} onFocus={() => onStop(company.key)} onClick={() => push(companyView(company.key))}>
-        <CompanyLogo company={company} size={40} />
+        <Face company={company} size={40} />
         <span className="contacts-row__text">
           <span className="contacts-row__name" dir="auto">
             {company.name}
@@ -244,7 +262,6 @@ function ListScreen() {
   return (
     <Screen
       title="Contacts"
-      large
       className="contacts-screen"
       scrollRef={scroll}
       edge={found ? undefined : <Index jump={jump} />}
@@ -288,7 +305,7 @@ function ListScreen() {
         <>
           {/* Shrug's own card, where Contacts keeps My Card */}
           <button type="button" className="contacts-me" onClick={() => push(MY_CARD)}>
-            <LogoDisc size={60} />
+            <LogoDisc size={40} />
             <span className="contacts-me__text">
               <span className="contacts-me__name">{SITE.legalName}</span>
               <span className="sr-only">, </span>
@@ -321,40 +338,89 @@ function ListScreen() {
 /** A link out of the site opens beside it. One that hands over to another app (mail, messages) just goes. */
 const leaves = (href: string) => /^https?:/i.test(href)
 
-/** One thing to do from a card: its sign over its name, as a contact's card sets them. A link out of the
- * site opens beside it; with nowhere to go it is drawn faint, and does nothing. */
-function Act({ label, icon, href, onClick, says }: { label: string; icon: ReactNode; href?: string | null; onClick?: () => void; says?: string }) {
-  const inside = (
-    <>
-      {icon}
-      <span className="contact-act__label">{label}</span>
-    </>
+// The signs on a card's round buttons, drawn solid, as the ones on a contact's card are.
+
+/** A compass: the company's own site. */
+function SiteGlyph({ size = 28 }: { size?: number }) {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden>
+      <mask id={id}>
+        <rect width="28" height="28" fill="#fff" />
+        <path d="M20.3 7.7 11.9 11.9 7.7 20.3l8.4-4.2z" fill="#000" />
+        <circle cx="14" cy="14" r="1.5" fill="#fff" />
+      </mask>
+      <circle cx="14" cy="14" r="11.6" fill="currentColor" mask={`url(#${id})`} />
+    </svg>
   )
+}
+
+/** A written page: a case study, the one-pager. */
+function PageGlyph({ size = 28 }: { size?: number }) {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden>
+      <mask id={id}>
+        <rect width="28" height="28" fill="#fff" />
+        <path d="M9.8 13.2h8.4M9.8 17h8.4M9.8 20.8h5" stroke="#000" strokeWidth="1.9" strokeLinecap="round" />
+      </mask>
+      <path d="M8.4 2.6h7.9l6.1 6.3v14a2.9 2.9 0 0 1-2.9 2.9H8.4a2.9 2.9 0 0 1-2.9-2.9V5.5a2.9 2.9 0 0 1 2.9-2.9z" fill="currentColor" mask={`url(#${id})`} />
+    </svg>
+  )
+}
+
+/** Passing it on: an arrow rising out of a box. */
+function PassOnGlyph({ size = 28 }: { size?: number }) {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden>
+      <mask id={id}>
+        <rect width="28" height="28" fill="#fff" />
+        <path d="M14 18V5" stroke="#000" strokeWidth="5.6" strokeLinecap="round" />
+      </mask>
+      <path d="M8.6 10.6h10.8a3.2 3.2 0 0 1 3.2 3.2v8.4a3.2 3.2 0 0 1-3.2 3.2H8.6a3.2 3.2 0 0 1-3.2-3.2v-8.4a3.2 3.2 0 0 1 3.2-3.2z" fill="currentColor" mask={`url(#${id})`} />
+      <path d="M14 16.8V3.3M9.9 7.2 14 3.1l4.1 4.1" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** One thing to do from a card: a round pane with its sign on it, in the row a contact's card keeps under
+ * the name. A link out of the site opens beside it; with nowhere to go it is drawn faint, as a contact's
+ * card leaves what it cannot do, and says why (`none`). */
+function Act({ label, icon, href, onClick, none }: { label: string; icon: ReactNode; href?: string | null; onClick?: () => void; none?: string | null }) {
   if (href)
     return (
       // A company's own site is told where the visit came from: `noopener`, not `noreferrer`
       <a className="contact-act" href={href} {...(leaves(href) ? { target: '_blank', rel: 'noopener' } : null)}>
-        {inside}
-        {leaves(href) && <span className="sr-only">, opens in a new tab</span>}
+        {icon}
+        <span className="sr-only">
+          {label}
+          {leaves(href) && ', opens in a new tab'}
+        </span>
       </a>
     )
   if (onClick)
     return (
-      <button type="button" className="contact-act" onClick={onClick} aria-label={says}>
-        {inside}
+      <button type="button" className="contact-act" onClick={onClick}>
+        {icon}
+        <span className="sr-only">{label}</span>
       </button>
     )
   return (
     <span className="contact-act" aria-disabled="true">
-      {inside}
+      {icon}
+      <span className="sr-only">
+        {label}: {none ?? 'none'}
+      </span>
     </span>
   )
 }
 
-/** One thing a card knows: what it is, small, over what it says. A link is blue, and opens beside the site. */
-function Field({ label, children, href }: { label: string; children: ReactNode; href?: string | null }) {
+/** One thing a card knows: what it is, small, over what it says. One that leads somewhere is pressed
+ * anywhere along its row, as a contact's number is, and carries the sign of where it leads at its end. */
+function Field({ label, children, href, sign }: { label: string; children: ReactNode; href?: string | null; sign?: ReactNode }) {
   return (
-    <div className="contact-field">
+    <div className="contact-field" data-link={href ? '' : undefined}>
       <dt className="contact-field__label">{label}</dt>
       <dd className="contact-field__value" dir="auto">
         {href ? (
@@ -364,6 +430,11 @@ function Field({ label, children, href }: { label: string; children: ReactNode; 
           </a>
         ) : (
           children
+        )}
+        {href && sign && (
+          <span className="contact-field__sign" aria-hidden>
+            {sign}
+          </span>
         )}
       </dd>
     </div>
@@ -381,20 +452,37 @@ function useCopied() {
   return [copied, setCopied] as const
 }
 
-/** The head of a card: the face, the name (which names the page), and a line under it. */
-function Head({ face, name, under }: { face: ReactNode; name: string; under: string }) {
+/** How large a name is set at the head of a card: as large as a contact's (41 points) where it fits on a
+ * line, and smaller the longer it is, so that a long one takes two lines and not three. */
+const nameSize = (name: string) => (name.length <= 11 ? 41 : name.length <= 15 ? 35 : name.length <= 22 ? 30 : 26)
+
+/** The head of a card: the face, and the name under it (which names the page). With a picture that fills
+ * the head of the card there is no face: the name is set over the foot of the picture. */
+function Head({ face, name, poster }: { face: ReactNode; name: string; poster?: boolean }) {
   const headingId = usePageHeadingId()
   return (
     // Not a <header>: outside an article that would make each card's head a banner for the whole page, which has one of its own
-    <div className="contact-head">
+    <div className="contact-head" data-poster={poster ? '' : undefined}>
       {face}
-      <h2 id={headingId} className="contact-head__name" dir="auto">
+      <h2 id={headingId} className="contact-head__name" style={{ fontSize: nameSize(name) }} dir="auto">
         {name}
       </h2>
-      <p className="contact-head__under">{under}</p>
     </div>
   )
 }
+
+/** A company's own picture, filling the head of its card as a contact's poster does: it runs from the top
+ * of the screen down behind the name and fades into the page, which is the colour of its own foot. */
+function Poster({ file }: { file: string }) {
+  return (
+    <div className="contact-poster" aria-hidden>
+      <img src={`${import.meta.env.BASE_URL}posters/${file}`} alt="" decoding="async" draggable={false} />
+    </div>
+  )
+}
+
+/** The colours a picture's card falls back on until tools/logo-colours.py has read the picture. */
+const UNREAD_POSTER = { top: '#1c1c1e', page: '#3a3a3c' }
 
 /** A company's card: what it is, the things to do with it, and what is known about it. */
 function CompanyCard({ id }: { id: string }) {
@@ -417,6 +505,10 @@ function CompanyCard({ id }: { id: string }) {
     const sent = await share({ title: company.name, text: company.blurb ? `${company.name}: ${company.blurb}` : company.name, url: company.url ?? null })
     if (sent === 'copied') setCopied(company.url ? 'Link copied' : 'Copied')
   }
+  // The card is in the colour of its picture: a photograph's own, where the company has one, or its logo's
+  const poster = company.poster
+  const shot = poster ? (POSTER_COLOURS[poster] ?? UNREAD_POSTER) : null
+  const page = (company.logo && LOGO_COLOURS[company.logo]?.page) || PLAIN_PAGE
 
   return (
     <Screen
@@ -424,18 +516,20 @@ function CompanyCard({ id }: { id: string }) {
       // A contact's card keeps its bar clear: the name is in the card
       center={<></>}
       ownHeading
-      tone="grouped"
-      className="contacts-screen contacts-screen--card"
+      tone="dark"
+      ground={shot ? { top: shot.top, foot: shot.page } : page}
+      className={`contacts-screen contacts-screen--card${poster ? ' contacts-screen--poster' : ''}`}
       trailing={
         <GlassButton label="Share" onClick={send}>
-          {copied ? <Check size={21} strokeWidth={2.6} aria-hidden /> : <Share size={20} strokeWidth={2.2} aria-hidden style={{ marginTop: -2 }} />}
+          {copied ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <ShareGlyph />}
         </GlassButton>
       }
     >
-      <Head face={<CompanyLogo company={company} size={104} eager />} name={company.name} under={company.vertical} />
+      {poster && <Poster file={poster} />}
+      <Head face={poster ? null : <Face company={company} eager />} name={company.name} poster={!!poster} />
       <div className="contact-acts">
-        <Act label={study ? 'case study' : 'website'} icon={study ? <FileText size={22} strokeWidth={2} aria-hidden /> : <Compass size={22} strokeWidth={2} aria-hidden />} href={company.url} />
-        <Act label="share" icon={<Share size={21} strokeWidth={2.1} aria-hidden />} onClick={send} says="Share" />
+        <Act label={study ? 'Case study' : 'Website'} icon={study ? <PageGlyph /> : <SiteGlyph />} href={company.url} none={fate} />
+        <Act label="Share" icon={<PassOnGlyph />} onClick={send} />
       </div>
       {/* Said aloud when it happens; the buttons keep their own names */}
       <span className="sr-only" role="status">
@@ -445,7 +539,7 @@ function CompanyCard({ id }: { id: string }) {
         <Section>
           <dl className="contact-fields">
             {company.url ? (
-              <Field label={study ? 'case study' : 'website'} href={company.url}>
+              <Field label={study ? 'case study' : 'website'} href={company.url} sign={study ? <PageGlyph size={20} /> : <SiteGlyph size={20} />}>
                 {study ? 'Read the case study' : hostOf(company.url)}
               </Field>
             ) : (
@@ -468,6 +562,9 @@ function CompanyCard({ id }: { id: string }) {
   )
 }
 
+/** Shrug's own card is in the colour of its wallpaper. */
+const SHRUG_PAGE = '#5760a1'
+
 /** Shrug's own card: who Shrug is, as the desktop's About Shrug says it, and the ways on. */
 function MyCard() {
   const [copied, setCopied] = useCopied()
@@ -481,18 +578,26 @@ function MyCard() {
       title={SITE.legalName}
       center={<></>}
       ownHeading
-      tone="grouped"
+      tone="dark"
+      ground={SHRUG_PAGE}
       className="contacts-screen contacts-screen--card"
       trailing={
         <GlassButton label="Share" onClick={send}>
-          {copied ? <Check size={21} strokeWidth={2.6} aria-hidden /> : <Share size={20} strokeWidth={2.2} aria-hidden style={{ marginTop: -2 }} />}
+          {copied ? <Check size={22} strokeWidth={2.6} aria-hidden /> : <ShareGlyph />}
         </GlassButton>
       }
     >
-      <Head face={<LogoDisc size={104} />} name={SITE.legalName} under="My Card" />
+      <Head
+        face={
+          <span className="contact-face" data-full="" aria-hidden>
+            <LogoDisc size="100%" />
+          </span>
+        }
+        name={SITE.legalName}
+      />
       <div className="contact-acts">
-        <Act label="one-pager" icon={<FileText size={22} strokeWidth={2} aria-hidden />} href={SITE.onePager} />
-        <Act label="share" icon={<Share size={21} strokeWidth={2.1} aria-hidden />} onClick={send} says="Share" />
+        <Act label="One-pager" icon={<PageGlyph />} href={SITE.onePager} />
+        <Act label="Share" icon={<PassOnGlyph />} onClick={send} />
       </div>
       <span className="sr-only" role="status">
         {copied ?? ''}
@@ -520,7 +625,7 @@ function MyCard() {
                 {way.label}
               </Field>
             )}
-            <Field label="one-pager" href={SITE.onePager}>
+            <Field label="one-pager" href={SITE.onePager} sign={<PageGlyph size={20} />}>
               Read the one-pager
             </Field>
           </dl>

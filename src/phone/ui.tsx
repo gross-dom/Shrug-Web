@@ -3,7 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Mic, Search, X } from 'lucide-react'
 import { Popover } from '../kit/motion/Popover'
 import { focusFirst, focusLost, holdFocus, useReturnFocus } from '../os/focus'
 import { createStore, useStore } from '../os/store'
-import { COLOR, setTone, sheeted } from './chrome'
+import { COLOR, setTone, sheeted, type Ground } from './chrome'
 import { closeSheet, pop, sys, type PhoneApp } from './system'
 
 // The parts every app on the phone is built from, drawn the way the current
@@ -105,8 +105,33 @@ export function GroupButton({ label, onClick, tint, disabled, children }: { labe
 export function BackButton({ onClick, label = 'Back' }: { onClick?: () => void; label?: string }) {
   return (
     <GlassButton label={label} onClick={onClick ?? pop}>
-      <ChevronLeft size={24} strokeWidth={2.3} aria-hidden style={{ marginLeft: -2 }} />
+      <ChevronLeft size={31} strokeWidth={2} aria-hidden style={{ marginLeft: -2.5 }} />
     </GlassButton>
+  )
+}
+
+// ---- Signs ----
+
+// Two signs that iOS draws its own way and that every app here uses: drawn here, in the line the
+// other icons are in, so that they are the same wherever they appear.
+
+/** Passing something on: an arrow rising out of a box. */
+export function ShareGlyph({ size = 25, strokeWidth = 1.9 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ marginTop: -2 }}>
+      <path d="M8.4 9.2H7.5a3.2 3.2 0 0 0-3.2 3.2v6a3.2 3.2 0 0 0 3.2 3.2h9a3.2 3.2 0 0 0 3.2-3.2v-6a3.2 3.2 0 0 0-3.2-3.2h-.9" />
+      <path d="M12 14.6V2.5M8.3 6.1 12 2.4l3.7 3.7" />
+    </svg>
+  )
+}
+
+/** Writing something new: a pencil across the corner of a sheet. */
+export function ComposeGlyph({ size = 25, strokeWidth = 1.9 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M11.6 4.4H7.4A3.8 3.8 0 0 0 3.6 8.2v8.6a3.8 3.8 0 0 0 3.8 3.8h8.6a3.8 3.8 0 0 0 3.8-3.8v-4.2" />
+      <path d="m10 14.2.8-3.3 9.4-9.4a1.4 1.4 0 0 1 2.4 1 1.4 1.4 0 0 1-.4 1l-9.4 9.4z" />
+    </svg>
   )
 }
 
@@ -133,6 +158,13 @@ export interface ScreenProps {
   edge?: ReactNode
   /** plain: white. grouped: the gray that inset lists sit on. dark: black, with light ink. */
   tone?: 'plain' | 'grouped' | 'dark'
+  /** A colour of the screen's own, in place of its tone's (a contact's card takes its picture's): the page is
+   * drawn in it (`--page`), and the browser's bars are given it. Two colours for a page that runs from one
+   * at its top into another at its foot; the page is drawn in the foot's. */
+  ground?: Ground
+  /** What is under the status bar is a picture, dark or pale, whatever the screen's own tone: the status
+   * bar's ink is chosen for that (white over a dark one). The screen itself keeps its tone. */
+  under?: 'dark' | 'pale'
   /** The screen lays out and scrolls its own contents (a conversation, a terminal). */
   fixed?: boolean
   /** The page draws its own heading (a card, a face, with `usePageHeadingId` for its id): the screen adds none. */
@@ -147,7 +179,7 @@ export interface ScreenProps {
 
 /** One screen of an app. The bar's buttons float over the page; under them the
  * page fades and blurs as it scrolls past, as iOS's scroll edge does. */
-export function Screen({ title, large, subtitle, center, leading, trailing, header, foot, edge, tone = 'plain', fixed, ownHeading, readable, className, scrollRef, children }: ScreenProps) {
+export function Screen({ title, large, subtitle, center, leading, trailing, header, foot, edge, tone = 'plain', ground, under, fixed, ownHeading, readable, className, scrollRef, children }: ScreenProps) {
   const depth = useContext(DepthContext)
   const top = useContext(TopContext)
   const headingId = useContext(PageHeadingContext)
@@ -169,10 +201,14 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
     if (h) setFolded(el.scrollTop > h.offsetTop + h.offsetHeight - 58)
   }
 
-  // The status bar over this screen takes its ink from it
+  // The status bar over this screen takes its ink from it, and the browser's bars its colour
+  const groundTop = typeof ground === 'object' ? ground.top : ground
+  const groundFoot = typeof ground === 'object' ? ground.foot : ground
+  // (a screen with a picture under the status bar says which ink reads over the picture)
+  const over = under === 'dark' ? 'dark' : under === 'pale' ? 'plain' : undefined
   useEffect(() => {
-    if (top) setTone(app, tone)
-  }, [top, app, tone])
+    if (top) setTone(app, tone, groundTop && groundFoot ? (groundTop === groundFoot ? groundTop : { top: groundTop, foot: groundFoot }) : undefined, over)
+  }, [top, app, tone, over, groundTop, groundFoot])
 
   const setScroller = (el: HTMLDivElement | null) => {
     scroller.current = el
@@ -181,7 +217,7 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
   }
 
   return (
-    <div className={`ios-screen${className ? ` ${className}` : ''}`} data-tone={tone} data-scrolled={scrolled || undefined} data-folded={folded || !large || undefined} data-foot={foot ? '' : undefined}>
+    <div className={`ios-screen${className ? ` ${className}` : ''}`} data-tone={tone} data-ground={groundFoot ? '' : undefined} data-scrolled={scrolled || undefined} data-folded={folded || !large || undefined} data-foot={foot ? '' : undefined} style={groundFoot ? ({ '--page': groundFoot, '--page-top': groundTop } as CSSProperties) : undefined}>
       {!big && center !== undefined && !ownHeading && (
         <h2 id={headingId} className="sr-only" dir="auto">
           {title}
@@ -431,7 +467,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search', label, onFo
   const field = useRef<HTMLInputElement>(null)
   return (
     <label className="ios-glass ios-search" data-filled={value ? '' : undefined}>
-      <Search size={18} strokeWidth={2.4} className="ios-search__glass" aria-hidden />
+      <Search size={19} strokeWidth={2.4} className="ios-search__glass" aria-hidden />
       <input
         ref={field}
         className="ios-search__input"
@@ -475,7 +511,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search', label, onFo
           <X size={11} strokeWidth={3.2} aria-hidden />
         </button>
       ) : (
-        <Mic size={18} strokeWidth={2.1} className="ios-search__mic" aria-hidden />
+        <Mic size={21} strokeWidth={2} className="ios-search__mic" aria-hidden />
       )}
     </label>
   )
@@ -498,8 +534,9 @@ export interface MenuItem {
 }
 
 /** A glass button that opens a menu under itself, as iOS's pull-down menus do.
- * `part` makes the button one of a `GlassGroup`'s, sharing that group's glass. */
-export function Menu({ label, items, children, tint, wide, part }: { label: string; items: MenuItem[]; children: ReactNode; tint?: boolean; wide?: boolean; part?: boolean }) {
+ * `part` makes the button one of a `GlassGroup`'s, sharing that group's glass.
+ * `rise` is for a button at the foot of a screen: its menu opens upward out of it. */
+export function Menu({ label, items, children, tint, wide, part, rise }: { label: string; items: MenuItem[]; children: ReactNode; tint?: boolean; wide?: boolean; part?: boolean; rise?: boolean }) {
   const [open, setOpen] = useState(false)
   // Up: open, or still fading away. Its bar stays over the rest of the screen for as long
   const [up, setUp] = useState(false)
@@ -588,7 +625,7 @@ export function Menu({ label, items, children, tint, wide, part }: { label: stri
     }
   }, [open])
   return (
-    <span ref={root} className="ios-menu" data-up={up || open || undefined}>
+    <span ref={root} className="ios-menu" data-up={up || open || undefined} data-rise={rise || undefined}>
       <button
         ref={button}
         type="button"
@@ -607,7 +644,7 @@ export function Menu({ label, items, children, tint, wide, part }: { label: stri
       >
         {children}
       </button>
-      <Popover show={open} origin="top right" className="ios-menu__list" role="menu" aria-label={label} onKeyDown={onMenuKey} {...(open ? null : ({ inert: '' } as object))}>
+      <Popover show={open} origin={rise ? 'bottom left' : 'top right'} className="ios-menu__list" role="menu" aria-label={label} onKeyDown={onMenuKey} {...(open ? null : ({ inert: '' } as object))}>
         {/* The rows scroll inside the menu where a screen is too short for all of them (a phone on its side) */}
         <div className="ios-menu__scroll" role="presentation">
           {items.map((item) => (

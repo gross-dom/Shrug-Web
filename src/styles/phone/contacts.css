@@ -2,41 +2,98 @@
    the list of companies in sections, a section to a vertical, with Shrug's
    own card at its head and the index of letters down its edge; and the card a
    company opens as. The bars, the search field and the grouped lists are
-   ios.css's; this is what is Contacts' own. Sizes are iOS points. */
+   ios.css's; this is what is Contacts' own. Sizes are iOS points, read off an
+   iPhone 17 Pro's own Contacts. */
 
 .contacts-app {
   position: absolute;
   inset: 0;
 }
 
+/* ---- A face ---- */
+
+/* Round, as every face in Contacts is. A logo sits inside the circle, on the ground the logo is itself
+   drawn on, so that the circle cuts nothing off it; one that is a picture running to its own edges fills
+   the circle; with no logo, the company's initial on the blue-gray a contact with no photo is given */
+.contact-face {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #fff;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.contact-face > img {
+  display: block;
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+
+.contact-face[data-full] > :is(img, svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.contact-face[data-empty] {
+  background: linear-gradient(180deg, #a3bbdb, #7986bf);
+}
+
+/* A hairline round it: a white logo keeps its edge on a white page */
+.contact-face::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.12);
+  content: '';
+  pointer-events: none;
+}
+
 /* ---- The list ---- */
 
 .contacts-screen {
-  /* How far in from the screen's edge the list starts, and how wide a row's logo is */
-  --inset: 20px;
+  /* How far in from the screen's edge a row's face starts, and how wide the face is */
+  --inset: 18px;
   --face: 40px;
+  /* Where the names start: the face, and 10 points on */
+  --names: calc(var(--inset) + var(--face) + 10px);
   /* Room for the index down the trailing edge */
-  --rail: 22px;
-  /* iOS's blue, a shade deeper: the index's letters and a card's links are small, and on white this one reads (4.7 to 1) */
+  --rail: 16px;
+  /* iOS's blue, a shade deeper: the index's letters are small, and on white this one reads (4.7 to 1) */
   --link: #0071e3;
 }
 
-/* Shrug's own card, at the head of the list as My Card is: a face, the name, and what it is */
+/* The list starts a little under the bar */
+.contacts-screen:not(.contacts-screen--card) > .ios-screen__scroll {
+  padding-top: calc(var(--status) + var(--bar) + 9px);
+}
+
+/* Shrug's own card, at the head of the list as My Card is: a row like the rest, with what it is under the name */
 .contacts-me {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
-  min-height: 84px;
-  padding: 10px var(--rail) 12px var(--inset);
+  min-height: 60px;
+  padding: 0 16px 0 var(--inset);
   text-align: left;
 }
 
 .contacts-me > svg {
   flex: none;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.16);
 }
 
 .contacts-me__text {
@@ -46,18 +103,19 @@
 
 .contacts-me__name {
   overflow: hidden;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 25px;
+  line-height: 21px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .contacts-me__sub {
   color: var(--label-2);
-  font-size: 13px;
-  line-height: 18px;
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
 }
 
 :is(.contacts-me, .contacts-row):active {
@@ -72,27 +130,38 @@
   display: block;
 }
 
-/* A vertical's name, where Contacts has a letter: it stays under the bar while its companies pass, and
-   the next one's pushes it on. A band of the page's own colour, seen through, so the rows going under
-   it do not run into its words. (Where it sticks is measured from the edge of what scrolls, which the
-   page's own padding has already set under the bar) */
+/* A vertical's name, where Contacts has a letter: small and gray over a rule, as that letter is. It stays
+   under the bar while its companies pass, and the next one's pushes it on; there it is a band of the
+   page's own colour, so that the rows going under it do not run into its words. (Where it sticks is
+   measured from the edge of what scrolls, which the page's own padding has already set under the bar) */
 .contacts-letter {
   position: sticky;
   top: 0;
   z-index: 2;
   display: block;
-  padding: 5px var(--rail) 5px var(--inset);
+  padding: 9.5px 16px 9.5px calc(var(--inset) + 0.5px);
   overflow: hidden;
-  background: color-mix(in srgb, var(--grouped) 88%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
   -webkit-backdrop-filter: blur(12px) saturate(1.6);
   backdrop-filter: blur(12px) saturate(1.6);
-  color: var(--label);
+  color: var(--label-2);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 20px;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* The rule under it, from the faces' edge to where the rows' own rules end */
+.contacts-letter::after {
+  position: absolute;
+  right: 16px;
+  bottom: 0;
+  left: var(--inset);
+  height: 0.5px;
+  background: var(--sep);
+  content: '';
 }
 
 .contacts-rows {
@@ -103,24 +172,24 @@
   display: block;
 }
 
-/* A company: its logo, then its name, as tall as a row with a face in it is */
+/* A company: its face, then its name, 60 points to a row */
 .contacts-row {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  min-height: 58px;
-  padding: 8px var(--rail) 8px var(--inset);
+  min-height: 60px;
+  padding: 0 calc(var(--rail) + 8px) 0 var(--inset);
   text-align: left;
 }
 
 /* A hairline under every row but a section's last, from where the names start */
 .contacts-rows > li:not(:last-child) > .contacts-row::after {
   position: absolute;
-  right: 0;
+  right: 16px;
   bottom: 0;
-  left: calc(var(--inset) + var(--face) + 12px);
+  left: var(--names);
   height: 0.5px;
   background: var(--sep);
   content: '';
@@ -145,9 +214,9 @@
 .contacts-row__where {
   overflow: hidden;
   color: var(--label-2);
-  font-size: 14px;
-  letter-spacing: -0.01em;
-  line-height: 18px;
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 19px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -169,14 +238,14 @@
 
 /* ---- The index ---- */
 
-/* The letters down the edge. It is the finger's for as long as the finger is on it: nothing under it scrolls */
-/* (It takes a finger a little to the letters' leading side too, as Contacts' does: they are 11pt type) */
+/* The letters down the edge, 8.5 points in from it and 13.7 apart. It is the finger's for as long as the
+   finger is on it: nothing under it scrolls. (It takes a finger a little to the letters' leading side too,
+   as Contacts' does: they are 11pt type) */
 .contacts-index {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  width: calc(var(--rail, 22px) + 12px);
-  padding: 4px 0;
+  width: calc(var(--rail, 16px) + 14px);
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
@@ -185,12 +254,13 @@
 
 .contacts-index__letter {
   display: block;
-  width: var(--rail, 22px);
-  height: 14px;
+  width: var(--rail, 16px);
+  height: 13.73px;
   color: var(--link);
   font-size: 11px;
   font-weight: 600;
-  line-height: 14px;
+  letter-spacing: 0;
+  line-height: 13.73px;
   text-align: center;
 }
 
@@ -217,78 +287,177 @@
 
 /* ---- A card ---- */
 
-/* The head of a card: the face, the name under it, and a line under that */
+/* The page is in the colour of the card's picture (`--page`, from the screen): the panes on it are that
+   colour a little lighter, the round buttons lighter again, each with a line of light round it, and all
+   the words are white. The colour is chosen so that white reads on every one of them (4.9 to 1 on a pane) */
+.ios-screen.contacts-screen--card {
+  --pane: color-mix(in srgb, var(--page) 93%, #fff);
+  --act: color-mix(in srgb, var(--page) 86%, #fff);
+  --rim: rgb(255 255 255 / 0.28);
+  --surface: var(--page);
+  --grouped: var(--page);
+  --surface-under: var(--page);
+  --label: #fff;
+  --label-2: #fff;
+  --label-3: rgb(255 255 255 / 0.45);
+  --sep: rgb(255 255 255 / 0.2);
+  --ring: #fff;
+  background: var(--page);
+  color: #fff;
+}
+
+/* Its glass buttons are the page's own colour, lit round the edge */
+.ios-screen.contacts-screen--card .ios-glass {
+  --glass: color-mix(in srgb, var(--page) 95%, #fff);
+  --glass-edge: inset 0 0 0 1px var(--rim), 0 6px 22px -6px rgb(0 0 0 / 0.22);
+  color: #fff;
+}
+
+/* The head of a card: the face, 215 points across on an iPhone, and the name under it */
 .contact-head {
+  position: relative;
+  z-index: 1;
   display: grid;
   justify-items: center;
-  padding: 6px 24px 0;
+  padding: 27px 20px 0;
   text-align: center;
 }
 
-.contact-head > svg {
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.16);
+.contact-head > .contact-face {
+  --d: min(215px, 53.5cqw);
+  width: var(--d);
+  height: var(--d);
+  box-shadow: 0 8px 36px -8px color-mix(in srgb, var(--page) 64%, #fff);
+  font-size: calc(var(--d) * 0.45);
+}
+
+.contact-head > .contact-face > img {
+  width: 64%;
+  height: 64%;
+}
+
+.contact-head > .contact-face[data-full] > img {
+  width: 100%;
+  height: 100%;
+}
+
+.contact-head > .contact-face::after {
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.2);
 }
 
 .contact-head__name {
   max-width: 100%;
-  margin-top: 12px;
-  font-size: 28px;
+  margin-top: 27px;
+  /* The rounded cut of the system's face, where there is one, as a contact's name is set */
+  font-family: ui-rounded, 'SF Pro Rounded', var(--font-ui);
+  font-size: 41px;
   font-weight: 700;
-  letter-spacing: -0.01em;
-  line-height: 34px;
+  letter-spacing: -0.005em;
+  line-height: 1.17;
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
-.contact-head__under {
-  margin-top: 2px;
-  color: var(--label-2);
-  font-size: 15px;
-  letter-spacing: -0.015em;
-  line-height: 20px;
+/* A picture that fills the head of the card: it runs from the top of the screen down behind the name and
+   fades out into the page, whose colour is the colour of its own foot. A shade along its top keeps the
+   status bar and the buttons clear of a pale sky */
+.contact-poster {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(var(--status) + min(480px, 62cqh));
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 66%, transparent);
+  mask-image: linear-gradient(#000 66%, transparent);
+  pointer-events: none;
 }
 
-/* What can be done from a card: each a pane of its own, a sign over a word, side by side */
+.contact-poster > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+
+.contact-poster::before {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgb(0 0 0 / 0.3), transparent calc(var(--status) + 76px)),
+    linear-gradient(transparent 52%, color-mix(in srgb, var(--page) 70%, transparent));
+  content: '';
+}
+
+/* With one, there is no face: the name is set over the foot of the picture */
+.contact-head[data-poster] {
+  padding-top: min(286px, 37cqh);
+}
+
+.contact-head[data-poster] .contact-head__name {
+  margin-top: 0;
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.35);
+}
+
+/* Over a picture the glass is see-through, not the page's colour */
+.ios-screen.contacts-screen--poster .ios-glass {
+  --glass: rgb(255 255 255 / 0.16);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+}
+
+.ios-screen.contacts-screen--poster {
+  --pane: color-mix(in srgb, var(--page) 78%, #000);
+  --act: color-mix(in srgb, var(--page) 78%, #000);
+}
+
+/* What can be done from a card: a row of round panes, 64 points each and 12 apart, a sign on each */
 .contact-acts {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
-  gap: 8px;
-  padding: 16px var(--edge) 4px;
+  gap: 12px;
+  padding: 18px var(--edge) 0;
 }
 
 .contact-act {
   display: grid;
-  flex: 1;
-  justify-items: center;
-  gap: 3px;
-  max-width: 172px;
-  min-height: 58px;
-  padding: 9px 6px 7px;
-  border-radius: 14px;
-  background: var(--surface);
-  color: var(--link);
-  text-align: center;
-}
-
-.contact-act__label {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.005em;
-  line-height: 13px;
+  flex: none;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--act);
+  box-shadow:
+    inset 0 0 0 1px var(--rim),
+    0 6px 20px -8px rgb(0 0 0 / 0.25);
+  color: #fff;
+  transition: transform 0.25s var(--ui);
 }
 
 :is(a, button).contact-act:active {
-  background: color-mix(in srgb, var(--surface) 86%, #000);
+  transform: scale(0.93);
+  transition-duration: 0.08s;
 }
 
 /* Nowhere to go: there, and faint, as a contact's card leaves what it cannot do */
-.contact-act[aria-disabled='true'] {
-  color: var(--label-3);
+.contact-act[aria-disabled='true'] > svg {
+  opacity: 0.35;
 }
 
 .contact-list {
-  gap: 18px;
-  padding-top: 14px;
+  position: relative;
+  z-index: 1;
+  gap: 12px;
+  padding-top: 15px;
+}
+
+/* A pane: the page's colour, lighter, with corners as round as a contact's card gives its panes */
+.ios-screen.contacts-screen--card .ios-section__rows {
+  border-radius: 32px;
+  background: var(--pane);
 }
 
 .contact-fields {
@@ -299,14 +468,13 @@
 .contact-field {
   position: relative;
   display: grid;
-  gap: 1px;
-  padding: 10px 16px 11px;
+  padding: 13.5px 16px 13px;
 }
 
 .contact-field + .contact-field::before {
   position: absolute;
   top: 0;
-  right: 0;
+  right: 16px;
   left: 16px;
   height: 0.5px;
   background: var(--sep);
@@ -314,32 +482,61 @@
 }
 
 .contact-field__label {
-  font-size: 14px;
-  letter-spacing: -0.01em;
-  line-height: 19px;
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 18px;
 }
 
 .contact-field__value {
-  color: var(--label);
-  font-size: 17px;
-  letter-spacing: -0.02em;
-  line-height: 22px;
+  font-size: 18px;
+  letter-spacing: -0.022em;
+  line-height: 23px;
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;
 }
 
+/* One that leads somewhere is pressed anywhere along its row, and has the sign of where it leads at its end */
+.contact-field[data-link] {
+  padding-right: 52px;
+}
+
 .contact-field__value > a {
-  display: inline-block;
-  color: var(--link);
+  display: block;
 }
 
-.contact-field__value > a:active {
-  opacity: 0.6;
+.contact-field__value > a::after {
+  position: absolute;
+  inset: 0;
+  content: '';
 }
 
+.contact-field[data-link]:active {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.contact-field__value > a:focus-visible {
+  outline: none;
+}
+
+.contact-field[data-link]:has(a:focus-visible) {
+  outline: 3px solid var(--ring);
+  outline-offset: -4px;
+  border-radius: 22px;
+}
+
+.contact-field__sign {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  display: grid;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Where a link would be, what is said in its place: in the same ink (a fainter one would not read on a pane) */
 .contact-field__none {
-  color: var(--label-2);
+  font-style: normal;
 }
 
 /* A thing to do, in a row of its own */
@@ -347,19 +544,19 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 48px;
+  min-height: 52px;
   padding: 8px 16px;
-  color: var(--link);
-  font-size: 17px;
-  letter-spacing: -0.02em;
-  line-height: 22px;
+  font-size: 18px;
+  letter-spacing: -0.022em;
+  line-height: 23px;
   text-align: left;
 }
 
 .contact-row:active {
-  background: rgb(0 0 0 / 0.07);
+  background: rgb(255 255 255 / 0.08);
 }
 
 .contact-row:focus-visible {
-  outline-offset: -3px;
+  outline-offset: -4px;
+  border-radius: 22px;
 }

@@ -30,6 +30,14 @@ if (typeof window !== 'undefined') window.addEventListener('online', () => missi
 
 const noteMissing = (logo: string) => missing.set((gone) => (gone.has(logo) ? gone : new Set(gone).add(logo)))
 
+/** A company's logo as a picture to draw: where it is, and what to do if it does not arrive. null for a
+ * company with no logo, and for one whose file did not arrive (it is asked for again when the line is back). */
+export function useLogo(company: Company) {
+  const logo = company.logo
+  const gone = useStore(missing, (s) => !!logo && s.has(logo))
+  return logo && !gone ? { src: `${import.meta.env.BASE_URL}logos/${logo}`, onError: () => noteMissing(logo) } : null
+}
+
 /** A company's logo as an app icon: its own mark on a rounded tile, or its
  * initial where no logo could be confirmed, or where the file did not arrive.
  * A logo is asked for when it comes into sight; `eager` asks for it at once,
