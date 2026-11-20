@@ -858,3 +858,45 @@
     border-radius: 7px;
   }
 }
+
+/* ---- The ground runs to every edge, in one dark; and the keyboard can be put away ---- */
+
+/* Dark enough that the wallpaper's own light and dark ends read as one colour behind it: the strips the
+   browser's bars take their colour from (chrome.ts) are that colour too, so the ground has no edge */
+.spot-away {
+  background: rgb(10 11 16 / 0.82);
+}
+
+.kb {
+  transition: transform 0.32s var(--glide);
+}
+
+/* The keyboard is put away (a drag on what was found): it goes down out of sight, and the field drops to
+   the foot of the screen as a shorter pill, where Spotlight leaves it. A press on the field brings both back */
+.spot[data-keys][data-keys-down] {
+  --foot: calc(var(--home, 34px) + 4px);
+}
+
+.spot[data-keys][data-keys-down] .kb {
+  transform: translateY(105%);
+  pointer-events: none;
+}
+
+.spot-foot {
+  transition:
+    bottom 0.32s var(--glide),
+    right 0.32s var(--glide),
+    left 0.32s var(--glide);
+}
+
+.spot[data-keys][data-keys-down] .spot-foot {
+  right: calc(35px + var(--side-r, 0px));
+  left: calc(35px + var(--side-l, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb,
+  .spot-foot {
+    transition: none;
+  }
+}

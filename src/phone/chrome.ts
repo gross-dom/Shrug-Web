@@ -16,10 +16,9 @@ export const WALLPAPER_TOP = '#0f1130'
 /** And along its foot, which is pale where the top is dark: what the browser's lower bar is given (edges.ts). */
 export const WALLPAPER_FOOT = '#8297de'
 
-/** Both again where the wallpaper is darkened: behind the App Switcher (phone.css takes it to 0.72 of its
- * brightness, and lays rgb(4 6 20 / 0.46) over that) and under search's shade (spotlight.css lays
- * rgb(10 11 16 / 0.62) over it, and at the foot the keyboard's own glass over that). */
-export const WALLPAPER_DIMMED = { switcher: { top: '#08091c', foot: '#353e60' }, search: { top: '#0c0d1c', foot: '#313443' } }
+/** Both again where the wallpaper is darkened: behind the App Switcher (phone.css lays rgb(4 6 20 / 0.46) over it) and under search's shade (spotlight.css lays
+ * rgb(10 11 16 / 0.82) over it, and at the foot the keyboard's own glass over that, or none when it is put away: one colour between the two). */
+export const WALLPAPER_DIMMED = { switcher: { top: '#0a0c29', foot: '#485481' }, search: { top: '#0b0c16', foot: '#23252f' } }
 
 export const chrome = createStore<Record<PhoneApp, Tone>>({ messages: 'plain', finder: 'plain', notes: 'plain', terminal: 'dark', photos: 'plain' })
 

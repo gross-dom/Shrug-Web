@@ -217,14 +217,13 @@ const ringOf = (page) =>
       await t.sleep(400)
     }
     await A.shot(page, 'fix-I-menu-land')
-    // …and the menu that rises out of a conversation's plus starts inside the screen
+    // …and a conversation's plus is inside the screen, and is the browser's own picker (no menu of apps)
     await A.at(page, 'messages', ['c:group'], null, 900)
-    await page.locator(`${TOP} .msg-more__button`).tap()
-    await t.sleep(600)
-    const plus = await page.evaluate((TOP) => { const l = document.querySelector(`${TOP} .msg-more__list[data-show]`); const r = l?.getBoundingClientRect(); return l ? { top: Math.round(r.top), bottom: Math.round(r.bottom), rows: l.querySelectorAll('.ios-menu__item').length } : null }, TOP)
-    check('PH-4 on its side (568x320): the plus menu in a conversation starts inside the screen', plus && plus.top >= 0 && plus.rows >= 4, JSON.stringify(plus))
-    await page.keyboard.press('Escape')
+    const plusAt = await page.locator(`${TOP} .msg-more__button`).boundingBox()
+    const [asked] = await Promise.all([page.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null), page.locator(`${TOP} .msg-more__button`).tap()])
     await t.sleep(300)
+    const menus = await page.locator(`${TOP} .msg-more__list, ${TOP} [role="menu"][aria-label="More from Shrug"]`).count()
+    check('PH-4 on its side (568x320): the plus in a conversation is inside the screen and asks the browser for files', !!plusAt && plusAt.y >= 0 && plusAt.y + plusAt.height <= 320 && !!asked && asked.isMultiple() && menus === 0, JSON.stringify({ plusAt, asked: !!asked, menus }))
 
     // PH-10: on its side with the keyboard up, something of what was found shows (Contacts' search)
     await contactsSearch(t, 'a')

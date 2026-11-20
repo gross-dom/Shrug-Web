@@ -567,9 +567,12 @@ export function Spotlight() {
   const root = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
   /** Where a finger came down on the results (`from`), and whether they were at their top then: a pull down from there closes search. */
-  const pull = useRef<{ from: number; top: boolean } | null>(null)
+  const pull = useRef<{ from: number; top: boolean; keys: boolean } | null>(null)
   /** A finger's phone: the keyboard is search's own, drawn at its foot (SpotKeys, above). */
   const [ownKeys] = useState(() => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches)
+  /** That keyboard is up. A drag on what was found puts it away, as it does on an iPhone, and the field
+   * drops to the foot of the screen; a press on the field brings it back. */
+  const [keysUp, setKeysUp] = useState(true)
   if (on && !shown) setShown(true)
 
   useEffect(() => {
@@ -583,6 +586,7 @@ export function Spotlight() {
     if (on) {
       setQuery('')
       setAt(-1)
+      setKeysUp(true)
       input.current?.focus({ preventScroll: true })
     } else if (root.current?.contains(document.activeElement)) {
       // Back on the Home Screen, the keyboard goes back to the pill search was opened from
@@ -648,7 +652,7 @@ export function Spotlight() {
 
   if (!shown) return null
   return (
-    <div ref={root} className="spot" data-leaving={!on || undefined} data-keys={ownKeys || undefined} role="dialog" aria-modal="true" aria-label="Search" onKeyDown={onKey} {...(on ? null : ({ inert: '' } as object))}>
+    <div ref={root} className="spot" data-leaving={!on || undefined} data-keys={ownKeys || undefined} data-keys-down={(ownKeys && !keysUp) || undefined} role="dialog" aria-modal="true" aria-label="Search" onKeyDown={onKey} {...(on ? null : ({ inert: '' } as object))}>
       {/* The ground behind: a tap on it closes search, as it does on an iPhone, and so does a pull down on what is
           found. The button that says so by name is after the field, for a keyboard and a screen reader */}
       <div className="spot-away" aria-hidden onClick={close} />
@@ -656,16 +660,19 @@ export function Spotlight() {
         className="spot-scroll"
         // A tap on the bare ground between results closes it, as a tap on the wallpaper does
         onClick={(e) => (e.target === e.currentTarget || (e.target as HTMLElement).id === 'spot-list') && close()}
-        onTouchStart={(e) => (pull.current = { from: e.touches[0]!.clientY, top: e.currentTarget.scrollTop <= 0 })}
+        onTouchStart={(e) => (pull.current = { from: e.touches[0]!.clientY, top: e.currentTarget.scrollTop <= 0, keys: ownKeys && keysUp })}
         // Dragging the results puts the keyboard away, as it does on an iPhone. A drag, not a tap whose finger shook
         onTouchMove={(e) => {
-          if (pull.current && Math.abs(e.touches[0]!.clientY - pull.current.from) > 10 && document.activeElement === input.current) input.current?.blur()
+          if (!pull.current || Math.abs(e.touches[0]!.clientY - pull.current.from) <= 10) return
+          if (ownKeys) setKeysUp(false)
+          else if (document.activeElement === input.current) input.current?.blur()
         }}
         // Pulled down from its top, the list goes back where it came from: search closes
         onTouchEnd={(e) => {
           const began = pull.current
           pull.current = null
-          if (began?.top && e.changedTouches[0]!.clientY - began.from > 96 && e.currentTarget.scrollTop <= 0) close()
+          // (The pull that put the keyboard away has done its work: it is the next one that closes search)
+          if (began?.top && !began.keys && e.changedTouches[0]!.clientY - began.from > 96 && e.currentTarget.scrollTop <= 0) close()
         }}
         onTouchCancel={() => (pull.current = null)}
       >
@@ -775,6 +782,8 @@ export function Spotlight() {
               setAt(-1)
             }}
             onKeyDown={onFieldKey}
+            // A press on the field brings its keyboard back
+            onPointerDown={() => setKeysUp(true)}
           />
           {/* What Return will do with what has been typed, written after it in the field as Spotlight writes it */}
           {typed && first && at < 0 && query.length <= 18 && (

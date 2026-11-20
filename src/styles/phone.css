@@ -320,11 +320,9 @@
   }
 }
 
-/* Behind the App Switcher it falls back and out of focus */
-.sb-wall[data-at='switcher'] {
-  filter: blur(16px) brightness(0.72);
-  transform: scale(1.08);
-}
+/* Behind the App Switcher it is dimmed, by the shade the switcher lays over it (below). It used to fall back
+   and out of focus as well: the falling back was the screen zooming as the switcher came and went, and a
+   blur the size of the screen was the heaviest thing there was to draw while the cards were moving */
 
 /* ---- The Lock Screen ---- */
 
@@ -776,11 +774,9 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
     filter 0.26s ease;
 }
 
-/* An app is in front: the icons have gone out past it, towards the eye, as an iPhone's do when an app
-   opens out of one of them; they fall back into place from there when it is put away */
-.sb-home[data-covered] {
-  transform: scale(1.16);
-}
+/* An app is in front: the icons fade where they are, and come back where they were when it is put away.
+   (They used to go out past it, towards the eye, and fall back: on a phone that read as the whole screen
+   zooming in and out with every app, and Shrug asked for it to stop) */
 
 .sb-home[data-covered] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
 .sb-home[data-covered] .sb-grid :is(.sb-icon__tile, .sb-icon__name) {
@@ -819,10 +815,6 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 
 /* Under a finger carrying an app away they come into sight as it is carried (`--carry`, from nothing to
    the whole way up the screen: Springboard.tsx), nearly in place by the time it is a third of the way */
-.ph[data-dragging] .sb-home[data-covered] {
-  transform: scale(max(1.045, 1.16 - var(--carry, 0) * 0.4));
-  transition: none;
-}
 
 .ph[data-dragging] .sb-home[data-covered] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
 .ph[data-dragging] .sb-home[data-covered] .sb-grid :is(.sb-icon__tile, .sb-icon__name) {
@@ -1981,4 +1973,35 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 
 .sb-apps[data-switcher] .sb-apps__away {
   background: rgb(4 6 20 / 0.46);
+}
+
+/* ---- The App Switcher, under a thumb ---- */
+
+/* What places a card (how far the row is panned, how far a card is lifted) is the card's own and is not
+   handed down into it: handed down, everything in every card's app was restyled at each move of the finger */
+@property --pan {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --d {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* A card in the row is moved by the browser's own hand, and blurs nothing while it is there: glass inside
+   it had to blur afresh at every frame. One soft shadow, not two */
+.sb-apps[data-switcher] .sb-slot {
+  will-change: transform;
+}
+
+.sb-apps[data-switcher] .sb-zoom__app * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.sb-apps[data-switcher] .sb-card {
+  box-shadow: 0 16px 36px rgb(0 0 0 / 0.4);
 }

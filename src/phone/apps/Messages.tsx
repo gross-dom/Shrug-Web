@@ -1,14 +1,13 @@
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, FileText, Mic, Plus, Search, Video, X } from 'lucide-react'
-import { chat, finishChat, replayChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
-import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
+import { attach, attached, attachedTo, chat, detach, finishChat, MOST_FILES, replayChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
+import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, PersonAvatar, relationsOf, Transcript, useConversationRows, type ListRow } from '../../apps/chat-ui'
 import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, sought, type Conversation } from '../../apps/state'
 import { eggOf } from '../../data/eggs'
 import { COMPANY_OF } from '../../data/founders'
 import { PEOPLE } from '../../data/people'
 import { COMPANIES } from '../../data/portfolio'
 import { SITE } from '../../data/site'
-import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
 import { formatter } from '../../os/dates'
 import { LogoDisc } from '../../os/icons'
@@ -18,14 +17,12 @@ import { showCompany } from '../../os/launch'
 import { atPerson, linkTo } from '../../os/place'
 import { useStore } from '../../os/store'
 import { sheeted } from '../chrome'
-import { OnePagerIcon, PhoneIcon } from '../icons'
 import { share } from '../native'
-import { closeSheet, goHome, launch, openSheet, pop, push, sys, topOf, type PhoneApp } from '../system'
+import { closeSheet, goHome, openSheet, pop, push, sys, topOf } from '../system'
 import { useNewCount } from '../unread'
 import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 // (The apps' names on this phone. That file draws this one, and this one reads that one's names: each is
 // asked of the other only once both are there, when something is drawn)
-import { PHONE } from './index'
 import { LIMITS, outbox, pick, resend, sendToShrug, setDraft, sizeOf, unpick, type Sent } from './outbox'
 import { conversationView, GROUP_VIEW, NEW_MESSAGE } from './routes'
 import '../../styles/phone/messages.css'
@@ -262,79 +259,47 @@ function Back() {
   )
 }
 
-/** The rest of the site, behind the plus: where Messages keeps its apps. */
-const MORE: PhoneApp[] = ['finder', 'notes', 'terminal', 'photos']
-
-function More() {
-  const [open, setOpen] = useState(false)
-  const root = useRef<HTMLSpanElement>(null)
-  // The arrows, Home and End move through it and Escape gives the keyboard back to the plus, as in any menu
-  const menu = useMenuKeys(open, setOpen)
-  useEffect(() => {
-    if (!open) return
-    const away = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false)
-    }
-    const key = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      // The menu closes; the screen behind it stays
-      e.preventDefault()
-      setOpen(false)
-    }
-    document.addEventListener('pointerdown', away, true)
-    window.addEventListener('keydown', key, true)
-    return () => {
-      document.removeEventListener('pointerdown', away, true)
-      window.removeEventListener('keydown', key, true)
-    }
-  }, [open])
+/** The files waiting in a message field, over its words: a picture small, anything else by its name and
+ * size, each with a button that takes it back out. */
+function Waiting({ files, drop }: { files: { id: string; file: File; url: string | null }[]; drop: (id: string) => void }) {
   return (
-    <span ref={root} className="msg-more">
-      <button ref={menu.button} type="button" className="ios-glass ios-button msg-more__button" aria-label="More from Shrug" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} onKeyDown={menu.onButtonKey}>
-        <Plus size={23} strokeWidth={2.2} aria-hidden />
-      </button>
-      <Popover show={open} origin="bottom left" className="ios-menu__list msg-more__list" role="menu" aria-label="More from Shrug" onKeyDown={menu.onMenuKey} {...(open ? null : ({ inert: '' } as object))}>
-        {MORE.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className="ios-menu__item msg-more__item"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false)
-              launch(id)
-            }}
-          >
-            <span className="msg-more__icon" aria-hidden>
-              <PhoneIcon id={id} />
-            </span>
-            {/* Under the name its icon has on the Home Screen: Contacts and Notes here, not the desktop's Portfolio and FAQs */}
-            <span className="ios-menu__label">{PHONE[id].label}</span>
+    <ul className="msgn-picked" aria-label="Attached">
+      {files.map((p) => (
+        <li key={p.id} className="msgn-pick" data-picture={p.url ? '' : undefined}>
+          {p.url ? (
+            <img src={p.url} alt={p.file.name} draggable={false} />
+          ) : (
+            <>
+              <FileText size={22} strokeWidth={1.8} aria-hidden />
+              <span className="msgn-pick__words">
+                <b dir="auto">{p.file.name}</b>
+                <span>{sizeOf(p.file.size)}</span>
+              </span>
+            </>
+          )}
+          <button type="button" className="msgn-pick__drop" aria-label={`Remove ${p.file.name}`} onClick={() => drop(p.id)} {...keepsCaret}>
+            <X size={12} strokeWidth={3.4} aria-hidden />
           </button>
-        ))}
-        <a className="ios-menu__item msg-more__item" role="menuitem" href={SITE.onePager} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
-          <span className="msg-more__icon" aria-hidden>
-            <OnePagerIcon />
-          </span>
-          <span className="ios-menu__label">
-            One-pager
-            <span className="sr-only">, opens in a new tab</span>
-          </span>
-        </a>
-      </Popover>
-    </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-/** The message field. The script types Shrug's own messages into it; anything
- * the visitor types is theirs to send, and is marked as not having gone. */
+/** The message field. The script types Shrug's own messages into it; anything the visitor types is theirs
+ * to send. The plus beside it is the browser's own picker (a phone offers its photos, its camera and its
+ * files there): what is picked waits in the field, and goes into the conversation with the words. It is
+ * shown from where it is on the visitor's own device: nothing is sent anywhere (src/apps/chat.ts). */
 function Field({ conversation, target, showing }: { conversation: Conversation; target: string; showing: boolean }) {
   // Kept with the conversation, not in this field: still there after a turn of the screen, or a look at another conversation
   const text = useStore(unsent, (s) => s[conversation] ?? '')
   const draft = useStore(chat, (s) => (conversation === 'group' ? s.draft : null))
+  const waiting = useStore(attached, (s) => attachedTo(s, conversation))
   const input = useRef<HTMLInputElement>(null)
-  const ready = text.trim().length > 0
-  const ghost = draft !== null && !text
+  const files = useRef<HTMLInputElement>(null)
+  const ready = text.trim().length > 0 || waiting.length > 0
+  const ghost = draft !== null && !text && !waiting.length
+  const full = waiting.length >= MOST_FILES
 
   // Asked for by the compose button: the field takes the keyboard as its screen arrives
   useEffect(() => {
@@ -356,23 +321,41 @@ function Field({ conversation, target, showing }: { conversation: Conversation; 
 
   return (
     <>
-      <More />
-      <form className="ios-glass msg-field" onSubmit={submit}>
-        {/* Where the words start: a sent bubble forms out of this spot */}
-        <span className="msg-field__origin" data-target={target} aria-hidden />
-        {ghost && (
-          <span className="msg-field__ghost" aria-hidden>
-            {draft}
-            <i className="msg-field__caret" />
+      <input
+        ref={files}
+        className="msgn-picker"
+        type="file"
+        multiple
+        tabIndex={-1}
+        aria-hidden
+        onChange={(e) => {
+          attach(conversation, [...(e.target.files ?? [])])
+          e.target.value = ''
+          input.current?.focus({ preventScroll: true })
+        }}
+      />
+      <button type="button" className="ios-glass ios-button msg-more__button" aria-label="Add files" aria-disabled={full || undefined} onClick={() => !full && files.current?.click()} {...keepsCaret}>
+        <Plus size={23} strokeWidth={2.2} aria-hidden />
+      </button>
+      <form className="ios-glass msg-field msgn-field" onSubmit={submit}>
+        {waiting.length > 0 && <Waiting files={waiting} drop={(id) => detach(conversation, id)} />}
+        <span className="msgn-field__row">
+          {/* Where the words start: a sent bubble forms out of this spot */}
+          <span className="msg-field__origin" data-target={target} aria-hidden />
+          {ghost && (
+            <span className="msg-field__ghost" aria-hidden>
+              {draft}
+              <i className="msg-field__caret" />
+            </span>
+          )}
+          <input ref={input} className="msg-field__input" type="text" dir="auto" placeholder={ghost ? '' : waiting.length ? 'Add comment or Send' : 'iMessage'} aria-label="iMessage" autoComplete="off" autoCorrect="on" enterKeyHint="send" value={text} onChange={(e) => setUnsent(conversation, e.target.value)} />
+          <span className="msg-field__mic" data-off={ready || ghost || undefined} aria-hidden>
+            <Mic size={20} strokeWidth={2} />
           </span>
-        )}
-        <input ref={input} className="msg-field__input" type="text" dir="auto" placeholder={ghost ? '' : 'iMessage'} aria-label="iMessage" autoComplete="off" autoCorrect="on" enterKeyHint="send" value={text} onChange={(e) => setUnsent(conversation, e.target.value)} />
-        <span className="msg-field__mic" data-off={ready || ghost || undefined} aria-hidden>
-          <Mic size={20} strokeWidth={2} />
+          <button type="submit" className="msg-field__send" aria-label="Send" data-ready={ready || undefined} aria-disabled={!ready} tabIndex={ready ? 0 : -1} {...keepsCaret}>
+            <ArrowUp size={19} strokeWidth={3} aria-hidden />
+          </button>
         </span>
-        <button type="submit" className="msg-field__send" aria-label="Send" data-ready={ready || undefined} aria-disabled={!ready} tabIndex={ready ? 0 : -1} {...keepsCaret}>
-          <ArrowUp size={19} strokeWidth={3} aria-hidden />
-        </button>
       </form>
     </>
   )
@@ -667,28 +650,7 @@ function NewMessageScreen() {
             <Plus size={23} strokeWidth={2.2} aria-hidden />
           </button>
           <form className="ios-glass msg-field msgn-field" onSubmit={submit}>
-            {picked.length > 0 && (
-              <ul className="msgn-picked" aria-label="Attached">
-                {picked.map((p) => (
-                  <li key={p.id} className="msgn-pick" data-picture={p.url ? '' : undefined}>
-                    {p.url ? (
-                      <img src={p.url} alt={p.file.name} draggable={false} />
-                    ) : (
-                      <>
-                        <FileText size={22} strokeWidth={1.8} aria-hidden />
-                        <span className="msgn-pick__words">
-                          <b dir="auto">{p.file.name}</b>
-                          <span>{sizeOf(p.file.size)}</span>
-                        </span>
-                      </>
-                    )}
-                    <button type="button" className="msgn-pick__drop" aria-label={`Remove ${p.file.name}`} onClick={() => unpick(p.id)} {...keepsCaret}>
-                      <X size={12} strokeWidth={3.4} aria-hidden />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {picked.length > 0 && <Waiting files={picked} drop={unpick} />}
             <span className="msgn-field__row">
               <input ref={input} className="msg-field__input" type="text" dir="auto" placeholder={picked.length ? 'Add comment or Send' : 'iMessage'} aria-label={`Message to ${SITE.name}`} autoComplete="off" autoCorrect="on" enterKeyHint="send" value={draft} onChange={(e) => setDraft(e.target.value)} />
               <span className="msg-field__mic" data-off={ready || undefined} aria-hidden>

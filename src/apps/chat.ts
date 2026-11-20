@@ -12,8 +12,19 @@ import { createStore } from '../os/store'
 
 export type ChatItem =
   /** A message from this Mac: Shrug's own, or one the visitor typed. */
-  | { key: string; kind: 'me'; text: string; by: 'shrug' | 'visitor' }
+  | { key: string; kind: 'me'; text: string; by: 'shrug' | 'visitor'; file?: ChatFile }
   | { key: string; kind: 'person'; index: number; typing: boolean }
+
+/** A file the visitor put into a conversation, as its bubble shows it. A message that carries one has the
+ * file's name for its words, so that whatever reads a message's words (the list's last line, what is kept)
+ * has something to read. */
+export interface ChatFile {
+  name: string
+  size: number
+  /** A picture's own address in the page, for as long as the page that picked it lasts: after a reload
+   * there is none, and the picture is shown by its name, as any other file is. */
+  url: string | null
+}
 
 export interface Chat {
   /** The group conversation, in order. */
@@ -45,6 +56,7 @@ export interface Written {
   key: string
   text: string
   at?: number
+  file?: ChatFile
 }
 
 export const TOTAL = PEOPLE.length
@@ -126,6 +138,7 @@ interface KeptMessage {
   key: string
   text: string
   after: string
+  file?: ChatFile
 }
 
 interface Kept {
@@ -140,6 +153,11 @@ interface Kept {
 
 const MOST = 200
 const words = (value: unknown) => (typeof value === 'string' ? value.slice(0, 5000) : '')
+/** A file as it comes back after a reload: its name and its size. The picture itself went with the page. */
+const fileOf = (value: unknown): { file: ChatFile } | null => {
+  const was = value as Partial<ChatFile> | null
+  return was && typeof was === 'object' && typeof was.name === 'string' && was.name && typeof was.size === 'number' && Number.isFinite(was.size) ? { file: { name: was.name.slice(0, 300), size: Math.max(0, was.size), url: null } } : null
+}
 const listOf = (value: unknown) => (Array.isArray(value) ? (value.slice(0, MOST) as Record<string, unknown>[]).filter((entry) => !!entry && typeof entry === 'object') : [])
 
 /** What this tab had of the conversation, read with care (it is only text in storage): null if there is nothing of use. */
@@ -150,13 +168,13 @@ function kept(): Kept | null {
   const startedAt = typeof was.startedAt === 'number' && Number.isFinite(was.startedAt) && was.startedAt <= Date.now() ? was.startedAt : Date.now()
   const repliedAt = Array.isArray(was.repliedAt) ? was.repliedAt.map((t) => (typeof t === 'number' && Number.isFinite(t) ? t : 0)) : []
   const mine = listOf(was.mine)
-    .map((entry) => ({ key: words(entry.key), text: words(entry.text), after: words(entry.after) }))
+    .map((entry): KeptMessage => ({ key: words(entry.key), text: words(entry.text), after: words(entry.after), ...fileOf(entry.file) }))
     .filter((message) => message.key && message.text)
   const direct: Chat['direct'] = {}
   if (was.direct && typeof was.direct === 'object')
     for (const [to, list] of Object.entries(was.direct as Record<string, unknown>).slice(0, MOST)) {
       const said = listOf(list)
-        .map((entry): Written => ({ key: words(entry.key), text: words(entry.text), ...(typeof entry.at === 'number' && Number.isFinite(entry.at) && entry.at <= Date.now() ? { at: entry.at } : null) }))
+        .map((entry): Written => ({ key: words(entry.key), text: words(entry.text), ...(typeof entry.at === 'number' && Number.isFinite(entry.at) && entry.at <= Date.now() ? { at: entry.at } : null), ...fileOf(entry.file) }))
         .filter((message) => message.key && message.text)
       if (said.length) direct[to] = said
     }
@@ -173,7 +191,7 @@ chat.subscribe(() => {
   // Shrug's own typing changes the field many times a second, and nothing that is kept
   if (keptOf && keptOf.items === s.items && keptOf.direct === s.direct && keptOf.done === s.done) return
   keptOf = { items: s.items, direct: s.direct, done: s.done }
-  const mine = s.items.flatMap((item, i) => (item.kind === 'me' && item.by === 'visitor' ? [{ key: item.key, text: item.text, after: s.items[i - 1]?.key ?? '' }] : []))
+  const mine = s.items.flatMap((item, i) => (item.kind === 'me' && item.by === 'visitor' ? [{ key: item.key, text: item.text, after: s.items[i - 1]?.key ?? '', ...(item.file ? { file: item.file } : null) }] : []))
   const now: Kept = { replied: s.replied, done: s.done, startedAt: s.startedAt, repliedAt: s.repliedAt.slice(0, s.replied), mine, direct: s.direct }
   const as = JSON.stringify(now)
   if (as === keptAs) return
@@ -308,7 +326,7 @@ function restored(was: Kept): Chat {
   const items: ChatItem[] = begun ? [...QUESTION.map((text, n) => asMine(text, `ask-${n}`)), ...PEOPLE.slice(0, was.replied).map((_, index): ChatItem => ({ key: `p-${index}`, kind: 'person', index, typing: false }))] : []
   for (const message of was.mine) {
     const at = items.findIndex((item) => item.key === message.after)
-    const item: ChatItem = { key: message.key, kind: 'me', text: message.text, by: 'visitor' }
+    const item: ChatItem = { key: message.key, kind: 'me', text: message.text, by: 'visitor', ...(message.file ? { file: message.file } : null) }
     if (at < 0) items.push(item)
     else items.splice(at + 1, 0, item)
   }
@@ -387,17 +405,64 @@ function typedBefore() {
 
 unsent.subscribe(() => keepFor('unsent', unsent.get()))
 
-/** Something the visitor typed, into the group or into one of the other
- * conversations (by its id). It joins the conversation as any sent message
- * does, and is marked Delivered. (Nothing leaves the page: the conversation is
- * a recording, and there is nobody at the other end to answer.) */
+// ---- Files ----
+
+/** A file picked to go into a conversation, waiting in its field until the message is sent. */
+export interface Attached {
+  id: string
+  file: File
+  /** A picture's own address in the page, to show it small; null for anything else. */
+  url: string | null
+}
+
+/** The most that one message takes. */
+export const MOST_FILES = 10
+
+/** The files waiting in each conversation's field. They are not kept for the tab: a page cannot keep a file. */
+export const attached = createStore<Record<string, Attached[]>>({})
+
+const NO_FILES: Attached[] = []
+export const attachedTo = (s: Record<string, Attached[]>, conversation: string) => s[conversation] ?? NO_FILES
+
+const isPicture = (file: File) => file.type.startsWith('image/') && !/svg/.test(file.type)
+let picks = 0
+
+/** Adds files to the message being written in a conversation, up to the most it takes. They are read by
+ * this page and by nothing else. */
+export function attach(conversation: string, files: File[]) {
+  attached.set((s) => {
+    const have = attachedTo(s, conversation)
+    const taken = files.slice(0, Math.max(0, MOST_FILES - have.length))
+    return taken.length ? { ...s, [conversation]: [...have, ...taken.map((file) => ({ id: `file-${++picks}`, file, url: isPicture(file) ? URL.createObjectURL(file) : null }))] } : s
+  })
+}
+
+/** Takes a file back out of the message being written. */
+export function detach(conversation: string, id: string) {
+  attached.set((s) => {
+    const gone = attachedTo(s, conversation).find((a) => a.id === id)
+    if (gone?.url) URL.revokeObjectURL(gone.url)
+    return gone ? { ...s, [conversation]: attachedTo(s, conversation).filter((a) => a.id !== id) } : s
+  })
+}
+
+/** Something the visitor typed, or files they picked, into the group or into one of the other
+ * conversations (by its id). Each file is a message of its own, ahead of the words, as Messages sends
+ * them. It joins the conversation as any sent message does, and is marked Delivered. (Nothing leaves the
+ * page: the conversation is a recording, and there is nobody at the other end to answer. A file is shown
+ * from where it is on the visitor's own device and goes nowhere.) */
 export function sendMessage(text: string, to = 'group') {
   const body = text.trim()
-  if (!body) return
-  const key = `me-${++sent}`
+  const files = attachedTo(attached.get(), to)
+  if (!body && !files.length) return
+  const said: { key: string; text: string; file?: ChatFile }[] = files.map(({ file, url }) => ({ key: `me-${++sent}`, text: file.name || 'Attachment', file: { name: file.name || 'Attachment', size: file.size, url } }))
+  if (body) said.push({ key: `me-${++sent}`, text: body })
+  // (The pictures' addresses go on with their bubbles: they are not let go of here)
+  if (files.length) attached.set((s) => ({ ...s, [to]: NO_FILES }))
+  const at = Date.now()
   chat.set((s) =>
     to === 'group'
-      ? { ...s, items: [...s.items, { key, kind: 'me', text: body, by: 'visitor' }] }
-      : { ...s, direct: { ...s.direct, [to]: [...(s.direct[to] ?? []), { key, text: body, at: Date.now() }] } },
+      ? { ...s, items: [...s.items, ...said.map((m): ChatItem => ({ ...m, kind: 'me', by: 'visitor' }))] }
+      : { ...s, direct: { ...s.direct, [to]: [...(s.direct[to] ?? []), ...said.map((m): Written => ({ ...m, at }))] } },
   )
 }

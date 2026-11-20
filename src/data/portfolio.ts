@@ -2,7 +2,10 @@
 // carrying the vertical it is in. The names and their order are Shrug's own
 // list; the verticals are from the design canvas; a company's website and
 // one-line description are from the portfolio page of shrug.vc, where it has
-// them. A logo is the company's own site icon, kept in public/logos;
+// them. (Clubhouse, Dispo and Popshop Live have no link there: theirs are the
+// addresses their own App Store listings give. HQ Trivia, Poparazzi and YOLO
+// have shut, and Drumroll could not be told from others of its name: they
+// keep `url: null` until Shrug says where to send a visitor.) A logo is the company's own site icon, kept in public/logos;
 // `logo: null` means none could be confirmed, and the window shows the
 // company's initial until a file is added.
 
@@ -151,11 +154,11 @@ export const COMPANIES: Company[] = [
   c('Atoms', 'Products', 'https://atoms.co', 'atoms-co.webp', null, 'Atoms (atoms.co)'),
   c('Atoms', 'Products', 'https://atoms.com/', 'atoms.webp', 'The most comfortable everyday shoes'),
   c('HQ Trivia', SOCIAL, null, 'hq-trivia.webp', 'A live gameshow that anyone can win'),
-  c('Clubhouse', SOCIAL, null, 'clubhouse.webp', 'A space for casual, drop-in audio conversations'),
+  c('Clubhouse', SOCIAL, 'https://www.clubhouse.com', 'clubhouse.webp', 'A space for casual, drop-in audio conversations'),
   c('Poparazzi', SOCIAL, null, null, 'Photo sharing app curated by your friends'),
-  c('Dispo', SOCIAL, null, 'dispo.webp', 'The digital disposable camera app'),
+  c('Dispo', SOCIAL, 'https://dispo.fun', 'dispo.webp', 'The digital disposable camera app'),
   c('YOLO', SOCIAL, null, null),
-  c('Popshop Live', SOCIAL, null, 'popshop.webp', 'Livestream shopping app'),
+  c('Popshop Live', SOCIAL, 'https://popshop.live', 'popshop.webp', 'Livestream shopping app'),
   c('818 Tequila', 'Other', 'https://drink818.com/', '818.webp', 'Award winning tequila'),
   c('Sprinter', 'Other', 'https://drinksprinter.com', null),
 ]

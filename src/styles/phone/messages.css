@@ -352,45 +352,9 @@
   padding-left: 12px;
 }
 
-.msg-more {
-  position: relative;
-  display: inline-flex;
+/* The plus is the browser's own file picker (Messages.tsx, Field) */
+.msg-more__button {
   flex: none;
-}
-
-.msg-more__button > svg {
-  transition: transform 0.3s var(--ui);
-}
-
-.msg-more__button[aria-expanded='true'] > svg {
-  transform: rotate(45deg);
-}
-
-/* The menu rises out of the plus */
-.msg-more__list.ss-popover {
-  top: auto;
-  right: auto;
-  bottom: calc(100% + 10px);
-  left: 0;
-  min-width: 226px;
-}
-
-.msg-more__list[data-show] {
-  pointer-events: auto;
-}
-
-.msg-more__item {
-  gap: 12px;
-  min-height: 50px;
-  padding: 0 20px 0 14px;
-}
-
-.msg-more__icon {
-  display: block;
-  flex: none;
-  width: 30px;
-  height: 30px;
-  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.14));
 }
 
 .msg-field {
@@ -797,6 +761,10 @@
 
 /* Files waiting in the field make it taller: the conversation keeps clear of them */
 .msgn:has(.msgn-picked) .msgn-thread {
+  padding-bottom: calc(var(--foot-gap) + 44px + 18px + 76px);
+}
+
+.msg-convo:has(.msgn-picked) .chat__flow {
   padding-bottom: calc(var(--foot-gap) + 44px + 18px + 76px);
 }
 

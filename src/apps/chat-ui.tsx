@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type MutableRefObject, type ReactElement, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronsDown, Pause, Plus, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronsDown, FileText, Pause, Plus, UserRound } from 'lucide-react'
 import { EGGS, eggOf, lastWords, type Egg, type EggLink } from '../data/eggs'
 import { COMPANY_OF } from '../data/founders'
 import { PEOPLE, RELATION_LABEL } from '../data/people'
@@ -18,7 +18,7 @@ import { AppIcon, DocumentIcon } from '../os/icons'
 import { launchApp, showCompany } from '../os/launch'
 import { atPerson, linkTo } from '../os/place'
 import { useStore } from '../os/store'
-import { chat, finishChat, replayChat, resumeChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatItem, type Written } from './chat'
+import { chat, finishChat, replayChat, resumeChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatFile, type ChatItem, type Written } from './chat'
 import { folded } from './fold'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
 import { SearchField, ShrugAvatar } from './ui'
@@ -141,6 +141,34 @@ const said = (who: string) => ({ role: 'group', 'aria-label': who }) as object
 const SHRUGS = said(SITE.name)
 const YOURS = said('You')
 
+/** A file's size as Messages says it. */
+export function sizeOf(bytes: number) {
+  if (bytes < 1024) return `${bytes} bytes`
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  const mb = bytes / (1024 * 1024)
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`
+}
+
+/** What a bubble that holds a file is marked with. (It rises into place as a received one does: only words
+ * are lifted out of the field.) */
+const FILED = { 'data-file': '' } as const
+
+/** A file the visitor sent, in its bubble: a picture as itself, anything else by its name and its size.
+ * (apps.css takes the bubble's blue and its tail off round both.) */
+function FileSent({ file }: { file: ChatFile }) {
+  return file.url ? (
+    <img className="chat-pic" src={file.url} alt={file.name} draggable={false} />
+  ) : (
+    <span className="chat-file">
+      <FileText size={26} strokeWidth={1.7} aria-hidden />
+      <span className="chat-file__words">
+        <b dir="auto">{file.name}</b>
+        <span>{sizeOf(file.size)}</span>
+      </span>
+    </span>
+  )
+}
+
 /** Under the last message of a conversation that was over long ago: it has been Delivered all along. */
 const delivered = (
   <Receipt key="receipt" show>
@@ -171,8 +199,8 @@ function groupNodes(items: ChatItem[], asked: boolean, startedAt: number, source
     if (item.kind === 'me') {
       const yours = item.by === 'visitor'
       nodes.push(
-        <Bubble key={item.key} from="me" source={source} {...(yours ? YOURS : SHRUGS)}>
-          {item.text}
+        <Bubble key={item.key} from="me" {...(item.file ? FILED : { source })} {...(yours ? YOURS : SHRUGS)}>
+          {item.file ? <FileSent file={item.file} /> : item.text}
         </Bubble>,
       )
       if (item.key === lastSent && (yours || asked)) nodes.push(deliveredTo(item.key))
@@ -211,7 +239,7 @@ function Linked({ link }: { link: EggLink }) {
 
 /** One of the other conversations: what was said in it, all there from the
  * start, and after that whatever the visitor has typed into it. */
-function eggNodes(egg: Egg, at: number, direct: { key: string; text: string }[], source: string) {
+function eggNodes(egg: Egg, at: number, direct: Written[], source: string) {
   const nodes: ReactElement[] = [stamp(at)]
   const theirs = said(egg.name)
   egg.messages.forEach((message, n) =>
@@ -225,8 +253,8 @@ function eggNodes(egg: Egg, at: number, direct: { key: string; text: string }[],
   if (!direct.length && egg.messages[egg.messages.length - 1]?.from === 'me') nodes.push(delivered)
   direct.forEach((message, n) => {
     nodes.push(
-      <Bubble key={message.key} from="me" source={source} {...YOURS}>
-        {message.text}
+      <Bubble key={message.key} from="me" {...(message.file ? FILED : { source })} {...YOURS}>
+        {message.file ? <FileSent file={message.file} /> : message.text}
       </Bubble>,
     )
     if (n === direct.length - 1) nodes.push(deliveredTo(message.key))

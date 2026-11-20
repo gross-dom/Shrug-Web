@@ -18,6 +18,12 @@ WEIGHT = 760
 OPTICAL = 32
 
 
+# A figure the face draws as two shapes laid over each other is given here as the one shape they make. The
+# clock draws a line of light round each figure, and round two shapes that line runs through the figure
+# where they cross: the 4's stem and its flag left two small boxes of line inside it.
+MERGED = {'4': 'M0 1178.4V918.8L641.8 0H1057.3V920.3H1243.7V1178.4H1057.3V1490H738.8V1178.4ZM738.8 316.2H737.7L318.9 918.1V920.3H738.8Z'}
+
+
 def main():
     font = instantiateVariableFont(TTFont(FONT), {'wght': WEIGHT, 'opsz': OPTICAL}, inplace=False)
     cap = font['OS/2'].sCapHeight
@@ -34,7 +40,7 @@ def main():
         pen = SVGPathPen(glyphs, ntos=lambda v: ('%.1f' % v).rstrip('0').rstrip('.'))
         glyphs[name].draw(TransformPen(pen, (1, 0, 0, -1, -x0, cap)))
         advance = font['hmtx'][name][0]
-        rows.append((ch, round(x1 - x0), round(x0), round(advance - x1), pen.getCommands()))
+        rows.append((ch, round(x1 - x0), round(x0), round(advance - x1), MERGED.get(ch, pen.getCommands())))
     lines = [
         '// The figures of the Lock Screen\'s clock, as outlines: 0 to 9 and the colon. Written by',
         '// tools/clock-face.py from the Inter the site ships (display cut, weight %d; SIL Open Font License).' % WEIGHT,

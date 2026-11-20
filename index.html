@@ -3,7 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#040618" />
+    <!-- The colour a browser gives its own bars: the top of the phone's wallpaper on a phone, where the page
+         runs under them, and the desktop's dark anywhere else. The phone's is first: it is the one the phone
+         keeps to what is at the top of its screen (src/phone/Phone.tsx) -->
+    <meta name="theme-color" content="#0f1130" media="(max-width: 739px), (max-height: 479px)" />
+    <meta name="theme-color" content="#040618" media="(min-width: 740px) and (min-height: 480px)" />
     <meta name="color-scheme" content="light" />
     <title>Shrug</title>
     <!-- Dates, counts and times on the page are not phone numbers -->
@@ -27,6 +31,12 @@
       html { background: #040618; }
       .boot { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 2147483647; display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-orient: vertical; -webkit-flex-direction: column; flex-direction: column; -webkit-box-align: center; -webkit-align-items: center; align-items: center; -webkit-box-pack: center; -webkit-justify-content: center; justify-content: center; box-sizing: border-box; padding: 32px 28px; overflow: auto; background: #040618; color: #fff; font: 15px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; text-align: center; -webkit-text-size-adjust: 100%; -webkit-transition: opacity 0.26s ease; transition: opacity 0.26s ease; }
       .boot[hidden] { display: none; }
+      /* On a phone the first paint is already in the wallpaper's colours, top and foot: the browser takes the colour of its own bars from what is at the page's edges, and a page that began dark and turned pale at the foot once the site arrived was seen to load its foot late */
+      @media (max-width: 739px), (max-height: 479px) {
+        html { background: #0f1130; }
+        body { background: #8297de; }
+        .boot { background: #0f1130; background: -webkit-linear-gradient(top, #0f1130, #434a99 48%, #8297de); background: linear-gradient(#0f1130, #434a99 48%, #8297de); }
+      }
       .boot[data-state='done'] { opacity: 0; pointer-events: none; }
       .boot p { margin: 0; }
       /* A quick arrival never shows any of it: the mark and the bar wait a moment before they are drawn */

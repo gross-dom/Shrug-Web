@@ -310,7 +310,7 @@ const touchOf = (t) => ({
     await p.evaluate(() => { const hits = [...document.querySelectorAll('.sb-card__hit')]; const order = (h) => +getComputedStyle(h.closest('.sb-slot')).getPropertyValue('--i'); hits.sort((a, b) => order(a) - order(b))[1].focus({ focusVisible: true }) })
     await p.waitForTimeout(500)
     await p.setViewportSize({ width: 760, height: 393 }); await p.waitForTimeout(700)
-    const pan = await p.evaluate(() => { const a = document.querySelector('.sb-apps'); return { at: a.dataset.at, pan: parseFloat(a.style.getPropertyValue('--pan')), stride: a.offsetWidth * 0.76 } })
+    const pan = await p.evaluate(() => { const a = document.querySelector('.sb-apps'); return { at: a.dataset.at, pan: parseFloat(a.dataset.pan), stride: a.offsetWidth * 0.76 } })
     say(pan.at === '1' && Math.abs(pan.pan - pan.stride) < 1, 'panned to the second card and turned, it still rests on that card', JSON.stringify(pan))
     const second = await mine()
     say(second.closes.join() === 'Close VIP' && second.names.join() === 'VIP', 'and the name and the ✕ showing are that card\'s', JSON.stringify(second))

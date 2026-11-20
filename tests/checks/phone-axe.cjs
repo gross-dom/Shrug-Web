@@ -52,7 +52,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.keyboard.press('Escape'); await sleep(300); await page.keyboard.press('Escape'); await sleep(500)
   for (const [where, app, stack, sheet] of [
     ['messages', 'messages', []], ['conversation', 'messages', ['c:group']], ['details', 'messages', ['c:group'], 'details'], ['easter egg', 'messages', ['c:founder']], ['portfolio folder', null, [], 'folder:portfolio'], ['faqs folder', null, [], 'folder:faqs'],
-    ['contacts', 'finder', []], ['company', 'finder', ['co:Varda']], ['company with no site', 'finder', ['co:Clubhouse']], ['my card', 'finder', ['me']],
+    ['contacts', 'finder', []], ['company', 'finder', ['co:Varda']], ['company with no site', 'finder', ['co:HQ Trivia']], ['my card', 'finder', ['me']],
     ['notes list', 'notes', ['f:faqs']], ['note', 'notes', ['f:faqs', 'n:4']], ['folders', 'notes', []], ['new folder', 'notes', [], 'new-folder'], ['notes folder', 'notes', ['f:notes']],
     ['library', 'photos', []], ['viewer', 'photos', ['m:0']], ['info', 'photos', ['m:0'], 'info'],
     ['terminal', 'terminal', []],

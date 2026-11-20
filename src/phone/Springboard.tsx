@@ -673,8 +673,11 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
       }
       // Home: back into its icon. Or, backed out of to the folder it was opened from (a company picked in
       // Portfolio: `pop`, system.ts), back into what was pressed there, which is in sight again
-      const out = now.sheet?.startsWith('folder:') ? cameFrom.get(id) : undefined
-      const into = out?.startsWith('folder:') ? originRect(out) : null
+      // The conversation opened out of the Home Screen's widget goes back into the widget, which is in
+      // sight again there: the way back is the way in
+      const came = cameFrom.get(id)
+      const out = now.sheet?.startsWith('folder:') ? came : !now.sheet && came === 'widget:chat' ? came : undefined
+      const into = out?.startsWith('folder:') || out === 'widget:chat' ? originRect(out) : null
       const from = into ?? originRect(iconOrigin(id))
       setDest(into ? out! : null)
       if (!motion || !from || !zoom.open) return setZoom((z) => ({ open: false, from: from ?? z.from, still: true }))
@@ -757,7 +760,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
           face={<Face id={id} origin={out} />}
           quick={card && front}
           // Back into a question's row in the FAQs folder, which is words and no picture of the app
-          vanish={!front && dest !== null && !/^folder:(?!faq:)/.test(dest)}
+          vanish={!front && dest !== null && dest !== 'widget:chat' && !/^folder:(?!faq:)/.test(dest)}
           className="sb-app"
           data-app={id}
           data-shut={!open || undefined}
@@ -790,6 +793,14 @@ const slotOf = (el: Element) => el.closest<HTMLElement>('.sb-slot')
 /** How far apart the App Switcher's cards are, as a share of the screen's width. */
 const STRIDE = 0.76
 
+/** How far the row of cards is panned, told to each card itself and to nothing else. Told to the row, it
+ * was handed down to everything inside every card (a style a card's whole app had to be gone over again
+ * for, at each move of the finger), which is what made the row stutter under a thumb. */
+function setPan(apps: HTMLElement, px: number) {
+  apps.dataset.pan = String(px)
+  for (const el of apps.querySelectorAll<HTMLElement>('.sb-slot')) el.style.setProperty('--pan', `${px}px`)
+}
+
 /** Marks the card in the middle of the App Switcher (`at`, counted from the app last in front). Its name
  * and the button that closes it are the only ones shown (phone.css): a neighbour's sit over the edge of
  * the screen, where a corner of its card peeks in, and its ✕ there read as the middle card's own while
@@ -803,7 +814,7 @@ function midOn(apps: HTMLElement, at: number) {
  * the distance: when the screen turns, the distance is worked out again for the new width. */
 function restOn(apps: HTMLElement, at: number) {
   apps.dataset.at = String(at)
-  apps.style.setProperty('--pan', `${at * apps.offsetWidth * STRIDE}px`)
+  setPan(apps, at * apps.offsetWidth * STRIDE)
   midOn(apps, at)
 }
 
@@ -856,7 +867,7 @@ function CardHandle({ id }: { id: PhoneApp }) {
 
   const down = (e: ReactPointerEvent) => {
     const apps = strip()
-    drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dx: 0, dy: 0, vy: 0, k: scaleOf(apps), axis: null, pan: parseFloat(apps?.style.getPropertyValue('--pan') || '0') }
+    drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dx: 0, dy: 0, vy: 0, k: scaleOf(apps), axis: null, pan: parseFloat(apps?.dataset.pan || '0') }
     dragged.current = false
     e.currentTarget.setPointerCapture(e.pointerId)
   }
@@ -879,7 +890,7 @@ function CardHandle({ id }: { id: PhoneApp }) {
     d.t = e.timeStamp
     if (d.axis === 'x') {
       apps.setAttribute('data-panning', '')
-      apps.style.setProperty('--pan', `${d.pan + dx}px`)
+      setPan(apps, d.pan + dx)
       // The name and the ✕ go with whichever card is nearest the middle
       midOn(apps, Math.max(0, Math.min(sys.get().recents.length - 1, Math.round((d.pan + dx) / (apps.offsetWidth * STRIDE)))))
     } else if (d.axis === 'y') {
@@ -1112,14 +1123,15 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     el.style.transform = `translate(${d.dx * 0.7 + (d.w / 2) * (1 - k)}px, ${d.h * (1 - k) + d.dy}px) scale(${k})`
     el.style.borderRadius = `${38 / k}px`
     // How far it has been carried: the Home Screen comes into sight behind it by that much (phone.css)
-    screenOf()?.style.setProperty('--carry', p.toFixed(3))
+    // (Told to the Home Screen, which is all that reads it: told to the whole phone, every app in it was restyled at each move)
+    screenOf()?.querySelector<HTMLElement>('.sb-home')?.style.setProperty('--carry', p.toFixed(3))
   }
 
   /** No longer carried: the marks that say so come off. */
   const unmark = () => {
     const screen = screenOf()
     screen?.removeAttribute('data-dragging')
-    screen?.style.removeProperty('--carry')
+    screen?.querySelector<HTMLElement>('.sb-home')?.style.removeProperty('--carry')
     carried.set(false)
   }
 

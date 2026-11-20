@@ -55,6 +55,16 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* On a phone the page's own colour is the foot of the wallpaper from its first paint (index.html says the
+   same before this sheet arrives, and the phone itself keeps it to what is at its foot: Phone.tsx). The
+   browser colours the strip under its bars from it: left dark here, that strip stayed dark until the script
+   had run, and the foot of the screen arrived after the rest of it */
+@media (max-width: 739px), (max-height: 479px) {
+  body {
+    background: #8297de;
+  }
+}
+
 .os :where(button, a, input, textarea, select, p, h1, h2, h3, h4, ul, ol, li, dl, dt, dd, figure, figcaption, label, time) {
   all: unset;
   box-sizing: border-box;
