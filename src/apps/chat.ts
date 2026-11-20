@@ -36,7 +36,15 @@ export interface Chat {
   startedAt: number
   repliedAt: number[]
   /** What the visitor has typed into one of the other conversations, by its id. */
-  direct: Record<string, { key: string; text: string }[]>
+  direct: Record<string, Written[]>
+}
+
+/** A message the visitor sent in one of the other conversations, and when: the conversation's row in the
+ * list says both. (One kept by this tab before the time was kept has none.) */
+export interface Written {
+  key: string
+  text: string
+  at?: number
 }
 
 export const TOTAL = PEOPLE.length
@@ -148,7 +156,7 @@ function kept(): Kept | null {
   if (was.direct && typeof was.direct === 'object')
     for (const [to, list] of Object.entries(was.direct as Record<string, unknown>).slice(0, MOST)) {
       const said = listOf(list)
-        .map((entry) => ({ key: words(entry.key), text: words(entry.text) }))
+        .map((entry): Written => ({ key: words(entry.key), text: words(entry.text), ...(typeof entry.at === 'number' && Number.isFinite(entry.at) && entry.at <= Date.now() ? { at: entry.at } : null) }))
         .filter((message) => message.key && message.text)
       if (said.length) direct[to] = said
     }
@@ -390,6 +398,6 @@ export function sendMessage(text: string, to = 'group') {
   chat.set((s) =>
     to === 'group'
       ? { ...s, items: [...s.items, { key, kind: 'me', text: body, by: 'visitor' }] }
-      : { ...s, direct: { ...s.direct, [to]: [...(s.direct[to] ?? []), { key, text: body }] } },
+      : { ...s, direct: { ...s.direct, [to]: [...(s.direct[to] ?? []), { key, text: body, at: Date.now() }] } },
   )
 }

@@ -82,17 +82,19 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* ---- Notifications: a reply that lands out of sight drops in at the top right
-   corner, under the menu bar, as a Mac's do (os/Notifications.tsx). Over the
-   windows and the Dock, under an open menu ---- */
+/* ---- Notifications: a reply that lands out of sight drops in at the top of
+   the screen, under the menu bar, as a Mac's do (os/Notifications.tsx). Over
+   the windows and the Dock, under an open menu. It keeps to the left of the
+   desk's icons, which are 92 across and 12 in from the edge (.desk, below): a
+   press on the folder is never taken by the news ---- */
 
 .notify {
   position: absolute;
   top: 38px;
-  right: 12px;
+  right: 116px;
   z-index: 750;
   width: 352px;
-  max-width: calc(100% - 24px);
+  max-width: calc(100% - 128px);
   pointer-events: none;
 }
 
@@ -115,15 +117,19 @@
   animation: notify-out 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
+/* It drops a little way into its place and lifts out of it again: it comes and
+   goes without crossing the icons beside it or the menu bar over it */
 @keyframes notify-in {
   from {
-    transform: translateX(calc(100% + 24px));
+    opacity: 0;
+    transform: translateY(-18px);
   }
 }
 
 @keyframes notify-out {
   to {
-    transform: translateX(calc(100% + 24px));
+    opacity: 0;
+    transform: translateY(-12px);
   }
 }
 
@@ -622,23 +628,30 @@
   white-space: nowrap;
 }
 
+/* One line where the words fit and two where they do not (“Showers And
+   Thunderstorms”): the time moves up to make the room, and the widget stays
+   the size it is. Past two lines they are cut, with an ellipsis */
 .sf__weather {
-  display: block;
+  display: -webkit-box;
   overflow: hidden;
   margin-top: 1px;
   font-size: 13px;
   font-weight: 500;
   line-height: 17px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .sf__weather b {
   font-weight: 600;
 }
 
-/* A desk too small to spare the room keeps it for its windows */
-@media (max-width: 1040px), (max-height: 640px) {
+/* A desk too small to spare the room keeps it for its windows: the widget is
+   there only where the conversation, opening in the middle as it does on
+   arriving, leaves it clear (1240px across and more; os/wm.ts keeps new
+   windows off it, and goes by the same two numbers before the desk is drawn) */
+@media (max-width: 1239px), (max-height: 640px) {
   .sf {
     display: none;
   }
@@ -718,6 +731,27 @@
 
 .wf[data-open] {
   display: block;
+}
+
+/* The window itself has the keyboard: F6 comes to it, and so does a window
+   with nothing in it that takes the keyboard first. Its ring is the one
+   every control wears (base.css), drawn just inside its edge, on its own
+   ground, so that it shows whatever the window lies over; on a dark window
+   it is white. (Not a ring round the frame itself, which the window's own
+   contents would be drawn over) */
+.wf:focus-visible::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  border-radius: var(--ss-radius-window);
+  outline: 3px solid var(--wf-ring, var(--ring, #0a6de6));
+  outline-offset: -3px;
+  pointer-events: none;
+}
+
+.wf[data-app='terminal'] {
+  --wf-ring: #fff;
 }
 
 .wf__content {
@@ -1209,6 +1243,8 @@ html[data-wm-busy='se'] * {
   }
 }
 
+/* Under an app that is open: pale, as a Mac's is on a Dock like this one. A
+   hair of shadow keeps it a dot where the wallpaper behind the glass is pale too */
 .dock__dot {
   position: absolute;
   bottom: -7px;
@@ -1217,7 +1253,8 @@ html[data-wm-busy='se'] * {
   height: 4px;
   margin-left: -2px;
   border-radius: 50%;
-  background: rgba(12, 16, 40, 0.72);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 0.5px rgba(8, 12, 50, 0.14), 0 0.5px 1.5px rgba(8, 12, 50, 0.28);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -1256,6 +1293,12 @@ html[data-wm-busy='se'] * {
   .dock__item:hover .dock__label {
     opacity: 1;
   }
+}
+
+/* Nor while a window is being carried or sized across the Dock: the pointer is
+   over an icon then, and is not pointing at it */
+html[data-wm-busy] .dock__item .dock__label {
+  opacity: 0;
 }
 
 .dock__item:focus-visible {

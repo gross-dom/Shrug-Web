@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type MutableRefObject, type ReactElement, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronsDown, Plus, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronsDown, Pause, Plus, UserRound } from 'lucide-react'
 import { EGGS, eggOf, lastWords, type Egg, type EggLink } from '../data/eggs'
 import { PEOPLE, RELATION_LABEL } from '../data/people'
 import { SITE } from '../data/site'
@@ -15,7 +15,7 @@ import { firstControl, focusFirst, useReturnFocus } from '../os/focus'
 import { AppIcon, DocumentIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
-import { chat, finishChat, replayChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatItem } from './chat'
+import { chat, finishChat, replayChat, resumeChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatItem, type Written } from './chat'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
 import { SearchField, ShrugAvatar } from './ui'
 import { formatter } from '../os/dates'
@@ -137,13 +137,16 @@ const said = (who: string) => ({ role: 'group', 'aria-label': who }) as object
 const SHRUGS = said(SITE.name)
 const YOURS = said('You')
 
+/** Under the last message of a conversation that was over long ago: it has been Delivered all along. */
 const delivered = (
   <Receipt key="receipt" show>
     Delivered
   </Receipt>
 )
 
-/** Under a message the visitor has just sent: it says Delivered a moment after it lands, as Messages does. */
+/** Under a message sent while the conversation is watched, Shrug's own or the visitor's: it says Delivered a
+ * moment after the bubble has landed, as Messages does, and not while its words are still on their way up
+ * from the field (the wait is the stylesheet's: `.chat-sent`). */
 const deliveredTo = (key: string) => (
   <Receipt key={`${key}-receipt`} show className="chat-sent">
     Delivered
@@ -168,7 +171,7 @@ function groupNodes(items: ChatItem[], asked: boolean, startedAt: number, source
           {item.text}
         </Bubble>,
       )
-      if (item.key === lastSent && (yours || asked)) nodes.push(yours ? deliveredTo(item.key) : delivered)
+      if (item.key === lastSent && (yours || asked)) nodes.push(deliveredTo(item.key))
     } else {
       const person = PEOPLE[item.index]!
       // The line over the bubble is for the eye; the bubble says the same for assistive tech, as its own name
@@ -229,10 +232,13 @@ function eggNodes(egg: Egg, at: number, direct: { key: string; text: string }[],
 
 /** The thread's own scrolling curve: quick off the mark, a long settle. */
 const settle = (k: number) => 1 - Math.pow(1 - k, 4)
+/** Where a scroll of the thread's own is headed: a place, the end (null), or a place worked out as it goes. */
+type Aim = number | null | (() => number)
+const placeOf = (to: Aim) => (typeof to === 'function' ? to() : to)
 const FOLLOW_MS = 550
 /** How long after a touch, a wheel or a key a scroll is still the reader's: a flick carries on after the finger lifts. */
 const HAND_MS = 3000
-const NO_MESSAGES: { key: string; text: string }[] = []
+const NO_MESSAGES: Written[] = []
 
 interface ScrollerProps {
   label: string
@@ -251,6 +257,10 @@ interface ScrollerProps {
    * for as long as there are any, so that nobody has to wait for every one. */
   rest?: number
   onAll?: () => void
+  /** The replies have been stopped where they were: the conversation says so at its head, where the offer of
+   * every reply was, and that is where they are set going again. */
+  paused?: boolean
+  onResume?: () => void
   /** Its window has been closed (closed, not minimised or left for another). Opened again, the conversation is
    * at its newest message, as Messages opens one, wherever it had been scrolled to before. */
   shut?: boolean
@@ -261,7 +271,7 @@ interface ScrollerProps {
 /** A conversation's messages: they scroll, and the view stays on the newest
  * one the way a chat does, until the reader scrolls back to read. The desktop's
  * conversations and the phone's are both drawn through this. */
-export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = true, foot, onTap, mine = 0, fromTop = false, rest = 0, onAll, shut = false, status = '' }: ScrollerProps) {
+export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = true, foot, onTap, mine = 0, fromTop = false, rest = 0, onAll, paused = false, onResume, shut = false, status = '' }: ScrollerProps) {
   const scroller = useRef<HTMLDivElement>(null)
   const flow = useRef<HTMLDivElement>(null)
   // A thread that is not being drawn (its window is closed, its app is put away) is held as it was. A
@@ -277,8 +287,10 @@ export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = t
   /** Following the newest message, until the reader scrolls back. */
   const pinned = useRef(!fromTop)
   /** The scroll that is moving is ours, not the reader's. `to` is where it is
-   * going: a fixed place, or null for the end, wherever that is by then. */
-  const run = useRef<{ frame: number; from: number; t0: number; to: number | null } | null>(null)
+   * going: a fixed place, null for the end, wherever that is by then, or a
+   * place that is asked for afresh each frame (a reply that is still being
+   * moved down by what is growing above it). */
+  const run = useRef<{ frame: number; from: number; t0: number; to: Aim } | null>(null)
   const flash = useRef<ReturnType<typeof setTimeout>>()
   // How many messages are in it: the lines over them (who said it, Delivered) are not counted as news
   const count = useMemo(() => nodes.reduce((n, node) => n + (node.type === Bubble ? 1 : 0), 0), [nodes])
@@ -295,12 +307,13 @@ export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = t
 
   /** Eases the thread to a place, or to its end. Called again mid-way (a
    * bubble still growing, another reply landing) it carries on from where it is. */
-  const glide = (to: number | null, instant = false) => {
+  const glide = (to: Aim, instant = false) => {
     const el = scroller.current
     if (!el) return
     const end = el.scrollHeight - el.clientHeight
-    const goal = Math.max(0, Math.min(end, to ?? end))
-    if (instant || prefersReducedMotion() || Math.abs(goal - el.scrollTop) < 1) {
+    const goal = Math.max(0, Math.min(end, placeOf(to) ?? end))
+    // (A place that may still move is gone to even from where it already is, so as to stay on it)
+    if (instant || prefersReducedMotion() || (typeof to !== 'function' && Math.abs(goal - el.scrollTop) < 1)) {
       stop()
       el.scrollTop = goal
       return
@@ -315,7 +328,7 @@ export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = t
       // when the page is busy
       if (!state.t0) state.t0 = now
       const limit = el.scrollHeight - el.clientHeight
-      const target = Math.max(0, Math.min(limit, state.to ?? limit))
+      const target = Math.max(0, Math.min(limit, placeOf(state.to) ?? limit))
       const k = Math.min(1, (now - state.t0) / FOLLOW_MS)
       el.scrollTop = state.from + (target - state.from) * settle(k)
       if (k < 1) state.frame = requestAnimationFrame(step)
@@ -445,16 +458,22 @@ export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = t
     const bubble = el?.querySelector<HTMLElement>(`[data-person="${jump}"]`)
     onJumped?.()
     if (!el || !bubble) return
-    const box = el.getBoundingClientRect()
-    const at = bubble.getBoundingClientRect()
-    // What is measured on the page is as it is drawn: inside a scaled frame (the phone's), a distance on the page is that much less of the thread
-    const k = box.width / el.offsetWidth || 1
-    // A long reply is shown from its top; a short one sits in the middle
-    const top = el.scrollTop + (at.top - box.top) / k - Math.max(28, (el.clientHeight - at.height / k) / 2)
+    // Where that puts the thread. It is asked again all the way there: when every reply has just come in at
+    // once (someone found before they had replied), the reply that was being written is still growing into
+    // its words, and carries everything under it down as it does
+    const spot = () => {
+      if (!bubble.isConnected) return el.scrollTop
+      const box = el.getBoundingClientRect()
+      const at = bubble.getBoundingClientRect()
+      // What is measured on the page is as it is drawn: inside a scaled frame (the phone's), a distance on the page is that much less of the thread
+      const k = box.width / el.offsetWidth || 1
+      // A long reply is shown from its top; a short one sits in the middle
+      return el.scrollTop + (at.top - box.top) / k - Math.max(28, (el.clientHeight - at.height / k) / 2)
+    }
     // The thread lets go of its end to stay here
     pinned.current = false
-    setAway(el.scrollHeight - el.clientHeight - top > 56)
-    glide(top)
+    setAway(el.scrollHeight - el.clientHeight - spot() > 56)
+    glide(spot)
     bubble.removeAttribute('data-flash')
     void bubble.offsetWidth
     bubble.setAttribute('data-flash', '')
@@ -488,9 +507,17 @@ export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = t
     onAll?.()
     scroller.current?.focus({ preventScroll: true })
   }
+  /** The offer of every reply is up: there are some to come, and they are coming. */
+  const offered = rest > 0 && !paused
+  // Set going again from the head of the thread. The button goes as it is pressed, and the keyboard with it to the thread
+  const resume = () => {
+    onResume?.()
+    scroller.current?.focus({ preventScroll: true })
+  }
 
   return (
-    <div className="chat__pane">
+    // Paused, whoever was writing stops where they were: their dots are held still (styles/apps.css)
+    <div className="chat__pane" data-paused={paused || undefined}>
       {/* Any scroll the reader starts takes over from ours */}
       <div
         ref={scroller}
@@ -524,9 +551,19 @@ export function Scroller({ label, nodes: latestNodes, jump, onJumped, active = t
       </div>
       {/* While replies are still coming: all of them at once, for whoever would sooner not wait */}
       {onAll && (
-        <button type="button" className="chat__all" data-show={rest > 0 || undefined} tabIndex={rest > 0 ? 0 : -1} aria-hidden={rest <= 0} onClick={all}>
+        <button type="button" className="chat__all" data-show={offered || undefined} tabIndex={offered ? 0 : -1} aria-hidden={!offered} onClick={all}>
           <ChevronsDown size={13} strokeWidth={2.4} aria-hidden />
           Load all {TOTAL} replies
+        </button>
+      )}
+      {/* Paused, the conversation says so in that same place, with the way to set it going again: a thread
+          that has stopped is otherwise only a thread that looks stuck */}
+      {onResume && (
+        <button type="button" className="chat__all chat__all--paused" data-show={paused || undefined} tabIndex={paused ? 0 : -1} aria-hidden={!paused} aria-label="Replies paused. Resume" onClick={resume}>
+          <Pause size={11} strokeWidth={0} fill="currentColor" aria-hidden />
+          <span className="chat__all-state">Replies paused</span>
+          <span className="chat__all-dot">·</span>
+          Resume
         </button>
       )}
       <button
@@ -586,6 +623,7 @@ export function Transcript({ conversation, source, active = true, shut = false }
   const replied = useStore(chat, (s) => s.replied)
   const whole = useStore(chat, (s) => s.whole)
   const direct = useStore(chat, (s) => (egg ? (s.direct[egg.id] ?? NO_MESSAGES) : NO_MESSAGES))
+  const paused = useStore(chat, (s) => !egg && s.paused)
   const jump = useStore(inbox, (s) => (egg ? null : s.jump))
   const nodes = useMemo(() => (egg ? eggNodes(egg, eggAt(egg, startedAt), direct, source) : groupNodes(items, asked, startedAt, source)), [egg, items, asked, startedAt, direct, source])
   /** How many of the visitor's own messages are in it. */
@@ -593,7 +631,30 @@ export function Transcript({ conversation, source, active = true, shut = false }
   const status = useAnnounced(!egg, replied, mine)
   // Until the question has been asked there is nothing to hurry along
   const rest = egg || !asked ? 0 : TOTAL - replied
-  return <Scroller label={conversationName(conversation)} nodes={nodes} jump={jump} onJumped={clearJump} active={active} mine={mine} fromTop={!egg && whole} rest={rest} onAll={egg ? undefined : finishChat} shut={shut} status={status} />
+  // Asked to show the reply of someone who has not replied yet (they were found by a search, which finds
+  // everyone in the group): everyone replies at once, and then theirs is there to go to. It is done here,
+  // where the conversation is drawn, so that it holds whichever list they were picked from
+  const early = jump !== null && jump >= replied
+  useEffect(() => {
+    if (early && active) finishChat()
+  }, [early, active])
+  return (
+    <Scroller
+      label={conversationName(conversation)}
+      nodes={nodes}
+      jump={early ? null : jump}
+      onJumped={clearJump}
+      active={active}
+      mine={mine}
+      fromTop={!egg && whole}
+      rest={rest}
+      onAll={egg ? undefined : finishChat}
+      paused={paused}
+      onResume={egg ? undefined : resumeChat}
+      shut={shut}
+      status={status}
+    />
+  )
 }
 
 // ---- The message field ----
@@ -761,6 +822,8 @@ export interface ListRow {
   conversation: Conversation
   /** For someone found in the group: whose reply to go to there. */
   person?: number
+  /** That someone has not replied yet: there is no reply of theirs to go to until everyone's are brought in. */
+  yet?: boolean
   name: string
   preview: ReactNode
   /** When it last heard something, as the row says it. */
@@ -778,40 +841,69 @@ const lastSaid = (s: Chat) => {
   return ''
 }
 
+/** Words as a search reads them: without their case or their accents, and with the quotation marks type
+ * is set with as the plain ones a keyboard has. What is looked for and what is looked through are both
+ * read this way, so that "don't" typed with a straight apostrophe finds the "don’t" a reply is set with. */
+const folded = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[‘’‚‛ʼ′`´]/g, "'")
+    .replace(/[“”„‟″«»]/g, '"')
+    .toLowerCase()
+
+/** Everyone in the group, as a search reads them. */
+const SOUGHT = PEOPLE.map((person) => ({ name: folded(person.name), role: folded(person.role), quote: folded(person.quote ?? '') }))
+
+/** Where what someone said would be, for someone found who has not said it yet. One element, made once:
+ * a row is drawn again only when what it shows has changed. */
+const NOT_YET = <span className="conv-yet">Hasn’t replied yet</span>
+
 /** The rows of the list of conversations: the group, then the others, the
- * one heard from most lately first. While something is being looked for
- * (`inbox.query`), the conversations it is in, and then the people in the
- * group it finds, by name, by role or by what they said. A person's reply is
- * in the group and nowhere else, so that is where their row goes: once it is
- * there. Someone who has not replied yet has said nothing to find, and a row
- * for them would give their words away early and lead nowhere. */
+ * one last heard from, or written to, first. While something is being looked
+ * for (`inbox.query`), the conversations it is in, and then the people in the
+ * group it finds. A person's reply is in the group and nowhere else, so that
+ * is where their row goes. Everyone in the group can be found by who they are
+ * (their name, their role), whether or not they have replied: the details list
+ * all of them, and a search that found only some would be saying the rest are
+ * not here. By what they said, only those who have said it: someone still to
+ * reply is listed as that, and nothing of their words is given away early. */
 export function useConversationRows(): ListRow[] {
   const replied = useStore(chat, (s) => s.replied)
   const repliedAt = useStore(chat, (s) => s.repliedAt)
   const startedAt = useStore(chat, (s) => s.startedAt)
   const last = useStore(chat, lastSaid)
+  const direct = useStore(chat, (s) => s.direct)
   const groupSeen = useStore(inbox, (s) => s.groupSeen)
-  const q = useStore(inbox, (s) => s.query).trim().toLowerCase()
+  const q = folded(useStore(inbox, (s) => s.query).trim())
 
   return useMemo(() => {
-    const has = (text: string) => text.toLowerCase().includes(q)
+    const has = (text: string) => folded(text).includes(q)
     const out: ListRow[] = []
     // New in the group: replies that have come in since it was last on screen
     if (!q || has(GROUP_NAME)) out.push({ key: 'group', conversation: 'group', name: GROUP_NAME, preview: last || ' ', when: clock(replied ? repliedAt[replied - 1]! : startedAt), unread: replied > groupSeen })
-    for (const egg of EGGS_BY_AGE) {
-      if (q && !has(egg.name) && !egg.messages.some((m) => has('link' in m ? m.link.label : m.text))) continue
-      // The others are old conversations, read long ago
-      out.push({ key: egg.id, conversation: egg.id, name: egg.name, preview: lastWords(egg), when: rowTime(eggAt(egg, startedAt)), unread: false })
+    // The others are old conversations, read long ago, until the visitor writes in one: then its row says
+    // what they wrote and when, and it is the one last used, at the head of the others
+    const others = EGGS_BY_AGE.map((egg) => {
+      const written = direct[egg.id] ?? NO_MESSAGES
+      const mine = written[written.length - 1]
+      return { egg, written, said: mine ? mine.text : lastWords(egg), at: mine ? mine.at || startedAt : eggAt(egg, startedAt) }
+    }).sort((a, b) => b.at - a.at)
+    for (const { egg, written, said, at } of others) {
+      if (q && !has(egg.name) && !egg.messages.some((m) => has('link' in m ? m.link.label : m.text)) && !written.some((m) => has(m.text))) continue
+      out.push({ key: egg.id, conversation: egg.id, name: egg.name, preview: said, when: rowTime(at), unread: false })
     }
     if (q)
-      PEOPLE.slice(0, replied).forEach((person, i) => {
-        const known = has(person.name) || has(person.role)
-        if (!known && !has(person.quote ?? '')) return
-        // What they said, where that is what was found; otherwise who they are
-        out.push({ key: `p:${i}`, conversation: 'group', person: i, name: person.name, preview: known ? person.role : person.quote, when: '', unread: false })
+      PEOPLE.forEach((person, i) => {
+        const sought = SOUGHT[i]!
+        const known = sought.name.includes(q) || sought.role.includes(q)
+        const yet = i >= replied
+        if (!known && (yet || !sought.quote.includes(q))) return
+        // What they said, where that is what was found; otherwise who they are. Someone still to reply: that they are
+        out.push({ key: `p:${i}`, conversation: 'group', person: i, yet, name: person.name, preview: yet ? NOT_YET : known ? person.role : person.quote, when: '', unread: false })
       })
     return out
-  }, [q, last, replied, repliedAt, startedAt, groupSeen])
+  }, [q, last, replied, repliedAt, startedAt, groupSeen, direct])
 }
 
 const ConversationRow = memo(function ConversationRow({ id, row, selected, avatar, onPick }: { id: string; row: ListRow; selected: boolean; avatar: number; onPick: (row: ListRow) => void }) {
@@ -824,6 +916,7 @@ const ConversationRow = memo(function ConversationRow({ id, row, selected, avata
       aria-selected={selected}
       data-row={row.key}
       data-conversation={row.person === undefined ? row.conversation : undefined}
+      data-yet={row.yet || undefined}
       unread={row.unread}
       selected={selected}
       lead={row.person === undefined ? <ConversationAvatar conversation={row.conversation} size={avatar} /> : <PersonAvatar index={row.person} size={avatar} />}
@@ -870,7 +963,13 @@ export function ConversationList({ onPick, selectable = true, avatar = 40, contr
   /** `by` is how it was picked: pressed (a click, Return), or passed over on the way through the list with the arrow keys. */
   const pick = (row: ListRow, by: 'press' | 'arrows' = 'press') => {
     if (row.person === undefined) openConversation(row.conversation)
-    else showInGroup(row.person)
+    else if (!row.yet) showInGroup(row.person)
+    // Someone who has not replied yet. Pressed, every reply is brought in, and theirs is gone to; only
+    // passed over with the arrows, they are picked out in the list and the conversation is left to play
+    else if (by === 'press') {
+      finishChat()
+      showInGroup(row.person)
+    } else openConversation('group')
     setFound(row.person ?? null)
     onPick?.(row.conversation, by)
   }
@@ -1061,10 +1160,30 @@ export function Details({ shown = true, onDone }: { shown?: boolean; onDone?: ()
           <span>Pause Replies</span>
           <Toggle on={paused} aria-hidden />
         </button>
-        <button type="button" className="details__row details__row--action" aria-disabled={done || undefined} onClick={done ? undefined : finishChat}>
+        {/* Either changes the thread the details are open over: they close, so that what was asked for is seen */}
+        <button
+          type="button"
+          className="details__row details__row--action"
+          aria-disabled={done || undefined}
+          onClick={
+            done
+              ? undefined
+              : () => {
+                  finishChat()
+                  onDone?.()
+                }
+          }
+        >
           Show Every Reply
         </button>
-        <button type="button" className="details__row details__row--action" onClick={replayChat}>
+        <button
+          type="button"
+          className="details__row details__row--action"
+          onClick={() => {
+            replayChat()
+            onDone?.()
+          }}
+        >
           Play From the Start
         </button>
       </div>

@@ -9,21 +9,23 @@ import type { AppId } from './apps'
 // now, and the folder after a Mac's; VIP and Shrug's own are Shrug's. No file
 // from an operating system is used.
 
-/** A continuous-corner square (a superellipse), 100 units across. */
-const SQUIRCLE = (() => {
-  const n = 5
+/** A superellipse as a path: an ellipse whose shoulders are fuller the higher `n` is (at 2 it is a plain ellipse). */
+const superellipse = (cx: number, cy: number, rx: number, ry: number, n: number) => {
   const steps = 96
   const pts: string[] = []
   for (let i = 0; i < steps; i++) {
     const t = (i / steps) * Math.PI * 2
     const c = Math.cos(t)
     const s = Math.sin(t)
-    const x = 50 + 50 * Math.sign(c) * Math.pow(Math.abs(c), 2 / n)
-    const y = 50 + 50 * Math.sign(s) * Math.pow(Math.abs(s), 2 / n)
+    const x = cx + rx * Math.sign(c) * Math.pow(Math.abs(c), 2 / n)
+    const y = cy + ry * Math.sign(s) * Math.pow(Math.abs(s), 2 / n)
     pts.push(`${x.toFixed(2)} ${y.toFixed(2)}`)
   }
   return `M${pts.join('L')}Z`
-})()
+}
+
+/** A continuous-corner square, 100 units across: its corners as round as the Mac's own tiles measure. */
+const SQUIRCLE = superellipse(50, 50, 50, 50, 4.4)
 
 /** Shrug's logo: the s on its tile, cut by it (src/data/logo.ts). A white tile and a black s, unless told otherwise. */
 export function Logo({ size = 24, ground = '#fff', ink = '#000', className }: { size?: number | string; ground?: string; ink?: string; className?: string }) {
@@ -51,7 +53,8 @@ export function LogoDisc({ size = 28, className }: { size?: number | string; cla
   )
 }
 
-function Tile({ from, to, children, sheen = 0.5 }: { from: string; to: string; children: ReactNode; sheen?: number }) {
+/** The tile an app's icon is drawn on: flat, as the Mac's are now, with nothing lit along its edge. */
+function Tile({ from, to, children }: { from: string; to: string; children: ReactNode }) {
   const id = useId().replace(/:/g, '')
   return (
     <svg viewBox="0 0 100 100" className="app-icon" aria-hidden>
@@ -60,62 +63,73 @@ function Tile({ from, to, children, sheen = 0.5 }: { from: string; to: string; c
           <stop offset="0" stopColor={from} />
           <stop offset="1" stopColor={to} />
         </linearGradient>
-        <linearGradient id={`${id}-hi`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff" stopOpacity={sheen} />
-          <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
         <clipPath id={`${id}-clip`}>
           <path d={SQUIRCLE} />
         </clipPath>
       </defs>
       <path d={SQUIRCLE} fill={`url(#${id}-bg)`} />
       <g clipPath={`url(#${id}-clip)`}>{children}</g>
-      {/* A lit top edge, so the tile reads as a physical thing */}
-      <path d={SQUIRCLE} fill="none" stroke={`url(#${id}-hi)`} strokeWidth="1.5" transform="translate(0.75 0.75) scale(0.985)" />
     </svg>
   )
 }
+
+/** The bubble: wider than it is tall, and only a little fuller at its shoulders than an ellipse. */
+const BUBBLE = superellipse(49.8, 48.25, 36.3, 30.2, 2.12)
 
 /** Messages: a pale speech bubble, lit from above, on a soft green, as the app that sends them is drawn now. */
 function ChatIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#8eee8b" to="#4ec254" sheen={0.35}>
+    <Tile from="#84ed7d" to="#63ce54">
       <defs>
-        <linearGradient id={`${id}-bubble`} gradientUnits="userSpaceOnUse" x1="0" y1="17" x2="0" y2="80">
-          <stop offset="0" stopColor="#fcfffb" />
-          <stop offset="1" stopColor="#d2f2d0" />
+        <linearGradient id={`${id}-bubble`} gradientUnits="userSpaceOnUse" x1="0" y1="18" x2="0" y2="79">
+          <stop offset="0" stopColor="#f8fdf8" />
+          <stop offset="1" stopColor="#d5f4d6" />
         </linearGradient>
         <filter id={`${id}-lift`} x="-20%" y="-20%" width="140%" height="150%">
           <feDropShadow dx="0" dy="1.2" stdDeviation="1.6" floodColor="#0c6b1c" floodOpacity="0.22" />
         </filter>
       </defs>
       <g fill={`url(#${id}-bubble)`} filter={`url(#${id}-lift)`}>
-        <ellipse cx="50.200" cy="47.500" rx="37.300" ry="30.300" />
-        {/* Its tail, down to the left */}
-        <path d="M21.6 66.500C22.6 71.600 21.400 75.900 17.700 78.500 17 79 17.300 80 18.200 80 23.800 80.100 29 78.600 33.200 75.600Z" />
+        <path d={BUBBLE} />
+        {/* Its tail: a short nub at its left, down to the level of the bubble's own foot and no lower */}
+        <path d="M18.400 64.400C19.600 66.400 20.500 68.500 20.850 70.400C21.150 72.400 19.350 75.300 17.550 77.100C17.050 77.650 17.400 78.450 18.200 78.450C21.900 78.300 26.600 76.400 30.200 74.200L30 66Z" />
       </g>
     </Tile>
   )
 }
 
-/** FAQs: Notes. A white pad with its yellow binding, the perforation under it, and two ruled lines that stop short of its edges. */
+/** FAQs: Notes. A white pad with its yellow binding, the perforation under it on a strip of cream, and two ruled lines that stop short of its edges. */
 function NotesIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#fdfdfd" to="#f0f0f2" sheen={0.6}>
+    <Tile from="#fefefe" to="#f4f5f5">
       <defs>
         <linearGradient id={`${id}-top`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fbdd58" />
-          <stop offset="1" stopColor="#f6c93a" />
+          <stop offset="0" stopColor="#f8d856" />
+          <stop offset="0.900" stopColor="#f7d14a" />
+          <stop offset="1" stopColor="#ffe55c" />
+        </linearGradient>
+        <linearGradient id={`${id}-strip`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f7f4e8" />
+          <stop offset="0.560" stopColor="#f7f4e8" />
+          <stop offset="1" stopColor="#f7f4e8" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`${id}-glow`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff39c" />
+          <stop offset="1" stopColor="#fff39c" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <rect width="100" height="26.500" fill={`url(#${id}-top)`} />
-      {Array.from({ length: 21 }, (_, i) => (
-        <circle key={i} cx={6.5 + i * 4.35} cy="30.300" r="0.850" fill="#bdb49a" />
+      <rect y="24" width="100" height="7.600" fill={`url(#${id}-strip)`} />
+      {/* The binding is lit along its lower edge, and a little of that light falls on the strip under it */}
+      <rect y="24.600" width="100" height="1.700" fill={`url(#${id}-glow)`} />
+      <rect width="100" height="24.600" fill={`url(#${id}-top)`} />
+      {/* Fifteen holes, a sixteenth of the pad apart */}
+      {Array.from({ length: 15 }, (_, i) => (
+        <circle key={i} cx={6.25 + i * 6.25} cy="28.300" r="1.050" fill="#bbbab1" />
       ))}
-      <g fill="none" stroke="#cbcbd0" strokeWidth="1.300" strokeLinecap="round">
-        <path d="M12.5 50.500h75M12.5 75.500h75" />
+      <g fill="none" stroke="#c2c2c2" strokeWidth="1.800" strokeLinecap="round">
+        <path d="M13.400 50h73.200M13.400 75.100h73.200" />
       </g>
     </Tile>
   )
@@ -123,12 +137,24 @@ function NotesIcon() {
 
 /** Case Studies: a terminal. A prompt and its cursor, small, in the top corner of a black tile. */
 function TerminalIcon() {
+  const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#262628" to="#0f0f11" sheen={0.3}>
-      {/* The tile's own edge, a shade lighter all round */}
-      <path d={SQUIRCLE} fill="none" stroke="#fff" strokeOpacity="0.090" strokeWidth="1.600" transform="translate(0.8 0.8) scale(0.984)" />
-      <path d="M19.2 23.400 35.400 33 19.200 42.600" fill="none" stroke="#f5f5f7" strokeWidth="4.300" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="40.200" y="48.900" width="20.800" height="4.300" rx="1" fill="#9a9a9f" />
+    <Tile from="#202020" to="#0e0e0e">
+      <defs>
+        <linearGradient id={`${id}-edge`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="50">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.240" />
+          <stop offset="0.160" stopColor="#fff" stopOpacity="0.100" />
+          <stop offset="0.280" stopColor="#fff" stopOpacity="0.060" />
+          <stop offset="0.480" stopColor="#fff" stopOpacity="0.028" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* The one tile with an edge to it: a faint light along its top that follows the corners round and is gone
+          before it is half-way down the sides, so that black still has a shape against a dark desk */}
+      <path d={SQUIRCLE} fill="none" stroke={`url(#${id}-edge)`} strokeWidth="3.200" />
+      {/* The prompt, cut as type is: its ends upright, and its point too */}
+      <path d="M18.400 20.500 36.600 30.850V34.650L18.400 45V40.520L32.060 32.750 18.400 24.980Z" fill="#fff" />
+      <rect x="39.800" y="48.750" width="20.900" height="4.250" rx="1" fill="#909092" />
     </Tile>
   )
 }
@@ -138,35 +164,55 @@ function FolderGlyph() {
   return (
     <>
       <defs>
-        <linearGradient id={`${id}-front`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#93d1f8" />
-          <stop offset="1" stopColor="#62ade8" />
+        <linearGradient id={`${id}-back`} gradientUnits="userSpaceOnUse" x1="0" y1="25.200" x2="0" y2="36">
+          <stop offset="0" stopColor="#75bce7" />
+          <stop offset="1" stopColor="#58a3d5" />
         </linearGradient>
+        <linearGradient id={`${id}-front`} gradientUnits="userSpaceOnUse" x1="0" y1="34.600" x2="0" y2="77.900">
+          <stop offset="0" stopColor="#8ccef3" />
+          <stop offset="1" stopColor="#62abda" />
+        </linearGradient>
+        <linearGradient id={`${id}-lit`} gradientUnits="userSpaceOnUse" x1="0" y1="34.600" x2="0" y2="35.800">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.420" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+        <clipPath id={`${id}-clip`}>
+          <rect x="17" y="34.600" width="66" height="43.300" rx="4.300" />
+        </clipPath>
       </defs>
-      {/* The back, with its tab; a sheet of what is in it showing over the front; the front */}
-      <path d="M17 32a6 6 0 0 1 6-6h14.600a6 6 0 0 1 4.700 2.300l1.200 1.500a3.400 3.400 0 0 0 2.700 1.300H77a6 6 0 0 1 6 6V47H17z" fill="#5faeea" />
-      <rect x="19.400" y="33.300" width="61.200" height="9" rx="1.500" fill="#fff" />
-      <rect x="17" y="35.700" width="66" height="41.300" rx="5.500" fill={`url(#${id}-front)`} />
-      <rect x="17.600" y="35.700" width="64.800" height="1.300" rx="0.650" fill="#fff" opacity="0.500" />
+      {/* The back, with its tab, a third of the way along; a sheet of what is in it showing over the front; and the
+          front, lit along its top edge. (The light is cut to the front's own corners: left as a bar, its square ends
+          stood out past them as two nicks) */}
+      <path d="M17 29.500A4.300 4.300 0 0 1 21.300 25.200H36.200C38.300 25.200 39.200 26.500 40.150 27.750C41.100 29 42.100 29.820 44.200 29.820H78.600A4.400 4.400 0 0 1 83 34.220V48H17Z" fill={`url(#${id}-back)`} />
+      <rect x="19.650" y="32.200" width="60.700" height="9" rx="2" fill="#fff" />
+      <rect x="17" y="34.600" width="66" height="43.300" rx="4.300" fill={`url(#${id}-front)`} />
+      <rect x="17" y="34.600" width="66" height="1.200" fill={`url(#${id}-lit)`} clipPath={`url(#${id}-clip)`} />
     </>
   )
 }
 
-/** Portfolio: the Finder. A face on blue, its far side a pale pane set in from the tile's edge with the profile for its near side, two small eyes, and a smile across both. */
+/** The Finder's far side: a pale pane set in from the tile's edge, rounded at every corner, with the profile of a face for its near side. */
+const PANE =
+  'M63.500 7.400H70C84.500 7.400 91.500 14.500 91.500 28.500V71.500C91.500 84.500 84 92 70 92H66.500C57.200 92 54.300 86.400 53.300 80C51.600 73 50.500 66 50.300 58.800C50.250 57.300 49.600 56.700 48.400 56.700H44.200C41.600 56.700 40.200 55.200 40.900 52.300C41.700 41 45 27 47.600 18.500C49.600 11.800 54.600 7.400 63.500 7.400Z'
+
+/** Portfolio: the Finder. A face on blue, its far side a pale pane with the profile for its near side, two small eyes, and a smile across both. */
 function FinderIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#1fbcfc" to="#2c8cf5" sheen={0.45}>
+    <Tile from="#0ec4ff" to="#39a5ff">
       <defs>
-        <linearGradient id={`${id}-far`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${id}-far`} gradientUnits="userSpaceOnUse" x1="0" y1="7.400" x2="0" y2="92">
           <stop offset="0" stopColor="#ffffff" />
-          <stop offset="1" stopColor="#d7e9fc" />
+          <stop offset="0.250" stopColor="#fdfeff" />
+          <stop offset="0.500" stopColor="#f3fbff" />
+          <stop offset="0.860" stopColor="#def3fe" />
+          <stop offset="1" stopColor="#d7effd" />
         </linearGradient>
       </defs>
-      <path d="M56.5 8.500C55.500 24 48 39.500 41.500 54.500H50.500C50.500 68 51.800 81 54 93H82A10.500 10.500 0 0 0 92.500 82.500V19A10.500 10.500 0 0 0 82 8.500Z" fill={`url(#${id}-far)`} />
-      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M27.400 32.500v8M69.300 32.500v8" stroke="#16233f" strokeWidth="2.700" />
-        <path d="M20.500 66.500C31 80 66 80 77 65.500" stroke="#0b0b10" strokeWidth="3.100" />
+      <path d={PANE} fill={`url(#${id}-far)`} />
+      <g fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M27.550 32.450v6.100M68.300 32.450v6.100" strokeWidth="3.700" />
+        <path d="M21.850 66.450C35.750 79.970 60.450 79.970 74.350 66.450" strokeWidth="3.700" />
       </g>
     </Tile>
   )
@@ -175,7 +221,7 @@ function FinderIcon() {
 /** VIP: black, with its name in white capitals. */
 function VipIcon() {
   return (
-    <Tile from="#2a2a2e" to="#000000" sheen={0.3}>
+    <Tile from="#2a2a2e" to="#000000">
       <path d={VIP_LETTERS} fill="#fff" fillRule="evenodd" />
     </Tile>
   )
@@ -184,7 +230,7 @@ function VipIcon() {
 /** Shrug's own: the logo, white on a black tile. The s sits on this tile as it does on the logo's (ON_TILE, at five ninths the size). */
 function ShrugIcon() {
   return (
-    <Tile from="#2a2a2e" to="#000000" sheen={0.3}>
+    <Tile from="#2a2a2e" to="#000000">
       <path d={S} fill="#fff" transform="translate(-38.52 -19.63) scale(0.7963)" />
     </Tile>
   )

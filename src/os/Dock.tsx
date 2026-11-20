@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useNewReplies } from '../apps/state'
 import { SITE } from '../data/site'
 import { APPS, DOCK_APPS, type AppId } from './apps'
@@ -58,11 +58,24 @@ export function Dock() {
 
   const open = openApps.split(' ')
 
+  /** Along the Dock with the arrows, as along a Mac's: left and right from icon to icon, Home and End to
+   * its ends. (Tab still stops on each, so nothing that worked before is taken away.) */
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+    const items = Array.from(shelf.current?.querySelectorAll<HTMLElement>('[data-dock-item]') ?? [])
+    const at = items.indexOf(document.activeElement as HTMLElement)
+    const to = e.key === 'ArrowRight' ? at + 1 : e.key === 'ArrowLeft' ? at - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : -1
+    if (at < 0 || to < 0 || to >= items.length) return
+    e.preventDefault()
+    items[to]!.focus()
+  }
+
   return (
     <nav className="dock" aria-label="Dock" data-compact={compact || undefined}>
       <div
         ref={shelf}
         className="dock__shelf"
+        onKeyDown={onKey}
         onPointerMove={(e) => {
           if (e.pointerType !== 'mouse' || compact || prefersReducedMotion() || document.documentElement.hasAttribute('data-wm-busy')) return
           const x = e.clientX

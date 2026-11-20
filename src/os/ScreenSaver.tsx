@@ -49,6 +49,9 @@ export function ScreenSaver() {
   const [who, setWho] = useState(0)
   const turned = useRef(0)
   turned.current = who
+  /** How many times it has come on. Whoever is up is drawn afresh each time, so that they fade in as it does:
+   * left as they were, they would have had their turn, and gone, behind a saver that was off. */
+  const [times, setTimes] = useState(0)
   /** The main pointer is a finger: there is nothing to move and no key to press. */
   const [finger] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
   const root = useRef<HTMLDivElement>(null)
@@ -138,10 +141,13 @@ export function ScreenSaver() {
   }, [])
 
   // While it's on: it has the keyboard (so a screen reader is where a sighted
-  // visitor is), the clock ticks and the people turn over
+  // visitor is), the clock ticks and the people turn over. It comes on with
+  // someone already there (the first of them, the first time; after that
+  // whoever was up when it was woken), who stays their whole turn from now
   useEffect(() => {
     if (!on) return
     root.current?.focus({ preventScroll: true })
+    setTimes((n) => n + 1)
     setNow(new Date())
     const tick = setInterval(() => setNow(new Date()), 5000)
     let turn: ReturnType<typeof setTimeout>
@@ -188,7 +194,7 @@ export function ScreenSaver() {
         <div className="saver__time">{clockOf(now)}</div>
       </div>
       <div ref={foot} className="saver__foot">
-        <div className="saver__who" key={who} style={{ animationDuration: `${stayFor(said)}ms` }}>
+        <div className="saver__who" key={`${times}:${who}`} style={{ animationDuration: `${stayFor(said)}ms` }}>
           {said && <span className="saver__said">{/^[“"]/.test(said) ? said : `“${said}”`}</span>}
           <span className="saver__name">{person.name}</span>
           <span className="saver__role">{person.role}</span>

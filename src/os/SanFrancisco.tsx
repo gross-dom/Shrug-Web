@@ -31,6 +31,15 @@ const asJson = async (url: string) => {
   return (await answer.json()) as unknown
 }
 
+/** What the service says the sky is doing, without how likely it thinks that is: "Slight Chance Light
+ * Rain" is Light Rain, "Rain Showers Likely" is Rain Showers. A widget this size has the room to say what,
+ * not how sure. Its other words are the weather itself and are kept: Mostly Cloudy, Patchy Fog. */
+const plainly = (says: string) =>
+  says
+    .replace(/^(?:slight\s+)?chance\s+(?:of\s+)?/i, '')
+    .replace(/\s+likely$/i, '')
+    .trim() || says
+
 /** The weather now: the hour that is running, from the service's forecast by the hour. */
 async function readWeather(): Promise<Weather> {
   const point = (await asJson(POINT)) as { properties?: { forecastHourly?: unknown } }
@@ -42,8 +51,8 @@ async function readWeather(): Promise<Weather> {
   const now = periods.find((p) => typeof p.endTime === 'string' && Date.parse(p.endTime) > Date.now()) ?? periods[0]
   if (!now || typeof now.temperature !== 'number' || typeof now.shortForecast !== 'string') throw new Error('weather: unread')
   const temp = now.temperatureUnit === 'C' ? (now.temperature * 9) / 5 + 32 : now.temperature
-  // "Slight Chance Light Rain then Mostly Cloudy": what it is doing now is the first of those
-  const says = now.shortForecast.split(/\s+then\s+/i)[0]!.trim().slice(0, 40)
+  // "Slight Chance Light Rain then Mostly Cloudy": what it is doing now is the first of those, said plainly
+  const says = plainly(now.shortForecast.split(/\s+then\s+/i)[0]!.trim()).slice(0, 40)
   return { temp, says, day: now.isDaytime !== false }
 }
 

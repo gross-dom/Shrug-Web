@@ -17,6 +17,11 @@ export interface AppSpec {
   /** The size the window opens at, given the room on the desktop. */
   size: (room: Size) => Size
   min: Size
+  /** For a window that would sooner open narrower than lie on the desk's
+   * icons: the least width it will open at beside them, on a desk too narrow
+   * for its size there and too short to have it under them (wm.ts). Without
+   * one a window opens at its size, on the icons if that is where it falls. */
+  slim?: number
   /** Where it opens, as an offset from centered. */
   nudge: { x: number; y: number }
   resizable: boolean
@@ -51,6 +56,10 @@ export const APPS: Record<AppId, AppSpec> = {
     blurb: 'What people say',
     size: fit({ w: 0.7, h: 0.84 }, { w: 820, h: 560 }, { w: 1180, h: 800 }),
     min: { w: 380, h: 360 },
+    // It opens by itself as the visit begins, and on a small screen its 820
+    // would cover the desk's icons before anyone had seen them. It keeps its
+    // list beside the conversation down to 560 across (styles/apps.css)
+    slim: 560,
     nudge: { x: 0, y: -4 },
     resizable: true,
     lightsY: 26,
