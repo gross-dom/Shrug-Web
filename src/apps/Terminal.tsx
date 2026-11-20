@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { CASE_STUDIES, caseDir, PUBLIC_CASE_STUDIES } from '../data/caseStudies'
-import { listUnder } from '../data/faqs'
-import { reach, SITE } from '../data/site'
+import { FAQS, listUnder } from '../data/faqs'
+import { COMPANY_OF, peopleOf } from '../data/founders'
+import { PEOPLE, RELATION_LABEL } from '../data/people'
+import { COMPANIES, VERTICALS } from '../data/portfolio'
+import { ABOUT, reach, SITE } from '../data/site'
 import { Prompt, Window } from '../kit/window'
 import { ALIASES, APP_IDS, type AppId } from '../os/apps'
 import { formatter } from '../os/dates'
@@ -9,7 +12,8 @@ import { dockPoint } from '../os/dom'
 import { shrug } from '../os/shrug'
 import { createStore, useStore } from '../os/store'
 import { openApp, wm } from '../os/wm'
-import { launchApp } from '../os/launch'
+import { launchApp, showCompany, showReply } from '../os/launch'
+import { folded } from './fold'
 
 // Case studies, in a terminal. Most are private: listing them works, reading
 // one is refused, and the shell asks whether to request access. The ones
@@ -21,12 +25,22 @@ import { launchApp } from '../os/launch'
 // the visitor's own mail or messages app. Nothing typed here is sent anywhere.
 //
 // It is a shell as far as a curious person will push it: help, ls, cat, open,
-// whoami, date, clear and a few more answer in character, an empty line is
-// just an empty line, and Up and Down walk what was typed. There is no state
-// to be stuck in: y and n are answers at any time, and n, cancel, exit and
-// Escape always come back to the question.
+// whoami, whois, fortune, date, clear and a few more answer in character, an
+// empty line is just an empty line, Up and Down walk what was typed and Tab
+// finishes a word that has been started. There is no state to be stuck in: y
+// and n are answers at any time, and n, cancel, exit and Escape always come
+// back to the question.
+//
+// What it knows of people and companies it reads from the site's own lists:
+// `whois` says who someone in the group chat is, or what a company in the
+// portfolio does, and `fortune` is something one of them said, as they said
+// it. Each ends in lines that go there: to the reply in the conversation, to
+// the company in the portfolio.
 
-type Line = { kind: 'cmd' | 'out' | 'err' | 'ask' | 'ok' | 'dim' | 'said'; text: string } | { kind: 'link'; text: string; href: string }
+/** Somewhere in the site a line goes when pressed: a company in the portfolio, a person's reply in the group chat, an app. */
+type Place = { company: string } | { person: number } | { app: AppId }
+
+type Line = { kind: 'cmd' | 'out' | 'err' | 'ask' | 'ok' | 'dim' | 'said'; text: string } | { kind: 'link'; text: string; href: string } | { kind: 'go'; text: string; to: Place }
 
 const PATH = 'shrug:case-studies'
 const dirs = CASE_STUDIES.map(caseDir)
@@ -111,16 +125,137 @@ const OPEN_HINT = 'portfolio, faqs, vip, chat, about'
 /** A case study that is public, if that is what was named (`alt`, `lula/README`). */
 const publicNamed = (arg: string) => PUBLIC_CASE_STUDIES.find((study) => arg.replace(/^\.?\//, '').split('/')[0] === study.dir.slice(0, -1))
 
+/** What help lists. Each line fits a phone held upright without turning over: a turned line reads as two commands. */
 const HELP: Line[] = [
   out('y, n          answer the question'),
   out('ls            list the case studies'),
   out('cat <name>    try to read one'),
   out('please        ask nicely'),
-  out(`open <app>    ${OPEN_HINT}`),
+  out('open <app>    another app: open portfolio'),
+  out('whois <name>  a person, or a company'),
+  out('fortune       something one of them said'),
   out('whoami        who is asking'),
   out('date          the time in san francisco'),
   out('clear         start over'),
 ]
+
+// ---- The people and the companies, as the shell knows them ----
+
+/** A company in the portfolio that a private case study is of, by the case study's directory (`varda/`):
+ * the one of that name. Not every case study is of a portfolio company. */
+const companyFiled = (dir: string) => {
+  const study = CASE_STUDIES.find((name) => caseDir(name) === dir)
+  return study ? (COMPANIES.find((company) => company.name === study) ?? null) : null
+}
+
+/** A private case study, if that is what was named (`varda`, `eight-sleep/README`): its directory. */
+const privateNamed = (arg: string) => dirs.find((dir) => arg.replace(/^\.?\//, '').split('/')[0] === dir.slice(0, -1)) ?? null
+
+/** The line that goes to a company in the portfolio, and the one that goes to a person's reply. */
+const toCompany = (key: string): Line => ({ kind: 'go', text: `${COMPANIES.find((company) => company.key === key)?.name ?? key} in the portfolio`, to: { company: key } })
+const toReply = (person: number): Line => ({ kind: 'go', text: `${PEOPLE[person]!.name} in the chat`, to: { person } })
+
+/** The replies short enough to be a fortune: a few lines at most, as the ones a terminal hands out are. */
+const FORTUNES = PEOPLE.map((person, index) => ({ person, index })).filter(({ person }) => !!person.quote && person.quote.length <= 220)
+let lastFortune = -1
+
+/** Something one of the people in the group said, exactly as they said it, and who said it. Never the same one twice running. */
+function fortune(): Line[] {
+  if (!FORTUNES.length) return [out('nobody has said anything yet.')]
+  let at = Math.floor(Math.random() * FORTUNES.length)
+  if (at === lastFortune) at = (at + 1) % FORTUNES.length
+  lastFortune = at
+  const { person, index } = FORTUNES[at]!
+  return [out(person.quote!), out(`    — ${person.name}, ${person.role}`), toReply(index)]
+}
+
+/** How well a name answers what was typed (both folded): the whole of it, its start, the start of one of
+ * its words, or somewhere in it. Lower is better; -1 is not at all. */
+function named(name: string, q: string) {
+  if (name === q) return 0
+  if (name.startsWith(q)) return 1
+  if (name.split(/[^\p{L}\p{N}]+/u).some((word) => word.startsWith(q))) return 2
+  return q.length > 2 && name.includes(q) ? 3 : -1
+}
+
+const SELF = ['shrug', 'shrug capital', 'shrug v', 'us', 'you']
+
+/** Who someone is, or what a company does, from the site's own lists: the best answer to the name, and
+ * the names of the others it could have meant. */
+function whois(arg: string): { lines: Line[]; lost?: boolean } {
+  const q = folded(arg.trim())
+  if (!q || SELF.includes(q))
+    return { lines: [out(SITE.line), ...ABOUT.facts.map((fact) => out(`${fact.label.toLowerCase().padEnd(10)}${fact.value}`)), { kind: 'go', text: 'about shrug', to: { app: 'about' } }] }
+  const found = [
+    ...PEOPLE.map((person, index) => ({ how: named(folded(person.name), q), name: person.name, person: index as number | null, company: null as string | null })),
+    ...COMPANIES.map((company) => ({ how: named(folded(company.name), q), name: company.name, person: null as number | null, company: company.key as string | null })),
+  ]
+    .filter((one) => one.how >= 0)
+    .sort((a, b) => a.how - b.how)
+  const best = found[0]
+  if (!best) return { lines: [{ kind: 'err', text: `whois: nobody here called ${arg.trim()}.` }, { kind: 'dim', text: 'the people are in the chat, the companies in the portfolio.' }], lost: true }
+  const others = found.slice(1, 6).map((one) => one.name)
+  const also: Line[] = others.length ? [{ kind: 'dim', text: `also: ${others.join(', ')}${found.length > 6 ? ', …' : ''}` }] : []
+  if (best.person !== null) {
+    const person = PEOPLE[best.person]!
+    const theirs = COMPANY_OF[best.person]
+    return { lines: [out(person.name), out(person.role), ...(person.relations.length ? [out(person.relations.map((r) => RELATION_LABEL[r].toLowerCase()).join(', '))] : []), toReply(best.person), ...(theirs ? [toCompany(theirs)] : []), ...also] }
+  }
+  const company = COMPANIES.find((one) => one.key === best.company)!
+  return { lines: [out(company.name), out(company.vertical), ...(company.blurb ? [out(company.blurb)] : []), toCompany(company.key), ...peopleOf(company.key).map(toReply), ...also] }
+}
+
+/** The site, counted: what a terminal prints of the machine it is on, of this one. Every figure is read from the lists. */
+const counts = (): Line[] => [
+  out(SITE.mark),
+  out(SITE.legalName.toLowerCase()),
+  out('people     ' + `${PEOPLE.length} in the group chat`),
+  out('portfolio  ' + `${COMPANIES.length} companies, ${VERTICALS.length} verticals`),
+  out('faqs       ' + `${FAQS.length}`),
+  out('studies    ' + `${CASE_STUDIES.length} private, ${PUBLIC_CASE_STUDIES.length} public`),
+  out('shell      please'),
+]
+
+// ---- Tab ----
+
+/** The words a line can begin with, as Tab finishes them: the ones help lists, and the few it leaves to be found. */
+const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'fortune', 'help', 'ls', 'neofetch', 'open', 'please', 'pwd', 'whoami', 'whois']
+const READS = ['cat', 'less', 'more', 'head', 'tail', 'vi', 'vim', 'nano']
+const OPEN_NAMES = ['portfolio', 'faqs', 'vip', 'chat', 'about', 'one-pager']
+const WHO = [...PEOPLE.map((person) => folded(person.name)), ...COMPANIES.map((company) => folded(company.name))]
+
+/** What the word being typed could be finished as: `head` is everything typed before it. */
+function candidates(head: string[], word: string): string[] {
+  if (!head.length) return COMMANDS
+  const command = head[0]!
+  if (command === 'whois') return WHO
+  const files = word.includes('/') ? listed.map((dir) => `${dir}README`) : [...(word.startsWith('.') && RULES.length ? [RULES_FILE] : []), ...listed]
+  if (READS.includes(command) || command === 'ls' || command === 'cd') return files
+  if (command === 'open') return word.includes('/') ? files : [...OPEN_NAMES, ...listed]
+  return []
+}
+
+/** What Tab makes of a line, as a shell's does: the word being typed is finished if only one thing begins
+ * that way, taken as far as they all agree if several do, and when that gets it no further `among` is the
+ * several. Null where nothing begins that way (or nothing has been typed): Tab is then the page's own. */
+export function completed(line: string): { line: string; among: string[] } | null {
+  if (!line.trim()) return null
+  const low = line.toLowerCase().replace(/^\s+/, '')
+  const first = low.split(/\s+/)[0]!
+  // A name can be several words: for whois, all that follows it is the word
+  const cut = first === 'whois' && low.length > first.length ? first.length + 1 : low.lastIndexOf(' ') + 1
+  const head = low.slice(0, cut).trim().split(/\s+/).filter(Boolean)
+  const word = folded(low.slice(cut))
+  const fits = [...new Set(candidates(head, word).filter((one) => one.startsWith(word)))]
+  if (!fits.length) return null
+  // As far as they all agree
+  let shared = fits[0]!
+  for (const one of fits) while (!one.startsWith(shared)) shared = shared.slice(0, -1)
+  const whole = fits.length === 1
+  // A directory has more to come after it, and so has a word that could still be one of several
+  const next = low.slice(0, cut) + shared + (whole && !shared.endsWith('/') ? ' ' : '')
+  return { line: next, among: whole || shared.length > word.length ? [] : fits }
+}
 
 let sanFrancisco: Intl.DateTimeFormat | undefined
 
@@ -135,7 +270,7 @@ function dateThere() {
 
 /** What a line typed into the shell gets back, and what it does besides saying it. `lost` is a command
  * the shell does not know: the desk has nothing for it, and its mark shrugs. */
-function respond(value: string, step: Term['step']): { lines: Line[]; step?: Term['step']; clear?: boolean; open?: AppId; go?: string; lost?: boolean } {
+function respond(value: string, step: Term['step']): { lines: Line[]; step?: Term['step']; clear?: boolean; open?: AppId; show?: Place; go?: string; lost?: boolean } {
   const low = value.toLowerCase()
   const [word = '', ...rest] = low.split(/\s+/)
   const arg = rest.join(' ')
@@ -195,10 +330,25 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
       const app = OPENS[name]
       if (app === 'terminal') return { lines: [out('you’re in it.')] }
       if (app) return { lines: [{ kind: 'ok', text: `opening ${arg}.` }], open: app }
+      // One the listing shows and nobody may read: what can be opened is the company itself, where it is in the portfolio
+      const shut = privateNamed(arg)
+      const company = shut && companyFiled(shut)
+      if (shut && company) return { lines: [out(`${shut} is private. here’s ${company.name} in the portfolio.`)], show: { company: company.key } }
+      if (shut) return { lines: [{ kind: 'err', text: DENIED }, { kind: 'ask', text: QUESTION }], step: 'ask' }
       return { lines: [{ kind: 'err', text: `open: nothing called ${arg}. try ${OPEN_HINT}.` }] }
     }
     case 'whoami':
       return { lines: [out('a founder, probably.')] }
+    case 'whois':
+    case 'who':
+    case 'finger':
+      return whois(arg)
+    case 'fortune':
+      return { lines: fortune() }
+    case 'neofetch':
+    case 'fastfetch':
+    case 'uname':
+      return { lines: counts() }
     case 'date':
       return { lines: [out(dateThere())] }
     case 'please':
@@ -239,6 +389,13 @@ function openIt(app: AppId) {
   else openApp(app, dockPoint(app))
 }
 
+/** Goes where a line of the terminal's leads: a company in the portfolio, a reply in the conversation, an app. */
+function goTo(to: Place) {
+  if ('company' in to) showCompany(to.company)
+  else if ('person' in to) showReply(to.person)
+  else launchApp(to.app)
+}
+
 /** Answers a line typed into the terminal (or a key pressed for it). Both layouts call this one. */
 export function answer(raw: string) {
   const value = raw.trim().slice(0, LINE_MAX)
@@ -249,6 +406,7 @@ export function answer(raw: string) {
     return { step: reply.step ?? t.step, log: [...t.log, { kind: 'said', text: value }, ...reply.lines], typed }
   })
   if (reply.open) openIt(reply.open)
+  if (reply.show) goTo(reply.show)
   if (reply.lost) shrug()
   // The request is the visitor's own to send: their mail or messages app opens on it
   if (reply.go) window.location.href = reply.go
@@ -286,6 +444,22 @@ export function useLine(onEscape?: () => void) {
       } else onEscape?.()
       return
     }
+    // Tab finishes the word being typed, as a shell's does. With nothing typed, or nothing that begins that
+    // way, it is the page's own key and moves on: the line is never somewhere the keyboard cannot leave
+    if (e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
+      const done = completed(typed)
+      if (!done) return
+      e.preventDefault()
+      back.current = null
+      setTyped(done.line.slice(0, LINE_MAX))
+      // Several it could be, and no further to take it: they are listed, as a shell lists them
+      if (done.among.length) {
+        const few = done.among.slice(0, 12)
+        const more = done.among.length - few.length
+        term.set((t) => ({ ...t, log: [...t.log, { kind: 'dim', text: few.join('  ') + (more > 0 ? `  … ${more} more` : '') }] }))
+      }
+      return
+    }
     if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.altKey || e.metaKey || e.ctrlKey) return
     const past = term.get().typed
     if (!past.length) return
@@ -321,7 +495,7 @@ export function useLine(onEscape?: () => void) {
   return { typed, setTyped: onChange, type, say, onKeyDown }
 }
 
-const CLASS: Record<Exclude<Line['kind'], 'cmd' | 'link'>, string | undefined> = { out: undefined, err: 'err', ask: 'ask', ok: 'ok', dim: 'dim', said: 'said' }
+const CLASS: Record<Exclude<Line['kind'], 'cmd' | 'link' | 'go'>, string | undefined> = { out: undefined, err: 'err', ask: 'ask', ok: 'ok', dim: 'dim', said: 'said' }
 
 /** A line that goes somewhere: a case study, the one-pager, the visitor's own mail. */
 function LinkLine({ text, href }: { text: string; href: string }) {
@@ -341,6 +515,17 @@ function LinkLine({ text, href }: { text: string; href: string }) {
   )
 }
 
+/** A line that goes somewhere in the site: a company in the portfolio, a reply in the conversation. */
+function GoLine({ text, to }: { text: string; to: Place }) {
+  return (
+    <div className="term__go">
+      <button type="button" className="term__link" onClick={() => goTo(to)}>
+        {text}
+      </button>
+    </div>
+  )
+}
+
 /** Everything the terminal has printed, top to bottom. */
 export function TerminalLog() {
   const log = useStore(term, (t) => t.log)
@@ -353,6 +538,8 @@ export function TerminalLog() {
           </Prompt>
         ) : line.kind === 'link' ? (
           <LinkLine key={i} text={line.text} href={line.href} />
+        ) : line.kind === 'go' ? (
+          <GoLine key={i} text={line.text} to={line.to} />
         ) : (
           <div key={i} className={CLASS[line.kind]}>
             {line.kind === 'said' ? `> ${line.text}`.trimEnd() : line.text}

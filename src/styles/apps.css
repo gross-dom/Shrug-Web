@@ -1654,6 +1654,62 @@
   background: color-mix(in srgb, var(--ss-accent) 88%, #000);
 }
 
+/* Whoever in the group chat speaks for the company: a row each, pressed to go to what they said */
+.pf-preview__voices {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: stretch;
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ss-line);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.os .pf-preview__voice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 6px 6px 8px;
+  border-radius: 9px;
+  text-align: left;
+  cursor: default;
+}
+
+.os .pf-preview__voice:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.os .pf-preview__voice:active {
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.pf-preview__voice-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--ss-text);
+}
+
+.pf-preview__voice-text > b {
+  overflow: hidden;
+  color: var(--ss-text-strong);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-preview__voice > svg {
+  flex: none;
+  color: var(--ss-text-faint);
+}
+
 /* A company with no site to visit: the line that stands where its link would be */
 .pf-preview__fate {
   display: inline-flex;

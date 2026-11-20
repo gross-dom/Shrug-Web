@@ -1,10 +1,10 @@
-import { finder, inbox, notes, openConversation, pickCompany, showNote } from '../apps/state'
+import { finder, inbox, notes, openConversation, pickCompany, showInGroup, showNote } from '../apps/state'
 import { FAQS } from '../data/faqs'
 import { companyOf, contactsFor, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
 import { arriveIn, onPhone, sys, topOf, unlock } from '../phone/system'
 import { APP_IDS } from './apps'
 import { dockPoint } from './dom'
-import { atCompany, atConversation, atQuestion, companyAt, conversationAt, questionAt, type Spot } from './place'
+import { atCompany, atConversation, atQuestion, companyAt, conversationAt, personAt, questionAt, type Spot } from './place'
 import { activeApp, openApp, wm } from './wm'
 
 // The site changes layout under a visit that is already going: a tablet is
@@ -74,7 +74,12 @@ export function spotOfDesk(): Spot | null {
 
 /** Has a window show what a link names (the window is opened by whoever calls this). */
 export function showOnDesk(spot: Spot) {
-  if (spot.app === 'messages') openConversation(conversationAt(spot.at) ?? 'group')
+  if (spot.app === 'messages') {
+    openConversation(conversationAt(spot.at) ?? 'group')
+    // One person's reply: the group, at what they said
+    const who = personAt(spot.at)
+    if (who !== null) showInGroup(who)
+  }
   if (spot.app === 'finder' && companyAt(spot.at)) pickCompany(companyAt(spot.at))
   if (spot.app === 'notes' && questionAt(spot.at) !== null) showNote(questionAt(spot.at)!)
 }

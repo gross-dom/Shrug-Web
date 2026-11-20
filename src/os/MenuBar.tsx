@@ -207,6 +207,45 @@ export function MenuBar() {
 
   const title = (id: string) => bar.current?.querySelector<HTMLElement>(`[data-menu-title="${id}"]`)
 
+  // A menu is also worked the way a Mac's is: press on its title, draw the pointer down to an item with the
+  // button held, and let go on it. The press that opened the menu is remembered; let go over an item of the
+  // menu that is open, having moved to get there, that item is chosen. Let go clear of the bar after such a
+  // drag, the menu goes, as it does on a Mac. Let go where it was pressed, the menu stays open to be clicked in
+  const drawn = useRef<{ x: number; y: number } | null>(null)
+  useEffect(() => {
+    const up = (e: PointerEvent) => {
+      const from = drawn.current
+      drawn.current = null
+      if (!from || e.pointerType !== 'mouse') return
+      if (Math.hypot(e.clientX - from.x, e.clientY - from.y) < 6) return
+      const under = document.elementFromPoint(e.clientX, e.clientY)
+      const item = under?.closest<HTMLElement>('[data-menu-item]')
+      if (item && bar.current?.contains(item)) {
+        if (item.getAttribute('aria-disabled') !== 'true') item.click()
+        return
+      }
+      if (!under?.closest('.menubar__menu')) setOpen(null)
+    }
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+  }, [])
+
+  /** A letter typed in an open menu goes to the next item that begins with it, as it does in a Mac's. */
+  const toLetter = (id: string, key: string) => {
+    const list = entries(id)
+    if (!list.length) return false
+    const at = list.indexOf(document.activeElement as HTMLElement)
+    const after = [...list.slice(at + 1), ...list.slice(0, at + 1)]
+    const hit = after.find((el) => (el.querySelector('.menu__label')?.textContent ?? '').trim().toLowerCase().startsWith(key.toLowerCase()))
+    hit?.focus()
+    return !!hit
+  }
+  const isLetter = (e: KeyboardEvent) => e.key.length === 1 && /\S/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey
+
   /** A choice has been made and its menu has gone, and the keyboard with it unless the choice put it
    * somewhere (a window opened, the screen saver came on). Left with nothing, it goes to the window in
    * front, or back to the menu's title. */
@@ -252,6 +291,8 @@ export function MenuBar() {
       e.preventDefault()
       step(id, -1)
     } else if (e.key === 'Escape') setOpen(null)
+    // Opened with the pointer, the keyboard is still on the title: a letter typed goes into the menu
+    else if (open === id && isLetter(e) && toLetter(id, e.key)) e.preventDefault()
   }
 
   const onMenuKey = (id: string) => (e: KeyboardEvent) => {
@@ -280,6 +321,7 @@ export function MenuBar() {
       setOpen(null)
       title(id)?.focus()
     } else if (e.key === 'Tab') setOpen(null)
+    else if (isLetter(e) && toLetter(id, e.key)) e.preventDefault()
   }
 
   return (
@@ -318,6 +360,8 @@ export function MenuBar() {
                   e.preventDefault()
                   setOpen(shown ? null : menu.id)
                   e.currentTarget.focus()
+                  // Held and drawn down to an item, the item is chosen where the button is let go (above)
+                  drawn.current = shown || e.pointerType !== 'mouse' ? null : { x: e.clientX, y: e.clientY }
                 }}
                 onPointerEnter={(e) => {
                   if (open && !shown && e.pointerType === 'mouse') setOpen(menu.id)

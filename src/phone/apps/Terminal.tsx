@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, type FormEvent, type ReactNode } from 'react'
-import { Ellipsis, Eraser, KeyRound, RotateCcw } from 'lucide-react'
+import { BookOpen, Ellipsis, Eraser, KeyRound, RotateCcw } from 'lucide-react'
 import { bareClick, LINE_MAX, startOver, term, TerminalLog, useLine } from '../../apps/Terminal'
+import { PUBLIC_CASE_STUDIES } from '../../data/caseStudies'
+import { reachable } from '../../data/site'
 import { Caret } from '../../kit/window'
 import { useStore } from '../../os/store'
-import { Menu, NavStack, Screen, useApp } from '../ui'
+import { goHome } from '../system'
+import { BackButton, Menu, NavStack, Screen, useApp, type MenuItem } from '../ui'
 import '../../styles/phone/terminal.css'
 
 // Case Studies on the phone. iOS has no terminal of its own, so this is the
@@ -110,20 +113,24 @@ function Session() {
     input.current?.blur()
   }
 
+  // What the menu offers first is something that can be done. With an address to write to, that is the
+  // request itself; with none, it is what can be read without one, where there is any
+  const first: MenuItem[] = reachable()
+    ? [{ label: 'Request Access', icon: <KeyRound size={18} strokeWidth={2.1} />, onSelect: () => say('y') }]
+    : PUBLIC_CASE_STUDIES.length
+      ? [{ label: 'Public Case Studies', icon: <BookOpen size={18} strokeWidth={2.1} />, onSelect: () => say('please') }]
+      : []
+
   return (
     <Screen
       title="Case Studies"
       tone="dark"
       fixed
       className="term-ios"
+      // The way out, where an app has Back to its lists: this is as far back as the app goes, and the Home Screen is next
+      leading={<BackButton label="Home Screen" onClick={goHome} />}
       trailing={
-        <Menu
-          label="More"
-          items={[
-            { label: 'Request Access', icon: <KeyRound size={18} strokeWidth={2.1} />, onSelect: () => say('y') },
-            { label: 'Clear', icon: <Eraser size={18} strokeWidth={2.1} />, divided: true, onSelect: clear },
-          ]}
-        >
+        <Menu label="More" items={[...first, { label: 'Clear', icon: <Eraser size={18} strokeWidth={2.1} />, divided: first.length > 0, onSelect: clear }]}>
           <Ellipsis size={22} strokeWidth={2.4} aria-hidden />
         </Menu>
       }
@@ -136,6 +143,9 @@ function Session() {
               </Key>
               <Key label="n: no" wide onPress={() => say('n')}>
                 n
+              </Key>
+              <Key label="help: what can be typed" wide onPress={() => say('help')}>
+                help
               </Key>
             </>
           ) : (

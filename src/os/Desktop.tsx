@@ -1,13 +1,14 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { startChat } from '../apps/chat'
-import { finder, inbox, notes, photos } from '../apps/state'
-import { arriveIn, onPhone, startSystem, unlock, watchHistory } from '../phone/system'
+import { finder, inbox, notes, photos, showInGroup } from '../apps/state'
+import { MY_CARD } from '../phone/apps/routes'
+import { arriveIn, onPhone, startSystem, watchHistory } from '../phone/system'
 import { asked, isOn, opens } from './address'
 import { Boundary } from './Boundary'
 import { cross, showOnDesk, spotOfDesk } from './crossing'
 import { keepDesk, restoreDesk, returning } from './deskmemory'
 import { dockPoint } from './dom'
-import { addressable, addressOf, placeOfSpot } from './place'
+import { addressable, addressOf, personAt, placeOfSpot } from './place'
 import { saver, startSaver } from './saver'
 import { Arriving, Stalled, unfetched } from './Stalled'
 import { useStore } from './store'
@@ -115,9 +116,13 @@ export function Desktop() {
       if (onPhone(named)) {
         const { stack, sheet } = placeOfSpot({ app: named, at })
         arriveIn(named, stack, sheet)
+        // A link to one person's reply: the conversation opens at what they said
+        const who = named === 'messages' ? personAt(at) : null
+        if (who !== null) showInGroup(who)
       }
-      // An app the phone does not have (About Shrug is the desktop's): its Home Screen, unlocked
-      else unlock()
+      // An app the phone does not have (About Shrug is the desktop's): who Shrug is, there, is on Shrug's own
+      // card in Contacts, so that is where the link arrives
+      else arriveIn('finder', [MY_CARD])
     }
     let gone = false
     let t1: ReturnType<typeof setTimeout> | undefined

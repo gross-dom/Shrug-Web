@@ -4,7 +4,7 @@ import type { PhoneApp } from '../system'
 import { ContactsApp, contactsFirst } from './Contacts'
 import { MessagesApp } from './Messages'
 import { NotesApp } from './Notes'
-import { PhotosApp } from './Photos'
+import { PhotosApp, photosFirst } from './Photos'
 import { TerminalApp } from './Terminal'
 
 // The apps on the phone: each of the desktop's windows, as the iPhone app it
@@ -38,7 +38,8 @@ export const PHONE: Record<PhoneApp, PhoneAppSpec> = {
   // A note is a white page; the lists of them are on the gray that inset lists sit on
   notes: { label: 'Notes', Root: NotesApp, first: (top) => ({ tone: top && /^[nu]:/.test(top) ? 'plain' : 'grouped' }) },
   terminal: { label: 'Case Studies', Root: TerminalApp, first: () => ({ tone: 'dark' }), eager: true },
-  photos: { label: 'VIP', Root: PhotosApp },
+  // The library is headed by a picture, dark to the top of the screen; a picture opened by itself is in a white room
+  photos: { label: 'VIP', Root: PhotosApp, first: photosFirst },
 }
 
 /** In the Dock, left to right: the four that are always to hand. */

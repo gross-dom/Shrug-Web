@@ -4,7 +4,9 @@ import { chat, finishChat, replayChat, sendMessage, setUnsent, toggleChat, TOTAL
 import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
 import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, sought, type Conversation } from '../../apps/state'
 import { eggOf } from '../../data/eggs'
+import { COMPANY_OF } from '../../data/founders'
 import { PEOPLE } from '../../data/people'
+import { COMPANIES } from '../../data/portfolio'
 import { SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
@@ -12,9 +14,12 @@ import { formatter } from '../../os/dates'
 import { LogoDisc } from '../../os/icons'
 import { prefersReducedMotion } from '../../os/dom'
 import { focusLost, holdFocus } from '../../os/focus'
+import { showCompany } from '../../os/launch'
+import { atPerson, linkTo } from '../../os/place'
 import { useStore } from '../../os/store'
 import { sheeted } from '../chrome'
 import { OnePagerIcon, PhoneIcon } from '../icons'
+import { share } from '../native'
 import { closeSheet, goHome, launch, openSheet, pop, push, sys, topOf, type PhoneApp } from '../system'
 import { useNewCount } from '../unread'
 import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
@@ -794,6 +799,13 @@ function DetailsSheet() {
   const inner = useRef<HTMLDivElement>(null)
   /** How far down the list of people was, and whose row was pressed, to come back to. */
   const place = useRef({ top: 0, row: -1 })
+  /** A link to a reply went to the clipboard (there was no share sheet to hand it to): said for a moment. */
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const t = setTimeout(() => setCopied(false), 1800)
+    return () => clearTimeout(t)
+  }, [copied])
 
   // The card starts at its top; the list comes back where it was left, and the keyboard goes with each
   useLayoutEffect(() => {
@@ -810,6 +822,7 @@ function DetailsSheet() {
     const who = PEOPLE[person]!
     const tags = relationsOf(person)
     const first = who.name.split(' ')[0]
+    const theirs = COMPANIES.find((company) => company.key === COMPANY_OF[person]) ?? null
     return (
       <Sheet label={`${who.name} details`} className="msg-details" leading={<BackButton label={`Back to ${GROUP_NAME}`} onClick={() => setPerson(null)} />}>
         <div ref={inner}>
@@ -839,11 +852,21 @@ function DetailsSheet() {
                     closeSheet()
                   }}
                 />
+                {/* A link to what they said, to pass on: it opens the conversation at their reply */}
+                <Cell title={copied ? 'Link Copied' : 'Share Reply…'} tint onClick={() => void share({ title: who.name, url: linkTo({ app: 'messages', at: atPerson(person) }) }).then((sent) => sent === 'copied' && setCopied(true))} />
               </Section>
             </List>
           ) : (
             // Two people under one name (“Courtne Smith & Filip Diarra”) are spoken of as the two they are
             <p className="msg-card__note">{who.name.includes('&') ? `${who.name} haven’t` : `${first} hasn’t`} replied yet.</p>
+          )}
+          {/* The company in the portfolio that is theirs, where their role names one (src/data/founders.ts) */}
+          {theirs && (
+            <List>
+              <Section>
+                <Cell title={`Show ${theirs.name} in Contacts`} tint onClick={() => showCompany(theirs.key)} />
+              </Section>
+            </List>
           )}
         </div>
       </Sheet>

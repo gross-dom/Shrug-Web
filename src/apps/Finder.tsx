@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { ArrowUpRight, ChevronLeft, ChevronRight, Folder, LayoutGrid, List } from 'lucide-react'
+import { peopleOf } from '../data/founders'
+import { PEOPLE } from '../data/people'
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
 import { Window } from '../kit/window'
 import { FolderIcon } from '../os/icons'
+import { showReply } from '../os/launch'
 import { shrug } from '../os/shrug'
 import { useStore } from '../os/store'
+import { GROUP_NAME, PersonAvatar } from './chat-ui'
 import { companiesIn, CompanyLogo, fateOf, hostOf, openCompany, tellApart, visitLabel, type Listed } from './portfolio-ui'
 import { finder, pickCompany, setFinderQuery, setFinderView, showVertical, sought, stepVertical } from './state'
 import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
@@ -12,7 +16,9 @@ import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 // The portfolio as a Finder window: verticals down the sidebar, and the
 // companies in the one that's picked, each under its own logo, in icons or a
 // list. All is every company in the order Shrug lists them. One is always
-// selected, and the preview beside them says what it does and links to it.
+// selected, and the preview beside them says what it does and links to it;
+// where someone in the group chat speaks for the company (src/data/founders.ts)
+// the preview has the way to what they said.
 // Back and Forward retrace the verticals visited; the search narrows whatever
 // is showing. A company with no site says so where its link would be, and a
 // double-click on one is answered there rather than by nothing.
@@ -60,9 +66,11 @@ function WayIn({ company, at, nudge = 0 }: { company: Listed; at: 'preview' | 'f
   )
 }
 
-/** The selected company, as a Finder preview shows a file: its icon, what it is, and a way in. */
+/** The selected company, as a Finder preview shows a file: its icon, what it is, and a way in. Where its
+ * founder is in the group chat, the way to what they said about Shrug is here too. */
 function Preview({ company, nudge }: { company: Listed; nudge: number }) {
   const apart = tellApart(company)
+  const voices = peopleOf(company.key)
   return (
     <aside className="pf-preview" aria-label={`${company.name}, ${company.vertical}`}>
       <CompanyLogo company={company} size={88} />
@@ -75,6 +83,20 @@ function Preview({ company, nudge }: { company: Listed; nudge: number }) {
         {company.blurb && <p className="pf-preview__blurb">{company.blurb}</p>}
       </div>
       <WayIn company={company} at="preview" nudge={nudge} />
+      {voices.length > 0 && (
+        <div className="pf-preview__voices">
+          {voices.map((person) => (
+            <button key={person} type="button" className="pf-preview__voice" onClick={() => showReply(person)}>
+              <PersonAvatar index={person} size={26} />
+              <span className="pf-preview__voice-text">
+                <b>{PEOPLE[person]!.name}</b>
+                <span>in {GROUP_NAME}</span>
+              </span>
+              <ChevronRight size={13} strokeWidth={2.2} aria-hidden />
+            </button>
+          ))}
+        </div>
+      )}
     </aside>
   )
 }
@@ -111,6 +133,19 @@ export function FinderApp() {
     pickCompany(company.key)
     setAsked((was) => ({ key: company.key, times: (was?.key === company.key ? was.times : 0) + 1 }))
   }
+
+  // Picked from somewhere else (a link, a person's card, the terminal), the company may be far down the
+  // window: it is brought into sight. One picked by hand is already there, and nothing moves
+  const chosenKey = chosen?.key ?? null
+  useEffect(() => {
+    if (!chosenKey) return
+    const box = files.current
+    const tile = box && Array.from(box.querySelectorAll<HTMLElement>('[data-company]')).find((el) => el.dataset.company === chosenKey)
+    if (!box || !tile) return
+    const around = box.getBoundingClientRect()
+    const at = tile.getBoundingClientRect()
+    if (at.top < around.top || at.bottom > around.bottom) tile.scrollIntoView({ block: 'center' })
+  }, [chosenKey, view])
 
   /** From the search field into what it found: the first company showing takes the keyboard. */
   const intoResults = () => files.current?.querySelector<HTMLElement>('[data-company][tabindex="0"]')?.focus()

@@ -1,12 +1,16 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { Check, Search, UserRound, X } from 'lucide-react'
+import { GROUP_NAME } from '../../apps/chat-ui'
 import { companiesIn, companyKeyed, fateOf, hostOf, tellApart, useLogo, type Listed } from '../../apps/portfolio-ui'
 import { sought } from '../../apps/state'
 import { sentenceSaying } from '../../data/faqs'
+import { peopleOf } from '../../data/founders'
 import { LOGO_COLOURS, PLAIN_PAGE, POSTER_COLOURS } from '../../data/logoColours'
+import { PEOPLE } from '../../data/people'
 import { COMPANY_COUNT, VERTICALS, type Company } from '../../data/portfolio'
 import { ABOUT, reach, reachable, SITE } from '../../data/site'
 import { LogoDisc } from '../../os/icons'
+import { showReply } from '../../os/launch'
 import { linkTo } from '../../os/place'
 import { useStore } from '../../os/store'
 import type { Ground, Tone } from '../chrome'
@@ -487,9 +491,9 @@ function Act({ label, icon, href, onClick, none }: { label: string; icon: ReactN
 
 /** One thing a card knows: what it is, small, over what it says. One that leads somewhere is pressed
  * anywhere along its row, as a contact's number is, and carries the sign of where it leads at its end. */
-function Field({ label, children, href, sign }: { label: string; children: ReactNode; href?: string | null; sign?: ReactNode }) {
+function Field({ label, children, href, onPress, sign }: { label: string; children: ReactNode; href?: string | null; /** It leads somewhere in the site: pressed, it goes there. */ onPress?: () => void; sign?: ReactNode }) {
   return (
-    <div className="contact-field" data-link={href ? '' : undefined}>
+    <div className="contact-field" data-link={href || onPress ? '' : undefined}>
       <dt className="contact-field__label">{label}</dt>
       <dd className="contact-field__value" dir="auto">
         {href ? (
@@ -497,16 +501,29 @@ function Field({ label, children, href, sign }: { label: string; children: React
             {children}
             {leaves(href) && <span className="sr-only">, opens in a new tab</span>}
           </a>
+        ) : onPress ? (
+          <button type="button" onClick={onPress}>
+            {children}
+          </button>
         ) : (
           children
         )}
-        {href && sign && (
+        {(href || onPress) && sign && (
           <span className="contact-field__sign" aria-hidden>
             {sign}
           </span>
         )}
       </dd>
     </div>
+  )
+}
+
+/** A speech bubble: the way to what someone said, in Messages. Drawn here. */
+function BubbleGlyph({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden>
+      <path d="M14 4c6.1 0 11 4 11 9s-4.9 9-11 9c-1.1 0-2.1-.1-3.1-.4-1.3 1.1-3.2 2-5.4 2.3-.5.1-.8-.4-.5-.8.9-1.1 1.5-2.3 1.7-3.5C4.4 18 3 15.6 3 13c0-5 4.9-9 11-9z" fill="currentColor" />
+    </svg>
   )
 }
 
@@ -594,6 +611,8 @@ function CompanyCard({ id }: { id: string }) {
   }
   // The card is in the colour of its picture: a photograph's own, where the company has one, or its logo's
   const poster = company.poster
+  // Whoever in the group chat speaks for the company (src/data/founders.ts): the card has the way to what they said
+  const voices = peopleOf(company.key)
 
   return (
     <Screen
@@ -614,6 +633,8 @@ function CompanyCard({ id }: { id: string }) {
       <Head face={poster ? null : <Face company={company} eager />} name={company.name} poster={!!poster} />
       <div className="contact-acts">
         <Act label={study ? 'Case study' : 'Website'} icon={study ? <PageGlyph /> : <SiteGlyph />} href={company.url} none={fate} />
+        {/* Where a contact's card has Message: here it goes to what their founder said, in Messages */}
+        {voices.length > 0 && <Act label={`${PEOPLE[voices[0]!]!.name} in ${GROUP_NAME}`} icon={<BubbleGlyph />} onClick={() => showReply(voices[0]!)} />}
         <Act label="Share" icon={<PassOnGlyph />} onClick={send} />
       </div>
       {/* Said aloud when it happens; the buttons keep their own names */}
@@ -637,6 +658,17 @@ function CompanyCard({ id }: { id: string }) {
             {company.blurb && <Field label="about">{company.blurb}</Field>}
           </dl>
         </Section>
+        {voices.length > 0 && (
+          <Section>
+            <dl className="contact-fields">
+              {voices.map((person) => (
+                <Field key={person} label={`in ${GROUP_NAME.toLowerCase()}`} onPress={() => showReply(person)} sign={<BubbleGlyph size={20} />}>
+                  {PEOPLE[person]!.name}
+                </Field>
+              ))}
+            </dl>
+          </Section>
+        )}
         <Section footer={BOTH_ASKED}>
           <button type="button" className="contact-row" onClick={send}>
             Share Contact

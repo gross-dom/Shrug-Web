@@ -1,7 +1,9 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type MutableRefObject, type ReactElement, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronsDown, Pause, Plus, UserRound } from 'lucide-react'
 import { EGGS, eggOf, lastWords, type Egg, type EggLink } from '../data/eggs'
+import { COMPANY_OF } from '../data/founders'
 import { PEOPLE, RELATION_LABEL } from '../data/people'
+import { COMPANIES } from '../data/portfolio'
 import { SITE } from '../data/site'
 import { Badge } from '../kit/controls/Badge'
 import { Toggle } from '../kit/controls/Toggle'
@@ -13,9 +15,11 @@ import { APPS, DOCK_APPS } from '../os/apps'
 import { prefersReducedMotion } from '../os/dom'
 import { firstControl, focusFirst, useReturnFocus } from '../os/focus'
 import { AppIcon, DocumentIcon } from '../os/icons'
-import { launchApp } from '../os/launch'
+import { launchApp, showCompany } from '../os/launch'
+import { atPerson, linkTo } from '../os/place'
 import { useStore } from '../os/store'
 import { chat, finishChat, replayChat, resumeChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatItem, type Written } from './chat'
+import { folded } from './fold'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
 import { SearchField, ShrugAvatar } from './ui'
 import { formatter } from '../os/dates'
@@ -841,17 +845,6 @@ const lastSaid = (s: Chat) => {
   return ''
 }
 
-/** Words as a search reads them: without their case or their accents, and with the quotation marks type
- * is set with as the plain ones a keyboard has. What is looked for and what is looked through are both
- * read this way, so that "don't" typed with a straight apostrophe finds the "don’t" a reply is set with. */
-const folded = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[‘’‚‛ʼ′`´]/g, "'")
-    .replace(/[“”„‟″«»]/g, '"')
-    .toLowerCase()
-
 /** Everyone in the group, as a search reads them. */
 const SOUGHT = PEOPLE.map((person) => ({ name: folded(person.name), role: folded(person.role), quote: folded(person.quote ?? '') }))
 
@@ -1075,6 +1068,48 @@ export function PersonCard({ index, size = 64 }: { index: number; size?: number 
   )
 }
 
+/** The company in the portfolio that is theirs, where their role names one (src/data/founders.ts): a
+ * press away, in the Portfolio window. Nothing for the many whose company is not in it. */
+function TheirCompany({ person }: { person: number }) {
+  const key = COMPANY_OF[person]
+  const company = key ? COMPANIES.find((one) => one.key === key) : null
+  if (!company) return null
+  return (
+    <div className="details__group">
+      <button type="button" className="details__row details__row--action" onClick={() => showCompany(company.key)}>
+        Show {company.name} in Portfolio
+      </button>
+    </div>
+  )
+}
+
+/** A link to what one person said, to pass on (`?open=chat&at=tony-hawk`): it opens the conversation at
+ * their reply. Copied, the row says so for a moment. */
+function CopyReplyLink({ person }: { person: number }) {
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const t = setTimeout(() => setCopied(false), 1800)
+    return () => clearTimeout(t)
+  }, [copied])
+  const copy = () => {
+    const link = linkTo({ app: 'messages', at: atPerson(person) })
+    // (Not allowed to write to the clipboard: the row says nothing it did not do)
+    navigator.clipboard?.writeText(link).then(
+      () => setCopied(true),
+      () => {},
+    )
+  }
+  return (
+    <button type="button" className="details__row details__row--action" onClick={copy}>
+      <span>{copied ? 'Link Copied' : 'Copy Link to Reply'}</span>
+      <span className="sr-only" role="status">
+        {copied ? 'Link copied' : ''}
+      </span>
+    </button>
+  )
+}
+
 /** What the info button opens on the group: the controls for the replies as
  * they play out, and everyone in it. A person there opens their card, with the
  * way to their reply in the conversation. `shown` is whether it is open: closed,
@@ -1141,10 +1176,12 @@ export function Details({ shown = true, onDone }: { shown?: boolean; onDone?: ()
             >
               Show in {GROUP_NAME}
             </button>
+            <CopyReplyLink person={person} />
           </div>
         ) : (
           <p className="details__note">Hasn’t replied yet.</p>
         )}
+        <TheirCompany person={person} />
       </div>
     )
 

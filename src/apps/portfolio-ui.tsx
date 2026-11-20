@@ -1,5 +1,6 @@
 import { COMPANIES, VERTICALS, type Company } from '../data/portfolio'
 import { createStore, useStore } from '../os/store'
+import { folded } from './fold'
 
 // What the Portfolio window and the phone's Portfolio screen share: every
 // company in Shrug's order, its logo as an icon, and where its icon opens.
@@ -18,23 +19,25 @@ export const companyKeyed = (key: string | null) => ALL.find((c) => c.key === ke
  * the head of the list. */
 const SHORT = 3
 
-/** Whether a word in `text` begins with `q` (which is in lower case). A word begins at the start of the
+/** Whether a word in `text` begins with `q` (which is folded already). A word begins at the start of the
  * text, after anything that is not a letter or a figure, and at a capital or a figure inside a name that
  * runs its words together (PlaygroundAI, Cloud23). */
 function beginsWord(text: string, q: string) {
-  const whole = text.toLowerCase()
-  const apart = text.replace(/[a-z](?=[A-Z])|[A-Za-z](?=[0-9])/g, '$& ').toLowerCase()
+  const whole = folded(text)
+  const apart = folded(text.replace(/[a-z](?=[A-Z])|[A-Za-z](?=[0-9])/g, '$& '))
   return [whole, apart].some((words) => {
     for (let at = words.indexOf(q); at >= 0; at = words.indexOf(q, at + 1)) if (at === 0 || !/[a-z0-9]/.test(words[at - 1]!)) return true
     return false
   })
 }
 
-/** Whether a company answers a search (`q`: trimmed, in lower case): by its name, its vertical or what it
- * does. It is the one rule for every place the companies are searched: the window's field, the search in
- * Contacts, and the phone's own search. */
-export function companyAnswers(company: Company, q: string) {
-  const has = q.length <= SHORT ? (text: string) => beginsWord(text, q) : (text: string) => text.toLowerCase().includes(q)
+/** Whether a company answers a search (`asked`: trimmed): by its name, its vertical or what it does. Both
+ * are read as a search reads words (src/apps/fold.ts): a blurb is typeset, and "world's" typed on a keyboard
+ * finds the "world’s" in it. It is the one rule for every place the companies are searched: the window's
+ * field, the search in Contacts, and the phone's own search. */
+export function companyAnswers(company: Company, asked: string) {
+  const q = folded(asked)
+  const has = q.length <= SHORT ? (text: string) => beginsWord(text, q) : (text: string) => folded(text).includes(q)
   return has(company.name) || has(company.vertical) || has(company.blurb ?? '')
 }
 

@@ -1,5 +1,5 @@
 import { answerBlocks, type Inline } from '../data/faqs'
-import { launchApp } from '../os/launch'
+import { launchApp, showGroup } from '../os/launch'
 
 // An answer, drawn: its paragraphs and its lists, with the links, the stress
 // and the crossings-out in them. The notes window and the iPhone's Notes both
@@ -21,9 +21,10 @@ function Run({ part }: { part: Inline }) {
     )
   }
   if ('app' in part) {
-    // One of the site's own apps: it opens where the reader is
+    // One of the site's own apps: it opens where the reader is. What an answer says of the conversation is
+    // said of the group itself (everyone "on our wall"), so that is what opens, not the list of conversations
     return (
-      <button type="button" className="answer__link" onClick={() => launchApp(part.app)}>
+      <button type="button" className="answer__link" onClick={() => (part.app === 'messages' ? showGroup() : launchApp(part.app))}>
         {part.label}
       </button>
     )

@@ -549,11 +549,18 @@
   padding-right: 52px;
 }
 
-.contact-field__value > a {
+.contact-field__value > a,
+.contact-field__value > button {
   display: block;
 }
 
-.contact-field__value > a::after {
+.contact-field__value > button {
+  width: 100%;
+  text-align: inherit;
+}
+
+.contact-field__value > a::after,
+.contact-field__value > button::after {
   position: absolute;
   inset: 0;
   content: '';
@@ -563,11 +570,12 @@
   background: rgb(255 255 255 / 0.08);
 }
 
-.contact-field__value > a:focus-visible {
+.contact-field__value > a:focus-visible,
+.contact-field__value > button:focus-visible {
   outline: none;
 }
 
-.contact-field[data-link]:has(a:focus-visible) {
+.contact-field[data-link]:has(a:focus-visible, button:focus-visible) {
   outline: 3px solid var(--ring);
   outline-offset: -4px;
   border-radius: 22px;

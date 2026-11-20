@@ -100,7 +100,7 @@ function plain() {
   const asked = answered.map((faq) => `<dt>${esc(faq.question)}</dt><dd>${drawn(faq.answer!)}</dd>`)
   return [
     `<main class="plain">`,
-    `<noscript><p class="plain-note">This is the site in plain words. The site itself is a desktop to click around, or an iPhone to tap through, and needs JavaScript: turn it on and reload to see it.</p></noscript>`,
+    `<noscript><p class="plain-note">This is Shrug’s site in plain words. The site itself is drawn as a desktop, or as an iPhone on a phone, and needs JavaScript: turn it on and reload to see it.</p></noscript>`,
     `<p class="plain-mark" aria-hidden="true">${tileSvg(40)}</p>`,
     `<h1>${esc(SITE.name)}</h1>`,
     `<p class="plain-line">${esc(SITE.line)}</p>`,
@@ -122,13 +122,21 @@ function plain() {
 function text() {
   const said = PEOPLE.filter((person) => person.quote).map((person) => `- “${person.quote}” ${person.name}, ${person.role}`)
   const backed = COMPANIES.map((company) => `- ${company.url ? `[${company.name}](${company.url})` : company.name}${company.blurb ? `: ${company.blurb}` : ''}`)
-  const asked = FAQS.filter((faq) => faq.answer).flatMap((faq) => [`### ${faq.question}`, '', faq.answer!.replace(/\]\(app:([\w-]+)\)/g, (_, app: AppId) => `](${appAddress(app)})`), ''])
+  // (A link to one of the site's apps is the address that opens it; words crossed out are marked as Markdown marks them)
+  const asked = FAQS.filter((faq) => faq.answer).flatMap((faq) => [
+    `### ${faq.question}`,
+    '',
+    faq
+      .answer!.replace(/\]\(app:([\w-]+)\)/g, (_, app: AppId) => `](${appAddress(app)})`)
+      .replace(/~([^~\s](?:[^~\n]*[^~\s])?)~/g, '~~$1~~'),
+    '',
+  ])
   return [
     `# ${SITE.name}`,
     '',
     `> ${SITE.line}`,
     '',
-    `The site (${HOME}) is interactive: a desktop to click around, or an iPhone to tap through. This file is what it holds, as text.`,
+    `The site (${HOME}) is interactive: it is drawn as a desktop, or as an iPhone on a phone. This file is what it holds, as text.`,
     '',
     `- [One-pager](${SITE.onePager})`,
     '',

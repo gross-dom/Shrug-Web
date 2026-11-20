@@ -4,6 +4,7 @@ import { hasFile, hueOf, MEDIA, type MediaKind } from '../../data/drops'
 import { DRAFT } from '../../data/site'
 import { prefersReducedMotion } from '../../os/dom'
 import { createStore, useStore } from '../../os/store'
+import type { Ground, Tone } from '../chrome'
 import { haptic, share } from '../native'
 import { goHome, openSheet, pop, push, swap, sys, topOf } from '../system'
 import { BackButton, Cell, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, Section, ShareGlyph, Sheet, SheetHost, scaleOf, useApp, usePageHeadingId, type MenuItem } from '../ui'
@@ -198,6 +199,14 @@ function Head({ index, line, innerRef, onOpen }: { index: number; line: ReactNod
       <button type="button" className="photos-head__open" aria-label={describe(index)} onClick={onOpen} />
     </div>
   )
+}
+
+/** What VIP is opening on, before its screens are there to say: the library, under the dark of the picture
+ * at its head (which is what the status bar is over, and is read against), or one picture in its white room. */
+export function photosFirst(top: string | null): { tone: Tone; ground?: Ground } {
+  if (top?.startsWith('m:')) return { tone: 'plain' }
+  const first = shownBy(mine.get().filter, mine.get().loved)[0]
+  return first === undefined ? { tone: 'plain' } : { tone: 'dark', ground: headTop(first) }
 }
 
 function Library() {

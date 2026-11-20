@@ -1,12 +1,14 @@
 import { EGGS } from '../data/eggs'
 import { FAQS } from '../data/faqs'
+import { PEOPLE } from '../data/people'
 import { COMPANIES } from '../data/portfolio'
 import { SITE } from '../data/site'
-import { contactsFor, conversationView, FAQS_FOLDER, noteView } from '../phone/apps/routes'
+import { contactsFor, conversationView, FAQS_FOLDER, MY_CARD, noteView } from '../phone/apps/routes'
 import { ALIASES, APP_IDS, type AppId } from './apps'
 
 // Where a visitor is, as an address says it: `?open=portfolio&at=varda` is the
-// portfolio with Varda open, `?open=faqs&at=4` the fourth question. The address
+// portfolio with Varda open, `?open=faqs&at=4` the fourth question, and
+// `?open=chat&at=tony-hawk` the conversation at what Tony Hawk said. The address
 // is kept in step with the visitor on both layouts (the iPhone as it moves
 // through history, src/phone/system.ts; the desktop as its front window
 // changes, src/os/Desktop.tsx), so the link in the address bar, or one passed on
@@ -43,6 +45,16 @@ export const questionAt = (at: string | null) => {
 /** One of the conversations beside the group, by its id. */
 export const conversationAt = (at: string | null) => (at && EGGS.some((egg) => egg.id === at.toLowerCase()) ? at.toLowerCase() : null)
 
+/** Someone in the group, by their name as an address writes it (`tony-hawk`): their place in it. A link
+ * that names one opens the conversation at what they said. It is a way in and not somewhere the address
+ * stays: once there, the visitor is in the conversation, and the address says that. */
+export function personAt(at: string | null) {
+  if (!at) return null
+  const index = PEOPLE.findIndex((person) => slug(person.name) === slug(at))
+  return index >= 0 ? index : null
+}
+
+export const atPerson = (index: number) => slug(PEOPLE[index]!.name)
 
 export const atCompany = (key: string | null) => (key ? slug(key) : null)
 export const atQuestion = (index: number | null) => (index === null ? null : String(index + 1))
@@ -63,6 +75,8 @@ export function spotOfPlace(place: PhonePlace): Spot | null {
   const app = place.app
   if (!app) return null
   const stack = place.stacks[app] ?? []
+  // Shrug's own card is what the desktop keeps in About Shrug: the two have one address
+  if (app === 'finder' && stack[stack.length - 1] === MY_CARD) return { app: 'about', at: null }
   if (app === 'finder') return { app, at: atCompany(companyAt(innermost(stack, 'co:'))) }
   if (app === 'notes') {
     const note = innermost(stack, 'n:')

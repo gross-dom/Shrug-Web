@@ -7,6 +7,7 @@ import { Window } from '../kit/window'
 import { useStore } from '../os/store'
 import { isShowing, wm } from '../os/wm'
 import { Answer } from './answer'
+import { folded } from './fold'
 import { notes, setNotesQuery, showNote, sought } from './state'
 import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 
@@ -23,8 +24,9 @@ const PREVIEW = [148, 132, 156, 120, 144, 136, 152]
 export function NotesApp() {
   const note = useStore(notes, (s) => s.note)
   const query = useStore(notes, (s) => s.query)
-  const q = query.trim().toLowerCase()
-  const shown = useMemo(() => FAQS.map((faq, i) => ({ faq, i })).filter(({ faq }) => !q || faq.question.toLowerCase().includes(q) || (faq.answer ? answerWords(faq.answer) : '').toLowerCase().includes(q)), [q])
+  // Read as a search reads words: the answers are typeset, and a keyboard types plain apostrophes
+  const q = folded(query.trim())
+  const shown = useMemo(() => FAQS.map((faq, i) => ({ faq, i })).filter(({ faq }) => !q || folded(faq.question).includes(q) || folded(faq.answer ? answerWords(faq.answer) : '').includes(q)), [q])
   const current = FAQS[note]!
   const step = (by: number) => showNote((note + by + FAQS.length) % FAQS.length)
   const list = useRef<HTMLDivElement>(null)
