@@ -52,7 +52,7 @@ exports.vipChecks = async ({ A, browser, BASE, DEV, check, shot, arrived, swap }
   check('phone: twelve tiles, none a wireframe (UX-5)', (await top().locator('.photos-tile').count()) === 12 && !SLOT.test(text), text.match(SLOT)?.[0])
   const names = await top().locator('.photos-pic__name').allInnerTexts()
   check('phone: each tile carries its drop', names.length === 12 && names[0] === 'Deep Tech Mat' && names[3] === 'Billboards', names.slice(0, 4).join(' | '))
-  const note = (await top().locator('.photos-note').innerText()).replace(/\s+/g, ' ')
+  const note = (await top().locator('.photos-note').count()) ? (await top().locator('.photos-note').innerText()).replace(/\s+/g, ' ') : ''
   const under = (await top().locator('.photos-head__line').innerText()).replace(/\s+/g, ' ')
   check('phone: nothing is counted that is not there; under the name it says whose they are, and there is no line at the foot', under === 'From the people who got a drop' && !note && !/\d+ (Photo|Video|Item)/.test(text), `${under} | ${note}`)
   check('phone: a tile says what it is and that it is on its way', (await top().locator('.photos-tile').first().getAttribute('aria-label')) === 'Photo from Deep Tech Mat, on its way')
