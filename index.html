@@ -21,7 +21,56 @@
     <!-- What the site looks like on a phone's Home Screen, if it is added to one: tools/icons.cjs draws these -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="preload" as="image" type="image/webp" href="/wallpaper.webp" media="(min-width: 740px) and (min-height: 480px)" />
+    <!-- Which of the desktop's wallpapers this visit shows: the next one each visit, round and round, from the
+         first (the picture the site has always had). It is settled here, before anything is drawn, so that
+         the right picture is asked for at once and the desk never shows one and then another. A reload, or a
+         return through the browser's history, is the same visit and keeps the wallpaper it had; one that a
+         visitor put on the desk themselves stays from visit to visit; `?still` holds it where it was. What is
+         settled is read by src/os/wallpaper.ts, which keeps it from then on. The list is written by
+         tools/wallpaper.cjs, and is the pictures of src/data/wallpapers.ts in their order. -->
+    <script>
+      ;(function () {
+        /* wallpapers */ var PICTURES = ['/wallpaper.webp', '/wallpapers/dusk.webp', '/wallpapers/ember.webp', '/wallpapers/lagoon.webp', '/wallpapers/graphite.webp']
+        var KEPT = 'shrug:wallpaper'
+        var at = 0
+        var auto = true
+        var desk = false
+        try {
+          desk = window.matchMedia('(min-width: 740px) and (min-height: 480px)').matches
+          var read = function (store) {
+            var was = JSON.parse(store.getItem(KEPT) || 'null')
+            return was && typeof was.at === 'number' && was.at % 1 === 0 && was.at >= 0 && was.at < PICTURES.length ? { at: was.at, auto: was.auto !== false } : null
+          }
+          var entry = window.performance && performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null
+          var again = !!entry && (entry.type === 'reload' || entry.type === 'back_forward')
+          var still = /[?&]still(?![^&=])|[?&]still=(?!(0|false|off|no)(&|$))/i.test(window.location.search)
+          var tab = read(window.sessionStorage)
+          var last = read(window.localStorage)
+          if (again && tab) {
+            at = tab.at
+            auto = tab.auto
+          } else if (last) {
+            auto = last.auto
+            // Only a visit to the desktop moves it on: a phone has a wallpaper of its own
+            at = auto && desk && !still ? (last.at + 1) % PICTURES.length : last.at
+          }
+          var now = JSON.stringify({ at: at, auto: auto })
+          window.sessionStorage.setItem(KEPT, now)
+          if (desk && !still) window.localStorage.setItem(KEPT, now)
+        } catch (e) {
+          // No storage here (a private window, a page held inside another): every visit begins on the first
+        }
+        window.__shrugWallpaper = { at: at, auto: auto }
+        if (desk) {
+          var link = document.createElement('link')
+          link.rel = 'preload'
+          link.as = 'image'
+          link.type = 'image/webp'
+          link.href = PICTURES[at]
+          document.head.appendChild(link)
+        }
+      })()
+    </script>
     <link rel="preload" as="image" type="image/webp" href="/wallpaper-phone.webp" media="(max-width: 739px), (max-height: 479px)" />
     <!-- What is on screen until the site is: the mark, and a bar that fills while the rest arrives. If that takes
          a while there is something to read; if it fails, or this browser is too old to draw the site, it says so

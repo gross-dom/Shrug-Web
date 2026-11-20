@@ -1,69 +1,50 @@
-import { keepFor, keptFor } from '../apps/chat'
 import { WALLPAPERS } from '../data/wallpapers'
-import { asked, isOn } from './address'
 import { createStore } from './store'
-import { wm } from './wm'
 
-// The desktop's wallpaper: which of the wallpapers (src/data/wallpapers.ts) the desk is showing. A visit
-// begins on the first, which is the picture the site has always had, and the desk moves on to the next
-// every two minutes, round and round, as a Mac set to change its picture does. One chosen in the
-// Wallpapers window stays until another is chosen, or the desk is told to change by itself again.
+// The desktop's wallpaper: which of the wallpapers (src/data/wallpapers.ts) the desk is showing. Each visit
+// shows the next one, round and round, from the first, which is the picture the site has always had. A
+// reload is the same visit and keeps the wallpaper it had. One put on the desk by hand, in the Wallpapers
+// window, stays from visit to visit, until the desk is told to change each visit again.
 //
-// Which is showing, and whether it changes by itself, are kept for the tab, as the rest of the desk is
-// (deskmemory.ts): a reload comes back to the wallpaper it left. Only the desktop does any of this: a phone
-// has a wallpaper of its own, and none of these is fetched there.
-
-/** How long the desk keeps a wallpaper before it moves on to the next. */
-export const EVERY = 2 * 60 * 1000
-
-/** `?wallpapers=10` in the address: the seconds asked for in place of the two minutes, for trying it out
- * (as `?idle=20` is for the screen saver). */
-function askedEvery(): number | null {
-  const seconds = Number(asked('wallpapers') ?? NaN)
-  return Number.isFinite(seconds) && seconds >= 3 ? seconds * 1000 : null
-}
+// Which one a visit shows is settled by the page itself before anything is drawn (the script at the head
+// of index.html), so that the right picture is asked for at once: this reads what it settled, and keeps
+// what changes from then on where that script will find it. The last shown is kept in the browser, for the
+// next visit to move on from; the one showing is kept for the tab, for a reload to come back to. Only the
+// desktop does any of this: a phone has a wallpaper of its own, and none of these is fetched there.
 
 interface Showing {
   /** Which of WALLPAPERS is on the desk. */
   at: number
-  /** The desk moves on to the next by itself. */
+  /** The desk shows the next one each visit. */
   auto: boolean
 }
 
-const NAME = 'wallpaper'
+const KEPT = 'shrug:wallpaper'
 
-/** What this tab was showing, read with care (it is only text in storage). */
-function kept(): Showing | null {
-  const was = keptFor(NAME) as Partial<Showing> | null
-  if (!was || typeof was !== 'object') return null
-  const at = typeof was.at === 'number' && Number.isInteger(was.at) && was.at >= 0 && was.at < WALLPAPERS.length ? was.at : 0
-  return { at, auto: was.auto !== false }
+/** What the page settled on as it loaded, read with care; the first, changing each visit, where it settled nothing. */
+function settled(): Showing {
+  const was = typeof window === 'undefined' ? null : (window as { __shrugWallpaper?: Partial<Showing> }).__shrugWallpaper
+  const at = was && typeof was.at === 'number' && Number.isInteger(was.at) && was.at >= 0 && was.at < WALLPAPERS.length ? was.at : 0
+  return { at, auto: was?.auto !== false }
 }
 
-export const wallpaper = createStore<Showing>((typeof window !== 'undefined' && kept()) || { at: 0, auto: true })
+export const wallpaper = createStore<Showing>(settled())
 
-wallpaper.subscribe(() => keepFor(NAME, wallpaper.get()))
+wallpaper.subscribe(() => {
+  const now = JSON.stringify(wallpaper.get())
+  try {
+    window.sessionStorage.setItem(KEPT, now)
+    window.localStorage.setItem(KEPT, now)
+  } catch {
+    // No storage here (a private window, a page held inside another): the choice lasts the visit
+  }
+})
 
-/** Puts one wallpaper on the desk, to stay: the desk stops changing it by itself. */
+/** Puts one wallpaper on the desk, to stay: the desk stops changing it each visit. */
 export const setWallpaper = (at: number) => wallpaper.set((s) => (at < 0 || at >= WALLPAPERS.length || (s.at === at && !s.auto) ? s : { at, auto: false }))
 
-/** Whether the desk moves on to the next wallpaper by itself. */
+/** Whether the desk shows the next wallpaper each visit. */
 export const setWallpaperAuto = (auto: boolean) => wallpaper.set((s) => (s.auto === auto ? s : { ...s, auto }))
 
-/** The next wallpaper, now. (It does not change whether the desk goes on changing by itself.) */
+/** The next wallpaper, now. (It does not change whether the desk goes on changing each visit.) */
 export const nextWallpaper = () => wallpaper.set((s) => ({ ...s, at: (s.at + 1) % WALLPAPERS.length }))
-
-/** Starts the desk changing its wallpaper, from now on. Returns what stops it.
- * It moves on only while the desktop is what is showing and the page can be seen: nobody is shown a
- * wallpaper that came and went while the tab was in the background. With `?still` in the address (the
- * site held still, to be looked at or checked) it keeps the one it has, unless the address also says how
- * often to change it. */
-export function runWallpapers() {
-  const every = askedEvery()
-  if (isOn('still') && !every) return () => {}
-  const timer = setInterval(() => {
-    if (!wallpaper.get().auto || document.hidden || wm.get().compact) return
-    nextWallpaper()
-  }, every ?? EVERY)
-  return () => clearInterval(timer)
-}

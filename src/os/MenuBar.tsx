@@ -106,7 +106,7 @@ function useMenus(): MenuDef[] {
           : active === 'notes'
             ? [item('Next Question', () => showNote((note + 1) % FAQS.length)), item('Previous Question', () => showNote((note + FAQS.length - 1) % FAQS.length))]
             : active === 'wallpapers'
-              ? [item('Next Wallpaper', nextWallpaper), rule, item('Change Automatically', () => setWallpaperAuto(!auto), { checked: auto })]
+              ? [item('Next Wallpaper', nextWallpaper), rule, item('Change Each Visit', () => setWallpaperAuto(!auto), { checked: auto })]
               : []
 
   const menus: MenuDef[] = [

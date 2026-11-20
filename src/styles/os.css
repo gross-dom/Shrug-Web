@@ -58,15 +58,18 @@
 /* The picture is asked for only where it shows: on the desktop, and behind an
    iPhone drawn in its frame. A phone in the hand covers it with its own, and
    never fetches this one (it is three times the size of everything else a
-   phone needs) */
-.os:not([data-compact]) .os__wallpaper::before,
-.os:has(.ph-desk) .os__wallpaper::before {
+   phone needs). And only on a visit that shows it: the desk has other
+   wallpapers, one to a visit (below), and a visit that shows another never
+   fetches this one either */
+.os[data-wallpaper='indigo']:not([data-compact]) .os__wallpaper::before,
+.os[data-wallpaper='indigo']:has(.ph-desk) .os__wallpaper::before {
   background-image: url('/wallpaper.webp');
 }
 
-/* The wallpaper the desk is showing (os/DeskWallpaper.tsx): the first is the picture above again, and the desk
-   moves on through the others (src/data/wallpapers.ts), each fading in over the one before it. Fetched, like
-   the picture above, only where the desktop's wallpaper shows */
+/* The wallpaper the desk is showing (os/DeskWallpaper.tsx): the first is the picture above again, and each
+   visit shows the next of the others (src/data/wallpapers.ts). One put on the desk from the Wallpapers
+   window fades in over the one before it. Fetched, like the picture above, only where the desktop's
+   wallpaper shows */
 .os__picture {
   position: absolute;
   inset: 0;

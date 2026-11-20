@@ -21,7 +21,7 @@ const PICTURES = [
 const QUALITY = 86
 
 // The desktop's wallpapers: the drawing as it is, and the same drawing in other colours. The desk shows
-// one and moves on to the next from time to time, and the Wallpapers window on the desk has them all, to
+// the next one each visit, and the Wallpapers window on the desk has them all, to
 // look at, to keep on the desk and to download (src/os/wallpaper.ts, src/apps/Wallpapers.tsx).
 // A colourway turns every colour of the drawing but its white the same way round the colour wheel
 // (`hue`, in degrees), and can make them stronger or weaker (`sat`) and lighter or darker (`light`).
@@ -96,15 +96,13 @@ const recoloured = (svg, { hue = 0, sat = 1, light = 1 }) =>
     await draw(svg, SMALL, path.join(pub, 'wallpapers', `${way.id}-small.webp`), 84)
     const full = `wallpapers/shrug-${way.id}.jpg`
     const { width, height } = await draw(svg, LARGE, path.join(pub, full), 92)
-    // The colours at the top left and the foot right of the drawing's sky: what the desk is painted in until the picture is there
-    const sky = [...svg.matchAll(/<stop offset="[\d.]+" stop-color="(#[0-9a-f]{6})"\/>/gi)].slice(0, 3).map((m) => m[1].toLowerCase())
-    listed.push({ id: way.id, name: way.name, src: `/${to}`, small: `/wallpapers/${way.id}-small.webp`, full: `/${full}`, width, height, bytes: fs.statSync(path.join(pub, full)).size, sky })
+    listed.push({ id: way.id, name: way.name, src: `/${to}`, small: `/wallpapers/${way.id}-small.webp`, full: `/${full}`, width, height, bytes: fs.statSync(path.join(pub, full)).size })
   }
   const lines = [
     '// The desktop\'s wallpapers, as tools/wallpaper.cjs made them: the picture the desk shows, the same small for',
-    '// the Wallpapers window\'s grid, and large to download (its size in pixels and in bytes). `sky` is the',
-    '// drawing\'s sky from its top to its foot, for the moment before a picture has arrived. Written by that tool:',
-    '// run it again when a colourway is added or changed.',
+    '// the Wallpapers window\'s grid, and large to download (its size in pixels and in bytes). Each visit shows',
+    '// the next of them (src/os/wallpaper.ts). Written by that tool: run it again when a colourway is added or',
+    '// changed. (It writes the same pictures, in the same order, into the script at the head of index.html.)',
     '',
     'export interface Wallpaper {',
     '  id: string',
@@ -115,16 +113,22 @@ const recoloured = (svg, { hue = 0, sat = 1, light = 1 }) =>
     '  width: number',
     '  height: number',
     '  bytes: number',
-    '  sky: string[]',
     '}',
     '',
     'export const WALLPAPERS: Wallpaper[] = [',
-    ...listed.map((w) => `  { id: '${w.id}', name: '${w.name}', src: '${w.src}', small: '${w.small}', full: '${w.full}', width: ${w.width}, height: ${w.height}, bytes: ${w.bytes}, sky: [${w.sky.map((c) => `'${c}'`).join(', ')}] },`),
+    ...listed.map((w) => `  { id: '${w.id}', name: '${w.name}', src: '${w.src}', small: '${w.small}', full: '${w.full}', width: ${w.width}, height: ${w.height}, bytes: ${w.bytes} },`),
     ']',
     '',
   ]
   fs.writeFileSync(path.join(__dirname, '..', 'src', 'data', 'wallpapers.ts'), lines.join('\n'))
   console.log(`wrote src/data/wallpapers.ts (${listed.length} wallpapers)`)
+  // The page settles which wallpaper a visit shows before the site has loaded, so it has their pictures too
+  const page = path.join(__dirname, '..', 'index.html')
+  const html = fs.readFileSync(page, 'utf8')
+  const line = /(\/\* wallpapers \*\/ var PICTURES = )\[[^\]]*\]/
+  if (!line.test(html)) throw new Error('index.html has no list of wallpapers to bring up to date')
+  fs.writeFileSync(page, html.replace(line, `$1[${listed.map((w) => `'${w.src}'`).join(', ')}]`))
+  console.log('brought index.html up to date')
   await browser.close()
 })().catch((e) => {
   console.error(e.message)

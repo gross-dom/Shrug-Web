@@ -10,8 +10,8 @@ import { setWallpaper, setWallpaperAuto, wallpaper } from '../os/wallpaper'
 // The Wallpapers folder on the desk, opened: the desk's wallpapers as a photo library, the way VIP shows
 // the drops (it is laid out with VIP's own grid and its dark room for one picture, styles/apps.css). A
 // press on one opens it large, where it can be put on the desk or downloaded at its full size; the arrows
-// step through the rest and Escape goes back to the grid. The desk moves on to the next wallpaper by
-// itself (src/os/wallpaper.ts) until one is put there by hand, and the switch in the bar sets it going again.
+// step through the rest and Escape goes back to the grid. Each visit shows the next wallpaper
+// (src/os/wallpaper.ts) until one is put on the desk by hand, and the switch in the bar sets it going again.
 
 /** A file's size as a Mac says it. */
 const sizeOf = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -19,12 +19,12 @@ const sizeOf = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 /** What a wallpaper is, for someone who is told it and not shown it. */
 const describe = (w: Wallpaper) => `${w.name} wallpaper, ${w.width} by ${w.height} pixels`
 
-/** Whether the desk changes its wallpaper by itself: a switch in the window's bar. */
+/** Whether the desk shows the next wallpaper each visit: a switch in the window's bar. */
 function Auto() {
   const auto = useStore(wallpaper, (s) => s.auto)
   return (
     <button type="button" className="walls-auto" role="switch" aria-checked={auto} onClick={() => setWallpaperAuto(!auto)}>
-      <span>Change Automatically</span>
+      <span>Change Each Visit</span>
       <Toggle on={auto} aria-hidden role="presentation" />
     </button>
   )
@@ -131,7 +131,7 @@ export function WallpapersApp() {
       <div ref={browse} className="vip__browse" style={look !== null ? { display: 'none' } : undefined}>
         <div className="vip__head">
           <h2 className="vip__title">Wallpapers</h2>
-          <p className="vip__sub">The desktop moves on to the next every two minutes. Open one to keep it there, or to download it.</p>
+          <p className="vip__sub">Each visit opens on the next one. Open one to keep it on the desktop, or to download it.</p>
         </div>
         <div className="walls__grid">
           {WALLPAPERS.map((w, index) => (
