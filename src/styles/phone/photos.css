@@ -139,11 +139,14 @@
 /* ---- The head of the library ---- */
 
 /* The first picture, large, from the very top of the screen (the status bar is over it) down to a little
-   past half way: 493 points of an iPhone's 874. Its foot is shaded, so that the name reads over any picture */
+   past half way: 493 points of an iPhone's 874. In a browser the page starts under the browser's own bar,
+   which is given the colour of the picture's top edge (Photos.tsx), so the picture reads as running up
+   under it; there it takes more of the shorter page, to come as far down the screen as it does in Photos.
+   Its foot is shaded, so that the name reads over any picture */
 .photos-head {
   position: relative;
   display: block;
-  height: calc(var(--status) + min(431px, 56cqh));
+  height: calc(var(--status) + min(431px, 61cqh));
   margin-top: calc(-1 * (var(--status) + var(--bar)));
   margin-bottom: 1.5px;
   overflow: hidden;

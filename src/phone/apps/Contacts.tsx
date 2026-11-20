@@ -3,7 +3,6 @@ import { Check, Search, UserRound, X } from 'lucide-react'
 import { GROUP_NAME } from '../../apps/chat-ui'
 import { companiesIn, companyKeyed, fateOf, hostOf, tellApart, useLogo, type Listed } from '../../apps/portfolio-ui'
 import { sought } from '../../apps/state'
-import { sentenceSaying } from '../../data/faqs'
 import { peopleOf } from '../../data/founders'
 import { LOGO_COLOURS, PLAIN_PAGE, POSTER_COLOURS } from '../../data/logoColours'
 import { PEOPLE } from '../../data/people'
@@ -583,11 +582,6 @@ export function contactsFirst(top: string | null): { tone: Tone; ground?: Ground
   return company ? { tone: 'dark', ground: groundOf(company) } : { tone: 'plain' }
 }
 
-/** Shrug's rule for putting two people in touch, as its FAQs give it (src/data/faqs.ts): said under the
- * row that passes a company on, in the FAQs' own sentence. Null, and nothing is said there, once the FAQs
- * no longer say it. */
-const BOTH_ASKED = sentenceSaying(/double opt-in/i)
-
 /** A company's card: what it is, the things to do with it, and what is known about it. */
 function CompanyCard({ id }: { id: string }) {
   const company = companyKeyed(id)
@@ -669,7 +663,7 @@ function CompanyCard({ id }: { id: string }) {
             </dl>
           </Section>
         )}
-        <Section footer={BOTH_ASKED}>
+        <Section>
           <button type="button" className="contact-row" onClick={send}>
             Share Contact
           </button>

@@ -173,7 +173,13 @@ function mixed(a: string, b: string, share: number) {
 
 /** What is along the top edge of the picture that heads the library, which the status bar is over: a slot's
  * is its drop's colour in the dark (photos.css draws it the same); a picture that has arrived is taken as dark. */
-const headTop = (index: number) => (MEDIA[index]!.src ? '#1c1c1e' : mixed(hueOf(MEDIA[index]!.drop), '#17171c', 0.5))
+const headTop = (index: number) => (MEDIA[index]!.src ? (MEDIA[index]!.edge ?? '#1c1c1e') : mixed(hueOf(MEDIA[index]!.drop), '#17171c', 0.5))
+
+/** Whether the top of the head is pale enough that the status bar over it wants dark ink (a post on white paper, not a photograph). */
+const paleTop = (index: number) => {
+  const [r, g, b] = [1, 3, 5].map((at) => parseInt(headTop(index).slice(at, at + 2), 16) / 255) as [number, number, number]
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.6
+}
 
 /** The head of the library, as a collection's is in Photos: its first picture, large, with the name and the
  * count over its foot. The name is the page's heading. The picture is pressed as its square in the grid is,
@@ -206,7 +212,7 @@ function Head({ index, line, innerRef, onOpen }: { index: number; line: ReactNod
 export function photosFirst(top: string | null): { tone: Tone; ground?: Ground } {
   if (top?.startsWith('m:')) return { tone: 'plain' }
   const first = shownBy(mine.get().filter, mine.get().loved)[0]
-  return first === undefined ? { tone: 'plain' } : { tone: 'dark', ground: headTop(first) }
+  return first === undefined ? { tone: 'plain' } : { tone: paleTop(first) ? 'plain' : 'dark', ground: headTop(first) }
 }
 
 function Library() {
@@ -269,7 +275,7 @@ function Library() {
       ownHeading
       className={`photos-library photos-library--headed${past ? ' photos-library--past' : ''}`}
       scrollRef={scroll}
-      under={past ? undefined : 'dark'}
+      under={past ? undefined : paleTop(first) ? 'pale' : 'dark'}
       ground={past ? undefined : { top: headTop(first), foot: '#ffffff' }}
       leading={home}
       foot={sorter}

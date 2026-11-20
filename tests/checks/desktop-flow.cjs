@@ -158,7 +158,7 @@ const { chromium } = require('playwright')
   // ---- Finder
   await page.click('[data-dock-app="finder"]'); await page.waitForTimeout(600)
   const logos = await page.evaluate(() => ({ tiles: document.querySelectorAll('.pf-file').length, images: document.querySelectorAll('.pf-file .logo img').length, initials: document.querySelectorAll('.pf-file .logo[data-empty]').length }))
-  ok('every company has a logo tile or its initial', logos.tiles === 81 && logos.images + logos.initials === 81, JSON.stringify(logos))
+  ok('every company has a logo tile or its initial', logos.tiles === 79 && logos.images + logos.initials === 79, JSON.stringify(logos))
   await page.locator('.pf__icons').evaluate((el) => (el.scrollTop = el.scrollHeight)); await page.waitForTimeout(1500)
   const broken = await page.evaluate(() => [...document.querySelectorAll('.pf-file .logo img')].filter((i) => i.complete && !i.naturalWidth).map((i) => i.src))
   ok('no logo fails to load', broken.length === 0, broken.slice(0, 3).join(','))
@@ -169,7 +169,7 @@ const { chromium } = require('playwright')
   ok('double-click opens the company in a new tab', !!popup, popup ? popup.url() : 'no tab')
   if (popup) await popup.close()
   await page.fill('.pf .search__input', ''); await page.click('[aria-label="as List"]'); await page.waitForTimeout(400)
-  ok('list view lists every company', (await page.locator('.pf-row:not(.pf-row--head)').count()) === 81)
+  ok('list view lists every company', (await page.locator('.pf-row:not(.pf-row--head)').count()) === 79)
   await page.click('[aria-label="as Icons"]')
 
   // ---- the rest

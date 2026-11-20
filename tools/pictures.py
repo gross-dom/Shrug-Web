@@ -182,7 +182,8 @@ def main():
     unsure = False
 
     if args.logos:
-        companies = names_in(os.path.join(ROOT, 'src', 'data', 'portfolio.ts'), 'c')
+        # (Two companies share a name. The one whose key is its name is the one a file of that name is for: portfolio.ts)
+        companies = list(dict.fromkeys(names_in(os.path.join(ROOT, 'src', 'data', 'portfolio.ts'), 'c')))
         taken, lost, twice, review = match(files_in(args.logos), companies, picks)
         for where in ('', 'large'):
             os.makedirs(os.path.join(ROOT, 'public', 'logos', where), exist_ok=True)

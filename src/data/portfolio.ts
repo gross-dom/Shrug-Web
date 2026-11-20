@@ -69,8 +69,9 @@ const c = (name: string, vertical: VerticalName, url: string | null, logo: strin
   vertical,
   url,
   blurb: blurb && typeset(blurb),
-  logo: SUPPLIED_LOGOS[key] ?? SUPPLIED_LOGOS[name] ?? logo,
-  logoLarge: SUPPLIED_LOGOS[key] ?? SUPPLIED_LOGOS[name] ?? null,
+  // (By its key, not its name: of the two called Atoms the supplied logo is the one's whose key is its name)
+  logo: SUPPLIED_LOGOS[key] ?? logo,
+  logoLarge: SUPPLIED_LOGOS[key] ?? null,
   poster: POSTERS[key] ?? null,
   note: NOTES[key] ? typeset(NOTES[key]) : null,
 })
@@ -86,7 +87,6 @@ export const COMPANIES: Company[] = [
   c('Avalanche Energy', 'Climate and energy', 'http://avalanchefusion.com', 'avalanche-energy.webp', 'Micro-fusion reactors for distributed energy'),
   c('Eight Sleep', 'Health', 'http://eightsleep.com', 'eight-sleep.webp', 'The ultimate sleep fitness machine'),
   c('ModRetro', 'Consumer', 'http://modretro.com', 'modretro.webp'),
-  c('General Matter', 'Climate and energy', 'https://generalmatter.com', 'general-matter.webp'),
   c('Genies', 'Consumer', 'http://genies.com', 'genies.webp', 'Star-studded digital avatars'),
   c('RTFKT', 'Web3', 'http://rtfkt.com', null, 'Avatars & collectibles for the metaverse'),
   c('Montes', 'Consumer', 'http://montesportland.com', 'montes.webp'),
@@ -107,7 +107,6 @@ export const COMPANIES: Company[] = [
   c('Night', 'Creator', 'https://www.night.co', 'night.webp'),
   c('Rob’s Popcorn', 'Creator', 'https://eatrobs.com/', 'robs-popcorn.webp', 'The Jonas Brothers popcorn!'),
   c('Living Carbon', 'Climate and energy', 'http://livingcarbon.com', 'living-carbon.webp', 'Carbon-capturing supertrees 🌱'),
-  c('Mona Lee Solar', 'Climate and energy', 'http://monalee.co', null, 'Frictionless solar installation for your home'),
   c('Fourthwall', 'Creator', 'http://fourthwall.com', 'fourthwall.webp', 'All-in-one monetization platform for creators'),
   c('BloxSnacks', 'Creator', 'http://bloxsnacks.com', null, 'Creator snacks & beverages for kids'),
   c('Tone', 'Creator', 'http://tone.shop', 'tone.webp'),

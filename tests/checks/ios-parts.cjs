@@ -135,7 +135,7 @@ const ringOf = (page) =>
     await page.locator(`${TOP} button[aria-label="Cancel"]`).tap()
     await t.sleep(500)
     const whole = await page.evaluate((TOP) => ({ rows: document.querySelectorAll(`${TOP} .contacts-row`).length, typed: document.querySelector(`${TOP} .ios-search__input`).value, index: !!document.querySelector(`${TOP} .contacts-index`), cancel: !!document.querySelector(`${TOP} button[aria-label="Cancel"]`) }), TOP)
-    check('Contacts\' search is put away by its Cancel: the whole list again, and the index', whole.rows === 81 && whole.typed === '' && whole.index && !whole.cancel, JSON.stringify(whole))
+    check('Contacts\' search is put away by its Cancel: the whole list again, and the index', whole.rows === 79 && whole.typed === '' && whole.index && !whole.cancel, JSON.stringify(whole))
 
     // MK-8: a sheet is pulled away by its contents (the details of the conversation)
     await A.at(page, 'messages', ['c:group'], 'details', 900)
@@ -367,7 +367,7 @@ const ringOf = (page) =>
     await page.keyboard.press('Escape')
     await t.sleep(900)
     const w4 = (await A.state(page)).place.app
-    check('MK-15 Escape in Contacts\' search: clears (the whole list is back), lets go, then is the phone\'s own', w1.v === '' && w1.f && w1.rows === 81 && !w2.f && w3 === 'finder' && w4 === null, JSON.stringify({ w1, w2, w3, w4 }))
+    check('MK-15 Escape in Contacts\' search: clears (the whole list is back), lets go, then is the phone\'s own', w1.v === '' && w1.f && w1.rows === 79 && !w2.f && w3 === 'finder' && w4 === null, JSON.stringify({ w1, w2, w3, w4 }))
 
     // MK-17: fields and titles take the direction of what they hold
     await A.at(page, 'notes', [], null, 800)
@@ -478,7 +478,7 @@ const ringOf = (page) =>
       if (w === 1440) {
         check('About at its own size is as tall as what is in it: no band of nothing at its foot', m.foot >= 11 && m.foot <= 16, `foot ${m.foot}px`)
         check('About says more about Shrug: when it started, who runs it, which fund this is, what it backs', m.facts.length >= 4 && m.facts.includes('Backs'), m.facts.join(' / '))
-        check('About counts what is on the site, each row a button', m.rows.length === 4 && /89 people/.test(m.rows[0]) && /81 companies/.test(m.rows[1]), m.rows.join(' / '))
+        check('About counts what is on the site, each row a button', m.rows.length === 4 && /89 people/.test(m.rows[0]) && /79 companies/.test(m.rows[1]), m.rows.join(' / '))
         check('About has no shrug emoticon in it', !m.emoticon && !(await t.page.$('.wf[data-app="about"] .about__mark')))
         check('About: the one-pager says it opens in a new tab', m.links.some((l) => /One-pager, opens in a new tab/.test(l)), m.links.join(' / '))
       }

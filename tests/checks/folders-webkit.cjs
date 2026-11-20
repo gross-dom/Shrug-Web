@@ -49,7 +49,7 @@ const want = (w, h) => {
   await b.size(460, 760); await wk.sleep(400)
   await b.js(`document.querySelector('.sb-folder')?.click(); return 1`); await wk.sleep(1300)
   const open = await b.js(`const s = [...document.querySelectorAll('.sb-open__step')].map((x) => Math.round(x.getBoundingClientRect().height)); return { steps: s, dots: document.querySelectorAll('.sb-open__dot').length, apps: document.querySelectorAll('.sb-open__app').length }`)
-  check('WebKit: the folder opens, with its strip', open.apps === 81 && open.dots === 9 && open.steps.length === 2 && open.steps.every((x) => x >= 44), JSON.stringify(open))
+  check('WebKit: the folder opens, with its strip', open.apps === 79 && open.dots === 9 && open.steps.length === 2 && open.steps.every((x) => x >= 44), JSON.stringify(open))
   await b.shot(out('open'))
   await b.js(`document.querySelector('.sb-open__step[data-way="on"]').click(); return 1`); await wk.sleep(900)
   check('WebKit: the right half turns the page', (await b.js(`return [...document.querySelectorAll('.sb-open__dot')].findIndex((d) => d.hasAttribute('data-current'))`)) === 1)

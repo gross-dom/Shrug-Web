@@ -132,7 +132,7 @@ const BRACKET = '[Shrug’s answer goes here'
       }
     })
     let l = await list()
-    check('DK-9 Portfolio as List at 1280x720: every name in full', l.rows === 81 && l.namesCut.length === 0, `${l.rows} rows, cut: ${l.namesCut.join(', ') || 'none'} (window ${Math.round(l.width)})`)
+    check('DK-9 Portfolio as List at 1280x720: every name in full', l.rows === 79 && l.namesCut.length === 0, `${l.rows} rows, cut: ${l.namesCut.join(', ') || 'none'} (window ${Math.round(l.width)})`)
     check('DK-9 Portfolio as List at 1280x720: the preview stands down and its link is in the foot', !l.preview && /Visit varda\.com/.test(l.foot ?? ''), `preview ${l.preview} | foot ${l.foot}`)
     check('DK-9 Portfolio as List: every cell carries its words in full as a title', l.titled)
     check('AX-15 Portfolio as List: the selected row\'s second line is white', l.second === 'rgb(255, 255, 255)', l.second)
@@ -152,7 +152,7 @@ const BRACKET = '[Shrug’s answer goes here'
     })
     const LONG = ['Climate and energy', '“Social is Hard” — Evan']
     let c = await columns(t.page)
-    check('Portfolio as List at 1280x720: About has the most room, under a third of its lines are cut, and only the two longest verticals are', c.rows === 81 && c.abouts < 27 && c.about > c.name && c.about > c.vertical * 2 && c.verticals.every((v) => LONG.includes(v)), JSON.stringify(c))
+    check('Portfolio as List at 1280x720: About has the most room, under a third of its lines are cut, and only the two longest verticals are', c.rows === 79 && c.abouts < 27 && c.about > c.name && c.about > c.vertical * 2 && c.verticals.every((v) => LONG.includes(v)), JSON.stringify(c))
     await t.ctx.close()
 
     for (const [device, wantPreview] of [['desktop', false], ['fhd', true]]) {
@@ -429,7 +429,7 @@ const BRACKET = '[Shrug’s answer goes here'
       const foot = row.closest('.ios-section').querySelector('.ios-section__footer')
       return { says: foot?.textContent ?? null, below: !!foot && foot.getBoundingClientRect().top >= row.getBoundingClientRect().bottom, footers: document.querySelectorAll(`${front} .ios-section__footer`).length }
     }, front)
-    check('Contacts: under Share Contact, the sentence on introductions from the FAQ about a small fund, word for word', under.says === 'Double opt-in, always.' && smallFund.includes(under.says) && under.below && under.footers === 1, JSON.stringify(under))
+    check('Contacts: nothing is said under Share Contact', under.says === null, String(under.says))
     const open = await t.page.locator(`${front} a.contact-act`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
     const link = await t.page.locator(`${front} .contact-field a`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
     check('UX-26 Contacts: a company link is rel="noopener" and says it opens in a new tab', [open, link].every((l) => l.rel === 'noopener' && l.target === '_blank' && /, opens in a new tab$/.test(l.says)), JSON.stringify([open, link]))
@@ -635,7 +635,7 @@ const BRACKET = '[Shrug’s answer goes here'
       await k.sleep(700)
       steps.push({ ...(await where()), stack: (await A.state(k.page)).place?.stack?.join() ?? null, app: (await A.state(k.page)).place?.app ?? null })
     }
-    check('MK-15 Contacts: Escape empties the search, and the whole list is back', steps[0].rows === 1 && steps[1].rows === 81 && steps[1].value === '' && steps[1].focused, JSON.stringify([steps[0], steps[1]]))
+    check('MK-15 Contacts: Escape empties the search, and the whole list is back', steps[0].rows === 1 && steps[1].rows === 79 && steps[1].value === '' && steps[1].focused, JSON.stringify([steps[0], steps[1]]))
     check('MK-15 Contacts: then lets go of the field', steps[2].app === 'finder' && !steps[2].focused, JSON.stringify(steps[2]))
     check('MK-15 Contacts: and only then leaves the app', steps[3].app === null, JSON.stringify(steps[3]))
 

@@ -5,8 +5,10 @@
 
 /** A company's name to its logo's file. */
 export const SUPPLIED_LOGOS: Record<string, string> = {
+  '818 Tequila': '818-tequila.webp',
   'AMCA': 'amca.webp',
   'Alt': 'alt.webp',
+  'Atoms': 'atoms.webp',
   'BloxSnacks': 'bloxsnacks.webp',
   'Cameo': 'cameo.webp',
   'Cloud23': 'cloud23.webp',
@@ -14,9 +16,11 @@ export const SUPPLIED_LOGOS: Record<string, string> = {
   'Drumroll': 'drumroll.webp',
   'Eight Sleep': 'eight-sleep.webp',
   'Enigma': 'enigma.webp',
+  'Galvanick': 'galvanick.webp',
   'Genies': 'genies.webp',
   'Giraffe360': 'giraffe360.webp',
   'HQ Trivia': 'hq-trivia.webp',
+  'Hadrian': 'hadrian.webp',
   'Hype & Vice': 'hype-vice.webp',
   'Khloud': 'khloud.webp',
   'Light Phone': 'light-phone.webp',
@@ -28,6 +32,7 @@ export const SUPPLIED_LOGOS: Record<string, string> = {
   'ModRetro': 'modretro.webp',
   'Montes': 'montes.webp',
   'MoonPay': 'moonpay.webp',
+  'Opal': 'opal.webp',
   'Poparazzi': 'poparazzi.webp',
   'RTFKT': 'rtfkt.webp',
   'Rob’s Popcorn': 'robs-popcorn.webp',

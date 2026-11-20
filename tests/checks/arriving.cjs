@@ -93,7 +93,7 @@ const afresh = async (page, go) => {
       // The companies are the list under the line that counts them; an answer in the FAQs may hold a list of its own
       return { h1: m.querySelector('h1')?.textContent, quotes: m.querySelectorAll('blockquote').length, companies: m.querySelectorAll('.plain-more + ul > li').length, answers: m.querySelectorAll('h3').length, scrolls: m.scrollHeight > m.clientHeight, fills: r.width === innerWidth && r.height === innerHeight, note: !!m.querySelector('.plain-note') && getComputedStyle(m.querySelector('.plain-note')).display !== 'none' }
     })
-    check(`${device}: the plain version reads`, read && read.h1 === 'Shrug' && read.quotes === 12 && read.companies === 81 && read.scrolls && read.fills, JSON.stringify(read))
+    check(`${device}: the plain version reads`, read && read.h1 === 'Shrug' && read.quotes === 12 && read.companies === 79 && read.scrolls && read.fills, JSON.stringify(read))
     await t.page.screenshot({ path: path.join(OUT, `${device}-plain.png`) })
     await t.ctx.close()
 

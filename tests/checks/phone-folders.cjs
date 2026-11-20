@@ -21,7 +21,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator('.sb-folder').first().tap(); await sleep(900)
   let s = await st()
   const open = await page.evaluate(() => ({ name: document.querySelector('.sb-open__name')?.textContent, apps: document.querySelectorAll('.sb-open__app').length, pages: document.querySelectorAll('.sb-open__page').length, first: [...document.querySelectorAll('.sb-open__page:first-child .sb-icon__name')].map((e) => e.textContent).slice(0, 3), blurred: !!document.querySelector('.sb-home[data-folder]') }))
-  say(s.app === null && s.sheet === 'folder:portfolio' && open.name === 'Portfolio' && open.apps === 81 && open.pages === 9 && open.blurred, 'Portfolio opens where it is: 81 companies, nine to a page, in the list’s order', JSON.stringify(open))
+  say(s.app === null && s.sheet === 'folder:portfolio' && open.name === 'Portfolio' && open.apps === 79 && open.pages === 9 && open.blurred, 'Portfolio opens where it is: 79 companies, nine to a page, in the list’s order', JSON.stringify(open))
   await page.screenshot({ path: out('portfolio') })
   // Turn the page with a swipe
   const box = await page.locator('.sb-open__pages').boundingBox()
@@ -61,7 +61,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator('.sb-folder').first().tap(); await sleep(800)
   await page.reload(); await sleep(1600)
   s = await st()
-  say(s.sheet === 'folder:portfolio' && (await page.locator('.sb-open__app').count()) === 81, 'a reload comes back to the open folder')
+  say(s.sheet === 'folder:portfolio' && (await page.locator('.sb-open__app').count()) === 79, 'a reload comes back to the open folder')
   await page.locator('.sb-homebar .sr-only').evaluate((el) => el.click()); await sleep(900)
   say((await st()).sheet === null, 'and the home bar closes it')
   const seen = [...new Set(errors)].filter((e) => !/Failed to load resource|\[vite\]/.test(e))
