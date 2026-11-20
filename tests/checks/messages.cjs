@@ -25,6 +25,17 @@ const pick = async (page, id, label) => {
 const active = (page) => page.evaluate(() => `${document.activeElement?.tagName.toLowerCase()}.${String(document.activeElement?.className || '').split(' ')[0]}`)
 const replies = (page, root) => page.evaluate((root) => document.querySelectorAll(`${root} .chat__thread [data-person]:not([data-typing])`).length, root)
 
+
+// What the browser's file picker is asked for, when `press` is made. (The test browser is told to hand the
+// picker over when the first listener for it is added, and that takes it a moment: a key pressed in the same
+// breath can arrive first, and the picker then opens where nothing can see it.)
+async function picking(page, press) {
+  const asked = page.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null)
+  await page.waitForTimeout(250)
+  await press()
+  return asked
+}
+
 async function desk(browser) {
   // ---- a message of the visitor's own: it goes as any message does, and the keyboard is where it should be
   let t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still' })
@@ -167,22 +178,27 @@ async function desk(browser) {
   await p.click(`${W} [data-conversation="group"]`)
   await p.waitForTimeout(500)
 
-  // AX-12 / AX-7: the + menu from the keyboard
+  // The + is the browser's own file picker, from the keyboard too: what is picked waits in the field and goes
+  // into the conversation with the words, each file a bubble of its own. (Nothing is sent anywhere: chat.ts)
   await p.focus(`${W} .composer__plus`)
-  await p.keyboard.press('Enter')
-  await p.waitForTimeout(350)
-  const first = await p.evaluate(() => document.activeElement?.textContent.trim())
-  await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown')
-  const third = await p.evaluate(() => document.activeElement?.textContent.trim())
-  await p.keyboard.press('End')
-  const last = await p.evaluate(() => document.activeElement?.textContent.trim())
-  await p.keyboard.press('Home')
-  const home = await p.evaluate(() => document.activeElement?.textContent.trim())
-  await p.keyboard.press('Escape')
-  await p.waitForTimeout(350)
-  say(first === 'Portfolio' && third === 'Case Studies' && /^One-pager/.test(last) && home === 'Portfolio', 'AX-12 the + menu answers Enter, the arrows, Home and End', [first, third, last, home].join(' | '))
-  say((await active(p)) === 'button.composer__plus' && (await p.getAttribute(`${W} .composer__plus`, 'aria-expanded')) === 'false', 'AX-7 Escape puts it away and gives the keyboard back to the +', await active(p))
-  say(/, opens in a new tab$/.test(last), 'UX-19 the + menu’s One-pager says ", opens in a new tab"', last)
+  const picker = await picking(p, () => p.keyboard.press('Enter'))
+  await p.waitForTimeout(300)
+  const plus = { name: await p.getAttribute(`${W} .composer__plus`, 'aria-label'), menus: await p.locator(`${W} [role="menu"]`).count(), many: !!picker && picker.isMultiple() }
+  say(!!picker && plus.many && plus.name === 'Add files' && plus.menus === 0, 'the + asks the browser for files, any number of them; no menu of apps opens', JSON.stringify(plus))
+  if (picker) {
+    await picker.setFiles([{ name: 'deck.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(2048, 1) }, { name: 'dot.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') }])
+    await p.waitForTimeout(400)
+    const waiting = await p.evaluate((W) => ({ files: [...document.querySelectorAll(`${W} .composer__file`)].map((x) => (x.querySelector('img') ? 'picture' : x.textContent.trim())), ready: !!document.querySelector(`${W} .composer__send[data-ready]`), hint: document.querySelector(`${W} .composer__input`).placeholder, drops: [...document.querySelectorAll(`${W} .composer__file-drop`)].map((x) => x.getAttribute('aria-label')), on: document.activeElement?.className }), W)
+    say(waiting.files.length === 2 && /^deck\.pdf2 KB$/.test(waiting.files[0]) && waiting.files[1] === 'picture' && waiting.ready && waiting.hint === 'Add comment or Send' && waiting.drops.join() === 'Remove deck.pdf,Remove dot.png' && /composer__input/.test(waiting.on), 'what was picked waits in the field (a file by its name and size, a picture as itself), each with a way back out; the caret is in the field', JSON.stringify(waiting))
+    await p.click(`${W} .composer__file-drop >> nth=0`)
+    await p.waitForTimeout(200)
+    const before = await p.locator(`${W} .ss-bubble[data-file]`).count()
+    await p.fill(`${W} .composer__input`, 'here it is')
+    await p.keyboard.press('Enter')
+    await p.waitForTimeout(1300)
+    const went = await p.evaluate((W) => { const mine = [...document.querySelectorAll(`${W} .chat__thread [data-from="me"] > .ss-bubble`)].slice(-2); return { last: mine.map((b) => (b.querySelector('img.chat-pic') ? 'picture' : b.textContent.trim())), files: document.querySelectorAll(`${W} .ss-bubble[data-file]`).length, waiting: document.querySelectorAll(`${W} .composer__file`).length, field: document.querySelector(`${W} .composer__field`).offsetHeight, value: document.querySelector(`${W} .composer__input`).value } }, W)
+    say(before === 0 && went.files === 1 && went.last.join(' | ') === 'picture | here it is' && went.waiting === 0 && went.value === '' && went.field <= 40, 'a file taken back out does not go; the picture goes as a bubble of its own ahead of the words, and the field is as it was', JSON.stringify({ before, went }))
+  }
 
   // AX-7 / AX-23: details take the keyboard in and give it back; ninety people are one stop
   await p.click(`${W} .chat-id`)
@@ -529,7 +545,7 @@ async function phone(browser) {
   // The + is the browser's own file picker: what is picked waits in the field, and goes into the conversation
   // as a bubble of its own, ahead of the words. (Nothing is sent anywhere: src/apps/chat.ts)
   await p.focus(`${F} .msg-more__button`)
-  const [asked] = await Promise.all([p.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null), p.keyboard.press('Enter')])
+  const asked = await picking(p, () => p.keyboard.press('Enter'))
   await p.waitForTimeout(300)
   const plus = { name: await p.locator(`${F} .msg-more__button`).getAttribute('aria-label'), menus: await p.locator(`${F} [role="menu"]`).count(), many: !!asked && asked.isMultiple() }
   say(!!asked && plus.many && plus.name === 'Add files' && plus.menus === 0, 'the phone’s + in a conversation asks the browser for files, any number of them; no menu of apps opens', JSON.stringify(plus))
@@ -542,7 +558,7 @@ async function phone(browser) {
     await p.waitForTimeout(200)
     const left = await p.locator(`${F} .msgn-pick`).count()
     await p.locator(`${F} .msg-more__button`).focus()
-    const [again] = await Promise.all([p.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null), p.keyboard.press('Enter')])
+    const again = await picking(p, () => p.keyboard.press('Enter'))
     if (again) await again.setFiles([{ name: 'one-pager.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(300, 1) }])
     await p.waitForTimeout(300)
     const before = await p.locator(`${F} .ss-bubble[data-file]`).count()

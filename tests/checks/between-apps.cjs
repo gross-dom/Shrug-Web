@@ -133,14 +133,39 @@ const touchOf = (t) => ({
     let shape = await pictured
     say(shape.length > 3 && shape.every(([w, h, across, off]) => Math.abs(w - h) <= 2 && Math.abs(w - across) <= 2 && Math.abs(off) <= 2), 'the icon\'s picture keeps its shape as the app opens: square, as wide as the window, in the middle of its height', JSON.stringify(shape.filter((_, i) => i % 3 === 0).map((f) => f.slice(0, 4))))
     await p.waitForTimeout(900)
-    // out of the widget and back into its icon: the icon's picture is the window's size all the way, not a slab in its corner
+    // out of the widget and back into the widget: the conversation is put away where it was opened from (and
+    // opened from its icon, into its icon)
+    const landing = (page, ms = 900) => page.evaluate((ms) => new Promise((done) => {
+      const out = []
+      const on = () => {
+        document.removeEventListener('pointerdown', on, true)
+        const t0 = performance.now()
+        const tick = () => {
+          const app = document.querySelector('.sb-slot[data-app="messages"] .sb-zoom__app')
+          if (app) { const r = app.getBoundingClientRect(); out.push([Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]) }
+          if (performance.now() - t0 < ms) requestAnimationFrame(tick); else done(out)
+        }
+        requestAnimationFrame(tick)
+      }
+      document.addEventListener('pointerdown', on, true)
+    }), ms)
+    const boxOf = (page, sel) => page.evaluate((sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] }, sel)
+    const near = (a, b) => !!a && !!b && a.every((v, i) => Math.abs(v - b[i]) <= 3)
     await A.at(p, null, [], null, 900)
+    const widgetAt = await boxOf(p, '.sb-widget--wide .sb-widget__face')
+    const iconAt = await boxOf(p, '.sb-dock .sb-icon[aria-label^="Messages"] .sb-icon__tile')
     await t.touch.tap(...(await mid(p, '.sb-widget--wide .sb-widget__face'))); await p.waitForTimeout(1400)
-    pictured = picture(p, 50)
+    let landed = landing(p)
     await t.touch.tap(W / 2, 760 - 8)
-    shape = await pictured
+    let rects = await landed
     await p.waitForTimeout(400)
-    say((await A.state(p)).place?.app === null && shape.length > 3 && shape.every(([w, h, across, off]) => Math.abs(w - h) <= 2 && Math.abs(w - across) <= 2 && Math.abs(off) <= 2), 'opened out of the widget and sent home, the conversation goes into its icon with the icon\'s picture the size of its window all the way', JSON.stringify(shape.filter((_, i) => i % 3 === 0).map((f) => f.slice(0, 4))))
+    say((await A.state(p)).place?.app === null && rects.length > 5 && near(rects[rects.length - 1], widgetAt), 'opened out of the widget and sent home, the conversation goes back into the widget', JSON.stringify({ widgetAt, last: rects.slice(-2) }))
+    await t.touch.tap(...(await mid(p, '.sb-dock .sb-icon[aria-label^="Messages"]'))); await p.waitForTimeout(1400)
+    landed = landing(p)
+    await t.touch.tap(W / 2, 760 - 8)
+    rects = await landed
+    await p.waitForTimeout(400)
+    say((await A.state(p)).place?.app === null && rects.length > 5 && near(rects[rects.length - 1], iconAt), 'and opened from its icon the next time, it goes into its icon', JSON.stringify({ iconAt, last: rects.slice(-2) }))
     say(A.realErrors(t.errors).length === 0, 'no errors', A.realErrors(t.errors).slice(0, 2).join(' | '))
     await t.ctx.close()
     // a card's launch screen is the card's own colour, not white: Contacts opened for the first time, on a company, out of the folder

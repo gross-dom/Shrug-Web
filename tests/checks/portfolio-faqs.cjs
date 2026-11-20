@@ -53,21 +53,20 @@ const BRACKET = '[Shrug’s answer goes here'
     await win.locator('.search__clear').click()
     check('DK-10 / tb-10 Portfolio: the clear button empties the search and the caret stays in the field', (await field.inputValue()) === '' && (await focusOf(t.page)) === 'input.search__input', `${await field.inputValue()} | ${await focusOf(t.page)}`)
 
-    // UX-16 / DK-13: a company with no site
-    await field.fill('drumroll')
+    // UX-16 / DK-13: a company with no site has no website area: nothing is said where its link would be
+    await field.fill('yolo')
     await t.sleep(250)
     const fate = win.locator('.pf-preview .pf-preview__fate')
-    check('UX-16 Portfolio: a company with no site says so where its link would be', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && (await win.locator('.pf-preview__visit').count()) === 0, (await fate.count()) ? await fate.innerText() : 'no line')
-    await win.locator('[data-company="Drumroll"]').dblclick()
+    const shown = await win.locator('.pf-preview .pf-preview__name').innerText().catch(() => '')
+    check('UX-16 Portfolio: a company with no site has nothing where its link would be', shown === 'YOLO' && (await fate.count()) === 0 && (await win.locator('.pf-preview__visit').count()) === 0 && !/website/i.test(await win.locator('.pf-preview').innerText()), `${shown} | ${await win.locator('.pf-preview').innerText()}`)
+    await win.locator('[data-company="YOLO"]').dblclick()
     await t.sleep(150)
-    const nudged = await win.locator('.pf-preview__fate[data-nudged]').count()
     const said = await win.locator('.pf__foot [role="status"].sr-only').innerText().catch(() => '')
-    check('DK-13 Portfolio: a double-click on it is answered (the line stirs and says so aloud), no tab opens', nudged === 1 && /Drumroll: No website listed/.test(said) && tabs.length === 0, `nudged ${nudged} | said "${said}" | tabs ${tabs.length}`)
-    await t.sleep(2600)
-    await win.locator('[data-company="Drumroll"]').focus()
+    check('DK-13 Portfolio: a double-click on it opens no tab and says nothing', said.trim() === '' && tabs.length === 0, `said "${said}" | tabs ${tabs.length}`)
+    await win.locator('[data-company="YOLO"]').focus()
     await t.page.keyboard.press('Enter')
     await t.sleep(150)
-    check('DK-13 Portfolio: Return on it is answered the same way', (await win.locator('.pf-preview__fate[data-nudged]').count()) === 1 && tabs.length === 0)
+    check('DK-13 Portfolio: nor does Return on it', tabs.length === 0 && (await win.locator('.pf-preview .pf-preview__name').innerText()) === 'YOLO')
 
     // A short search finds what begins with it, not what has it somewhere inside ("AI" is in "Mountain")
     const found = async (q) => {
@@ -139,7 +138,7 @@ const BRACKET = '[Shrug’s answer goes here'
     await win.locator('[data-company="YOLO"]').click()
     await t.sleep(150)
     l = await list()
-    check('UX-16 Portfolio as List: a company with no site says so in the foot too', l.foot === 'No website listed', String(l.foot))
+    check('UX-16 Portfolio as List: a company with no site has nothing in the foot either', l.foot === null, String(l.foot))
     // The columns: what a company does is different on every line and is what the list is read for, so it has the most
     // room; its vertical, one of a dozen short things said over and over, has what all but the two longest need, and
     // more only once About has all it wants. (Which verticals are cut short, and how many Abouts)
@@ -400,10 +399,10 @@ const BRACKET = '[Shrug’s answer goes here'
     check('Notes: a link in an answer to the site’s own chat opens Messages', (await A.state(t.page)).place?.app === 'messages', JSON.stringify((await A.state(t.page)).place))
 
     // UX-16: Contacts, a company with no site
-    await A.at(t.page, 'finder', ['co:Drumroll'])
+    await A.at(t.page, 'finder', ['co:YOLO'])
     const fate = t.page.locator(`${front} .contact-field__none`)
-    const site = await t.page.locator(`${front} .contact-act`).first().evaluate((el) => ({ tag: el.tagName, off: el.getAttribute('aria-disabled'), says: el.textContent.trim() }))
-    check('UX-16 Contacts: a company with no site says so where its address would be, and its website button is there but faint', (await fate.count()) === 1 && (await fate.innerText()).trim() === 'No website listed' && site.tag === 'SPAN' && site.off === 'true' && site.says === 'Website: No website listed' && (await t.page.locator(`${front} .contact-field a`).count()) === 0, JSON.stringify(site))
+    const site = await t.page.evaluate((front) => { const top = [...document.querySelectorAll(`${front} .ios-page`)].pop(); return { acts: [...top.querySelectorAll('.contact-act')].map((a) => a.textContent.trim()), words: top.querySelector('.contact-list')?.innerText ?? '' } }, front)
+    check('UX-16 Contacts: a company with no site has no website button and no website row: nothing is said in their place', (await fate.count()) === 0 && site.acts.join() === 'Share' && !/website/i.test(site.words) && (await t.page.locator(`${front} .contact-field a`).count()) === 0, JSON.stringify(site))
     await t.page.evaluate(() => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }) })
     const shareAndRead = async (by = '.ios-bar [aria-label="Share"]') => {
       await t.page.evaluate(() => navigator.clipboard.writeText('—'))
@@ -412,7 +411,7 @@ const BRACKET = '[Shrug’s answer goes here'
       return t.page.evaluate(() => navigator.clipboard.readText())
     }
     let sent = await shareAndRead()
-    check('UX-16 Contacts: Share on it sends its name with no address', sent === 'Drumroll', sent)
+    check('UX-16 Contacts: Share on it sends its name with no address', sent === 'YOLO', sent)
     check('UX-16 Contacts: and says "Copied", not "Link copied"', (await t.page.locator(`${front} [role="status"]`).first().innerText().catch(() => '')) === 'Copied')
     await A.at(t.page, 'finder', ['co:HQ Trivia'])
     sent = await shareAndRead()
