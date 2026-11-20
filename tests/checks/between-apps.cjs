@@ -307,10 +307,16 @@ const touchOf = (t) => ({
     say((await p.evaluate(() => history.state.shrug.stacks.finder.length)) === 0, 'and Contacts is on its list again for the next time')
     // the same company come to from the list in Contacts goes back to the list
     await A.at(p, 'finder', [], null, 900)
-    await t.touch.tap(...(await mid(p, `${TOP} .contacts-row`))); await p.waitForTimeout(1000)
-    await t.touch.tap(...(await mid(p, `${TOP} .ios-bar button[aria-label="Back"]`))); await p.waitForTimeout(900)
-    s = await A.state(p)
-    say(s.place?.app === 'finder' && s.place.stack.length === 0, 'a card opened from the list in Contacts goes back to the list, as before', JSON.stringify(s.place))
+    // (the list is where the company is, as it is left: a row that is in sight)
+    const inSight = await p.evaluate((TOP) => { const row = [...document.querySelectorAll(`${TOP} .contacts-row`)].find((el) => { const r = el.getBoundingClientRect(); return r.top > 120 && r.bottom < innerHeight - 140 }); if (!row) return null; const r = row.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2] }, TOP)
+    if (inSight) {
+      await t.touch.tap(...inSight); await p.waitForTimeout(1000)
+      const onCard = (await A.state(p)).place?.stack.length === 1
+      const backAgain = await mid(p, `${TOP} .ios-bar button[aria-label="Back"]`)
+      if (backAgain) { await t.touch.tap(...backAgain); await p.waitForTimeout(900) }
+      s = await A.state(p)
+      say(onCard && !!backAgain && s.place?.app === 'finder' && s.place.stack.length === 0, 'a card opened from the list in Contacts goes back to the list, as before', JSON.stringify(s.place))
+    } else say(false, 'no company in sight in the list of Contacts')
     // and a question picked in the FAQs folder
     await A.at(p, null, [], null, 700)
     await t.touch.tap(...(await mid(p, '.sb-folder__face[data-folder="faqs"]'))); await p.waitForTimeout(900)

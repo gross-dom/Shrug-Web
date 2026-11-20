@@ -484,7 +484,8 @@ const touchOf = (t) => ({
     say(clock[0] >= 0 && clock[1] <= 280, 'at 280 wide the clock fits', JSON.stringify(clock))
     await A.unlock(p)
     const names = await p.evaluate(() => { const els = [...document.querySelectorAll('.sb-grid > .sb-icon .sb-icon__name')].map((n) => n.getBoundingClientRect()).sort((a, b) => a.top - b.top || a.left - b.left); const bad = []; for (let i = 1; i < els.length; i++) if (Math.abs(els[i].top - els[i - 1].top) < 4 && els[i].left < els[i - 1].right - 0.5) bad.push(i); return { n: els.length, bad } })
-    say(names.n >= 3 && names.bad.length === 0, 'and no icon name runs into the next', JSON.stringify(names))
+    // (two names on the grid now that VIP is in the Dock: Case Studies and the one-pager)
+    say(names.n >= 2 && names.bad.length === 0, 'and no icon name runs into the next', JSON.stringify(names))
     await t.ctx.close()
 
     const i = await fresh('iphone')
