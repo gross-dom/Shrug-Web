@@ -187,7 +187,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     await app.locator('input').first().fill('someone@example.com'); await sleep(300)
     await app.locator('input').first().press('Enter'); await sleep(800)
     const text = await app.locator('.ios-screen').innerText()
-    say(/nothing is sent from here/.test(text) && !/request noted/.test(text), 'an email typed anyway is not taken: it says nothing is sent from here', text.split('\n').slice(-3).join(' / ').slice(0, 90))
+    say(/we don’t take addresses here\. that one stays with you\./.test(text) && !/request noted/.test(text), 'an email typed anyway is not taken: it says addresses are not taken here, and that one stays with whoever typed it', text.split('\n').slice(-3).join(' / ').slice(0, 90))
     await ctx.close()
   })
 

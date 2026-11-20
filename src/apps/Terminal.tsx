@@ -1,30 +1,47 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { CASE_STUDIES, caseDir, PUBLIC_CASE_STUDIES } from '../data/caseStudies'
+import { listUnder } from '../data/faqs'
 import { reach, SITE } from '../data/site'
 import { Prompt, Window } from '../kit/window'
 import { ALIASES, APP_IDS, type AppId } from '../os/apps'
+import { formatter } from '../os/dates'
 import { dockPoint } from '../os/dom'
+import { shrug } from '../os/shrug'
 import { createStore, useStore } from '../os/store'
 import { openApp, wm } from '../os/wm'
 import { launchApp } from '../os/launch'
 
-// Case studies, in a terminal. They're private: listing them works, reading
-// one is refused, and the shell asks whether to request access. It never asks
-// for anything it will not use: while Shrug has no address to write to
-// (`reach` in src/data/site.ts) a yes is answered with the case studies that
-// are public and the one-pager; once there is one, a yes hands over to the
-// visitor's own mail or messages app. Nothing typed here is sent anywhere.
+// Case studies, in a terminal. Most are private: listing them works, reading
+// one is refused, and the shell asks whether to request access. The ones
+// anyone can read (src/data/caseStudies.ts) are listed with the rest: a yes, a
+// `please` or reading one by name hands over the links to them. The shell
+// never asks for anything it will not use: while Shrug has no address to write
+// to (`reach` in src/data/site.ts) a yes is answered with the case studies
+// that are public and the one-pager; once there is one, a yes hands over to
+// the visitor's own mail or messages app. Nothing typed here is sent anywhere.
 //
 // It is a shell as far as a curious person will push it: help, ls, cat, open,
-// whoami, clear and a few more answer in character, an empty line is just an
-// empty line, and Up and Down walk what was typed. There is no state to be
-// stuck in: y and n are answers at any time, and n, cancel, exit and Escape
-// always come back to the question.
+// whoami, date, clear and a few more answer in character, an empty line is
+// just an empty line, and Up and Down walk what was typed. There is no state
+// to be stuck in: y and n are answers at any time, and n, cancel, exit and
+// Escape always come back to the question.
 
 type Line = { kind: 'cmd' | 'out' | 'err' | 'ask' | 'ok' | 'dim' | 'said'; text: string } | { kind: 'link'; text: string; href: string }
 
 const PATH = 'shrug:case-studies'
 const dirs = CASE_STUDIES.map(caseDir)
+
+/** What `ls` lists: the private case studies in Shrug's order, then the ones anyone can read. */
+const listed = [...dirs, ...PUBLIC_CASE_STUDIES.map((study) => study.dir)]
+
+/** A file that `ls` shows only when asked for everything (`ls -a`): Shrug's rules of engagement, each a
+ * line, read from the answer in the FAQs that gives them (src/data/faqs.ts). It is there for as long as
+ * the FAQs have the list. */
+const RULES_FILE = '.rules'
+const RULES = listUnder(/\brules\b/i)
+
+/** Whether the rules file is what was named (`.rules`, `./.rules`). */
+const rulesNamed = (arg: string) => RULES.length > 0 && arg.replace(/^\.\//, '') === RULES_FILE
 
 /** As long as a line typed here can be: room for any command or address, and no more. */
 export const LINE_MAX = 120
@@ -34,7 +51,7 @@ const DENIED = 'permission denied. case studies are private.'
 
 const intro: Line[] = [
   { kind: 'cmd', text: 'ls' },
-  { kind: 'out', text: dirs.join('  ') },
+  { kind: 'out', text: listed.join('  ') },
   { kind: 'cmd', text: `cat ${dirs[0]}README` },
   { kind: 'err', text: DENIED },
   { kind: 'ask', text: QUESTION },
@@ -73,10 +90,15 @@ const wayOn = (): Line => {
 }
 
 /** A yes. With an address to write to, the request is the visitor's own to send, from their own
- * mail or messages (`handOver` opens it); with none, what there is to read now. */
+ * mail or messages (`go`, in what `respond` gives back, opens it). With none there is nothing to ask
+ * with, and nothing is said that would sound like a request taken: only what can be read now, and that
+ * the rest cannot. */
 function yes(): Line[] {
   const way = reach('', 'Case study access')
-  if (way.kind === 'doc') return [out('case studies go out by hand.'), ...publicOnes(''), out('for the rest, start with the one-pager:'), wayOn()]
+  if (way.kind === 'doc') {
+    const open = publicOnes('')
+    return [...open, out(`${open.length ? 'the rest aren’t. ' : ''}start with the one-pager:`), wayOn()]
+  }
   return [{ kind: 'ok', text: way.kind === 'email' ? 'ok. over to your mail app.' : 'ok. over to your messages.' }, wayOn(), ...publicOnes('meanwhile, ')]
 }
 
@@ -93,13 +115,27 @@ const HELP: Line[] = [
   out('y, n          answer the question'),
   out('ls            list the case studies'),
   out('cat <name>    try to read one'),
+  out('please        ask nicely'),
   out(`open <app>    ${OPEN_HINT}`),
   out('whoami        who is asking'),
+  out('date          the time in san francisco'),
   out('clear         start over'),
 ]
 
-/** What a line typed into the shell gets back, and what it does besides saying it. */
-function respond(value: string, step: Term['step']): { lines: Line[]; step?: Term['step']; clear?: boolean; open?: AppId; go?: string } {
+let sanFrancisco: Intl.DateTimeFormat | undefined
+
+/** The day and the time in San Francisco, where the desk's widget keeps its clock: the day as the menu
+ * bar writes one (Wed 18 Nov), the time on the visitor's own kind of clock, and all of it in the
+ * terminal's lower case. */
+function dateThere() {
+  sanFrancisco ??= formatter({ weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })
+  const of = Object.fromEntries(sanFrancisco.formatToParts(new Date()).map((part) => [part.type, part.value]))
+  return `${of.weekday} ${of.day} ${of.month}, ${of.hour}:${of.minute}${of.dayPeriod ? ` ${of.dayPeriod}` : ''} in san francisco.`.toLowerCase()
+}
+
+/** What a line typed into the shell gets back, and what it does besides saying it. `lost` is a command
+ * the shell does not know: the desk has nothing for it, and its mark shrugs. */
+function respond(value: string, step: Term['step']): { lines: Line[]; step?: Term['step']; clear?: boolean; open?: AppId; go?: string; lost?: boolean } {
   const low = value.toLowerCase()
   const [word = '', ...rest] = low.split(/\s+/)
   const arg = rest.join(' ')
@@ -115,11 +151,11 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
   // Every way of backing out comes back to the question
   if (['cancel', 'back', 'exit', 'quit', 'q', 'logout', 'bye', ':q', ':q!'].includes(low)) return { lines: no(QUESTION), step: 'ask' }
 
-  // An address typed in the hope it is what was wanted: it is not kept, and it is said where it could go
+  // An address typed in the hope it is what was wanted: it is not kept, and it is said so, with where it could go
   if (isEmail(value)) {
     const way = reach('', 'Case study access')
-    if (way.kind === 'doc') return { lines: [out('nothing is sent from here, so that went nowhere.'), out('start with the one-pager:'), wayOn()] }
-    return { lines: [out('nothing is sent from here. write from your own:'), wayOn()] }
+    if (way.kind === 'doc') return { lines: [out('we don’t take addresses here. that one stays with you.'), out('start with the one-pager:'), wayOn()] }
+    return { lines: [out('we don’t take addresses here. write from your own:'), wayOn()] }
   }
 
   switch (word) {
@@ -129,8 +165,11 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
       return { lines: HELP }
     case 'ls':
     case 'll':
-    case 'dir':
-      return { lines: [out(dirs.join('  '))] }
+    case 'dir': {
+      // Asked for everything (-a, -la, --all), the listing has the file it otherwise leaves out, first as ls has them
+      const all = RULES.length > 0 && rest.some((flag) => /^-\w*a|^--all$/.test(flag))
+      return { lines: [out([...(all ? [RULES_FILE] : []), ...listed].join('  '))] }
+    }
     case 'cat':
     case 'less':
     case 'more':
@@ -140,6 +179,8 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
     case 'vim':
     case 'nano': {
       if (!arg) return { lines: [out(`${word}: which one? try: ${word} ${dirs[0]}README`)] }
+      // The rules are Shrug's own words, a line each as the FAQs have them: said as written, not in the shell's lower case
+      if (rulesNamed(arg)) return { lines: RULES.map(out) }
       const open = publicNamed(arg)
       if (open) return { lines: [out(`${open.dir} is public:`), { kind: 'link', text: open.dir, href: open.url }] }
       return { lines: [{ kind: 'err', text: DENIED }, { kind: 'ask', text: QUESTION }], step: 'ask' }
@@ -147,6 +188,7 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
     case 'open': {
       if (!arg) return { lines: [out(`open: what? ${OPEN_HINT}.`)] }
       const name = arg.replace(/\s+/g, '-')
+      if (rulesNamed(arg)) return { lines: RULES.map(out) }
       const study = publicNamed(arg)
       if (study) return { lines: [out(`${study.dir} is public:`), { kind: 'link', text: study.dir, href: study.url }] }
       if (name === 'one-pager' || name === 'onepager') return { lines: [{ kind: 'link', text: 'read the one-pager', href: SITE.onePager }] }
@@ -157,6 +199,13 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
     }
     case 'whoami':
       return { lines: [out('a founder, probably.')] }
+    case 'date':
+      return { lines: [out(dateThere())] }
+    case 'please':
+      // Asked nicely, as the app's label in the Dock says to: what can be read is handed over. With nothing
+      // public there is nothing to hand over, and the word is no command
+      if (PUBLIC_CASE_STUDIES.length) return { lines: publicOnes('since you asked nicely. ') }
+      break
     case 'pwd':
       return { lines: [out(PATH)] }
     case 'cd':
@@ -179,10 +228,12 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
     case 'shrug':
       return { lines: [out('that’s us.')] }
   }
-  return { lines: [{ kind: 'err', text: `command not found: ${word}` }, { kind: 'dim', text: step === 'ask' ? 'y or n answers the question. help lists the rest.' : 'help lists what there is.' }] }
+  return { lines: [{ kind: 'err', text: `command not found: ${word}` }, { kind: 'dim', text: step === 'ask' ? 'y or n answers the question. help lists the rest.' : 'help lists what there is.' }], lost: true }
 }
 
-/** Opens an app from the shell: its window on the desktop, the app itself on the phone. */
+/** Opens an app from the shell: its window on the desktop, the app itself on the phone. Everything `open`
+ * knows opens something on both: About Shrug, which the phone has no app for, is Shrug's own card in
+ * Contacts there (`launchApp`). */
 function openIt(app: AppId) {
   if (wm.get().compact) launchApp(app)
   else openApp(app, dockPoint(app))
@@ -198,6 +249,7 @@ export function answer(raw: string) {
     return { step: reply.step ?? t.step, log: [...t.log, { kind: 'said', text: value }, ...reply.lines], typed }
   })
   if (reply.open) openIt(reply.open)
+  if (reply.lost) shrug()
   // The request is the visitor's own to send: their mail or messages app opens on it
   if (reply.go) window.location.href = reply.go
 }

@@ -397,6 +397,34 @@
   letter-spacing: 0.01em;
 }
 
+/* Its arms. When the desk is asked for something it does not have, they lift once and come back down
+   (os/shrug.ts): each turns about its shoulder, the end beside the face, so that the hand at the far end
+   rises furthest */
+.menubar__arm {
+  display: inline-block;
+}
+
+.menubar__arm[data-side='left'] {
+  --lift: 11deg;
+  transform-origin: 100% 78%;
+}
+
+.menubar__arm[data-side='right'] {
+  --lift: -11deg;
+  transform-origin: 0 78%;
+}
+
+.menubar__mark[data-shrug] .menubar__arm {
+  animation: mark-shrug 0.62s cubic-bezier(0.3, 0, 0.3, 1);
+}
+
+@keyframes mark-shrug {
+  32%,
+  58% {
+    transform: translateY(-1px) rotate(var(--lift));
+  }
+}
+
 /* Under an open menu, over everything else: it takes the press that puts the
    menu away, so that nothing beneath it is pressed as well. Behind the bar's
    own titles, which stay live for moving from menu to menu */
@@ -1583,6 +1611,7 @@ html[data-wm-busy='se'] * {
   .wf[data-phase='opening'],
   .wf[data-phase='closing'],
   .dock__item[data-hop] .dock__icon,
+  .menubar__mark[data-shrug] .menubar__arm,
   .saver__sky,
   .saver__who {
     animation: none;

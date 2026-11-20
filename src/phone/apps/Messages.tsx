@@ -670,7 +670,8 @@ function Undelivered() {
       name={UNDELIVERED}
       title="Not Delivered"
       message={closed ? `${SITE.name} can’t take messages here yet, so this was not sent. Nothing has left your phone.` : 'This message could not be sent. Check your connection and try again.'}
-      actions={closed ? [{ label: 'OK', bold: true }] : [{ label: 'Try Again', onSelect: () => message && resend(message.id) }, { label: 'Cancel', bold: true }]}
+      // With nowhere to send it yet there is still something to do: the one-pager, over the button that closes this
+      actions={closed ? [{ label: 'Read the One-pager', href: SITE.onePager, newTab: true }, { label: 'OK', bold: true }] : [{ label: 'Try Again', onSelect: () => message && resend(message.id) }, { label: 'Cancel', bold: true }]}
     />
   )
 }
@@ -723,7 +724,7 @@ function DetailsSheet() {
           </div>
           {person < replied ? (
             <List>
-              <Section footer={`${first} replied in the group. This goes to that reply.`}>
+              <Section footer={`Opens the conversation at ${first}’s reply.`}>
                 <Cell
                   title={`Show in ${GROUP_NAME}`}
                   tint

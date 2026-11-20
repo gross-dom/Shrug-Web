@@ -41,6 +41,11 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
     ['one-pager', 'One-pager'], ['one pager', 'One-pager'], ['onepager', 'One-pager'], ['deck', 'One-pager'],
     ['contact', 'Get in Touch'], ['email', 'Get in Touch'], ['reach', 'Get in Touch'], ['pitch', 'Get in Touch'], ['apply', 'Get in Touch'], ['intro', 'Get in Touch'],
     ['varda', 'Varda'], ['kevin', 'Kevin Olusola'], ['akash', 'Akash Nigam'],
+    // Shrug itself, by its name, by a word for who is behind it or by a partner's name: its own card in Contacts
+    ['shrug', 'Shrug Capital'], ['Shrug Capital', 'Shrug Capital'], ['about', 'Shrug Capital'], ['about shrug', 'Shrug Capital'], ['team', 'Shrug Capital'], ['who', 'Shrug Capital'], ['partners', 'Shrug Capital'],
+    ['niv', 'Shrug Capital'], ['niv dror', 'Shrug Capital'], ['dom santry', 'Shrug Capital'], ['santry', 'Shrug Capital'],
+    // what is new: the question that says what is different about this fund
+    ["what's new", 'What’s different about Shrug V?'], ['what’s new', 'What’s different about Shrug V?'], ['new', 'What’s different about Shrug V?'], ['shrug v', 'What’s different about Shrug V?'],
   ]
   for (const [q, want] of firsts) {
     await type(t, q)
@@ -62,6 +67,23 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await type(t, 'shrug')
   r = await read(t.page)
   check('"shrug": a drop nothing has arrived for is not what comes first', !!r.top && r.top.title !== 'Shrug Calendar 2020' && r.top.title !== 'Shrug Calendar 2021', `${r.top?.title} · ${titles(r).slice(0, 8).join('/')}`)
+  check('"shrug": Shrug’s own card, called what Contacts calls it, with the questions about Shrug still listed', r.top?.sub === 'My Card' && r.top?.tag === 'BUTTON' && titles(r).includes('Why is it called Shrug V?'), `${r.top?.sub} · ${titles(r).slice(0, 8).join('/')}`)
+  await type(t, 'dom')
+  r = await read(t.page)
+  check('"dom": found by a partner’s name, the card says who the partners are', r.top?.title === 'Shrug Capital' && r.top?.sub === 'Niv Dror, Dom Santry', JSON.stringify(r.top))
+  // neither Shrug's card nor the note on what is new takes over what only begins like the words for them
+  await type(t, 'sh')
+  r = await read(t.page)
+  check('"sh": two letters are not yet Shrug’s card', !!r.top && r.top.title !== 'Shrug Capital', r.top?.title)
+  await type(t, 'what')
+  r = await read(t.page)
+  check('"what": not yet the note on what is new', !!r.top && r.top.title !== 'What’s different about Shrug V?', r.top?.title)
+  // the portfolio's own rule for a short search holds here: a company is found by what begins with it, not by
+  // where the letters fall inside a word ("ai" is in Luminai, and in the Mountain water of Liquid Death's line)
+  await type(t, 'ai')
+  r = await read(t.page)
+  const ai = [r.top?.title, ...(r.groups.find((g) => g.name === 'Contacts')?.rows.map((x) => x.title) ?? [])]
+  check('"ai": the companies found are the name that begins with it and the AI vertical, not Luminai or Liquid Death', ai.includes('Aidaly') && ai.includes('PlaygroundAI') && ai.includes('Outtake') && !ai.includes('Luminai') && !ai.includes('Liquid Death'), ai.join('/'))
   await type(t, 'testimonials')
   r = await read(t.page)
   check('"testimonials": the conversation of that name first, and Messages listed', r.top?.title === 'Testimonials' && [r.top?.title, ...titles(r)].includes('Messages'), `${r.top?.title} · ${titles(r).slice(0, 6).join('/')}`)
@@ -103,6 +125,20 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await t.page.keyboard.press('Enter'); await t.sleep(1300)
   s = await A.state(t.page)
   check('Return with results opens the first (Varda, at its card in Contacts)', s.place?.app === 'finder' && s.place.stack.join() === 'co:Varda' && s.place.sheet === null, JSON.stringify(s.place))
+  await A.at(t.page, null, [])
+  await openSearch(t)
+  await type(t, 'shrug')
+  await t.page.keyboard.press('Enter'); await t.sleep(1300)
+  s = await A.state(t.page)
+  const mine = await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .contact-head__name').innerText().catch(() => '')
+  check('Return on "shrug" opens Shrug’s own card in Contacts', s.place?.app === 'finder' && s.place.stack.join() === 'me' && mine.trim() === 'Shrug Capital', `${JSON.stringify(s.place)} ${mine}`)
+  await A.at(t.page, null, [])
+  await openSearch(t)
+  await type(t, "what's new")
+  await t.page.locator('.spot-row[data-top]').click(); await t.sleep(1300)
+  s = await A.state(t.page)
+  const note = await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .notes-note__title').innerText().catch(() => '')
+  check('"what\'s new", pressed, opens the note on what is different about Shrug V', s.place?.app === 'notes' && /^f:faqs,n:\d+$/.test(s.place.stack.join()) && note.trim() === 'What’s different about Shrug V?', `${JSON.stringify(s.place)} ${note}`)
   await A.at(t.page, null, [])
   await openSearch(t)
   await type(t, 'zzzz')

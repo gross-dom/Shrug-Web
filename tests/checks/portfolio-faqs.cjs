@@ -69,6 +69,21 @@ const BRACKET = '[Shrug’s answer goes here'
     await t.sleep(150)
     check('DK-13 Portfolio: Return on it is answered the same way', (await win.locator('.pf-preview__fate[data-nudged]').count()) === 1 && tabs.length === 0)
 
+    // A short search finds what begins with it, not what has it somewhere inside ("AI" is in "Mountain")
+    const found = async (q) => {
+      await field.fill(q)
+      await t.sleep(250)
+      return win.locator('.pf-file[data-company]').evaluateAll((els) => els.map((el) => el.getAttribute('data-company')))
+    }
+    const ai = await found('AI')
+    check('Portfolio: "AI" finds the AI vertical and the name that begins with it, and no longer Liquid Death for its Mountain water', ai.join() === 'Aidaly,Outtake,Superhuman,Sauron,Voiceflow,DoNotPay,PlaygroundAI', ai.join(', '))
+    const pay = await found('pay')
+    check('Portfolio: a short search still finds a word inside a name that runs its words together', pay.join() === 'MoonPay,DoNotPay', pay.join(', '))
+    const web = await found('web')
+    check('Portfolio: …and every company of a vertical by the start of its name', ['RTFKT', 'MoonPay', 'OnCyber', 'Thirdweb', 'Crossmint', 'Layer2', 'Hang'].every((name) => web.includes(name)), web.join(', '))
+    const inside = await found('ount')
+    check('Portfolio: a longer search matches inside words, as it did', inside.join() === 'Liquid Death', inside.join(', '))
+
     // The two companies called Atoms
     await field.fill('atoms')
     await t.sleep(250)
@@ -160,6 +175,17 @@ const BRACKET = '[Shrug’s answer goes here'
     await t.sleep(250)
     const listed = await win.locator('.faq__note ul.answer__list > li').count()
     check('FAQs: an answer that lists things is set as a list', listed === 15 && (await win.locator('.faq__note .answer > p').count()) >= 2, `${listed} items`)
+    // …and what it crosses out is crossed out: the answer is written "We are ~pleased to announce~ our go-to marketing checklist:"
+    const crossed = (note) => {
+      const s = note.querySelector('s.answer__struck')
+      const words = s ? [...s.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('') : null
+      return { words, line: s ? getComputedStyle(s).textDecorationLine : null, read: s?.closest('p').textContent ?? null, tilde: /~/.test(note.textContent) }
+    }
+    const struck = await win.locator('.faq__note').evaluate(crossed)
+    check('FAQs: words written between tildes are crossed out, with no tilde drawn', struck.words === 'pleased to announce' && struck.line === 'line-through' && !struck.tilde, JSON.stringify(struck))
+    check('FAQs: …and a screen reader is told where the crossing-out starts and stops', struck.read === 'We are crossed out: pleased to announce, end of crossing out, our go-to marketing checklist:', struck.read)
+    const preview = (await win.locator('.faq-row').nth(4).innerText()).replace(/\s+/g, ' ')
+    check('FAQs: …and the line under the question has the words, without the marks', preview.includes('We are pleased to announce our go-to marketing checklist:') && !/~/.test(preview), preview)
     await win.locator('.faq-row').nth(6).click()
     await t.sleep(250)
     const out = await win.locator('.faq__note a.answer__link').first().evaluate((a) => ({ href: a.href, target: a.target, rel: a.rel, says: a.textContent }))
@@ -298,10 +324,16 @@ const BRACKET = '[Shrug’s answer goes here'
     check('UX-4 Notes: a question is answered in Shrug’s own words, with nothing left to come', note.includes('Where do you find opportunities?') && note.length > 200 && !note.includes(PENDING) && !note.includes(BRACKET) && (await t.page.locator(`${front} .notes-slot, ${front} .notes-way`).count()) === 0 && (await t.page.locator(`${front} .notes-note .answer > p`).count()) >= 1, note.slice(0, 160))
     await A.at(t.page, 'notes', ['f:faqs', 'n:4'])
     check('Notes: an answer that lists things is set as a list', (await t.page.locator(`${front} .notes-note ul.answer__list > li`).count()) === 15)
+    const struck = await t.page.locator(`${front} .notes-note`).evaluate((note) => {
+      const s = note.querySelector('s.answer__struck')
+      return { words: s ? [...s.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('') : null, line: s ? getComputedStyle(s).textDecorationLine : null, read: s?.closest('p').textContent ?? null, tilde: /~/.test(note.textContent) }
+    })
+    check('Notes: words written between tildes are crossed out there too, and said to be', struck.words === 'pleased to announce' && struck.line === 'line-through' && !struck.tilde && struck.read === 'We are crossed out: pleased to announce, end of crossing out, our go-to marketing checklist:', JSON.stringify(struck))
     await A.at(t.page, 'notes', ['f:faqs', 'n:6'])
     const out = await t.page.locator(`${front} .notes-note a.answer__link`).first().evaluate((a) => ({ href: a.href, target: a.target, says: a.textContent }))
     check('Notes: a link out of an answer opens in a new tab, and says so', /foundersfund\.com/.test(out.href) && out.target === '_blank' && /, opens in a new tab$/.test(out.says), JSON.stringify(out))
     await A.at(t.page, 'notes', ['f:faqs', 'n:8'])
+    const smallFund = (await t.page.locator(`${front} .notes-note`).innerText()).replace(/\s+/g, ' ')
     await t.page.locator(`${front} .notes-note button.answer__link`).tap()
     await t.sleep(1100)
     check('Notes: a link in an answer to the site’s own chat opens Messages', (await A.state(t.page)).place?.app === 'messages', JSON.stringify((await A.state(t.page)).place))
@@ -330,6 +362,13 @@ const BRACKET = '[Shrug’s answer goes here'
     sent = await shareAndRead('.contact-act:has-text("share")')
     const row = await shareAndRead('.contact-row')
     check('Contacts: the share button on the card and its Share Contact row send the same', /varda\.com/.test(sent) && row === sent, `${sent} | ${row}`)
+    // Under that row: Shrug's rule for an introduction, as the FAQs say it and not retyped
+    const under = await t.page.evaluate((front) => {
+      const row = document.querySelector(`${front} .contact-row`)
+      const foot = row.closest('.ios-section').querySelector('.ios-section__footer')
+      return { says: foot?.textContent ?? null, below: !!foot && foot.getBoundingClientRect().top >= row.getBoundingClientRect().bottom, footers: document.querySelectorAll(`${front} .ios-section__footer`).length }
+    }, front)
+    check('Contacts: under Share Contact, the sentence on introductions from the FAQ about a small fund, word for word', under.says === 'Double opt-in, always.' && smallFund.includes(under.says) && under.below && under.footers === 1, JSON.stringify(under))
     const open = await t.page.locator(`${front} a.contact-act`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
     const link = await t.page.locator(`${front} .contact-field a`).evaluate((a) => ({ rel: a.rel, target: a.target, says: a.textContent }))
     check('UX-26 Contacts: a company link is rel="noopener" and says it opens in a new tab', [open, link].every((l) => l.rel === 'noopener' && l.target === '_blank' && /, opens in a new tab$/.test(l.says)), JSON.stringify([open, link]))
@@ -344,6 +383,10 @@ const BRACKET = '[Shrug’s answer goes here'
     await t.sleep(300)
     const empty = (await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .ios-empty').innerText()).replace(/\s+/g, ' ').trim()
     check('UX-19 Contacts: an empty search says "No Results for “x”" and what to try', empty === 'No Results for “zzzz” Check the spelling or try a new search.', empty)
+    await t.page.locator(`${front} .ios-search__input`).fill('AI')
+    await t.sleep(300)
+    const ai = await t.page.locator(`${front} .contacts-row`).evaluateAll((els) => els.map((el) => el.getAttribute('data-company')))
+    check('Contacts: "AI" finds the AI vertical and the name that begins with it there too, and not Liquid Death', ai.join() === 'Aidaly,Outtake,Superhuman,Sauron,Voiceflow,DoNotPay,PlaygroundAI', ai.join(', '))
     await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [aria-label="Cancel"]').tap()
     await t.sleep(300)
     // The list is all there is: nothing of Files or of the Wallet is left (no tabs, no Recents, Shared or Browse, no cards)

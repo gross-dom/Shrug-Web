@@ -318,6 +318,73 @@ const parts = {
     check('copy: "Minimize", "Group Chat", "Questions about Shrug", "One-pager, opens in a new tab"', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager, opens in a new tab') && names.dock.includes('FAQs: Questions about Shrug') && names.dock.includes('One-pager, opens in a new tab') && names.lights.includes('Minimize Portfolio'), JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
     check('desk: icons are named "…, desktop icon", sit inside main, and links do not drag', names.desk.join(' | ') === 'Portfolio, desktop icon | One-pager, desktop icon, opens in a new tab' && names.deskInMain && names.dockDrag === 'false', JSON.stringify(names.desk))
     check('title: names the window in front', names.title === 'Portfolio · Shrug', names.title)
+    check('menus: What’s New in Shrug V is in the mark\'s menu, straight under About Shrug', names.mark[0] === 'About Shrug' && names.mark[1] === 'What’s New in Shrug V', JSON.stringify(names.mark.slice(0, 3)))
+    await t.ctx.close()
+
+    // What’s New in Shrug V opens the FAQs on the question that says what is different about it, whatever they were on
+    const faqs = (page) => page.evaluate(() => {
+      const w = document.querySelector('.wf[data-app="notes"]')
+      return { front: document.querySelector('.wf[data-active]')?.getAttribute('data-app') ?? null, title: w?.querySelector('.faq__title')?.textContent.trim() ?? null, row: w?.querySelector('.faq-row[aria-current]')?.textContent.trim().slice(0, 31) ?? null, search: w?.querySelector('.search__input')?.value ?? null }
+    })
+    t = await fresh('desktop', 'still&open=faqs')
+    await t.page.locator('.wf[data-app="notes"] .search__input').fill('gifts')
+    await t.page.waitForTimeout(300)
+    const looking = await faqs(t.page)
+    await choose(t.page, 'mark', 'What’s New in Shrug V')
+    await t.page.waitForTimeout(400)
+    let news = await faqs(t.page)
+    check('menus: What’s New in Shrug V shows the FAQ on what is different about Shrug V, and lets go of a search that left it out', looking.title !== 'What’s different about Shrug V?' && news.front === 'notes' && news.title === 'What’s different about Shrug V?' && news.row === 'What’s different about Shrug V?' && news.search === '', JSON.stringify([looking, news]))
+    await t.ctx.close()
+    t = await fresh('desktop', 'still&empty')
+    await chooseByKeys(t.page, 'mark', 'What’s New in Shrug V')
+    await t.page.waitForTimeout(500)
+    news = await faqs(t.page)
+    check('menus: chosen by keyboard on a bare desk, it opens the FAQs window on it and the keyboard goes into the window', news.front === 'notes' && news.title === 'What’s different about Shrug V?' && (await focusIs(t.page)) === 'wf:notes', `${JSON.stringify(news)} focus ${await focusIs(t.page)}`)
+    await t.ctx.close()
+
+    // The mark shrugs when the desk has nothing to give: its arms lift once for a command the terminal does
+    // not know, and once for a search of the portfolio that comes up empty
+    const mark = () =>
+      t.page.evaluate(() => {
+        const m = document.querySelector('[data-menu-mark]')
+        const arms = [...m.querySelectorAll('.menubar__arm')]
+        return { text: m.textContent, times: Number(m.getAttribute('data-shrug') ?? 0), arms: arms.length, lifting: arms.filter((a) => a.getAnimations().some((x) => x.animationName === 'mark-shrug')).length, on: document.body.innerText.split(m.textContent).length - 1 }
+      })
+    const typeIn = async (text) => {
+      await t.page.locator('.wf[data-app="terminal"] .term__input').click()
+      await t.page.keyboard.type(text)
+      await t.page.keyboard.press('Enter')
+      await t.page.waitForTimeout(120)
+    }
+    t = await fresh('desktop', 'still&open=portfolio,case-studies')
+    const rest = await mark()
+    await typeIn('ls')
+    const known = await mark()
+    await typeIn('frobnicate')
+    const lost = await mark()
+    await t.page.waitForTimeout(900)
+    const down = await mark()
+    check('mark: at rest, and after a command the terminal knows, it does not move', rest.arms === 2 && rest.times === 0 && rest.lifting === 0 && known.times === 0 && known.lifting === 0, JSON.stringify([rest, known]))
+    check('mark: a command not found lifts both its arms, once, and they come back down', lost.times === 1 && lost.lifting === 2 && down.times === 1 && down.lifting === 0, JSON.stringify([lost, down]))
+    check('mark: it is the same emoticon throughout, and still only in the menu bar', /ツ/.test(rest.text) && [rest, lost, down].every((m) => m.text === rest.text && m.on === 1), JSON.stringify(lost))
+    await t.page.click('[data-dock-app="finder"]')
+    await t.page.waitForTimeout(500)
+    const search = t.page.locator('.wf[data-app="finder"] .search__input')
+    await search.click()
+    await search.pressSequentially('var')
+    await t.page.waitForTimeout(200)
+    const some = await mark()
+    await search.pressSequentially('zz')
+    await t.page.waitForTimeout(200)
+    const empty = await mark()
+    check('mark: a search of the portfolio that finds nothing lifts them again, once however much more is typed', some.times === 1 && empty.times === 2 && empty.lifting === 2 && !!(await t.page.$('.wf[data-app="finder"] .pf__none')), JSON.stringify([some, empty]))
+    await t.ctx.close()
+    // With less motion asked for, the arms stay down
+    t = await fresh('desktop', 'still&open=case-studies', { reducedMotion: true })
+    await typeIn('frobnicate')
+    const still = await mark()
+    const anim = await t.page.evaluate(() => [...document.querySelectorAll('.menubar__arm')].map((a) => getComputedStyle(a).animationName).join())
+    check('mark: no lift with reduced motion', still.times === 1 && still.lifting === 0 && anim === 'none,none', `${JSON.stringify(still)} ${anim}`)
     await t.ctx.close()
 
     // One click picks a desktop icon; the next opens it, however long after
