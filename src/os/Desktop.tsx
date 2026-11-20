@@ -66,7 +66,7 @@ const fetchOther = () => {
 /** What the address this visit arrived on asks for: the apps it names, and what is open in the last of
  * them (`?open=portfolio&at=varda`: src/os/place.ts). Read once, as the page loads, because the address
  * is rewritten from then on to follow the visitor. */
-const LINKED = { apps: opens(), at: asked('at') }
+const LINKED = { apps: opens(), at: asked('at'), about: says('about') }
 
 interface Boot {
   done(): void
@@ -123,7 +123,7 @@ export function Desktop() {
       // An app the phone does not have. About Shrug is the desktop's: who Shrug is, on a phone, is on Shrug's
       // own card in Contacts, so that is where a link to it arrives. (Settings, which an old link may still
       // name, is nowhere on the phone: its Home Screen, unlocked)
-      else if (says('about')) arriveIn('finder', [MY_CARD])
+      else if (LINKED.about) arriveIn('finder', [MY_CARD])
       else unlock()
     }
     let gone = false
