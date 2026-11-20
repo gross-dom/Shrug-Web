@@ -778,6 +778,13 @@
   pointer-events: none;
 }
 
+/* The ring is for a keyboard. A window the site itself brings to the front as the page arrives, or after a
+   press of the mouse, wears none until a key is pressed (src/os/focus.ts): a browser rings whatever a
+   script gives the keyboard to when no key has been touched yet */
+html[data-input='touch'] .wf:focus-visible::after {
+  content: none;
+}
+
 .wf[data-app='terminal'] {
   --wf-ring: #fff;
 }

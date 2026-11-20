@@ -131,7 +131,7 @@ const HELP: Line[] = [
   out('ls            list the case studies'),
   out('cat <name>    try to read one'),
   out('please        ask nicely'),
-  out('open <app>    another app: open portfolio'),
+  out('open <app>    try: open portfolio'),
   out('whois <name>  a person, or a company'),
   out('fortune       something one of them said'),
   out('whoami        who is asking'),
@@ -237,7 +237,8 @@ function candidates(head: string[], word: string): string[] {
 
 /** What Tab makes of a line, as a shell's does: the word being typed is finished if only one thing begins
  * that way, taken as far as they all agree if several do, and when that gets it no further `among` is the
- * several. Null where nothing begins that way (or nothing has been typed): Tab is then the page's own. */
+ * several. Where nothing begins that way the line is left as it is. Null only where nothing has been
+ * typed: Tab is then the page's own. */
 export function completed(line: string): { line: string; among: string[] } | null {
   if (!line.trim()) return null
   const low = line.toLowerCase().replace(/^\s+/, '')
@@ -247,7 +248,7 @@ export function completed(line: string): { line: string; among: string[] } | nul
   const head = low.slice(0, cut).trim().split(/\s+/).filter(Boolean)
   const word = folded(low.slice(cut))
   const fits = [...new Set(candidates(head, word).filter((one) => one.startsWith(word)))]
-  if (!fits.length) return null
+  if (!fits.length) return { line, among: [] }
   // As far as they all agree
   let shared = fits[0]!
   for (const one of fits) while (!one.startsWith(shared)) shared = shared.slice(0, -1)
@@ -444,8 +445,9 @@ export function useLine(onEscape?: () => void) {
       } else onEscape?.()
       return
     }
-    // Tab finishes the word being typed, as a shell's does. With nothing typed, or nothing that begins that
-    // way, it is the page's own key and moves on: the line is never somewhere the keyboard cannot leave
+    // Tab finishes the word being typed, as a shell's does, and with a line under way it never takes the
+    // keyboard elsewhere. With nothing typed it is the page's own key and moves on (and Escape empties a
+    // line): the terminal is never somewhere the keyboard cannot leave
     if (e.key === 'Tab' && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
       const done = completed(typed)
       if (!done) return

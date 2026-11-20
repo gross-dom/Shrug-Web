@@ -71,9 +71,11 @@ const check = (name, ok, detail = '') => {
     ['?open=portfolio+vip', 'photos', ''],
     ['portfolio', 'finder', ''],
     ['#faqs', 'notes', 'f:faqs'],
-    // (About Shrug and Settings are the desktop's: a phone that is asked for one opens on its Home Screen)
-    ['?open=about', 'home', null],
-    ['?open=settings', 'home', null],
+    // (About Shrug is the desktop's: who Shrug is, on a phone, is on Shrug's own card in Contacts, and that is where a link to it arrives)
+    ['?open=about', 'finder', 'me'],
+    ['?open=settings', 'finder', 'me'],
+    // (one person's reply: the conversation, which is then brought to what they said)
+    ['?open=chat&at=tony-hawk', 'messages', 'c:group'],
     ['?open=nonsense', null, null],
   ]) {
     v = await visit('iphone', tail, 900)
