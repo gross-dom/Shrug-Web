@@ -77,9 +77,10 @@ const { chromium } = require('playwright')
   await page.waitForTimeout(3600)
   const away = await page.evaluate(() => ({ unread: !!document.querySelector('.conv[data-conversation="group"][data-unread]'), badge: document.querySelector('.dock__badge')?.textContent ?? null }))
   ok('with another conversation open, new replies mark Testimonials and the Dock counts them', away.unread && +away.badge >= 1, JSON.stringify(away))
-  // A reply that lands while its conversation is not the one in front is news: it drops in at the top right
-  const note = await page.waitForSelector('.notify__card', { timeout: 15000 }).then((el) => el.evaluate((card) => { const r = card.getBoundingClientRect(); return { from: card.querySelector('.notify__from')?.textContent, right: Math.round(innerWidth - r.right), top: Math.round(r.top) } })).catch(() => null)
-  ok('a reply that lands meanwhile drops in at the top right corner, under the menu bar', !!note && note.from === 'Testimonials' && note.right <= 20 && note.top >= 24 && note.top <= 60, JSON.stringify(note))
+  // A reply that lands while its conversation is not the one in front is news: it drops in at the top right, under the
+  // menu bar and beside the desk's icons, not over them. (Looked at once it has come to rest)
+  const note = await page.waitForSelector('.notify__card', { timeout: 15000 }).then(async (el) => { await page.waitForTimeout(450); return el.evaluate((card) => { const r = card.getBoundingClientRect(); const icons = Math.min(...[...document.querySelectorAll('.desk__item')].map((icon) => icon.getBoundingClientRect().left)); return { from: card.querySelector('.notify__from')?.textContent, clear: Math.round(icons - r.right), right: Math.round(innerWidth - r.right), top: Math.round(r.top) } }) }).catch(() => null)
+  ok('a reply that lands meanwhile drops in at the top right, under the menu bar and clear of the desk\'s icons', !!note && note.from === 'Testimonials' && note.clear >= 8 && note.right <= 140 && note.top >= 30 && note.top <= 60, JSON.stringify(note))
   // The count on the Dock is a circle, as a badge is
   const badge = await page.evaluate(() => { const r = document.querySelector('.dock__badge')?.getBoundingClientRect(); return r ? { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10 } : null })
   ok('the count on the Dock is a circle', !!badge && Math.abs(badge.w - badge.h) < 0.6, JSON.stringify(badge))

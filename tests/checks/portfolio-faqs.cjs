@@ -140,6 +140,19 @@ const BRACKET = '[Shrug’s answer goes here'
     await t.sleep(150)
     l = await list()
     check('UX-16 Portfolio as List: a company with no site says so in the foot too', l.foot === 'No website listed', String(l.foot))
+    // The columns: what a company does is different on every line and is what the list is read for, so it has the most
+    // room; its vertical, one of a dozen short things said over and over, has what all but the two longest need, and
+    // more only once About has all it wants. (Which verticals are cut short, and how many Abouts)
+    const columns = (page) => page.evaluate(() => {
+      const w = document.querySelector('.wf[data-app="finder"]')
+      const cut = (el) => el.scrollWidth > el.clientWidth + 1
+      const rows = [...w.querySelectorAll('.pf-row:not(.pf-row--head)')]
+      const wide = (el) => Math.round(el.getBoundingClientRect().width)
+      return { rows: rows.length, verticals: [...new Set(rows.filter((row) => cut(row.children[1])).map((row) => row.children[1].textContent.trim()))], abouts: rows.filter((row) => cut(row.children[2])).length, name: wide(rows[0].children[0]), vertical: wide(rows[0].children[1]), about: wide(rows[0].children[2]) }
+    })
+    const LONG = ['Climate and energy', '“Social is Hard” — Evan']
+    let c = await columns(t.page)
+    check('Portfolio as List at 1280x720: About has the most room, under a third of its lines are cut, and only the two longest verticals are', c.rows === 81 && c.abouts < 27 && c.about > c.name && c.about > c.vertical * 2 && c.verticals.every((v) => LONG.includes(v)), JSON.stringify(c))
     await t.ctx.close()
 
     for (const [device, wantPreview] of [['desktop', false], ['fhd', true]]) {
@@ -154,6 +167,27 @@ const BRACKET = '[Shrug’s answer goes here'
         return { cut: names.filter((el) => el.scrollWidth > el.clientWidth + 1).length, preview: !!preview && getComputedStyle(preview).display !== 'none', width: Math.round(w.getBoundingClientRect().width) }
       })
       check(`DK-9 Portfolio as List on ${device}: names in full, preview ${wantPreview ? 'kept' : 'stood down'}`, r.cut === 0 && r.preview === wantPreview, JSON.stringify(r))
+      c = await columns(d.page)
+      if (device === 'desktop') {
+        check('Portfolio as List on desktop: at the size it opens, what every company does is said in full, and all but the longest vertical', c.abouts === 0 && c.verticals.every((v) => v === LONG[1]) && c.vertical > 112, JSON.stringify(c))
+        // Behind another window, what is picked in it is grey: the blue is the window in front's
+        const picked = () => d.page.evaluate(() => { const row = document.querySelector('.wf[data-app="finder"] .pf-row[aria-selected="true"]'); return { ground: getComputedStyle(row).backgroundColor, words: getComputedStyle(row.children[0]).color, second: getComputedStyle(row.children[1]).color } })
+        const front = await picked()
+        await d.page.click('[data-dock-app="messages"]')
+        await d.sleep(500)
+        const behind = await picked()
+        check('Portfolio as List: behind another window the row picked is grey with dark words, not blue with white', front.second === 'rgb(255, 255, 255)' && behind.ground === 'rgb(220, 220, 225)' && behind.words === 'rgb(29, 29, 31)' && behind.second === 'rgb(85, 86, 92)', JSON.stringify({ front, behind }))
+        await d.page.click('[data-dock-app="finder"]')
+        await d.sleep(500)
+        await w.locator('[aria-label="as Icons"]').click()
+        await d.sleep(300)
+        const name = () => d.page.evaluate(() => getComputedStyle(document.querySelector('.wf[data-app="finder"] .pf-file[aria-selected="true"] .pf-file__name')).backgroundColor)
+        const tileFront = await name()
+        await d.page.click('[data-dock-app="messages"]')
+        await d.sleep(500)
+        const tileBehind = await name()
+        check('Portfolio as Icons: and so is the name under the company picked', tileBehind === 'rgb(220, 220, 225)' && tileFront !== tileBehind, `${tileFront} -> ${tileBehind}`)
+      }
       await d.ctx.close()
     }
   }
@@ -193,6 +227,30 @@ const BRACKET = '[Shrug’s answer goes here'
     await win.locator('.faq-row').first().click()
     await t.sleep(200)
 
+    // The list follows the note. Previous from the first question goes round to the last, which is below the fold of a
+    // window this size: its row comes into sight, by the list's own scrolling, and the keyboard stays where it was
+    const inList = () => t.page.evaluate(() => {
+      const list = document.querySelector('.wf[data-app="notes"] .side__list'); const box = list.getBoundingClientRect()
+      const row = list.querySelector('[aria-current]'); const r = row.getBoundingClientRect()
+      return { note: document.querySelector('.wf[data-app="notes"] .faq__meta').textContent.trim(), row: [...list.querySelectorAll('.faq-row')].indexOf(row) + 1, seen: r.top >= box.top - 0.5 && r.bottom <= box.bottom + 0.5, scrolls: list.scrollHeight > list.clientHeight + 20, top: Math.round(list.scrollTop), on: document.activeElement?.getAttribute('aria-label'), desk: document.querySelector('.os').scrollTop + document.scrollingElement.scrollTop }
+    })
+    await win.locator('[aria-label="Previous question"]').click()
+    await t.sleep(350)
+    const last = await inList()
+    check('FAQs: Previous from the first question goes round to the last, and the list goes with it', last.note === 'Question 10 of 10' && last.row === 10 && last.scrolls && last.seen && last.top > 0 && last.on === 'Previous question' && last.desk === 0, JSON.stringify(last))
+    await win.locator('[aria-label="Next question"]').click()
+    await t.sleep(350)
+    const firstAgain = await inList()
+    check('FAQs: and Next from the last, back to the first', firstAgain.note === 'Question 1 of 10' && firstAgain.row === 1 && firstAgain.seen && firstAgain.top === 0, JSON.stringify(firstAgain))
+    // Its rows are even: the same space between a question and how its answer begins, whether the question is one line or two
+    const spaces = await t.page.evaluate(() => [...document.querySelectorAll('.wf[data-app="notes"] .faq-row')].map((row) => {
+      const title = row.querySelector('.ss-row__title'); const range = document.createRange(); range.selectNodeContents(title)
+      const words = range.getBoundingClientRect(); const begins = row.querySelector('.ss-row__preview').getBoundingClientRect(); const r = row.getBoundingClientRect()
+      return { lines: Math.round(words.height / parseFloat(getComputedStyle(title).lineHeight)), between: Math.round((begins.top - words.bottom) * 10) / 10, over: Math.round((words.top - r.top) * 10) / 10, under: Math.round((r.bottom - begins.bottom) * 10) / 10 }
+    }))
+    const spread = (key) => Math.max(...spaces.map((s) => s[key])) - Math.min(...spaces.map((s) => s[key]))
+    check('FAQs: the rows are even, whether a question takes one line or two', spaces.length === 10 && new Set(spaces.map((s) => s.lines)).size > 1 && spread('between') <= 1 && spread('over') <= 1 && spread('under') <= 1, JSON.stringify(spaces.map((s) => [s.lines, s.over, s.between, s.under])))
+
     // DK-10: the window follows the search
     await field.click()
     await field.pressSequentially('small fund')
@@ -223,6 +281,9 @@ const BRACKET = '[Shrug’s answer goes here'
     await t.sleep(700)
     const chat = await t.page.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.getAttribute('data-app') ?? null, open: !!document.querySelector('.wf[data-app="messages"][data-open]') }))
     check('FAQs: a link in an answer to the site’s own chat opens the chat', chat.front === 'messages' && chat.open, JSON.stringify(chat))
+    // …which leaves this window behind it: the question picked in its list is grey there, not the blue of the window in front
+    const behind = await t.page.evaluate(() => { const row = document.querySelector('.wf[data-app="notes"] .faq-row[data-selected]'); return row ? { ground: getComputedStyle(row).backgroundColor, words: getComputedStyle(row.querySelector('.ss-row__title')).color } : null })
+    check('FAQs: behind another window the question picked is grey with dark words', !!behind && behind.ground === 'rgb(220, 220, 225)' && behind.words === 'rgb(29, 29, 31)', JSON.stringify(behind))
     check('FAQs: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 200))
     await t.ctx.close()
 

@@ -433,9 +433,17 @@
   line-height: 15px;
 }
 
-/* A message the visitor has just sent says Delivered a moment after it lands, as Messages does */
-.chat__thread .ss-receipt.chat-sent {
+/* A message that has just been sent, Shrug's or the visitor's, says Delivered a moment after it lands, as
+   Messages does: once its words have come up from the field, never under the gap they are on their way
+   to. (Under a message that was there when the conversation was drawn, after a reload or a look at
+   another conversation, it has been Delivered all along and is simply there.) */
+.chat__thread .ss-bubble-row:has(> .ss-bubble[data-arrived]) + .ss-receipt.chat-sent {
   animation: chat-arrive 0.3s ease 0.7s both;
+}
+
+/* Paused: whoever was writing has stopped where they were, and their dots with them */
+.chat__pane[data-paused] .ss-bubble__dots i {
+  animation-play-state: paused;
 }
 
 /* A bubble that goes somewhere: its words are the link, underlined, in the
@@ -574,6 +582,38 @@
 
 .chat__all:active {
   opacity: 0.6;
+}
+
+/* With the replies paused the same piece of glass says so, and is what sets them going again: what has
+   happened in the window's grey, the way on in the accent */
+.chat__all-state {
+  color: var(--ss-text);
+  font-weight: 500;
+}
+
+.chat__all-dot {
+  color: var(--ss-text-faint);
+}
+
+/* In the window, what is at the head of the thread has it to itself. While it is up the conversation
+   begins under it, so it never lies on the day and the time; and what scrolls up behind it later (and
+   behind the way back down to the newest) is put out of focus, so that two lines of words are never
+   read through each other. (The iPhone's conversation sets its own glass, and its own room under its
+   header: styles/phone/messages.css.) */
+.wf .chat__all,
+.wf .chat__new {
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  backdrop-filter: blur(12px) saturate(1.6);
+}
+
+.wf .chat__pane:has(> .chat__all[data-show]) .chat__flow {
+  padding-top: 48px;
+}
+
+/* (The thread eases down to make that room, as it eases whenever something is put into it; the glass
+   comes up a moment after it has started, into room that is already there) */
+.wf .chat__all[data-show] {
+  transition-delay: 0.1s;
 }
 
 /* The message field: a plus for everything else, then the field itself */
@@ -868,6 +908,18 @@
   line-height: 14px;
 }
 
+/* Someone found who has not replied yet: listed quietly, their face let down and their name in the grey
+   of the line under it, which says so. (Told by that line, which is this file's own, so that the iPhone's
+   list, which draws the same rows its own way, has it too.) */
+.ss-row:has(.conv-yet) .ss-row__lead {
+  opacity: 0.5;
+}
+
+.ss-row:has(.conv-yet) .ss-row__title {
+  color: var(--ss-text);
+  font-weight: 500;
+}
+
 /* Details: who is in the conversation, and the replies' own controls */
 .chat-details.ss-popover {
   top: 2px;
@@ -1128,6 +1180,11 @@
     padding: 0 16px 0 12px;
     border-radius: 18px;
     font-size: 13px;
+  }
+
+  /* ...and the taller one at the head of the thread has that much more room kept under it */
+  .wf .chat__pane:has(> .chat__all[data-show]) .chat__flow {
+    padding-top: 56px;
   }
 }
 
@@ -1405,13 +1462,32 @@
   min-height: 0;
   padding: 0 8px 10px;
   font-size: 12.5px;
+  /* Its columns go by its own width (below), which the preview beside it changes */
+  container: pf-list / inline-size;
+}
+
+/* Once the longest line of About has all it needs (328px), what is spare is
+   Vertical's: first for “Climate and energy”, then for the longest of them */
+@container pf-list (min-width: 632px) {
+  .pf-row {
+    --pf-vertical: 138px;
+  }
+}
+
+@container pf-list (min-width: 658px) {
+  .pf-row {
+    --pf-vertical: 164px;
+  }
 }
 
 /* A list is where names are read in full: Name keeps room for the longest of
-   them, and the other two columns share what is left */
+   them (144px, Avalanche Energy). Vertical says one of a dozen short things,
+   over and over down a list of one vertical, and is given what all but its
+   two longest need; everything else is About's, where each line is different
+   and is what the list is read for */
 .pf-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.1fr) minmax(0, 0.8fr) minmax(0, 1.7fr);
+  grid-template-columns: minmax(146px, 1fr) var(--pf-vertical, 112px) minmax(0, 2.4fr);
   align-items: center;
   width: 100%;
   height: 28px;
@@ -1759,6 +1835,12 @@
 
 .faq-row .ss-row__title {
   white-space: normal;
+}
+
+/* The kit keeps two lines' height for a row's name, for a second line these rows do not have: a question
+   of one line stood off from its answer, and one of two lines sat on it. Each sits on its answer */
+.faq-row .ss-row__body {
+  min-height: 0;
 }
 
 .faq-row:hover {
@@ -2617,6 +2699,39 @@
   .about__fact {
     padding-top: 6px;
     padding-bottom: 6px;
+  }
+}
+
+/* ---- A window that is not in front ----
+   What is selected in it is grey, as a Mac greys the selection of a window
+   behind: the open conversation, the company picked, the note that is open.
+   The colour says which window the keyboard is in. On the grey the words are
+   the window's own ink again, the smaller lines a shade darker than they are
+   elsewhere (5.3 to 1 on it; the usual grey would be 4.3). Under forced
+   colours what is selected stays the system's own Highlight (access.css). */
+
+@media (forced-colors: none) {
+  .wf:not([data-active]) .conv[data-selected],
+  .wf:not([data-active]) .faq-row[data-selected],
+  .wf:not([data-active]) .faq-row[data-selected]:hover,
+  .wf:not([data-active]) .pf-row[aria-selected='true'],
+  .wf:not([data-active]) .pf-row[aria-selected='true']:nth-child(odd),
+  .wf:not([data-active]) .pf-file[aria-selected='true'] .pf-file__name {
+    background: #dcdce1;
+    color: #1d1d1f;
+    --ss-text-strong: #1d1d1f;
+    --ss-text: #55565c;
+    --ss-ink-2: rgba(0, 0, 0, 0.1);
+  }
+
+  .wf:not([data-active]) .conv[data-selected] .ss-row__dot {
+    background: #0a84ff;
+  }
+
+  .wf:not([data-active]) .faq-row[data-selected] .ss-row__preview[data-text],
+  .wf:not([data-active]) .pf-row[aria-selected='true'] > span:not(:first-child),
+  .wf:not([data-active]) .pf-row[aria-selected='true'] .pf-row__host {
+    color: #55565c;
   }
 }
 

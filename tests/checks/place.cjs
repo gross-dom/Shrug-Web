@@ -113,7 +113,9 @@ const windows = (page) =>
   await t.page.click('[data-dock-app="notes"]'); await settle(t.page, 900)
   await t.page.locator('.wf[data-app="notes"] .faq-row').nth(2).click(); await settle(t.page, 500)
   check('desktop, the third question: ?open=faqs&at=3', tail(t.page) === '/?still&open=faqs&at=3', tail(t.page))
-  // Move the Portfolio window, put FAQs in the Dock, then reload
+  // Put FAQs in the Dock, move the Portfolio window, then reload. (FAQs first, while it is in front and its lights
+  // can be pressed: it opens under the desk's icons now, and the Portfolio window, once moved, lies over them)
+  await t.page.click('.wf[data-app="notes"] .wf__light[data-kind="min"]'); await settle(t.page, 900)
   await t.page.click('[data-dock-app="finder"]'); await settle(t.page, 600)
   const bar = await t.page.locator('.wf[data-app="finder"]').boundingBox()
   await t.page.mouse.move(bar.x + bar.width / 2, bar.y + 14)
@@ -121,8 +123,6 @@ const windows = (page) =>
   await t.page.mouse.move(bar.x + bar.width / 2 - 180, bar.y + 14 + 90, { steps: 8 })
   await t.page.mouse.up()
   await settle(t.page, 500)
-  await t.page.click('.wf[data-app="notes"] .wf__light[data-kind="min"]', { force: true }).catch(() => {})
-  await settle(t.page, 900)
   const before = await windows(t.page)
   const addressBefore = tail(t.page)
   await settle(t.page, 600)

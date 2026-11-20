@@ -172,12 +172,28 @@ function deskIcons(viewport: Size): Rect {
   return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: viewport.w - 104, y: 42, w: 92, h: 196 }
 }
 
+/** The smallest screen the desk's widget is shown on: under it the room is the
+ * windows' (the stylesheet says the same: styles/os.css, .sf). It is as wide
+ * as leaves the widget clear of the conversation where that first opens. */
+const WIDGET_FROM: Size = { w: 1240, h: 641 }
+
+/** The widget on the desk, top left: where it is drawn, or where the
+ * stylesheet puts it if the desk has not been drawn yet; null on a desk that
+ * does not show one. */
+function deskWidget(viewport: Size): Rect | null {
+  const el = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('.sf')
+  const r = el?.getBoundingClientRect()
+  if (r) return r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null
+  return viewport.w >= WIDGET_FROM.w && viewport.h >= WIDGET_FROM.h ? { x: 18, y: 46, w: 164, h: 164 } : null
+}
+
 /** Where a window opens for the first time: the app's own size for this desk,
  * in the middle and off it by the app's nudge as far as there is room for
  * one, never against an edge. Where that would sit on the windows already
- * open or on the desk's icons, and somewhere else clearly would not (beside
- * the window in front, to one side of a wide desk, under the icons on a
- * narrow one), it opens there instead. */
+ * open, and somewhere else clearly would not (beside the window in front, to
+ * one side of a wide desk), it opens there instead. Wherever it opens, it
+ * keeps off what is kept on the desk if it can: a place on the icons or on
+ * the widget is taken beside them or under them. */
 function placed(id: AppId, s: WM): Rect {
   const spec = APPS[id]
   const d = desk(s.viewport, false)
@@ -199,10 +215,41 @@ function placed(id: AppId, s: WM): Rect {
   const front = activeApp(s)
   const others = APP_IDS.filter((other) => other !== id && isShowing(s.wins[other])).map((other) => geometry(s.wins[other], s.viewport, false))
   const icons = deskIcons(s.viewport)
-  // The icons count for more than a window does: a window can be moved off another, the icons cannot be moved
-  const cost = (r: Rect) => others.reduce((sum, other) => sum + shared(r, other), 0) + shared(r, icons) * 4
-  const least = cost(home)
-  if (least === 0) return home
+  const widget = deskWidget(s.viewport)
+  const things = widget ? [icons, widget] : [icons]
+  /** How much of a place is on other windows, how much on what is kept on the desk, and how much of its size the window gives up for it. */
+  const over = (r: Rect) => others.reduce((sum, other) => sum + shared(r, other), 0)
+  const kept = (r: Rect) => things.reduce((sum, thing) => sum + shared(r, thing), 0)
+  const lost = (r: Rect) => w * h - r.w * r.h
+  /** How far one place is from another, in where it is and in how big. */
+  const apart = (a: Rect, b: Rect) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.w - b.w) + Math.abs(a.h - b.h)
+
+  const gap = 12
+  /** A place, moved clear of what is kept on the desk by the least that does
+   * it: beside the icons or the widget, or under them. Failing those, under
+   * them a little shorter (a window that cannot be sized is not shortened);
+   * and failing that, for a window that says it would sooner be (`slim`),
+   * beside the icons a little narrower. A place that is clear, or cannot be
+   * made so, is given back as it is. */
+  const cleared = (spot: Rect): Rect => {
+    const on = things.filter((thing) => shared(spot, thing) > 0)
+    if (!on.length) return spot
+    const whole: Rect[] = []
+    const shorter: Rect[] = []
+    const narrower: Rect[] = []
+    if (on.includes(icons) && icons.x - gap - w >= box.x) whole.push({ ...spot, x: Math.round(icons.x - gap - w) })
+    if (widget && on.includes(widget) && widget.x + widget.w + gap + w <= box.x + box.w) whole.push({ ...spot, x: Math.round(widget.x + widget.w + gap) })
+    const y = Math.round(Math.max(...on.map((thing) => thing.y + thing.h)) + gap)
+    const left = Math.min(h, box.y + box.h - y)
+    if (left === h) whole.push({ ...spot, y })
+    else if (spec.resizable && left >= spec.min.h && left >= h * 0.75) shorter.push({ ...spot, y, h: left })
+    const slim = Math.floor(icons.x - gap - box.x)
+    if (on.includes(icons) && spec.slim && slim < w && slim >= spec.slim) narrower.push({ ...spot, x: box.x, w: slim })
+    // Of the ways that do clear it, the one that covers least and goes least far
+    const price = (way: Rect) => over(way) + apart(way, spot)
+    const pick = (ways: Rect[]) => ways.filter((way) => kept(way) === 0).sort((a, b) => price(a) - price(b))[0]
+    return pick(whole) ?? pick(shorter) ?? pick(narrower) ?? spot
+  }
 
   const edge = 16
   const xs = new Set([home.x])
@@ -215,30 +262,33 @@ function placed(id: AppId, s: WM): Rect {
     if (beside.x + beside.w + edge + w <= box.x + box.w) xs.add(beside.x + beside.w + edge)
     if (beside.x - edge - w >= box.x) xs.add(beside.x - edge - w)
   }
-  const rows = [{ y: home.y, h }]
-  if (shared(home, icons) > 0) {
-    // Clear of the icons: to their left, or under them, a little shorter if it
-    // must be (a window that cannot be sized is not shortened)
-    if (icons.x - 12 - w >= box.x) xs.add(Math.round(icons.x - 12 - w))
-    const under = Math.round(icons.y + icons.h + 12)
-    const left = Math.min(h, box.y + box.h - under)
-    if (left === h || (spec.resizable && left >= spec.min.h && left >= h * 0.75)) rows.push({ y: under, h: left })
-  }
-  let best = home
-  let bestScore = least
-  for (const row of rows) {
-    for (const x of xs) {
-      const spot: Rect = { x, y: row.y, w, h: row.h }
-      // Among spots as clear as each other, the one nearest the middle
-      const score = cost(spot) + Math.abs(x - home.x) + Math.abs(row.y - home.y)
-      if (score < bestScore) {
-        best = spot
-        bestScore = score
-      }
+  // Each place to try, as it would be taken (clear of the desk's own things
+  // if it can be), and what it costs. What is kept on the desk counts for
+  // more than a window does: a window can be moved off another, the icons and
+  // the widget cannot be moved. Moving a place clear is not counted in its
+  // favour: it covers what it covered before the move, or after it if that is
+  // more. And a place that makes the window smaller is charged what the
+  // window gives up, or the smallest place would always look the clearest
+  const tries = [...xs].map((x) => {
+    const at: Rect = { x, y: home.y, w, h }
+    const to = cleared(at)
+    return { to, cost: Math.max(over(at), over(to)) + kept(to) * 4 + lost(to) }
+  })
+  // (The first of them is the middle: the set keeps the order it was filled in)
+  const middle = tries[0]!
+  if (middle.cost === 0) return middle.to
+  let best = middle
+  let bestScore = middle.cost + apart(middle.to, home)
+  for (const one of tries.slice(1)) {
+    // Among places as clear as each other, the one nearest the middle
+    const score = one.cost + apart(one.to, home)
+    if (score < bestScore) {
+      best = one
+      bestScore = score
     }
   }
   // Only where it is clearly better: on a small desk everything overlaps, and the nudged pile is the tidier one
-  return cost(best) <= least * 0.75 ? best : home
+  return best.cost <= middle.cost * 0.75 ? best.to : middle.to
 }
 
 function centered(id: AppId, viewport: Size, compact: boolean): Rect {
@@ -407,11 +457,15 @@ export function setPreview(preview: Tile | null) {
   wm.set((s) => (s.preview === preview ? s : { ...s, preview }))
 }
 
+/** Window > Bring All to Front, as a Mac means it: the windows that are showing are in front of
+ * everything else, in the order they were in. A window that was put in the Dock stays there: it is
+ * brought back from its icon, or by its name in the same menu. */
 export function bringAllToFront() {
-  wm.set((s) => ({
-    ...s,
-    wins: Object.fromEntries(APP_IDS.map((id) => [id, s.wins[id].open ? { ...s.wins[id], minimized: false } : s.wins[id]])) as Record<AppId, Win>,
-  }))
+  wm.set((s) => {
+    const showing = s.order.filter((id) => isShowing(s.wins[id]))
+    const order = [...s.order.filter((id) => !showing.includes(id)), ...showing]
+    return order.every((id, i) => id === s.order[i]) ? s : { ...s, order }
+  })
 }
 
 export function setViewport(viewport: Size) {

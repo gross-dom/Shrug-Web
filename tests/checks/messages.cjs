@@ -57,8 +57,17 @@ async function desk(browser) {
   say(tree.dir, 'MK-17 every bubble finds its own text direction')
   say(tree.initials, 'AX-23 initials are never read out before a name')
   say((await p.getAttribute(`${W} .composer__input`, 'dir')) === 'auto', 'MK-17 the message field finds its own direction')
+  // Shrug's own question says Delivered as a message of the visitor's does: a moment after its bubble has landed
+  const asked = await p.evaluate((W) => { const r = document.querySelector(`${W} .chat__thread .ss-receipt`); return r ? { under: r.previousElementSibling?.querySelector('.ss-bubble')?.getAttribute('aria-label'), says: r.textContent.trim(), waits: r.classList.contains('chat-sent'), by: getComputedStyle(r).animationDelay } : null }, W)
+  say(!!asked && asked.under === 'Shrug' && asked.says === 'Delivered' && asked.waits && asked.by === '0.7s', 'under Shrug’s question, "Delivered" waits for the bubble to land, as it does under the visitor’s', JSON.stringify(asked))
+  // The offer of every reply has room of its own at the head of the thread: the day over the first message starts under it
+  const offer = await p.evaluate((W) => { const pill = document.querySelector(`${W} .chat__all[data-show]`); const day = document.querySelector(`${W} .chat-stamp`); if (!pill || !day) return null; const cs = getComputedStyle(pill); return { says: pill.textContent.trim(), clear: Math.round(day.getBoundingClientRect().top - pill.getBoundingClientRect().bottom), glass: cs.backdropFilter || cs.webkitBackdropFilter } }, W)
+  say(!!offer && /^Load all 89 replies$/.test(offer.says) && offer.clear >= 8 && /blur/.test(offer.glass), 'the offer of every reply sits clear above the day the conversation begins with, on glass of its own', JSON.stringify(offer))
   // nothing moves under the checks that follow
   await pick(p, 'view', 'Pause Replies')
+  // Paused, the head of the thread says so, where that offer was, and whoever was writing holds still
+  const held = await p.evaluate((W) => { const pill = document.querySelector(`${W} .chat__all--paused`); return { shown: pill?.hasAttribute('data-show'), says: pill?.textContent.replace(/\s+/g, ' ').trim(), name: pill?.getAttribute('aria-label'), offer: !!document.querySelector(`${W} .chat__all:not(.chat__all--paused)[data-show]`), dots: [...document.querySelectorAll(`${W} .ss-bubble__dots i`)].map((d) => getComputedStyle(d).animationPlayState) } }, W)
+  say(held.shown && /^Replies paused\s?·\s?Resume$/.test(held.says || '') && held.name === 'Replies paused. Resume' && !held.offer && held.dots.every((s) => s === 'paused'), 'paused: the head of the thread says "Replies paused · Resume" in place of the offer, and the dots hold still', JSON.stringify(held))
 
   // tb-10 / AX-7: sending leaves the caret in the field, by Return and by the button
   await p.fill(`${W} .composer__input`, 'hello from a visitor')
@@ -103,15 +112,26 @@ async function desk(browser) {
   await p.keyboard.press('ArrowUp')
   await p.waitForTimeout(300)
 
-  // DK-5 / AX-22: search is of what has been said; nothing found is said outside the list
+  // DK-5 / AX-22: search is of everyone in the conversation. Who has replied is found by what they said too; who has
+  // not yet, by who they are alone, and is marked so. Nothing found is said outside the list
+  const found = () => p.evaluate((W) => [...document.querySelectorAll(`${W} .conv-list [data-row]`)].map((row) => ({ row: row.dataset.row, yet: row.hasAttribute('data-yet'), said: row.querySelector('.ss-row__preview')?.textContent.trim() })), W)
   await p.fill(`${W} .search__input`, 'maggie norris')
   await p.waitForTimeout(400)
+  const yet = await found()
+  say(yet.length === 1 && yet[0].row === 'p:88' && yet[0].yet && yet[0].said === 'Hasn’t replied yet', 'DK-5 someone who has not replied yet is found by name, marked "Hasn’t replied yet"', JSON.stringify(yet))
+  await p.fill(`${W} .search__input`, 'sounding board')
+  await p.waitForTimeout(400)
   const none = await p.evaluate((W) => { const l = document.querySelector(`${W} .conv-list`); const n = document.querySelector(`${W} .conv-none`); return { rows: l.querySelectorAll('[data-row]').length, strays: [...l.children].filter((c) => !c.matches('[role="option"], [role="group"]')).length, none: n?.textContent.trim(), role: n?.getAttribute('role'), inList: !!l.querySelector('.conv-none, .side-empty') } }, W)
-  say(none.rows === 0 && none.none === 'No Results', 'DK-5 someone who has not replied yet is not found', JSON.stringify(none))
+  say(none.rows === 0 && none.none === 'No Results', 'DK-5 …and not by what they have yet to say', JSON.stringify(none))
   say(none.role === 'status' && !none.inList && none.strays === 0, 'AX-22 "No Results" is a status outside the listbox', JSON.stringify(none))
   await p.fill(`${W} .search__input`, 'pentatonix')
   await p.waitForTimeout(400)
   say((await p.locator(`${W} [data-row="p:0"]`).count()) === 1, 'DK-5 someone who has replied is found')
+  // typed in capitals, with a keyboard's apostrophe: the reply is set with a typographer's
+  await p.fill(`${W} .search__input`, 'THEY\'RE THE BEST')
+  await p.waitForTimeout(400)
+  const typed = await found()
+  say(typed.length === 1 && typed[0].row === 'p:0' && !typed[0].yet && /^They’re the best/.test(typed[0].said || ''), 'DK-5 …by what they said, whichever apostrophe and case it is typed in', JSON.stringify(typed))
   // DK-10: Return opens the first thing found; the down arrow goes into the list
   await p.fill(`${W} .search__input`, 'akash')
   await p.waitForTimeout(300)
@@ -136,6 +156,14 @@ async function desk(browser) {
   await p.waitForTimeout(500)
   const night = await p.evaluate((W) => [...document.querySelectorAll(`${W} .chat__thread .ss-bubble__text`)].map((x) => x.textContent), W)
   say(night.join(' | ') === 'you up? | always | we just closed another customer', 'and the conversation with him says so', night.join(' | '))
+  // One of them written in is the one last used: its row says what the visitor wrote, and when, at the head of the others
+  await p.click(`${W} [data-conversation="drops"]`)
+  await p.waitForTimeout(400)
+  await p.fill(`${W} .composer__input`, 'thank you!')
+  await p.keyboard.press('Enter')
+  await p.waitForTimeout(900)
+  const wrote = await p.evaluate((W) => ({ rows: [...document.querySelectorAll(`${W} .conv`)].map((row) => ({ name: row.querySelector('.ss-row__title').textContent, when: row.querySelector('.ss-row__meta')?.textContent.trim(), said: row.querySelector('.ss-row__preview')?.textContent.trim() })), now: [0, 60_000].map((ago) => new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(Date.now() - ago)) }), W)
+  say(wrote.rows.map((r) => r.name).join(' | ') === 'Testimonials | Drops | Akash Nigam | +1 (555) 010-0142' && wrote.rows[1].said === 'thank you!' && wrote.now.includes(wrote.rows[1].when), 'a conversation written in moves to the head of the others, its row saying what was written and the time', JSON.stringify(wrote))
   await p.click(`${W} [data-conversation="group"]`)
   await p.waitForTimeout(500)
 
@@ -211,6 +239,46 @@ async function desk(browser) {
   say(A.realErrors(t.errors).length === 0, 'desktop: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 
+  // ---- while the replies are still coming: Resume, someone found before they have replied, and what the details start
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still' })
+  p = t.page
+  await p.waitForSelector(`${W} .composer__input`, { timeout: 20000 })
+  await p.waitForFunction((W) => document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length >= 2, W, { timeout: 30000 })
+  await pick(p, 'view', 'Pause Replies')
+  const stopped = await replies(p, W)
+  await p.click(`${W} .chat__all--paused`)
+  const went = await p.waitForFunction(([W, n]) => document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length > n, [W, stopped], { timeout: 15000 }).then(() => true, () => false)
+  const resumed = await p.evaluate((W) => ({ paused: !!document.querySelector(`${W} .chat__all--paused[data-show]`), offer: !!document.querySelector(`${W} .chat__all:not(.chat__all--paused)[data-show]`), menu: [...document.querySelectorAll('[data-menu="view"] [data-menu-item]')].map((i) => i.textContent.trim()).find((x) => /Replies$/.test(x)) }), W)
+  say(went && !resumed.paused && resumed.offer && resumed.menu === 'Pause Replies' && (await active(p)) === 'div.chat__scroll', 'paused: Resume there sets the replies going again, with the keyboard on the thread', JSON.stringify({ went, ...resumed, on: await active(p) }))
+  // someone still to reply, come to with the arrows from the search: picked out, and the conversation left to play
+  await p.fill(`${W} .search__input`, 'aidaly')
+  await p.waitForTimeout(400)
+  await p.keyboard.press('ArrowDown')
+  await p.waitForTimeout(400)
+  const passed = await p.evaluate((W) => ({ people: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, row: document.querySelector(`${W} .conv[data-selected]`)?.dataset.row, yet: document.querySelector(`${W} .conv[data-selected]`)?.hasAttribute('data-yet') }), W)
+  say(passed.row === 'p:88' && passed.yet && passed.people < 89, 'DK-5 the arrows pass over someone still to reply without hurrying anyone', JSON.stringify(passed))
+  // …and pressed: every reply is brought in, and theirs is gone to
+  await p.keyboard.press('Enter')
+  await p.waitForTimeout(1600)
+  const brought = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`).getBoundingClientRect(); const b = document.querySelector(`${W} .chat__thread [data-person="88"]`)?.getBoundingClientRect(); const row = document.querySelector(`${W} [data-row="p:88"]`); return { people: document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length, inView: !!b && b.top >= s.top - 2 && b.bottom <= s.bottom + 2, yet: row?.hasAttribute('data-yet'), said: row?.querySelector('.ss-row__preview')?.textContent.trim() } }, W)
+  say(brought.people === 89 && brought.inView && !brought.yet && brought.said === 'Founder of Aidaly', 'DK-5 pressed, everyone’s replies are brought in and theirs is gone to', JSON.stringify(brought))
+  await p.fill(`${W} .search__input`, '')
+  // The details close on what changes the thread under them, so that it is seen
+  await p.click(`${W} .chat-id`)
+  await p.waitForTimeout(500)
+  await p.locator(`${W} .details__row`, { hasText: 'Play From the Start' }).click()
+  await p.waitForTimeout(700)
+  const again = await p.evaluate((W) => ({ details: !!document.querySelector(`${W} .chat-details[data-show]`), people: document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length }), W)
+  say(!again.details && again.people === 0 && (await active(p)) === 'button.chat-id', 'Play From the Start in the details starts over and closes them, the keyboard back on the name', JSON.stringify({ ...again, on: await active(p) }))
+  await p.click(`${W} .chat-id`)
+  await p.waitForTimeout(500)
+  await p.locator(`${W} .details__row`, { hasText: 'Show Every Reply' }).click()
+  await p.waitForTimeout(900)
+  const every = await p.evaluate((W) => ({ details: !!document.querySelector(`${W} .chat-details[data-show]`), people: document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length }), W)
+  say(!every.details && every.people === 89, 'Show Every Reply there brings everyone in and closes them too', JSON.stringify(every))
+  say(A.realErrors(t.errors).length === 0, 'desktop (while replies come): no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
+  await t.ctx.close()
+
   // ---- DK-16: replies that land where nobody can see them are new
   t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still' })
   p = t.page
@@ -218,6 +286,9 @@ async function desk(browser) {
   await p.waitForFunction((W) => document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length >= 1, W, { timeout: 30000 })
   await p.locator('.dock__item[data-dock-app="finder"]').click()
   await p.waitForTimeout(700)
+  // (behind another window, what is picked in its list is grey: the blue is the window in front's)
+  const dim = await p.evaluate((W) => getComputedStyle(document.querySelector(`${W} .conv[data-selected]`)).backgroundColor, W)
+  say(dim === 'rgb(220, 220, 225)', 'behind another window, the conversation picked in the list is grey, not blue', dim)
   const beside = await replies(p, W)
   await p.waitForFunction(([W, n]) => document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length >= n + 2, [W, beside], { timeout: 30000 })
   say(!(await p.locator('.dock__badge').count()), 'DK-16 a window in front that leaves the chat in sight: nothing is new', await p.locator('.dock__badge').count() ? await p.textContent('.dock__badge') : '')
@@ -349,6 +420,17 @@ async function phone(browser) {
   const head = await p.evaluate((F) => ({ name: document.querySelector(`${F} .msg-head`)?.textContent.replace(/\s+/g, ' ').trim(), cam: document.querySelector(`${F} .ios-bar [aria-label="FaceTime"]`) ? 'FaceTime' : null, twins: document.querySelectorAll(`${F} [aria-label$="details"]`).length }), F)
   say(head.name === 'Testimonials. Details' && head.cam === 'FaceTime' && head.twins === 0, 'AX-23 the name opens Details; the camera is named for what it is', JSON.stringify(head))
 
+  // Paused from the details, the conversation says so at its head; Resume there sets it going again
+  const TOP = `${F} .ios-page[data-pos="top"]`
+  await A.at(p, 'messages', ['c:group'], 'details')
+  await p.locator(`${F} .ios-sheet [role="switch"][aria-label="Pause Replies"]`).tap()
+  await p.waitForTimeout(400)
+  await A.at(p, 'messages', ['c:group'])
+  const held = await p.evaluate((TOP) => { const pill = document.querySelector(`${TOP} .chat__all--paused`); return { shown: pill?.hasAttribute('data-show'), says: pill?.textContent.replace(/\s+/g, ' ').trim(), n: document.querySelectorAll(`${TOP} .chat__thread [data-person]:not([data-typing])`).length } }, TOP)
+  await p.locator(`${TOP} .chat__all--paused`).tap()
+  const went = await p.waitForFunction(([TOP, n]) => document.querySelectorAll(`${TOP} .chat__thread [data-person]:not([data-typing])`).length > n, [TOP, held.n], { timeout: 15000 }).then(() => true, () => false)
+  say(held.shown && /^Replies paused\s?·\s?Resume$/.test(held.says || '') && went && !(await p.locator(`${TOP} .chat__all--paused[data-show]`).count()), 'phone: paused, the head of the conversation says "Replies paused · Resume", and a tap there sets the replies going again', JSON.stringify({ ...held, went }))
+
   // UX-17: FaceTime answers in character
   const edges = () => p.evaluate(() => [getComputedStyle(document.querySelector('.ph-edge--top')).backgroundColor, getComputedStyle(document.querySelector('.ph-edge--foot')).backgroundColor].join(' | '))
   const clear = await edges()
@@ -395,17 +477,25 @@ async function phone(browser) {
   const rtl = await p.evaluate((F) => { const x = [...document.querySelectorAll(`${F} .ss-bubble[aria-label="You"] .ss-bubble__text`)].pop(); return x ? getComputedStyle(x).direction : null }, F)
   say(rtl === 'rtl', 'MK-17 right-to-left words are laid out right to left', String(rtl))
 
-  // DK-5 on the phone: search does not find people who have not replied
+  // The list: the conversation written in (above) says what was written, and when
   await p.locator(`${F} .msg-back`).tap()
   await p.waitForTimeout(900)
   const footOf = () => p.evaluate((F) => [...document.querySelectorAll(`${F} .ios-page[data-pos="top"] .ios-foot > button`)].map((b) => b.getAttribute('aria-label')).join(), F)
   const atRest = await footOf()
+  const listed = await p.evaluate((F) => ({ rows: [...document.querySelectorAll(`${F} .msg-row`)].map((row) => ({ name: row.querySelector('.ss-row__title').textContent.replace(/, unread$/, ''), when: row.querySelector('.ss-row__meta')?.textContent.trim(), said: row.querySelector('.ss-row__preview')?.textContent.trim() })), now: [0, 60_000, 120_000].map((ago) => new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(Date.now() - ago)) }), F)
+  say(listed.rows[1]?.name === 'Akash Nigam' && listed.rows[1].said === 'congrats' && listed.now.includes(listed.rows[1].when), 'phone: the row of a conversation written in says what was written, and the time', JSON.stringify(listed))
+  // DK-5 on the phone: search finds someone who has not replied yet by name, and says that they have not
   await p.fill(`${F} .ios-search__input`, 'maggie norris')
   await p.waitForTimeout(500)
-  say((await p.locator(`${F} .msg-row`).count()) === 0, 'DK-5 the phone’s search does not find someone who has not replied')
+  const yet = await p.evaluate((F) => [...document.querySelectorAll(`${F} .msg-row`)].map((row) => ({ row: row.dataset.row, said: row.querySelector('.ss-row__preview')?.textContent.trim() })), F)
+  say(yet.length === 1 && yet[0].row === 'p:88' && yet[0].said === 'Hasn’t replied yet', 'DK-5 the phone’s search finds someone who has not replied yet, marked "Hasn’t replied yet"', JSON.stringify(yet))
+  // (a name nobody here has: someone still to reply is found now, above)
+  await p.fill(`${F} .ios-search__input`, 'zzqx nobody')
+  await p.waitForTimeout(500)
+  say((await p.locator(`${F} .msg-row`).count()) === 0, 'the phone’s search finds nobody for a name nobody here has')
   // Nothing found is said as Contacts and Notes say it, and while a search is on the foot offers the way out of it
   const none = await p.evaluate((F) => { const e = document.querySelector(`${F} .ios-page[data-pos="top"] .ios-empty`); return e ? { says: e.innerText.replace(/\s*\n+\s*/g, ' ').trim(), glyph: !!e.querySelector('.ios-empty__icon svg') } : null }, F)
-  say(!!none && none.says === 'No Results for “maggie norris” Check the spelling or try a new search.' && none.glyph, 'UX-19 Messages: an empty search says "No Results for “x”" and what to try, under the glass the others show', JSON.stringify(none))
+  say(!!none && none.says === 'No Results for “zzqx nobody” Check the spelling or try a new search.' && none.glyph, 'UX-19 Messages: an empty search says "No Results for “x”" and what to try, under the glass the others show', JSON.stringify(none))
   say(atRest === 'New message' && (await footOf()) === 'Cancel', 'while a search is on, the button beside the field ends it, where compose was', `${atRest} -> ${await footOf()}`)
   await p.locator(`${F} .ios-page[data-pos="top"] .ios-foot button[aria-label="Cancel"]`).tap()
   await p.waitForTimeout(500)
@@ -474,6 +564,14 @@ async function phone(browser) {
   await p.waitForTimeout(700)
   const backOn = await p.evaluate(() => ({ on: document.activeElement?.getAttribute('aria-label'), sheet: history.state?.shrug?.sheet, place: history.state?.shrug?.stacks?.messages?.join() }))
   say(trapped && backOn.on === 'FaceTime' && backOn.sheet === null && backOn.place === 'c:group', 'UX-17 the alert keeps Tab, closes on Escape alone, and gives the keyboard back', JSON.stringify({ trapped, ...backOn }))
+  // DK-5: someone found in the list before they have replied. Pressed, everyone's replies are brought in and theirs is gone to
+  await A.at(p, 'messages', [])
+  await p.fill(`${F} .ios-search__input`, 'maggie norris')
+  await p.waitForTimeout(500)
+  await p.locator(`${F} .msg-row[data-row="p:88"]`).click()
+  await p.waitForTimeout(2200)
+  const brought = await p.evaluate((F) => { const top = document.querySelector(`${F} .ios-page[data-pos="top"]`); const s = top.querySelector('.chat__scroll')?.getBoundingClientRect(); const b = top.querySelector('.chat__thread [data-person="88"]')?.getBoundingClientRect(); return { place: history.state?.shrug?.stacks?.messages?.join(), people: top.querySelectorAll('.chat__thread [data-person]:not([data-typing])').length, inView: !!s && !!b && b.top >= s.top - 2 && b.bottom <= s.bottom + 2 } }, F)
+  say(brought.place === 'c:group' && brought.people === 89 && brought.inView, 'DK-5 phone: pressed, everyone’s replies are brought in and theirs is gone to', JSON.stringify(brought))
   say(A.realErrors(t.errors).length === 0, 'framed phone: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 }

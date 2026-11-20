@@ -286,6 +286,20 @@ const touchOf = (t) => ({
     w = await read(t.page)
     say(!!w && /^20°/.test(w.weather || '') && /Sunny/.test(w.weather || '') && w.sky === 'day' && /^\d{2}:\d{2}$/.test(w.time || '') && /8 hours behind/.test(w.apart || ''), 'in Celsius and on a 24-hour clock for a visitor in London', JSON.stringify(w))
     await t.ctx.close()
+    // what the service says at length: how likely it thinks the weather is left out, and what is still long takes a second line
+    const told = (page) => page.evaluate(() => { const el = document.querySelector('.sf__weather'); const r = el.getBoundingClientRect(); const box = document.querySelector('.sf').getBoundingClientRect(); return { lines: Math.round(r.height / parseFloat(getComputedStyle(el).lineHeight)), cut: el.scrollHeight > el.clientHeight + 1, inside: r.bottom <= box.bottom - 8 && r.right <= box.right - 8, time: document.querySelector('.sf__time').getBoundingClientRect().bottom <= r.top + 1 } })
+    t = await fresh('desktop', 'still&empty', { locale: 'en-US', timezoneId: 'America/New_York', weather: { shortForecast: 'Slight Chance Rain Showers then Mostly Cloudy' } })
+    await t.page.waitForTimeout(1200)
+    w = await read(t.page)
+    let said = await told(t.page)
+    say(!!w && w.weather === '58° Fahrenheit Rain Showers' && said.lines === 1, 'a slight chance of rain showers is said as rain showers, on one line', `${w?.weather} ${JSON.stringify(said)}`)
+    await t.ctx.close()
+    t = await fresh('desktop', 'still&empty', { locale: 'en-US', timezoneId: 'America/New_York', weather: { shortForecast: 'Showers And Thunderstorms Likely' } })
+    await t.page.waitForTimeout(1200)
+    w = await read(t.page)
+    said = await told(t.page)
+    say(!!w && w.weather === '58° Fahrenheit Showers And Thunderstorms' && said.lines === 2 && !said.cut && said.inside && said.time && w.box[2] === 164 && w.box[3] === 164, 'words too long for one line take a second, whole, under the time, and the widget stays its size', `${w?.weather} ${JSON.stringify(said)} ${JSON.stringify(w?.box)}`)
+    await t.ctx.close()
     // the service is down: the time alone, and no weather that was not told
     t = await fresh('desktop', 'still&empty', { weather: 'down' })
     await t.page.waitForTimeout(1500)
@@ -297,6 +311,14 @@ const touchOf = (t) => ({
     await t.page.waitForTimeout(900)
     say((await A.layout(t.page)) === 'desktop' && (await read(t.page)) === null, 'a desk too small to spare the room does not show it')
     await t.ctx.close()
+    // it is there only where the conversation, opening in the middle, leaves it clear: from 1240 across
+    for (const [wide, shown] of [[1239, false], [1240, true]]) {
+      t = await fresh({ w: wide, h: 720 }, 'still')
+      await t.page.waitForTimeout(1200)
+      const at = await t.page.evaluate(() => { const box = (el) => { if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom] }; return { widget: box(document.querySelector('.sf')), chat: box(document.querySelector('.wf[data-app="messages"]')) } })
+      say(!!at.widget === shown && !!at.chat && (!at.widget || at.chat[0] >= at.widget[2]), shown ? `at ${wide} across it is shown, and the conversation opens clear of it` : `at ${wide} across it is not`, JSON.stringify(at))
+      await t.ctx.close()
+    }
   })
 
   // ---- F. The desktop's icons, after the designs
@@ -307,16 +329,38 @@ const touchOf = (t) => ({
       const fills = (el) => [...el.querySelectorAll('stop')].map((s) => s.getAttribute('stop-color').toLowerCase())
       const of = (id) => document.querySelector(`.dock [data-dock-item="${id}"] svg, .dock [data-app="${id}"] svg`) ?? [...document.querySelectorAll('.dock svg.app-icon')][['finder', 'messages', 'notes', 'terminal', 'photos'].indexOf(id)]
       const out = {}
-      for (const id of ['finder', 'messages', 'notes', 'terminal']) { const svg = of(id); out[id] = svg ? { stops: fills(svg).slice(0, 2), ellipse: !!svg.querySelector('ellipse'), dots: svg.querySelectorAll('circle').length, rect: svg.querySelectorAll('rect').length } : null }
+      // (rim: an outline stroked round the tile itself, over what is drawn on it: the lit edge the tiles used to wear)
+      for (const id of ['finder', 'messages', 'notes', 'terminal', 'photos']) { const svg = of(id); out[id] = svg ? { stops: fills(svg).slice(0, 2), ellipse: !!svg.querySelector('ellipse'), dots: svg.querySelectorAll('circle').length, rect: svg.querySelectorAll('rect').length, rim: svg.querySelectorAll(':scope > path[stroke]').length } : null }
+      const box = (el) => { const b = el.getBBox(); return [b.x, b.y, b.width, b.height] }
+      const chat = of('messages')
+      // the bubble and its tail: drawn as two shapes under one shadow
+      const [bubble, tail] = chat ? [...chat.querySelectorAll('g[filter] > path')].map(box) : []
+      out.bubble = bubble && tail ? { wide: Math.round(bubble[2] * 10) / 10, tall: Math.round(bubble[3] * 10) / 10, foot: Math.round((bubble[1] + bubble[3]) * 10) / 10, tailFoot: Math.round((tail[1] + tail[3]) * 10) / 10 } : null
       const folder = document.querySelector('.desk .folder-icon')
-      out.folder = folder ? { back: folder.querySelector('path')?.getAttribute('fill'), sheet: [...folder.querySelectorAll('rect')].some((r) => r.getAttribute('fill') === '#fff' && !r.getAttribute('opacity')) } : null
+      const front = folder && [...folder.querySelectorAll(':scope > rect')].find((r) => /^url/.test(r.getAttribute('fill')) && !r.getAttribute('clip-path'))
+      const all = folder && [...folder.querySelectorAll(':scope > path, :scope > rect')].map(box)
+      out.folder = folder ? {
+        back: fills(folder)[0], sheet: [...folder.querySelectorAll('rect')].some((r) => r.getAttribute('fill') === '#fff' && !r.getAttribute('opacity')),
+        // how wide it is for its height, and how round the corners of its front are for its width
+        shape: Math.round(((Math.max(...all.map((b) => b[0] + b[2])) - Math.min(...all.map((b) => b[0]))) / (Math.max(...all.map((b) => b[1] + b[3])) - Math.min(...all.map((b) => b[1])))) * 100) / 100,
+        corner: front ? Math.round((+front.getAttribute('rx') / +front.getAttribute('width')) * 1000) / 1000 : null,
+        // the light along the front's top edge is cut to the front's own shape
+        litClipped: [...folder.querySelectorAll(':scope > rect')].filter((r) => r.getAttribute('clip-path')).length,
+      } : null
+      const dot = document.querySelector('.dock__dot')
+      out.dot = getComputedStyle(dot).backgroundColor
       return out
     })
-    say(icons.messages?.ellipse && icons.messages.stops[0] === '#8eee8b', 'Messages: a pale bubble on a soft green', JSON.stringify(icons.messages))
-    say(icons.notes?.dots === 21 && icons.notes.stops[0] === '#fdfdfd', 'Notes: a white pad with its perforation under a yellow binding', JSON.stringify(icons.notes))
-    say(icons.finder?.stops[0] === '#1fbcfc', 'the Finder: its face on a brighter blue', JSON.stringify(icons.finder))
-    say(icons.terminal?.stops[0] === '#262628' && icons.terminal.rect >= 1, 'a terminal: its prompt and cursor on black', JSON.stringify(icons.terminal))
-    say(icons.folder?.back === '#5faeea' && icons.folder.sheet, 'the folder on the desk: a Mac\'s light blue, with a sheet showing over its front', JSON.stringify(icons.folder))
+    const tiles = ['finder', 'messages', 'notes', 'terminal', 'photos']
+    say(tiles.every((id) => icons[id]?.rim === 0), 'no tile wears a lit rim round its edge', tiles.map((id) => `${id} ${icons[id]?.rim}`).join(', '))
+    say(!icons.messages?.ellipse && icons.messages?.stops.join() === '#84ed7d,#63ce54', 'Messages: a pale bubble on the design\'s green', JSON.stringify(icons.messages))
+    say(!!icons.bubble && Math.abs(icons.bubble.wide - 72.6) < 1 && Math.abs(icons.bubble.tall - 60.4) < 1 && Math.abs(icons.bubble.tailFoot - icons.bubble.foot) < 0.6, 'its bubble about 72 by 60 of the tile\'s hundred, its tail a nub that ends level with the bubble\'s foot', JSON.stringify(icons.bubble))
+    say(icons.notes?.dots === 15 && icons.notes.stops[0] === '#fefefe', 'Notes: a white pad with fifteen holes under a yellow binding', JSON.stringify(icons.notes))
+    say(icons.finder?.stops.join() === '#0ec4ff,#39a5ff', 'the Finder: its face on the design\'s blue', JSON.stringify(icons.finder))
+    say(icons.terminal?.stops[0] === '#202020' && icons.terminal.rect >= 1, 'a terminal: its prompt and cursor on black', JSON.stringify(icons.terminal))
+    say(icons.folder?.back === '#75bce7' && icons.folder.sheet, 'the folder on the desk: a Mac\'s light blue, with a sheet showing over its front', JSON.stringify(icons.folder))
+    say(!!icons.folder && icons.folder.shape >= 1.22 && icons.folder.shape <= 1.27 && icons.folder.corner >= 0.05 && icons.folder.corner <= 0.07 && icons.folder.litClipped === 1, 'it is a quarter wider than it is tall, its corners small, and the light on its front\'s top edge is cut to the front', JSON.stringify(icons.folder))
+    say(/^rgba?\(255, 255, 255/.test(icons.dot || ''), 'the dot under an open app is pale', icons.dot)
     say(A.realErrors(t.errors).length === 0, 'no errors', A.realErrors(t.errors).slice(0, 2).join(' | '))
     await t.ctx.close()
   })

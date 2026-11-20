@@ -1,10 +1,11 @@
-import { useEffect, useId, useMemo, useRef } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef } from 'react'
 import { ArrowUpRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { ANSWER_PENDING, ANSWER_PENDING_LINE, ANSWER_PLACEHOLDER, answerOpening, answerWords, FAQS, waysOn } from '../data/faqs'
 import { DRAFT } from '../data/site'
 import { Row } from '../kit/parts/Row'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
+import { isShowing, wm } from '../os/wm'
 import { Answer } from './answer'
 import { notes, setNotesQuery, showNote, sought } from './state'
 import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
@@ -37,6 +38,24 @@ export function NotesApp() {
   useEffect(() => {
     if (q && shown.length && !shown.some(({ i }) => i === open.current)) showNote(shown[0]!.i)
   }, [q, shown])
+
+  // The list follows the note. Whatever changed it (Next and Previous, which
+  // go round from the last question to the first; a link in an answer; the
+  // menu bar; the address), its row is brought into sight: by the list's own
+  // scrolling and nothing else's, and the keyboard is left where it was. A
+  // window that was not showing does the same as it is shown
+  const showing = useStore(wm, (s) => isShowing(s.wins.notes))
+  useLayoutEffect(() => {
+    const box = list.current
+    const row = box?.querySelector<HTMLElement>('[aria-current]')
+    if (!box || !row || !box.offsetHeight) return
+    const frame = box.getBoundingClientRect()
+    const at = row.getBoundingClientRect()
+    // (As it is drawn: a window still opening out of its icon is drawn small)
+    const k = frame.height / box.offsetHeight || 1
+    if (at.top < frame.top) box.scrollTop -= (frame.top - at.top) / k + 6
+    else if (at.bottom > frame.bottom) box.scrollTop += (at.bottom - frame.bottom) / k + 6
+  }, [note, shown, showing])
 
   /** From the search field into what it found: the first question is shown, and its row takes the keyboard. */
   const intoResults = () => {
