@@ -101,4 +101,6 @@ export interface PosterColours {
 }
 
 /** The same for each picture that heads a card in place of a logo (public/posters). */
-export const POSTER_COLOURS: Record<string, PosterColours> = {}
+export const POSTER_COLOURS: Record<string, PosterColours> = {
+  'modretro.webp': { top: '#777a79', page: '#3e652b' },
+}

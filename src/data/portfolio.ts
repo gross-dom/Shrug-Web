@@ -61,7 +61,7 @@ const NOTES: Record<string, string> = {}
  * A picture taller than it is wide, 1200 pixels across or more, with its subject in the upper two thirds
  * (the name and the card's buttons are set over the lower third). After adding one, run
  * `python3 tools/logo-colours.py`, which reads the colours the card takes from it. */
-const POSTERS: Record<string, string> = {}
+const POSTERS: Record<string, string> = { ModRetro: 'modretro.webp' }
 
 const c = (name: string, vertical: VerticalName, url: string | null, logo: string | null, blurb: string | null = null, key = name): Company => ({
   key,
