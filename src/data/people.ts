@@ -2,6 +2,7 @@
 // from the design canvas; each quote is that person's testimonial as published
 // on shrug.vc.
 
+import { SUPPLIED_PHOTOS } from './pictures'
 import { typeset } from './typeset'
 
 export type Relation = 'F' | 'L' | 'C'
@@ -13,6 +14,8 @@ export interface Person {
   relations: Relation[]
   /** The testimonial. `null` shows placeholder lines instead. */
   quote: string | null
+  /** Their photograph, where Shrug has supplied one: a file in public/people (src/data/pictures.ts). Without one they are shown by their initials. */
+  photo: string | null
 }
 
 export const RELATION_LABEL: Record<Relation, string> = {
@@ -26,6 +29,7 @@ const p = (name: string, role: string, tags: string, quote: string | null = null
   role,
   relations: tags.split('') as Relation[],
   quote: quote && typeset(quote),
+  photo: SUPPLIED_PHOTOS[name] ?? null,
 })
 
 export const PEOPLE: Person[] = [

@@ -6,6 +6,7 @@
 // `logo: null` means none could be confirmed, and the window shows the
 // company's initial until a file is added.
 
+import { SUPPLIED_LOGOS } from './pictures'
 import { typeset } from './typeset'
 
 export interface Company {
@@ -18,8 +19,10 @@ export interface Company {
   url: string | null
   /** One line on what it does, as shrug.vc has it. */
   blurb: string | null
-  /** A file in public/logos. */
+  /** A file in public/logos: the one Shrug supplied for it (src/data/pictures.ts), or else its site's own icon. */
   logo: string | null
+  /** The same picture larger, for the head of its card: a file in public/logos/large. Only a supplied logo has one. */
+  logoLarge: string | null
   /** A picture of the company's own, for the head of its contact card on the phone, as a contact's poster is:
    * a file in public/posters, from POSTERS below. null for most, whose card is headed by the logo. */
   poster: string | null
@@ -66,7 +69,8 @@ const c = (name: string, vertical: VerticalName, url: string | null, logo: strin
   vertical,
   url,
   blurb: blurb && typeset(blurb),
-  logo,
+  logo: SUPPLIED_LOGOS[key] ?? SUPPLIED_LOGOS[name] ?? logo,
+  logoLarge: SUPPLIED_LOGOS[key] ?? SUPPLIED_LOGOS[name] ?? null,
   poster: POSTERS[key] ?? null,
   note: NOTES[key] ? typeset(NOTES[key]) : null,
 })

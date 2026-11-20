@@ -172,7 +172,7 @@ function Face({ company, size, eager }: { company: Listed; size?: number; eager?
   return (
     <span className="contact-face" data-empty={logo ? undefined : ''} data-full={logo && !ground ? '' : undefined} style={{ ...(size ? { width: size, height: size, fontSize: Math.round(size * 0.45) } : null), ...(logo && ground ? { background: ground } : null) }} aria-hidden>
       {/* Small and already fetched (portfolio-ui.tsx warms them): drawn with the row, not a frame after it */}
-      {logo ? <img src={logo.src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="sync" draggable={false} onError={logo.onError} /> : company.name.trim()[0]?.toUpperCase()}
+      {logo ? <img src={eager && company.logoLarge ? `${import.meta.env.BASE_URL}logos/large/${company.logoLarge}` : logo.src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="sync" draggable={false} onError={logo.onError} /> : company.name.trim()[0]?.toUpperCase()}
     </span>
   )
 }

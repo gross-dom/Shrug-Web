@@ -39,7 +39,9 @@ export const relationsOf = (index: number) => PEOPLE[index]!.relations.map((r) =
 /** A contact with no photo: the gray monogram Messages gives them. It is a
  * picture of the name beside it, so its initials are never read out before the name. */
 export function PersonAvatar({ index, size = 28 }: { index: number; size?: number }) {
-  return <Avatar name={PEOPLE[index]!.name.replace(' & ', ' ')} tone="ios" size={size} aria-hidden />
+  const person = PEOPLE[index]!
+  // Their photograph, where Shrug has supplied one; their initials otherwise
+  return <Avatar name={person.name.replace(' & ', ' ')} tone="ios" size={size} src={person.photo ? `${import.meta.env.BASE_URL}people/${person.photo}` : undefined} aria-hidden />
 }
 
 /** The group's own photo: Shrug's mark. */
