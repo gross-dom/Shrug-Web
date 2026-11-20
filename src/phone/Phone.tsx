@@ -107,7 +107,8 @@ export function Phone() {
     /** A field has taken the keyboard and it has not come yet: how tall it is expected to be. */
     let coming = 0
     let overdue: ReturnType<typeof setTimeout> | undefined
-    const typedIn = (node: unknown): node is HTMLElement => node instanceof HTMLElement && node.matches('input:not([type="file"], [type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"]), textarea, [contenteditable]:not([contenteditable="false"])')
+    // (A field that asks the phone for no keyboard has one of its own: search's, on the Home Screen)
+    const typedIn = (node: unknown): node is HTMLElement => node instanceof HTMLElement && node.matches('input:not([type="file"], [type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [inputmode="none"]), textarea, [contenteditable]:not([contenteditable="false"])')
 
     const fit = () => {
       // A pinch-zoom is not a keyboard

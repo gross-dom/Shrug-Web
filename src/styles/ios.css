@@ -1121,3 +1121,12 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
     transition: none;
   }
 }
+
+/* Glass blurs whatever is behind it, and on a screen that is moving that is a new blur at every frame: it is
+   what made a slide stutter on a phone. While an app's screens slide their glass is left unblurred (it keeps
+   its tint), and is glass again as they land */
+.ios-nav[data-sliding] .ios-page,
+.ios-nav[data-sliding] .ios-page * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}

@@ -1396,6 +1396,26 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   animation: sb-live-in 0.22s ease both;
 }
 
+/* Opening out of its icon the app is its launch screen, flat and in its own colour, until it has all but
+   filled the phone; then its screens come up over it in a blink (Springboard.tsx) */
+.sb-live {
+  transition: opacity 0.16s ease;
+}
+
+.sb-slot[data-veiled] .sb-live {
+  opacity: 0;
+  transition: none;
+}
+
+/* A window in flight (opening, going back into its icon, carried under a finger) blurs nothing: glass inside
+   it would have to blur afresh at every frame, which is what made the move stutter on a phone. It keeps its
+   tint, and is glass again when the window lands */
+.sb-slot[data-flying] .sb-zoom__app *,
+.ph[data-dragging] .sb-slot[data-front] .sb-zoom__app * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 @keyframes sb-live-in {
   from {
     opacity: 0;
@@ -1444,18 +1464,26 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   inset: 0;
 }
 
+/* The cards are fanned as an iPhone fans them. The one in the middle is whole; the app used after it lies
+   over its trailing edge, a little more than half a card along; the ones used before it are tucked under
+   its leading edge, a narrow strip of each showing. `--d` is how far a card is from the middle in the
+   switcher's own even steps (Springboard.tsx pans by those): to the right a step is most of a card, to
+   the left it is that strip */
 .sb-apps[data-switcher] .sb-slot,
 .sb-slot[data-lingering]:not([data-front]) {
+  --d: calc(var(--pan, 0px) - var(--i) * var(--stride));
   z-index: calc(10 - var(--i));
-  transform: translateX(calc(var(--pan, 0px) - var(--i) * var(--stride))) translateY(var(--lift, 0px));
+  transform: translateX(calc(max(var(--d), 0px) * 0.71 + min(var(--d), 0px) * 0.24)) translateY(var(--lift, 0px));
 }
 
 .sb-apps[data-switcher] .sb-card,
 .sb-slot[data-lingering]:not([data-front]) .sb-card {
   overflow: hidden;
-  border-radius: 46px;
-  box-shadow: 0 30px 70px rgb(0 0 0 / 0.4);
-  transform: scale(0.72);
+  border-radius: 54px;
+  box-shadow:
+    0 30px 70px rgb(0 0 0 / 0.42),
+    -14px 0 34px rgb(0 0 0 / 0.22);
+  transform: scale(0.69);
 }
 
 /* The cards that weren't picked fade where they are */
@@ -1479,7 +1507,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 @keyframes sb-card-in {
   from {
     opacity: 0;
-    transform: translateX(calc(var(--pan, 0px) - var(--i) * var(--stride) - 34cqw)) translateY(var(--lift, 0px));
+    transform: translateX(calc(max(var(--d), 0px) * 0.71 + min(var(--d), 0px) * 0.24 - 34cqw)) translateY(var(--lift, 0px));
   }
 }
 
@@ -1494,13 +1522,13 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 
 .sb-slot__label {
   position: absolute;
-  top: calc(14cqh - 40px);
-  left: 15.5cqw;
+  top: calc(15.5cqh - 44px);
+  left: 18cqw;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   color: #fff;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.02em;
   text-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
@@ -1512,9 +1540,25 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
    (`data-mid`: Springboard.tsx). A neighbour's sit where a corner of its card peeks in at the edge of the
    screen: its ✕ there, in the screen's top corner, read as the middle card's own, and closed an app that
    was not in view */
-.sb-apps[data-switcher] .sb-slot[data-mid] .sb-slot__label {
+/* Every card has its app's icon over its corner, as an iPhone's has; the one in the middle has its name beside it */
+.sb-apps[data-switcher] .sb-slot .sb-slot__label {
   opacity: 1;
   transition: opacity 0.3s ease 0.15s;
+}
+
+.sb-slot__name {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.sb-apps[data-switcher] .sb-slot[data-mid] .sb-slot__name {
+  opacity: 1;
+}
+
+/* On a phone a card is closed as it is on an iPhone, by flicking it up: there is no button over it. (In the
+   frame on a computer, where a pointer cannot flick, the button stays) */
+.ph--bleed .sb-slot__close {
+  display: none;
 }
 
 .sb-slot__icon {
@@ -1927,4 +1971,14 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
     animation: sb-hint-lit 1s ease;
     transition: none;
   }
+}
+
+/* Behind the cards the screen is dimmed, as an iPhone dims what is behind its switcher */
+.sb-apps__away {
+  background: rgb(0 0 0 / 0);
+  transition: background-color 0.3s ease;
+}
+
+.sb-apps[data-switcher] .sb-apps__away {
+  background: rgb(4 6 20 / 0.46);
 }

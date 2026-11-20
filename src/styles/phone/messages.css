@@ -1097,3 +1097,9 @@
 .msgn:has(.msgn-picked) .msgn-refused {
   bottom: calc(var(--foot-gap) + 44px + 22px + 76px);
 }
+
+/* The list's foot holds the compose button alone, in its trailing corner */
+.msg-foot-gap {
+  flex: 1;
+  pointer-events: none;
+}

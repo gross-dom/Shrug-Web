@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUpLeft, AtSign, LayoutGrid, Lightbulb, MessageCircle, Search, X } from 'lucide-react'
+import { ArrowBigUp, ArrowRight, ArrowUpLeft, AtSign, Delete, LayoutGrid, Lightbulb, MessageCircle, Mic, Search, Smile, X } from 'lucide-react'
 import { chat } from '../apps/chat'
 import { ConversationAvatar, GROUP_NAME, PersonAvatar } from '../apps/chat-ui'
 import { ALL, companyAnswers, CompanyLogo, hostOf } from '../apps/portfolio-ui'
@@ -410,6 +410,14 @@ const INSTEAD: Hit[] = [onePager('instead:one-pager', 0, 'One-pager'), askInMess
 /** One thing found. The keyboard stays in the field (the arrow keys walk these from there), so a row
  * is an option of the field's list and not a stop of its own for Tab. */
 function Row({ hit, top, onLeave }: { hit: Hit; top?: boolean; onLeave: () => void }) {
+  // An app found first is shown as its icon, with its name under it, as Spotlight shows one
+  if (top && hit.kind === 'app' && !hit.href)
+    return (
+      <button type="button" className="spot-app spot-app--top" role="option" aria-selected={false} tabIndex={-1} data-top data-spot-item onClick={hit.open}>
+        <span className="spot-app__icon">{hit.lead(64)}</span>
+        <span className="spot-app__name spot-row__title">{hit.title}</span>
+      </button>
+    )
   const inside = (
     <>
       <span className="spot-row__lead">{hit.lead(top ? 52 : 40)}</span>
@@ -436,9 +444,105 @@ function Row({ hit, top, onLeave }: { hit: Hit; top?: boolean; onLeave: () => vo
   )
 }
 
-function Group({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
+// ---- The keyboard ----
+
+// On a phone search has a keyboard of its own, drawn here at the foot of the screen, as Spotlight's sits
+// there: the field is given no keyboard by the phone (`inputmode="none"`). The phone's own would come up
+// a third of a second after the field was pressed and take a different height from the page each time,
+// with the browser sliding the page about under it; on a pull down it would not come at all until the
+// field was pressed. This one is there with the field, at once and always in the same place.
+
+const LETTERS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
+const FIGURES = ['1234567890', '-/:;()£&@"', '.,?!’']
+
+function SpotKeys({ typed, ready, onType, onDelete, onGo }: { typed: boolean; /** There is something for Go to open. */ ready: boolean; onType: (text: string) => void; onDelete: () => void; onGo: () => void }) {
+  const [figures, setFigures] = useState(false)
+  const [shift, setShift] = useState(false)
+  const repeat = useRef<ReturnType<typeof setTimeout>>()
+  const stop = () => clearTimeout(repeat.current)
+  useEffect(() => stop, [])
+  // A key does its work as the finger comes down, as a keyboard's does, and never takes the caret from the field
+  const key = (act: () => void) => ({
+    onPointerDown: (e: React.PointerEvent) => {
+      e.preventDefault()
+      act()
+    },
+    // (For a key pressed without a pointer: a screen reader's double tap, a switch)
+    onClick: (e: React.MouseEvent) => {
+      if (e.detail === 0) act()
+    },
+  })
+  const rows = figures ? FIGURES : LETTERS
+  const letter = (ch: string) => {
+    const out = shift && !figures ? ch.toUpperCase() : ch
+    return (
+      <button key={ch} type="button" className="kb-key" data-key={ch} tabIndex={-1} aria-label={out} {...key(() => (onType(out), setShift(false)))}>
+        {out}
+      </button>
+    )
+  }
+  // Held, the delete key goes on deleting
+  const deleting = () => {
+    onDelete()
+    stop()
+    const again = () => {
+      onDelete()
+      repeat.current = setTimeout(again, 70)
+    }
+    repeat.current = setTimeout(again, 420)
+  }
   return (
-    <div className="spot-group" role="group" aria-label={title}>
+    <div className="kb" role="group" aria-label="Keyboard">
+      <div className="kb-row">{[...rows[0]!].map(letter)}</div>
+      <div className="kb-row" data-inset={figures ? undefined : ''}>
+        {[...rows[1]!].map(letter)}
+      </div>
+      <div className="kb-row">
+        <button type="button" className="kb-key kb-key--wide" data-key="shift" data-on={shift || undefined} tabIndex={-1} aria-label={figures ? 'Letters' : 'Shift'} aria-pressed={figures ? undefined : shift} {...key(() => (figures ? setFigures(false) : setShift((on) => !on)))}>
+          {figures ? <span className="kb-key__word">ABC</span> : <ArrowBigUp size={23} strokeWidth={1.9} fill={shift ? 'currentColor' : 'none'} aria-hidden />}
+        </button>
+        <span className="kb-row__mid" data-figures={figures || undefined}>
+          {[...rows[2]!].map(letter)}
+        </span>
+        <button
+          type="button"
+          className="kb-key kb-key--wide"
+          data-key="delete"
+          tabIndex={-1}
+          aria-label="Delete"
+          onPointerDown={(e) => {
+            e.preventDefault()
+            deleting()
+          }}
+          onPointerUp={stop}
+          onPointerLeave={stop}
+          onPointerCancel={stop}
+          onClick={(e) => e.detail === 0 && onDelete()}
+        >
+          <Delete size={23} strokeWidth={1.9} aria-hidden />
+        </button>
+      </div>
+      <div className="kb-row">
+        <button type="button" className="kb-key kb-key--mode" data-key="123" tabIndex={-1} aria-label={figures ? 'Letters' : 'Numbers'} {...key(() => setFigures((on) => !on))}>
+          <span className="kb-key__word">{figures ? 'ABC' : '123'}</span>
+        </button>
+        <button type="button" className="kb-key kb-key--space" data-key=" " tabIndex={-1} aria-label="Space" {...key(() => onType(' '))} />
+        <button type="button" className="kb-key kb-key--go" data-key="go" data-ready={(typed && ready) || undefined} tabIndex={-1} aria-label={typed && ready ? 'Open' : 'Search'} {...key(onGo)}>
+          {typed && ready ? <ArrowRight size={22} strokeWidth={2.4} aria-hidden /> : <Search size={19} strokeWidth={2.4} aria-hidden />}
+        </button>
+      </div>
+      {/* Under the keys, where an iPhone keeps them: pictures of the two it has no use for here */}
+      <div className="kb-foot" aria-hidden>
+        <Smile size={27} strokeWidth={1.9} />
+        <Mic size={25} strokeWidth={1.9} />
+      </div>
+    </div>
+  )
+}
+
+function Group({ title, icon, plain, children }: { title: string; icon?: ReactNode; /** Its rows lie on the ground, under a rule, and not on a pane. */ plain?: boolean; children: ReactNode }) {
+  return (
+    <div className="spot-group" data-plain={plain || undefined} role="group" aria-label={title}>
       {/* The group is named for a screen reader by its label; this is that name for the eye */}
       <div className="spot-group__head" aria-hidden>
         {icon && <span className="spot-group__icon">{icon}</span>}
@@ -462,6 +566,8 @@ export function Spotlight() {
   const input = useRef<HTMLInputElement>(null)
   /** Where a finger came down on the results (`from`), and whether they were at their top then: a pull down from there closes search. */
   const pull = useRef<{ from: number; top: boolean } | null>(null)
+  /** A finger's phone: the keyboard is search's own, drawn at its foot (SpotKeys, above). */
+  const [ownKeys] = useState(() => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches)
   if (on && !shown) setShown(true)
 
   useEffect(() => {
@@ -491,6 +597,18 @@ export function Spotlight() {
   /** How many things were found, as the list shows them. */
   const count = (found.top ? 1 : 0) + found.groups.reduce((sum, group) => sum + group.hits.length, 0)
   const close = () => showSpotlight(false)
+  /** What Return, or the keyboard's Go, does: opens what the arrow keys are on, or the best of what was found. */
+  const go = () => {
+    const picked = at >= 0 ? items()[at] : null
+    if (!picked && !(typed && first)) return false
+    if (picked) picked.click()
+    else {
+      first!.open()
+      // A link has gone to a tab of its own: search has done its work here
+      if (first!.href) close()
+    }
+    return true
+  }
 
   const items = () => [...(root.current?.querySelectorAll<HTMLElement>('[data-spot-item]') ?? [])]
 
@@ -516,15 +634,7 @@ export function Spotlight() {
       e.preventDefault()
       setAt((now) => Math.max(-1, Math.min(count - 1, now + (e.key === 'ArrowDown' ? 1 : -1))))
     } else if (e.key === 'Enter') {
-      const picked = at >= 0 ? items()[at] : null
-      if (!picked && !(typed && first)) return
-      e.preventDefault()
-      if (picked) picked.click()
-      else {
-        first!.open()
-        // A link has gone to a tab of its own: search has done its work here
-        if (first!.href) close()
-      }
+      if (go()) e.preventDefault()
     }
   }
 
@@ -536,7 +646,7 @@ export function Spotlight() {
 
   if (!shown) return null
   return (
-    <div ref={root} className="spot" data-leaving={!on || undefined} role="dialog" aria-modal="true" aria-label="Search" onKeyDown={onKey} {...(on ? null : ({ inert: '' } as object))}>
+    <div ref={root} className="spot" data-leaving={!on || undefined} data-keys={ownKeys || undefined} role="dialog" aria-modal="true" aria-label="Search" onKeyDown={onKey} {...(on ? null : ({ inert: '' } as object))}>
       {/* The ground behind: a tap on it closes search, as it does on an iPhone, and so does a pull down on what is
           found. The button that says so by name is after the field, for a keyboard and a screen reader */}
       <div className="spot-away" aria-hidden onClick={close} />
@@ -579,7 +689,7 @@ export function Spotlight() {
                   ))}
                 </div>
               </Group>
-              <Group title="Try Searching For">
+              <Group title="Try Searching For" plain>
                 {TRY.map((text) => (
                   <button
                     key={text}
@@ -617,7 +727,7 @@ export function Spotlight() {
                 </Group>
               )}
               {found.groups.map((group) => (
-                <Group key={group.id} title={group.title} icon={group.icon}>
+                <Group key={group.id} title={group.title} icon={group.icon} plain>
                   {group.hits.map((hit) => (
                     <Row key={hit.key} hit={hit} onLeave={close} />
                   ))}
@@ -626,7 +736,7 @@ export function Spotlight() {
             </>
           ) : (
             // Nothing found is not the end of the road: the short version of Shrug, and the conversation
-            <Group title="Suggestions" icon={<Lightbulb size={16} strokeWidth={2.4} />}>
+            <Group title="Suggestions" icon={<Lightbulb size={16} strokeWidth={2.4} />} plain>
               {INSTEAD.map((hit) => (
                 <Row key={hit.key} hit={hit} onLeave={close} />
               ))}
@@ -649,7 +759,7 @@ export function Spotlight() {
             aria-expanded
             aria-controls="spot-list"
             aria-autocomplete="list"
-            inputMode="search"
+            inputMode={ownKeys ? 'none' : 'search'}
             enterKeyHint="search"
             autoComplete="off"
             autoCorrect="off"
@@ -692,6 +802,21 @@ export function Spotlight() {
           Close Search
         </button>
       </div>
+      {ownKeys && (
+        <SpotKeys
+          typed={typed}
+          ready={!!first}
+          onType={(text) => {
+            setQuery((was) => (was + text).slice(0, 80))
+            setAt(-1)
+          }}
+          onDelete={() => {
+            setQuery((was) => [...was].slice(0, -1).join(''))
+            setAt(-1)
+          }}
+          onGo={go}
+        />
+      )}
     </div>
   )
 }

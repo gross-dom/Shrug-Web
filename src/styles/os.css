@@ -591,7 +591,11 @@
   font-family: var(--font-ui);
   letter-spacing: -0.01em;
   pointer-events: auto;
-  transition: opacity 0.5s ease;
+  cursor: default;
+  text-decoration: none;
+  transition:
+    opacity 0.5s ease,
+    transform 0.15s ease;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -1696,4 +1700,14 @@ html[data-wm-busy] .dock__item .dock__label {
   .notify__card[data-leaving] {
     animation: none;
   }
+}
+
+/* The widget is pressed like one: it gives a little under the pointer, and wears the desk's white ring for a keyboard */
+.sf:active {
+  transform: scale(0.97);
+}
+
+.sf:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
 }

@@ -309,14 +309,8 @@ const touchOf = (t) => ({
     await p.locator(`${TOP} .ios-bar button[aria-label^="Back"]`).tap(); await p.waitForTimeout(900)
     const row = await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-rows > :first-child`)?.textContent ?? '', TOP)
     say(/^Shrug/.test(row) && /Not Delivered/.test(row), 'the list of conversations has it at its head, and says it did not go', row.slice(0, 80))
-    // looked for, it is found: by its name, by what was written in it, by the name of a file sent
-    const finds = []
-    for (const q of ['shrug', 'seed deck', 'deck.pdf', 'zzzz']) {
-      await p.locator(`${TOP} .ios-search__input`).fill(q); await p.waitForTimeout(350)
-      finds.push(await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-row[data-row="shrug"] .ss-row__preview`)?.textContent ?? null, TOP))
-    }
-    say(/Our seed deck$/.test(finds[0] || '') && /Our seed deck$/.test(finds[1] || '') && /Seed Deck\.pdf$/.test(finds[2] || '') && finds[3] === null, 'a search of the list finds it by its name, by its words and by its file\'s name, showing which', JSON.stringify(finds))
-    await p.locator(`${TOP} .ios-foot button[aria-label="Cancel"]`).tap(); await p.waitForTimeout(400)
+    // (the list has no search of its own for now: Shrug took it off)
+    say((await p.locator(`${TOP} .ios-search__input`).count()) === 0, 'the list of conversations has no search field')
     // a reload brings it back with what was being written; a file that was only picked is not kept
     await p.locator(`${TOP} .msg-row[data-row="shrug"]`).tap(); await p.waitForTimeout(900)
     await p.locator(`${TOP} .msg-field__input`).fill('And one more thing')

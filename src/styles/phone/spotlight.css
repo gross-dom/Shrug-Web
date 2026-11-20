@@ -564,3 +564,256 @@
     opacity: 0;
   }
 }
+
+/* ================= As an iPhone's own search looks now (Shrug's screenshots of it) ================= */
+
+/* What is behind is all but dark, its colours left as a glow: white type and gray glass read on any of it */
+.spot-away {
+  background: rgb(10 11 16 / 0.62);
+  -webkit-backdrop-filter: blur(36px) saturate(1.7);
+  backdrop-filter: blur(36px) saturate(1.7);
+}
+
+/* The headings are a quiet gray, a size up, as Spotlight sets them */
+.spot-group__head {
+  color: rgb(235 235 245 / 0.62);
+  font-size: 16px;
+}
+
+/* A pane is gray glass on that ground */
+.spot-card {
+  background: rgb(120 120 128 / 0.3);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.14);
+}
+
+/* What was found, after the pane at the head: under a rule, on the ground itself, a hairline between the rows */
+.spot-group[data-plain] .spot-group__head {
+  padding-bottom: 9px;
+  border-bottom: 0.5px solid rgb(255 255 255 / 0.2);
+}
+
+.spot-group[data-plain] .spot-card {
+  overflow: visible;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.spot-group[data-plain] .spot-row {
+  padding-right: 6px;
+  padding-left: 6px;
+  border-radius: 14px;
+}
+
+.spot-group[data-plain] .spot-row + .spot-row::before {
+  right: 0;
+  left: 58px;
+}
+
+/* An app found first: its icon, at the size it has on the Home Screen, with its name under it */
+.spot-app--top {
+  justify-self: start;
+  margin: 8px 10px;
+  padding: 8px 8px 7px;
+}
+
+.spot-app--top .spot-app__icon {
+  width: clamp(58px, 16cqw, 68px);
+}
+
+.spot-app--top .spot-app__name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+/* The field is the same gray glass, a little darker, with a fine light edge */
+.spot-field {
+  background: rgb(60 60 67 / 0.52);
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.22),
+    0 8px 24px rgb(0 0 0 / 0.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+}
+
+.spot-field:focus-within {
+  box-shadow:
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.3),
+    0 8px 24px rgb(0 0 0 / 0.2);
+}
+
+/* ---- Search's own keyboard (a finger's phone: Spotlight.tsx) ---- */
+
+/* It lies along the foot of the screen, as Spotlight's does, and the field sits on its top edge: the rest
+   of the screen, above, is what was found */
+.spot[data-keys] {
+  --key: 42px;
+  --key-gap: 12px;
+  --kb-foot: calc(var(--home, 34px) + 6px);
+  --kb-h: calc(12px + 4 * var(--key) + 3 * var(--key-gap) + var(--kb-foot));
+  --foot: calc(var(--kb-h) + 10px);
+}
+
+.kb {
+  position: absolute;
+  right: var(--side-r, 0px);
+  bottom: 0;
+  left: var(--side-l, 0px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--key-gap);
+  box-sizing: border-box;
+  height: var(--kb-h);
+  padding: 12px 3px 0;
+  border-radius: 30px 30px 0 0;
+  background: rgb(44 44 48 / 0.6);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.18);
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
+  backdrop-filter: blur(30px) saturate(1.6);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  animation: kb-rise 0.3s var(--glide) both;
+}
+
+@keyframes kb-rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+.spot[data-leaving] .kb {
+  animation: kb-fall 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes kb-fall {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.kb-row {
+  display: flex;
+  gap: 6px;
+  padding: 0 3px;
+}
+
+/* The middle row of letters is one key short, and set in by half a key at each end */
+.kb-row[data-inset] {
+  padding: 0 calc(3px + (100% - 6px) / 20);
+}
+
+.kb-row__mid {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  margin: 0 calc((100% - 6px) / 20 - 14px);
+}
+
+.kb-row__mid[data-figures] {
+  margin: 0 8px;
+}
+
+.kb-key {
+  display: grid;
+  flex: 1 1 0;
+  place-items: center;
+  min-width: 0;
+  height: var(--key);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 0.2);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.3);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  /* A press is the key's, at once: nothing waits to see whether it is a double tap */
+  touch-action: none;
+}
+
+.kb-key:active {
+  background: rgb(255 255 255 / 0.42);
+}
+
+.kb-key--wide {
+  flex: 0 0 calc((100% - 6px) / 10 * 1.26);
+  background: rgb(255 255 255 / 0.11);
+}
+
+.kb-key--wide[data-on] {
+  background: rgb(255 255 255 / 0.86);
+  color: #1c1c1e;
+}
+
+.kb-key--mode,
+.kb-key--go {
+  flex: 0 0 23%;
+  background: rgb(255 255 255 / 0.11);
+}
+
+.kb-key__word {
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.kb-key--go {
+  color: rgb(255 255 255 / 0.4);
+}
+
+/* Something to open: the key that opens it is the blue one */
+.kb-key--go[data-ready] {
+  background: #0b7aff;
+  color: #fff;
+}
+
+.kb-key--go[data-ready]:active {
+  background: #3d95ff;
+}
+
+/* Under the keys, on a screen with the height for them: the two an iPhone keeps there */
+.kb-foot {
+  display: none;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px calc(var(--below, 0px) + 6px);
+  color: #fff;
+  pointer-events: none;
+}
+
+@container (min-height: 800px) {
+  .spot[data-keys] {
+    --kb-foot: calc(72px + var(--below, 0px));
+  }
+
+  .kb-foot {
+    display: flex;
+  }
+}
+
+/* A phone on its side, or a very short screen: smaller keys, closer together */
+@container (max-height: 520px) {
+  .spot[data-keys] {
+    --key: 32px;
+    --key-gap: 7px;
+    --kb-foot: calc(var(--home, 20px) + 2px);
+  }
+
+  .kb {
+    padding-top: 8px;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .kb-key {
+    font-size: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb,
+  .spot[data-leaving] .kb {
+    animation: none;
+  }
+}

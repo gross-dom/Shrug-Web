@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react'
 import { Check, Heart, Image as ImageIcon, Images, Info, Layers, ListFilter, Play, Video } from 'lucide-react'
+import { PUBLIC_CASE_STUDIES } from '../../data/caseStudies'
 import { hasFile, hueOf, MEDIA, type MediaKind } from '../../data/drops'
 import { DRAFT } from '../../data/site'
 import { prefersReducedMotion } from '../../os/dom'
@@ -265,7 +266,7 @@ function Library() {
       {[narrowed, count(real, 'Item')].filter(Boolean).join(' · ')}
     </>
   ) : (
-    narrowed || 'From the people who got a drop'
+    narrowed
   )
   return (
     <Screen
@@ -287,8 +288,6 @@ function Library() {
       {tally(shown) ? (
         <p className="photos-note">
           {tally(shown)}
-          <br />
-          From the people who got a drop.
         </p>
       ) : null}
     </Screen>
@@ -606,6 +605,9 @@ function Viewer({ index }: { index: number }) {
   )
 }
 
+/** The public case study that goes with a drop: the one of the company the drop is named for (“Alt x Shrug” is Alt's). */
+const studyOf = (drop: string) => PUBLIC_CASE_STUDIES.find((study) => drop.toLowerCase().startsWith(study.name.toLowerCase() + ' ')) ?? null
+
 /** What Info brings up: where the picture is from. */
 function InfoSheet() {
   const top = useStore(sys, (s) => topOf(s, 'photos'))
@@ -614,12 +616,15 @@ function InfoSheet() {
   if (top?.startsWith('m:')) last.current = Number(top.slice(2))
   const slot = last.current === null ? undefined : MEDIA[last.current]
   if (!slot) return null
+  const study = studyOf(slot.drop)
   return (
     <Sheet label="Info" title="Info" detent="medium">
       <List>
         <Section footer={slot.src ? undefined : DRAFT ? 'Nothing has been supplied for this slot yet. The picture takes its place when it is.' : 'This one hasn’t come in yet. It shows here when it does.'}>
           <Cell title="Drop" value={slot.drop} />
           <Cell title="Kind" value={slot.kind === 'video' ? 'Video' : 'Photo'} />
+          {/* The case study of the company the drop was made with, where Shrug has one anyone can read */}
+          {study && <Cell title="Case Study" value={study.name} href={study.url} chevron />}
           {/* Who sent it, once that is known (the editor is shown that it is not) */}
           {(slot.from || DRAFT) && <Cell title="From" value={slot.from ?? 'Not supplied yet'} />}
         </Section>

@@ -359,6 +359,17 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
     first.current = false
   }, [])
 
+  // While its screens slide, the stack says so: what is costly to draw on a moving screen (glass, which
+  // has to blur what is behind it afresh at every frame) is drawn plainly until they have landed (ios.css)
+  const depth = stack.length
+  useLayoutEffect(() => {
+    const el = nav.current
+    if (first.current || !el || !motion) return
+    el.setAttribute('data-sliding', '')
+    const t = setTimeout(() => el.removeAttribute('data-sliding'), 560)
+    return () => clearTimeout(t)
+  }, [depth]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!seen.gone.length) return
     const t = setTimeout(() => setSeen((s) => (s.gone.length ? { ...s, gone: [] } : s)), 400)

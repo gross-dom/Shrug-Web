@@ -189,18 +189,11 @@ function ListScreen() {
   // The conversation with Shrug is the phone's own, and not among the rows the two layouts share
   const shrug = inShrug(sent, q.toLowerCase())
 
-  // The field has the keyboard, or has something in it: the foot is given over to the search, as it is
-  // in Contacts and in Notes, with the button that ends it where the compose button was
-  const [focused, setFocused] = useState(false)
-  const leaving = useRef<ReturnType<typeof setTimeout>>()
-  useEffect(() => () => clearTimeout(leaving.current), [])
-  const searching = focused || query !== ''
-  const cancel = () => {
-    clearTimeout(leaving.current)
-    setInboxQuery('')
-    setFocused(false)
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-  }
+  // The list has no search of its own for now (Shrug's choice): whatever a search on the desktop left it
+  // narrowed to is let go, so that every conversation is listed
+  useEffect(() => {
+    if (query) setInboxQuery('')
+  }, [query])
 
   return (
     <Screen
@@ -215,33 +208,18 @@ function ListScreen() {
       }
       foot={
         <>
-          <SearchBar
-            value={query}
-            onChange={setInboxQuery}
-            label="Search conversations"
-            onFocus={() => {
-              clearTimeout(leaving.current)
-              setFocused(true)
+          {/* (The compose button keeps its corner: this takes up the room a search field had) */}
+          <span className="msg-foot-gap" aria-hidden />
+          <GlassButton
+            label="New message"
+            onClick={() => {
+              // A new message, to Shrug: its screen opens with the field ready
+              primeKeyboard()
+              push(NEW_MESSAGE)
             }}
-            // A press on the button that ends the search takes the keyboard from the field first: the button stays until the press has landed
-            onBlur={() => (leaving.current = setTimeout(() => setFocused(false), 180))}
-          />
-          {searching ? (
-            <GlassButton label="Cancel" onClick={cancel}>
-              <X size={21} strokeWidth={2.4} aria-hidden />
-            </GlassButton>
-          ) : (
-            <GlassButton
-              label="New message"
-              onClick={() => {
-                // A new message, to Shrug: its screen opens with the field ready
-                primeKeyboard()
-                push(NEW_MESSAGE)
-              }}
-            >
-              <ComposeGlyph />
-            </GlassButton>
-          )}
+          >
+            <ComposeGlyph />
+          </GlassButton>
         </>
       }
     >

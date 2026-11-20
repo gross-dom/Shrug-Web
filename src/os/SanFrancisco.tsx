@@ -17,6 +17,9 @@ const ZONE = 'America/Los_Angeles'
 /** Where the service is asked what it has for the middle of the city: it answers with the address of its forecast, hour by hour. */
 const POINT = 'https://api.weather.gov/points/37.7749,-122.4194'
 
+/** The same service's page for the city, for a person to read: where a press on the widget goes. */
+const FORECAST = 'https://forecast.weather.gov/MapClick.php?lat=37.7749&lon=-122.4194'
+
 interface Weather {
   /** Degrees Fahrenheit, as the service gives them. */
   temp: number
@@ -140,7 +143,8 @@ export function SanFrancisco() {
   const degrees = weather ? Math.round(FAHRENHEIT ? weather.temp : ((weather.temp - 32) * 5) / 9) : null
   const gray = !!weather && /cloud|overcast|fog|rain|drizzle|shower|haze|mist|snow|thunder/i.test(weather.says) && !/partly|mostly (sunny|clear)/i.test(weather.says)
   return (
-    <aside className="sf" aria-label="San Francisco" data-sky={light ? (gray ? 'gray' : 'day') : 'night'}>
+    // Pressed, it opens the forecast it is reading from: the Weather Service's own page for the city
+    <a className="sf" href={FORECAST} target="_blank" rel="noreferrer" aria-label="San Francisco: the time and the weather there. Opens the forecast in a new tab" draggable={false} data-sky={light ? (gray ? 'gray' : 'day') : 'night'}>
       <p className="sf__head">
         <span className="sf__city">San Francisco</span>
         {weather && <Glyph className="sf__glyph" size={19} strokeWidth={2.1} aria-hidden />}
@@ -174,6 +178,6 @@ export function SanFrancisco() {
       ) : (
         <p className="sf__weather">Pacific Time</p>
       )}
-    </aside>
+    </a>
   )
 }

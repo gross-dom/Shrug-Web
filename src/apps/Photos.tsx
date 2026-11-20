@@ -268,8 +268,7 @@ export function PhotosApp() {
         }}
       >
         <div className="vip__head">
-          <h2 className="vip__title">When the drops landed.</h2>
-          <p className="vip__sub">{none ? 'From the people who got a drop.' : (arrived('video') ? 'Photos and videos from the people who got one.' : 'From the people who got one.')}</p>
+          <h2 className="vip__title">VIP</h2>
         </div>
         <MediaGrid />
       </div>

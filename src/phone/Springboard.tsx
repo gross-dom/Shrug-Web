@@ -30,7 +30,7 @@ import { dropLost, goHome, launch, launchAt, lock, pop, quit, refocus, showSpotl
 import { clockOf, dateOf, useNow } from './time'
 import { useNewCount } from './unread'
 import { AppContext, scaleOf } from './ui'
-import { Zoom } from './Zoom'
+import { Zoom, ZOOM } from './Zoom'
 
 // The phone itself, under and around its apps: the wallpaper, the Lock Screen
 // with the group's replies arriving on it, the Home Screen (widgets, icons,
@@ -563,6 +563,10 @@ function Face({ id, origin }: { id: PhoneApp; origin: string | null }) {
   return <span className="sb-face sb-face--card" />
 }
 
+/** How long an app opening out of its icon stays a flat launch screen before its own screens come up: by
+ * then it has all but filled the phone (the move is quickest at its start). */
+const REVEAL = 250
+
 function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const front = useStore(sys, (s) => s.app === id)
   const locked = useStore(sys, (s) => s.locked)
@@ -582,6 +586,22 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   // takes typing the instant it opens: `eager`, apps/index.tsx.)
   const [loaded, setLoaded] = useState(() => !sys.get().motion || !!PHONE[id].eager)
   const cold = useRef(!loaded)
+  // Opening out of its icon, an app is a flat screen in its own colour until it has all but filled the
+  // phone, and its screens come up over that in a blink: nothing of them is seen stretching into place,
+  // which is how an iPhone's launch screen reads, and a flat sheet is the easiest thing there is to move
+  const [veiled, setVeiled] = useState(false)
+  // In flight (opening, or going back into its icon): what is costly to draw on something moving is left off (phone.css)
+  const [flying, setFlying] = useState(false)
+  useEffect(() => {
+    if (!veiled) return
+    const t = setTimeout(() => setVeiled(false), REVEAL)
+    return () => clearTimeout(t)
+  }, [veiled])
+  useEffect(() => {
+    if (!flying) return
+    const t = setTimeout(() => setFlying(false), ZOOM.open + 80)
+    return () => clearTimeout(t)
+  }, [flying])
   /** What it is going back into, when that is not its icon: the thing in a folder it was opened out of. */
   const [dest, setDest] = useState<string | null>(null)
   // Cards stay drawn for a moment after the switcher closes, while they clear the screen
@@ -679,6 +699,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
     if (!motion || !from) return setZoom((z) => ({ open: true, from: from ?? z.from, still: true }))
     // Opening: placed on what it opens out of first (below lets it go)
     placed.current = { on: from, open: true }
+    setVeiled(true)
     setZoom({ open: false, from, still: true })
   }, [front, switcher]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -692,6 +713,7 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
     // Going back, its picture is put where its window is before both are let go
     if (!at.open) gather(slot.current)
     void slot.current?.offsetWidth
+    setFlying(true)
     setZoom((z) => ({ ...z, open: at.open, still: false }))
   }, [zoom])
 
@@ -718,12 +740,12 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const out = front ? origin : dest
   const card = out !== null && !out.startsWith('icon:')
   return (
-    <div ref={slot} className="sb-slot" data-app={id} data-front={front || undefined} data-open={(front && zoom.open) || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order, '--tone': ground } as CSSProperties}>
+    <div ref={slot} className="sb-slot" data-app={id} data-front={front || undefined} data-open={(front && zoom.open) || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} data-veiled={(veiled && front) || undefined} data-flying={flying || undefined} style={{ '--i': order, '--tone': ground } as CSSProperties}>
       <div className="sb-slot__label" aria-hidden>
         <span className="sb-slot__icon">
           <PhoneIcon id={id} />
         </span>
-        {PHONE[id].label}
+        <span className="sb-slot__name">{PHONE[id].label}</span>
       </div>
       {switcher && <CardClose id={id} />}
       <div className="sb-card">
