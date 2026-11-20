@@ -129,7 +129,9 @@ async function desk(browser) {
   // The conversations beside the group: a founder by name, heard from in the small hours; no Mom, no verification code
   const eggs = await p.evaluate((W) => [...document.querySelectorAll(`${W} .conv`)].map((row) => ({ name: row.querySelector('.ss-row__title').textContent.replace(/, unread$/, ''), when: row.querySelector('.ss-row__meta')?.textContent.trim(), said: row.querySelector('.ss-row__preview')?.textContent.trim() })), W)
   say(eggs.map((e) => e.name).join(' | ') === 'Testimonials | Akash Nigam | +1 (555) 010-0142 | Drops', 'the list is Testimonials and three others: no Mom, no verification code', eggs.map((e) => e.name).join(' | '))
-  say(eggs[1].said === 'we just closed another customer' && /^(0?[1-4]:\d\d( ?AM)?)$/.test(eggs[1].when), 'the founder is Akash Nigam, heard from late at night: "we just closed another customer"', JSON.stringify(eggs[1]))
+  // (in the small hours themselves, before the hour he writes at, he was heard from a few minutes ago: src/apps/chat-ui.tsx, eggAt)
+  const small = (await p.evaluate(() => new Date().getHours())) < 3
+  say(eggs[1].said === 'we just closed another customer' && (small ? /^(0?[0-4]|12):\d\d( ?AM)?$/ : /^(0?[1-4]:\d\d( ?AM)?)$/).test(eggs[1].when), 'the founder is Akash Nigam, heard from late at night: "we just closed another customer"', JSON.stringify(eggs[1]))
   await p.click(`${W} [data-conversation="founder"]`)
   await p.waitForTimeout(500)
   const night = await p.evaluate((W) => [...document.querySelectorAll(`${W} .chat__thread .ss-bubble__text`)].map((x) => x.textContent), W)
