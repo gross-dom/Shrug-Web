@@ -163,13 +163,14 @@
   padding-top: 17px;
 }
 
-/* Today, Yesterday, Previous 7 Days: over each group, in line with the edge of its card */
+/* Today, Yesterday, Previous 7 Days: over each group, in line with the edge of its card, at the 20 points
+   Notes sets them in */
 .notes-group__header {
   margin: 0 1px 9px;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.012em;
-  line-height: 26px;
+  line-height: 25px;
 }
 
 /* A note's row, 60 points of it: its name on one line, and under it the date and how the note starts.
@@ -219,6 +220,12 @@
   border-radius: 3px;
   background: rgb(255 204 0 / 0.45);
   color: inherit;
+}
+
+/* And the same words in the note itself, when it is opened from what the search found. There the browser
+   paints the mark, on the places it is told of (Notes.tsx, `useHits`): the same wash, with no shape of its own */
+::highlight(notes-hit) {
+  background-color: rgb(255 204 0 / 0.45);
 }
 
 /* The same notes as a gallery: each one's page in small, its name and date under it */
@@ -296,14 +303,16 @@
 
 /* ---- A note ---- */
 
-/* A note is text: it can be selected, as it can in Notes, and the selection is Notes' yellow */
+/* A note is text: it can be selected, as it can in Notes, and the selection is Notes' yellow. Its words
+   start 26 points in from the screen's edge, where a note's do, and a little under the bar */
 .notes-note {
-  padding: 0 20px 20px;
+  padding: 12px 26px 20px;
   -webkit-user-select: text;
   user-select: text;
 }
 
-/* When it was last touched, small, over the page */
+/* When it was last touched, small, over the page. Only a note of the visitor's own has it: the dates the
+   questions are filed under are dressing, and nothing was written then */
 .notes-note__date {
   margin-bottom: 14px;
   color: var(--label-2);
@@ -379,9 +388,11 @@
   line-height: 21px;
 }
 
-/* A note of the visitor's own is typed straight onto the page, which is theirs to its foot */
+/* A note of the visitor's own is typed straight onto the page, which is theirs to its foot. Its date is
+   at its head, close under the bar */
 .notes-note--own {
   min-height: 100%;
+  padding-top: 0;
 }
 
 /* The line being typed is kept clear of the bar floating over the foot of the page */

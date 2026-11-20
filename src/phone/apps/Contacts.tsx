@@ -11,8 +11,8 @@ import { linkTo } from '../../os/place'
 import { useStore } from '../../os/store'
 import type { Ground, Tone } from '../chrome'
 import { haptic, share } from '../native'
-import { push, sys, topOf } from '../system'
-import { Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, ShareGlyph, usePageHeadingId } from '../ui'
+import { goHome, push, sys, topOf } from '../system'
+import { BackButton, Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, ShareGlyph, usePageHeadingId } from '../ui'
 import { companyOf, companyView, MY_CARD } from './routes'
 import '../../styles/phone/contacts.css'
 
@@ -163,17 +163,62 @@ function Index({ jump }: { jump: (group: number) => void }) {
 
 // ---- The list ----
 
+/** The logos that have been seen to arrive, by their address: a face that is drawn again starts with its picture. */
+const seen = new Set<string>()
+
 /** A company's face: round, as every face in Contacts is. Its logo sits inside the circle on the ground the
  * logo is drawn on (so that the circle cuts nothing off it), or fills it where the logo is a picture that
  * runs to its own edges; a company with no logo is its initial, as a contact with no photo is. `eager`
- * asks for the logo at once, for the face at the head of a card. */
+ * asks for the logo at once, for the face at the head of a card.
+ *
+ * A row's logo is asked for as the row comes into sight, and on a slow line the row is there first: until
+ * its logo has arrived the face is the company's initial too, and not an empty disc. (Not the face at the
+ * head of a card, whose larger picture is always a moment behind it: a letter that size, there and gone,
+ * is worse than the disc it would fill.) */
 function Face({ company, size, eager }: { company: Listed; size?: number; eager?: boolean }) {
   const logo = useLogo(company)
   const ground = company.logo ? (LOGO_COLOURS[company.logo]?.ground ?? null) : null
+  const src = logo ? (eager && company.logoLarge ? `${import.meta.env.BASE_URL}logos/large/${company.logoLarge}` : logo.src) : null
+  const picture = useRef<HTMLImageElement>(null)
+  const [arrived, setArrived] = useState(() => !!src && seen.has(src))
+  // One that has been fetched already (portfolio-ui.tsx warms them) is there when the row is drawn, and is
+  // found so before anything is painted: the row is drawn with its logo, not with a letter first
+  useLayoutEffect(() => {
+    const el = picture.current
+    const there = !!el && el.complete && el.naturalWidth > 0
+    if (there && src) seen.add(src)
+    setArrived(there)
+  }, [src])
+  /** The logo is what the face shows: there is one, and it is here (or it is the head of a card's). */
+  const shown = !!logo && (arrived || !!eager)
   return (
-    <span className="contact-face" data-empty={logo ? undefined : ''} data-full={logo && !ground ? '' : undefined} style={{ ...(size ? { width: size, height: size, fontSize: Math.round(size * 0.45) } : null), ...(logo && ground ? { background: ground } : null) }} aria-hidden>
-      {/* Small and already fetched (portfolio-ui.tsx warms them): drawn with the row, not a frame after it */}
-      {logo ? <img src={eager && company.logoLarge ? `${import.meta.env.BASE_URL}logos/large/${company.logoLarge}` : logo.src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="sync" draggable={false} onError={logo.onError} /> : company.name.trim()[0]?.toUpperCase()}
+    <span
+      className="contact-face"
+      data-empty={shown ? undefined : ''}
+      // (with a logo still to come, as against none at all: contacts.css holds the letter back a moment)
+      data-waiting={!shown && src ? '' : undefined}
+      data-full={shown && !ground ? '' : undefined}
+      style={{ ...(size ? { width: size, height: size, fontSize: Math.round(size * 0.45) } : null), ...(shown && ground ? { background: ground } : null) }}
+      aria-hidden
+    >
+      {!shown && company.name.trim()[0]?.toUpperCase()}
+      {/* (Still on its way, the picture waits over the letter, unseen: contacts.css) */}
+      {src && (
+        <img
+          ref={picture}
+          src={src}
+          alt=""
+          loading={eager ? 'eager' : 'lazy'}
+          decoding="sync"
+          draggable={false}
+          data-coming={shown ? undefined : ''}
+          onLoad={() => {
+            seen.add(src)
+            setArrived(true)
+          }}
+          onError={logo?.onError}
+        />
+      )}
     </span>
   )
 }
@@ -236,6 +281,25 @@ function ListScreen() {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   }
 
+  // What a search finds takes the list's place on the same page, and begins at its top. The list comes
+  // back where it was left when the search is over (or has nothing typed in it any more): it is read
+  // here as the first letter is typed, while the list is still what the page holds
+  const place = useRef<number | null>(null)
+  const type = (value: string) => {
+    if (!query.trim() && value.trim() && place.current === null) place.current = scroll.current?.scrollTop ?? null
+    setQuery(value)
+  }
+  const finding = found !== null
+  useLayoutEffect(() => {
+    const page = scroll.current
+    if (!page) return
+    if (finding) page.scrollTop = 0
+    else if (place.current !== null) {
+      page.scrollTop = place.current
+      place.current = null
+    }
+  }, [finding])
+
   /** How far down the page the bar comes: what scrolls is clear of it by its own padding. */
   const barOf = (page: HTMLElement) => parseFloat(getComputedStyle(page).paddingTop) || 0
 
@@ -267,12 +331,14 @@ function ListScreen() {
       title="Contacts"
       className="contacts-screen"
       scrollRef={scroll}
+      // The way out, where Contacts has Back to its lists: this is as far back as the app goes, and the Home Screen is next
+      leading={<BackButton label="Home Screen" onClick={goHome} />}
       edge={found ? undefined : <Index jump={jump} />}
       foot={
         <>
           <SearchBar
             value={query}
-            onChange={setQuery}
+            onChange={type}
             label="Search the portfolio"
             onFocus={() => {
               clearTimeout(leaving.current)

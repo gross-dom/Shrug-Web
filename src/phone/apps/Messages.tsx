@@ -1,22 +1,26 @@
 import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, FileText, Mic, Plus, Video, X } from 'lucide-react'
+import { ArrowUp, ChevronLeft, ChevronRight, CircleAlert, FileText, Mic, Plus, Search, Video, X } from 'lucide-react'
 import { chat, finishChat, replayChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent } from '../../apps/chat'
 import { ConversationAvatar, conversationName, GROUP_NAME, keepsCaret, PersonAvatar, relationsOf, Transcript, useConversationRows, useMenuKeys, type ListRow } from '../../apps/chat-ui'
-import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, type Conversation } from '../../apps/state'
+import { inbox, openConversation, seeGroup, setInboxQuery, showInGroup, sought, type Conversation } from '../../apps/state'
 import { eggOf } from '../../data/eggs'
 import { PEOPLE } from '../../data/people'
 import { SITE } from '../../data/site'
 import { Popover } from '../../kit/motion/Popover'
 import { Row } from '../../kit/parts/Row'
-import { APPS } from '../../os/apps'
+import { formatter } from '../../os/dates'
 import { LogoDisc } from '../../os/icons'
 import { prefersReducedMotion } from '../../os/dom'
 import { focusLost, holdFocus } from '../../os/focus'
 import { useStore } from '../../os/store'
+import { sheeted } from '../chrome'
 import { OnePagerIcon, PhoneIcon } from '../icons'
 import { closeSheet, goHome, launch, openSheet, pop, push, sys, topOf, type PhoneApp } from '../system'
 import { useNewCount } from '../unread'
 import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
+// (The apps' names on this phone. That file draws this one, and this one reads that one's names: each is
+// asked of the other only once both are there, when something is drawn)
+import { PHONE } from './index'
 import { LIMITS, outbox, pick, resend, sendToShrug, setDraft, sizeOf, unpick, type Sent } from './outbox'
 import { conversationView, GROUP_VIEW, NEW_MESSAGE } from './routes'
 import '../../styles/phone/messages.css'
@@ -114,13 +118,33 @@ const ConversationRow = memo(
   (a, b) => a.picked === b.picked && a.row.key === b.row.key && a.row.unread === b.row.unread && a.row.when === b.row.when && a.row.preview === b.row.preview,
 )
 
+/** What a message to Shrug is in a line: its words, or what went in their place. */
+const saidIn = (message: Sent) => message.text || (message.files.length === 1 ? message.files[0]!.name : `${message.files.length} Attachments`)
+
+/** What the list shows of the conversation with Shrug: the message its row speaks for, and that message
+ * in a line. With nothing being looked for that is the newest. While something is (`q`: trimmed, in lower
+ * case, as the rest of the list is searched) it is the newest too where the conversation's own name has
+ * the words; failing that, the newest message that has them, in what was written or in the name of a file
+ * sent with it, shown by the words or the name they were found in. Null where nothing has been sent yet,
+ * or the search finds nothing here. */
+function inShrug(sent: Sent[], q: string): { message: Sent; said: string } | null {
+  const last = sent[sent.length - 1]
+  if (!last) return null
+  const has = (text: string) => text.toLowerCase().includes(q)
+  if (!q || has(SITE.name)) return { message: last, said: saidIn(last) }
+  for (let i = sent.length - 1; i >= 0; i--) {
+    const message = sent[i]!
+    if (has(message.text)) return { message, said: message.text }
+    const file = message.files.find((f) => has(f.name))
+    if (file) return { message, said: file.name }
+  }
+  return null
+}
+
 /** The conversation with Shrug, once something has been written to it: at the head of the list, as the
  * newest is. */
-function ShrugRow({ picked }: { picked: boolean }) {
-  const last = useStore(outbox, (s) => s.sent[s.sent.length - 1] ?? null)
-  if (!last) return null
+function ShrugRow({ message: last, said, picked }: { message: Sent; said: string; picked: boolean }) {
   const open = () => push(NEW_MESSAGE)
-  const said = last.text || (last.files.length === 1 ? last.files[0]!.name : `${last.files.length} Attachments`)
   return (
     <Row
       className="msg-row"
@@ -150,12 +174,28 @@ function ShrugRow({ picked }: { picked: boolean }) {
 function ListScreen() {
   const query = useStore(inbox, (s) => s.query)
   const rows = useConversationRows()
+  const sent = useStore(outbox, (s) => s.sent)
   /** The conversation that is open over the list, if one is. */
   const picked = useStore(sys, (s) => s.stacks.messages[0] ?? null)
   const q = query.trim()
   const talks = rows.filter((row) => row.person === undefined)
   // While something is being looked for: the people in the group it finds
   const people = rows.filter((row) => row.person !== undefined)
+  // The conversation with Shrug is the phone's own, and not among the rows the two layouts share
+  const shrug = inShrug(sent, q.toLowerCase())
+
+  // The field has the keyboard, or has something in it: the foot is given over to the search, as it is
+  // in Contacts and in Notes, with the button that ends it where the compose button was
+  const [focused, setFocused] = useState(false)
+  const leaving = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => clearTimeout(leaving.current), [])
+  const searching = focused || query !== ''
+  const cancel = () => {
+    clearTimeout(leaving.current)
+    setInboxQuery('')
+    setFocused(false)
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  }
 
   return (
     <Screen
@@ -170,22 +210,38 @@ function ListScreen() {
       }
       foot={
         <>
-          <SearchBar value={query} onChange={setInboxQuery} label="Search conversations" />
-          <GlassButton
-            label="New message"
-            onClick={() => {
-              // A new message, to Shrug: its screen opens with the field ready
-              primeKeyboard()
-              push(NEW_MESSAGE)
+          <SearchBar
+            value={query}
+            onChange={setInboxQuery}
+            label="Search conversations"
+            onFocus={() => {
+              clearTimeout(leaving.current)
+              setFocused(true)
             }}
-          >
-            <ComposeGlyph />
-          </GlassButton>
+            // A press on the button that ends the search takes the keyboard from the field first: the button stays until the press has landed
+            onBlur={() => (leaving.current = setTimeout(() => setFocused(false), 180))}
+          />
+          {searching ? (
+            <GlassButton label="Cancel" onClick={cancel}>
+              <X size={21} strokeWidth={2.4} aria-hidden />
+            </GlassButton>
+          ) : (
+            <GlassButton
+              label="New message"
+              onClick={() => {
+                // A new message, to Shrug: its screen opens with the field ready
+                primeKeyboard()
+                push(NEW_MESSAGE)
+              }}
+            >
+              <ComposeGlyph />
+            </GlassButton>
+          )}
         </>
       }
     >
       <div className="msg-rows">
-        {!q && <ShrugRow picked={picked === NEW_MESSAGE} />}
+        {shrug && <ShrugRow message={shrug.message} said={shrug.said} picked={picked === NEW_MESSAGE} />}
         {talks.map((row) => (
           <ConversationRow key={row.key} row={row} picked={picked === conversationView(row.conversation)} />
         ))}
@@ -200,7 +256,12 @@ function ListScreen() {
           </div>
         </section>
       )}
-      {rows.length === 0 && q && <Empty title="No Results">for “{q}”</Empty>}
+      {/* Said as Contacts and Notes say it: the words quoted back (cut short where they run on), and what to try */}
+      {rows.length === 0 && !shrug && q && (
+        <Empty icon={<Search size={44} strokeWidth={1.8} />} title={`No Results for “${sought(query)}”`}>
+          Check the spelling or try a new search.
+        </Empty>
+      )}
     </Screen>
   )
 }
@@ -264,7 +325,8 @@ function More() {
             <span className="msg-more__icon" aria-hidden>
               <PhoneIcon id={id} />
             </span>
-            <span className="ios-menu__label">{APPS[id].name}</span>
+            {/* Under the name its icon has on the Home Screen: Contacts and Notes here, not the desktop's Portfolio and FAQs */}
+            <span className="ios-menu__label">{PHONE[id].label}</span>
           </button>
         ))}
         <a className="ios-menu__item msg-more__item" role="menuitem" href={SITE.onePager} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
@@ -389,6 +451,23 @@ function ConversationScreen({ conversation, view }: { conversation: Conversation
   const name = conversationName(conversation)
   const group = conversation === 'group'
 
+  // While replies are still to come the thread offers them all at once, on a pill at its head, and keeps
+  // room there for it (messages.css): from the start, so that the pill arrives over nothing and the thread
+  // does not step down to let it in. The room outlasts the pill for as long as the conversation can be
+  // seen: given back there, every message in it would step up under the eyes of whoever is reading. It
+  // goes once Messages has been put away for a moment (not while it is a card in the App Switcher, where
+  // it is still seen), and a conversation that opens with every reply in it never has it
+  const coming = group && replied < TOTAL
+  const away = useStore(sys, (s) => s.app !== 'messages' && !s.switcher)
+  const [kept, setKept] = useState(false)
+  useEffect(() => {
+    if (coming) return setKept(true)
+    if (!away || !kept) return
+    const gone = setTimeout(() => setKept(false), 700)
+    return () => clearTimeout(gone)
+  }, [coming, away, kept])
+  const roomy = coming || kept
+
   // On screen, the group has been seen as far as it has got: nothing in it is new
   useEffect(() => {
     if (!showing) return
@@ -400,7 +479,7 @@ function ConversationScreen({ conversation, view }: { conversation: Conversation
     <Screen
       title={name}
       fixed
-      className={group ? 'msg-convo' : 'msg-convo msg-convo--person'}
+      className={group ? `msg-convo${roomy ? ' msg-convo--roomy' : ''}` : 'msg-convo msg-convo--person'}
       leading={<Back />}
       center={
         group ? (
@@ -459,44 +538,63 @@ const UNDELIVERED = 'undelivered'
 /** Which message that alert is about. */
 let asked: string | null = null
 
+// When a message to Shrug was sent, written as a thread's stamp writes it (src/apps/chat-ui.tsx): the day
+// as Messages names it, and the time on the visitor's own clock.
+const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
+const WEEKDAY = formatter({ weekday: 'long' })
+const DATE = formatter({ day: 'numeric', month: 'numeric', year: '2-digit' })
+
+/** The day a moment was in: Today, Yesterday, the weekday, then the date. */
+function dayOf(t: number) {
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 86_400_000)
+  return days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 7 ? WEEKDAY.format(t) : DATE.format(t)
+}
+
 /** One message as the conversation shows it: its files, its words, and under them how it went. */
 function SentMessage({ message, last }: { message: Sent; last: boolean }) {
   const failed = message.state === 'failed'
+  const parts = message.files.map((file, i) =>
+    file.url ? (
+      <img key={i} className="msgn-pic" src={file.url} alt={file.name} draggable={false} />
+    ) : (
+      <span key={i} className="msgn-file">
+        <FileText size={26} strokeWidth={1.7} aria-hidden />
+        <span className="msgn-file__words">
+          <b dir="auto">{file.name}</b>
+          <span>{sizeOf(file.size)}</span>
+        </span>
+      </span>
+    ),
+  )
+  if (message.text)
+    parts.push(
+      <p key="words" className="msgn-bubble" dir="auto">
+        {message.text}
+      </p>,
+    )
   return (
     <div className="msgn-sent" data-state={message.state}>
       <div className="msgn-sent__parts">
-        {message.files.map((file, i) =>
-          file.url ? (
-            <img key={i} className="msgn-pic" src={file.url} alt={file.name} draggable={false} />
-          ) : (
-            <span key={i} className="msgn-file">
-              <FileText size={26} strokeWidth={1.7} aria-hidden />
-              <span className="msgn-file__words">
-                <b dir="auto">{file.name}</b>
-                <span>{sizeOf(file.size)}</span>
-              </span>
-            </span>
-          ),
-        )}
-        {message.text && (
-          <p className="msgn-bubble" dir="auto">
-            {message.text}
-          </p>
-        )}
+        {parts.slice(0, -1)}
+        {/* The last of it (the words, or the last file) has the mark beside it when the message has not gone,
+            as Messages puts it: beside the bubble that "Not Delivered" is written under */}
+        <div className="msgn-sent__last">
+          {parts[parts.length - 1]}
+          {failed && (
+            <button
+              type="button"
+              className="msgn-alert"
+              aria-label="Not delivered. Details"
+              onClick={() => {
+                asked = message.id
+                openSheet(UNDELIVERED)
+              }}
+            >
+              <CircleAlert size={24} strokeWidth={2.2} aria-hidden />
+            </button>
+          )}
+        </div>
       </div>
-      {failed && (
-        <button
-          type="button"
-          className="msgn-alert"
-          aria-label="Not delivered. Details"
-          onClick={() => {
-            asked = message.id
-            openSheet(UNDELIVERED)
-          }}
-        >
-          <CircleAlert size={24} strokeWidth={2.2} aria-hidden />
-        </button>
-      )}
       {(failed || last) && (
         <p className="msgn-receipt" data-failed={failed || undefined}>
           {failed ? 'Not Delivered' : message.state === 'sent' ? 'Delivered' : message.files.length ? `Sending… ${Math.round(message.part * 100)}%` : 'Sending…'}
@@ -632,9 +730,12 @@ function NewMessageScreen() {
       <div ref={scroller} className="msgn-thread" data-started={started || undefined} role="log" aria-label={`Messages to ${SITE.name}`}>
         {started ? (
           <>
+            {/* When it began, as every conversation here says it: the day, and the time the first message was sent */}
             <p className="msgn-stamp">
               <b>iMessage</b>
-              <span>Today</span>
+              <span>
+                <b>{dayOf(sent[0]!.at)}</b> {TIME.format(sent[0]!.at)}
+              </span>
             </p>
             {sent.map((message, i) => (
               <SentMessage key={message.id} message={message} last={i === sent.length - 1} />
@@ -648,9 +749,13 @@ function NewMessageScreen() {
           </p>
         )}
       </div>
-      {/* Said aloud: a file turned away, and how the last message went */}
+      {/* Said aloud: a file turned away, and how the last message went. Each in a place of its own: what is
+          said of a file is taken back a few seconds on, and that must not say how the message went over again */}
       <span className="sr-only" role="status">
-        {refused ?? (lastState === 'failed' ? 'Not delivered.' : lastState === 'sent' ? 'Delivered.' : '')}
+        {refused ?? ''}
+      </span>
+      <span className="sr-only" role="status">
+        {lastState === 'failed' ? 'Not delivered.' : lastState === 'sent' ? 'Delivered.' : ''}
       </span>
       {refused && (
         <p className="msgn-refused" aria-hidden>
@@ -737,7 +842,8 @@ function DetailsSheet() {
               </Section>
             </List>
           ) : (
-            <p className="msg-card__note">{first} hasn’t replied yet.</p>
+            // Two people under one name (“Courtne Smith & Filip Diarra”) are spoken of as the two they are
+            <p className="msg-card__note">{who.name.includes('&') ? `${who.name} haven’t` : `${first} hasn’t`} replied yet.</p>
           )}
         </div>
       </Sheet>
@@ -801,6 +907,9 @@ function DetailsSheet() {
 /** The name the alert goes by in the phone's history, where a sheet's name goes (`sys.sheet`). */
 const FACETIME = 'facetime'
 
+/** How dark the shade an alert lays over the screen is (messages.css draws it: `.msg-alert__shade`). */
+const ALERT_SHADE = 0.22
+
 interface AlertAction {
   label: string
   /** It goes somewhere: a link. Without one it is a button. */
@@ -841,6 +950,14 @@ function Alert({ name, title, message, actions }: { name: string; title: string;
     if (!live || !nav || nav.hasAttribute('inert')) return
     nav.setAttribute('inert', '')
     return () => nav.removeAttribute('inert')
+  }, [live])
+  // And the edges of the screen are told of its shade, as a sheet tells them of its own (chrome.ts): the
+  // strips along the top and the foot, and the browser's bars over them, are the conversation under that
+  // shade, not a pale band left round a screen that has gone dim
+  useLayoutEffect(() => {
+    if (!live) return
+    sheeted.set({ shade: ALERT_SHADE, foot: null })
+    return () => sheeted.set({ shade: 0, foot: null })
   }, [live])
   // ...and when it closes, the keyboard goes back to what opened it; or to the thread, if that has gone (a
   // message deleted from here). Asked a frame later, once the screen is open again; by then the screen

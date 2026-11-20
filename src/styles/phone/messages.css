@@ -188,20 +188,43 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* What has scrolled up under the header: out of focus, and fading */
+/* While replies are still to come, Load all 89 replies is offered on a pill under the header (below), and
+   the thread keeps this much more room at its head, so that the pill is over none of it where it begins.
+   (Messages.tsx says when the room is kept: longer than the pill is there, so that nothing in the thread
+   moves when the pill goes) */
+.msg-convo {
+  --pill: 46px;
+  --pill-room: 0px;
+}
+
+.msg-convo--roomy {
+  --pill-room: var(--pill);
+}
+
+/* What has scrolled up under the header: out of focus, and fading. Where it fades is measured back from
+   its foot (the last 44% of what it reaches with nothing under the header, as it always was), so that it
+   fades the same way when it reaches further, and on its way from the one to the other */
 .msg-edge {
+  --reach: calc(var(--status) + var(--bar-top, 0px) + 120px);
   position: absolute;
   top: 0;
   right: 0;
   left: 0;
   z-index: 3;
-  height: calc(var(--status) + var(--bar-top, 0px) + 120px);
-  background: linear-gradient(rgb(255 255 255 / 0.96) 0%, rgb(255 255 255 / 0.92) 56%, rgb(255 255 255 / 0) 100%);
+  height: var(--reach);
+  background: linear-gradient(rgb(255 255 255 / 0.96) 0, rgb(255 255 255 / 0.92) calc(100% - 0.44 * var(--reach)), rgb(255 255 255 / 0) 100%);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  -webkit-mask-image: linear-gradient(#000 60%, transparent);
-  mask-image: linear-gradient(#000 60%, transparent);
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 0.4 * var(--reach)), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 0.4 * var(--reach)), transparent);
   pointer-events: none;
+  transition: height 0.3s var(--ui);
+}
+
+/* While the pill is there it reaches as much further: what goes up under the header is out of focus by
+   the time it is under the pill */
+.msg-convo:has(.chat__all[data-show]) .msg-edge {
+  height: calc(var(--reach) + var(--pill));
 }
 
 /* The thread runs the whole height of the screen, under the header and the field */
@@ -224,7 +247,7 @@
 }
 
 .msg-convo .chat__flow {
-  padding: calc(var(--status) + var(--bar-top, 0px) + 100px) 16px calc(var(--foot-gap) + 44px + 18px) 10px;
+  padding: calc(var(--status) + var(--bar-top, 0px) + 100px + var(--pill-room)) 16px calc(var(--foot-gap) + 44px + 18px) 10px;
 }
 
 /* Bubbles at the size iOS sets them */
@@ -295,9 +318,9 @@
 .msg-convo .chat__all {
   top: calc(var(--status) + var(--bar-top, 0px) + 94px);
   gap: 5px;
-  height: 34px;
+  height: 36px;
   padding: 0 15px 0 11px;
-  border-radius: 17px;
+  border-radius: 18px;
   background: rgb(255 255 255 / 0.72);
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
   backdrop-filter: blur(14px) saturate(1.6);
@@ -310,6 +333,13 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   z-index: 4;
+}
+
+/* The pill is 36 points tall; what takes the press is a finger's 44 */
+.msg-convo .chat__all::after {
+  position: absolute;
+  inset: -4px 0;
+  content: '';
 }
 
 /* ---- The message field ---- */
@@ -678,6 +708,10 @@
     transition: none;
   }
 
+  .msg-edge {
+    transition: none;
+  }
+
   .msg-field__caret {
     animation: none;
   }
@@ -756,8 +790,9 @@
   display: none;
 }
 
+/* Begun, it starts where every conversation's thread does (`.msg-convo .chat__flow`, above) */
 .msgn-thread[data-started] {
-  padding-top: calc(var(--status) + var(--bar-top, 0px) + 106px);
+  padding-top: calc(var(--status) + var(--bar-top, 0px) + 100px);
 }
 
 /* Files waiting in the field make it taller: the conversation keeps clear of them */
@@ -800,6 +835,11 @@
   font-weight: 600;
 }
 
+/* The first message is as far under the stamp as a thread's first bubble is under its own: 12 points */
+.msgn-stamp + .msgn-sent {
+  margin-top: 3px;
+}
+
 /* One message: its files, its words, and under them how it went */
 .msgn-sent {
   position: relative;
@@ -820,6 +860,15 @@
   gap: 3px;
   min-width: 0;
   max-width: 76%;
+}
+
+/* The last of its parts (its words, or its last file): what the mark is set beside when it has not gone */
+.msgn-sent__last {
+  position: relative;
+  display: grid;
+  justify-items: end;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .msgn-bubble {
@@ -891,11 +940,12 @@
   line-height: 16px;
 }
 
-/* Beside a message that did not go: the mark Messages puts there, which says why when pressed */
+/* Beside a message that did not go: the mark Messages puts there, which says why when pressed. It is
+   level with the middle of the message's last part, in the room kept for it past that part's edge */
 .msgn-alert {
   position: absolute;
-  top: calc(50% - 8px);
-  right: 0;
+  top: 50%;
+  left: calc(100% + 6px);
   display: grid;
   place-items: center;
   width: 28px;

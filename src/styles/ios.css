@@ -246,7 +246,9 @@
   line-height: 20px;
 }
 
-/* The bar: nothing but its buttons, floating. Touches fall through it to the page */
+/* The bar: nothing but its buttons, floating. Touches fall through it to the page. Its two sides share
+   what its name leaves, and neither is ever narrower than its own buttons: a name too long for the room
+   between them is the one that gives way (it is cut short), and never runs on under a button */
 .ios-bar {
   position: absolute;
   top: 0;
@@ -254,7 +256,7 @@
   left: 0;
   z-index: 5;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
   align-items: center;
   gap: 8px;
   height: calc(var(--status) + var(--bar));
@@ -461,9 +463,24 @@
   outline: none;
 }
 
-.ios-search:focus-within {
+/* And the ring is a keyboard's. A finger put in the field is shown the caret and nothing more, as iOS shows
+   it. A browser will not say which it was: a field that has the caret counts as focused from the keyboard
+   however it came by it. So the ring is left off after a touch, as it is for everything else (base.css),
+   and left off altogether where the pointer is a finger: there the keyboard is the phone's own, and its
+   first letter would otherwise bring the ring back. (A keyboard joined to a phone has the caret to go by) */
+.ios-search:has(:focus-visible) {
   outline: 3px solid color-mix(in srgb, var(--blue) 45%, transparent);
   outline-offset: 1px;
+}
+
+html[data-input='touch'] .ios-search:has(:focus-visible) {
+  outline: none;
+}
+
+@media (pointer: coarse) {
+  .ios-search:has(:focus-visible) {
+    outline: none;
+  }
 }
 
 .ios-search__input::placeholder {

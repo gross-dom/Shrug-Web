@@ -241,8 +241,53 @@ export function sorted(entries: Entry[], sort: Book['sort']) {
   return [...entries].sort(by)
 }
 
-/** The notes that have the words searched for, in their name or in the rest. `q` is trimmed and in lower case. */
-export const found = (entries: Entry[], q: string) => (q ? entries.filter((e) => titleOf(e).toLowerCase().includes(q) || e.text.toLowerCase().includes(q)) : [])
+// ---- Search ----
+
+// What is typed is seldom what is written. The notes are typeset (don’t, “proprietary”), and a keyboard
+// types the plain marks unless it is a phone's, which types the curled ones; nobody looking for a word
+// types its capitals or its accents. So both sides are folded before they are compared: capitals to small
+// letters, an accented letter to the letter under it, every quotation mark to the plain one of its kind.
+
+/** One character as search compares it. Some fold to nothing (an accent written as a mark of its own). */
+const foldOne = (ch: string) =>
+  ch
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[‘’‛ʼ′]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    // (the s that ends a Greek word is the same letter as the one inside it)
+    .replace(/ς/g, 'σ')
+
+/** Words as search compares them. It is done a character at a time, so that where something is found
+ * in the folded words is known in the words as they are written (`placeOf`). */
+export function folded(words: string) {
+  let out = ''
+  for (const ch of words) out += foldOne(ch)
+  return out
+}
+
+/** Where in `text` the words searched for first are: from where to where, in the text as it is written,
+ * for marking them there. `q` is folded already. Null where they are not in it. */
+export function placeOf(text: string, q: string): [from: number, to: number] | null {
+  if (!q) return null
+  let all = ''
+  /** For each folded character, where the character it came from starts in the text. */
+  const starts: number[] = []
+  let at = 0
+  for (const ch of text) {
+    const one = foldOne(ch)
+    for (let i = 0; i < one.length; i++) starts.push(at)
+    all += one
+    at += ch.length
+  }
+  starts.push(text.length)
+  const found = all.indexOf(q)
+  return found < 0 ? null : [starts[found]!, starts[found + q.length]!]
+}
+
+/** The notes that have the words searched for, in their name or in the rest. `q` is trimmed and folded. */
+export const found = (entries: Entry[], q: string) => (q ? entries.filter((e) => folded(titleOf(e)).includes(q) || folded(e.text).includes(q)) : [])
 
 // ---- Dates, as Notes writes them ----
 
