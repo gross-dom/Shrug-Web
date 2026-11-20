@@ -199,26 +199,6 @@ function useNews() {
 
 // ---- The Lock Screen ----
 
-/** A Live Activity under the notification, as an iPhone keeps one at the foot of its Lock Screen: how many
- * of the group have replied so far, and a bar that fills as they do. The notification stays on one reply
- * long enough for it to be read, so it no longer counts them as they land; this does. Pressed, it opens
- * the conversation, as the notification does. */
-function Activity() {
-  const replied = useStore(chat, (s) => s.replied)
-  return (
-    <button type="button" className="sb-activity" data-origin="lock-activity" aria-label={`${GROUP_NAME}: ${replied} of ${TOTAL} ${replied === 1 ? 'has' : 'have'} replied. Open the conversation`} onClick={() => openGroup('lock-activity')}>
-      <span className="sb-activity__app">
-        <PhoneIcon id="messages" />
-      </span>
-      <span className="sb-activity__words">
-        <b>{GROUP_NAME}</b> · {replied} of {TOTAL}
-      </span>
-      <span className="sb-activity__bar">
-        <span style={{ '--done': replied / TOTAL } as CSSProperties} />
-      </span>
-    </button>
-  )
-}
 
 function Lock() {
   const locked = useStore(sys, (s) => s.locked)
@@ -370,7 +350,6 @@ function Lock() {
               <Reply index={reply.now - 1} turn={reply.turn} origin="lock-note" onOpen={() => openGroup('lock-note')} />
               {reply.was > 0 && <Reply key={reply.was} index={reply.was - 1} was />}
             </div>
-            <Activity />
           </>
         )}
       </LockScreen>

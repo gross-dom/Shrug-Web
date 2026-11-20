@@ -179,14 +179,8 @@ const touchOf = (t) => ({
     // the edges of the older notifications start at the front one's foot (it is glass: behind it they showed through)
     const edges = await q.evaluate(() => { const s = document.querySelector('.sb-stack'); return { more: s.dataset.more, cut: ['::before', '::after'].map((part) => getComputedStyle(s, part).clipPath.slice(0, 8)) } })
     say(edges.more === '2' && edges.cut.every((c) => c === 'polygon('), 'the older notifications under it are cut to start at its foot: they do not show through it', JSON.stringify(edges))
-    // the Live Activity under it counts every reply as it lands, in the same glass, clear of the words under it
-    await q.waitForFunction(() => !document.querySelector('.sb-note--was') && document.querySelector('.sb-lock .sb-note').getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 5000 }).catch(() => {})
-    const act = await q.evaluate(() => { const a = document.querySelector('.sb-lock .sb-activity'); const r = a.getBoundingClientRect(); const hint = document.querySelector('.sb-lock__hint').getBoundingClientRect(); const note = document.querySelector('.sb-lock .sb-note').getBoundingClientRect(); return { tag: a.tagName, says: a.textContent.replace(/\s+/g, ' ').trim(), name: a.getAttribute('aria-label'), under: Math.round(r.top - note.bottom), clear: Math.round(hint.top - r.bottom), glass: getComputedStyle(a).backdropFilter === getComputedStyle(document.querySelector('.sb-lock .sb-note')).backdropFilter, done: +a.querySelector('.sb-activity__bar > span').style.getPropertyValue('--done') } })
-    say(act.tag === 'BUTTON' && /^Testimonials · \d+ of 89$/.test(act.says) && /^Testimonials: \d+ of 89 ha(s|ve) replied\. Open the conversation$/.test(act.name || '') && act.glass && act.done > 0 && act.done < 1, 'a Live Activity under the notification says how many have replied, in the same glass, with a bar that fills', JSON.stringify(act))
-    say(shown.counted >= 5 && act.under >= 15 && act.clear >= 8, 'it counts every reply as it lands, and keeps clear of the notification\'s stack and of the words under it', JSON.stringify({ counted: shown.counted, under: act.under, clear: act.clear }))
-    await d.touch.tap(...(await mid(q, '.sb-lock .sb-activity'))); await q.waitForTimeout(1300)
-    const opened = await st(q)
-    say(!opened.locked && opened.place?.app === 'messages' && opened.place.stack.join() === 'c:group', 'pressed, it opens the conversation', JSON.stringify(opened.place))
+    // nothing under it counts the replies: Shrug took the bar that did off the Lock Screen
+    say((await q.locator('.sb-lock .sb-activity').count()) === 0, 'the Lock Screen has no progress bar under its notification')
     await d.ctx.close()
 
     // with motion turned down a tap does not lift the screen: the words that say how it opens are lit instead

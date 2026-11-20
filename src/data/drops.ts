@@ -1,10 +1,10 @@
-// VIP: photos and videos from the people who got a drop. The drops are from
-// the design canvas; the media has not been supplied, so every tile is a slot.
-// A slot with no file is still drawn (a quiet tile with the drop's name on
-// it, or, with `?draft` in the address, the note that says what is missing),
-// but it is never counted: a count a visitor reads is of what has arrived.
+// VIP: photos from the people who got a drop, as they posted them. The pictures are Shrug's own
+// (public/vip, kept at the size they are shown at), each filed under the drop it is of; they are set
+// out a drop at a time in turn, so that no one drop fills the head of the grid. A slot with no file is
+// still drawn (a quiet tile with the drop's name on it), but it is never counted: a count a visitor
+// reads is of what has arrived.
 
-export const DROPS = ['Deep Tech Mat', 'Atoms x MKBHD', 'Feastables x Shrug', 'Billboards', 'Alt x Shrug', 'VC Sticker Pack', 'Shrug Calendar 2020', 'Shrug Calendar 2021', 'VC Puzzle', 'Acquire x Shrug', 'Demo Day Socks']
+export const DROPS = ['Atoms x MKBHD', 'Deep Tech Mat', 'Feastables x Shrug', 'Billboards', 'Alt x Shrug', 'Shrug Calendar', 'VC Puzzle', 'VC Sticker Pack', 'Other Drops']
 
 export type MediaKind = 'photo' | 'video'
 
@@ -20,21 +20,42 @@ export interface MediaSlot {
   span: '' | 'big' | 'tall' | 'wide'
 }
 
-const slot = (kind: MediaKind, drop: string, span: MediaSlot['span'] = ''): MediaSlot => ({ kind, drop, from: null, src: null, span })
+const photo = (drop: string, file: string, span: MediaSlot['span'] = ''): MediaSlot => ({ kind: 'photo', drop, from: null, src: `/vip/${file}`, span })
 
 export const MEDIA: MediaSlot[] = [
-  slot('photo', 'Deep Tech Mat', 'big'),
-  slot('video', 'Atoms x MKBHD'),
-  slot('photo', 'Feastables x Shrug', 'tall'),
-  slot('photo', 'Billboards'),
-  slot('video', 'Alt x Shrug', 'wide'),
-  slot('photo', 'VC Sticker Pack'),
-  slot('photo', 'Shrug Calendar 2020', 'tall'),
-  slot('photo', 'Shrug Calendar 2021'),
-  slot('video', 'VC Puzzle', 'big'),
-  slot('photo', 'Acquire x Shrug'),
-  slot('photo', 'Demo Day Socks'),
-  slot('video', 'Deep Tech Mat', 'wide'),
+  photo('Atoms x MKBHD', 'atoms-x-mkbhd.webp', 'big'),
+  photo('Deep Tech Mat', 'deep-tech-mat.webp'),
+  photo('Feastables x Shrug', 'feastables-1.webp'),
+  photo('Billboards', 'billboard-1.webp'),
+  photo('Alt x Shrug', 'alt-1.webp'),
+  photo('Shrug Calendar', 'shrug-cal-1.webp'),
+  photo('VC Puzzle', 'shrug-cal-9.webp'),
+  photo('VC Sticker Pack', 'others-3.webp'),
+  photo('Other Drops', 'others-1.webp'),
+  photo('Atoms x MKBHD', 'atoms-1.webp'),
+  photo('Feastables x Shrug', 'feastables-2.webp'),
+  photo('Billboards', 'billboard-2.webp'),
+  photo('Alt x Shrug', 'alt-2.webp'),
+  photo('Shrug Calendar', 'shrug-cal-2.webp'),
+  photo('VC Puzzle', 'shrug-cal-10.webp'),
+  photo('Other Drops', 'others-2.webp'),
+  photo('Atoms x MKBHD', 'atoms-2.webp'),
+  photo('Feastables x Shrug', 'feastables-3.webp'),
+  photo('Billboards', 'billboard-3.webp'),
+  photo('Alt x Shrug', 'alt-3.webp'),
+  photo('Shrug Calendar', 'shrug-cal-3.webp'),
+  photo('VC Puzzle', 'shrug-cal-11.webp'),
+  photo('Atoms x MKBHD', 'atoms-3.webp'),
+  photo('Feastables x Shrug', 'feastables-4.webp'),
+  photo('Billboards', 'billboard-4.webp'),
+  photo('Shrug Calendar', 'shrug-cal-4.webp'),
+  photo('Atoms x MKBHD', 'atoms-4.webp'),
+  photo('Billboards', 'billboard-5.webp'),
+  photo('Shrug Calendar', 'shrug-cal-5.webp'),
+  photo('Atoms x MKBHD', 'atoms-5.webp'),
+  photo('Shrug Calendar', 'shrug-cal-6.webp'),
+  photo('Shrug Calendar', 'shrug-cal-7.webp'),
+  photo('Shrug Calendar', 'shrug-cal-8.webp'),
 ]
 
 /** A drop's own colour: what its tiles are drawn in until their pictures arrive, so that a drop looks
