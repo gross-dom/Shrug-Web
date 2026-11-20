@@ -57,6 +57,16 @@ const windows = (page) =>
   check('phone, Back to the Home Screen: no app named', tail(t.page) === '/?still', tail(t.page))
   await t.page.goForward(); await settle(t.page, 900)
   check('phone, Forward: the app named again', tail(t.page) === '/?still&open=portfolio', tail(t.page))
+  // An app opened at a place of its own (the conversation, out of the widget) and sent home leaves no step behind it:
+  // the phone is back on the Home Screen's own step, at the Home Screen's address
+  await t.page.goBack(); await settle(t.page, 900)
+  const homeStep = (await A.state(t.page)).n
+  await t.page.locator('.sb-widget--wide').tap(); await settle(t.page, 1300)
+  s = await A.state(t.page)
+  check('phone, the conversation out of the widget: ?open=chat, a step on', tail(t.page) === '/?still&open=chat' && s.place?.stack.join() === 'c:group' && s.n === homeStep + 1, `${tail(t.page)} step ${s.n}`)
+  await t.page.evaluate(() => document.querySelector('.sb-homebar .sr-only')?.click()); await settle(t.page, 1100)
+  s = await A.state(t.page)
+  check('phone, sent home from there: the plain address, on the step the Home Screen was on', tail(t.page) === '/?still' && s.place?.app === null && s.n === homeStep, `${tail(t.page)} step ${s.n} (the Home Screen was on ${homeStep})`)
   check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 

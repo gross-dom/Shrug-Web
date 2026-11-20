@@ -37,6 +37,31 @@ const touchOf = (t) => ({
     console.log(`--- ${letter}. ${name}`)
     try { await run() } catch (e) { say(false, `${name}: the check itself fell over`, String(e).slice(0, 240)) }
   }
+  // The app in front and its icon's picture over it, frame by frame from the next press, for as long as the picture shows:
+  // [the picture's width, its height, the window's width, how far the picture's middle is under the window's, the finger is up]
+  const picture = (page, frames = 60) => page.evaluate((frames) => new Promise((done) => {
+    const out = []
+    let up = false
+    const lifted = () => (up = true)
+    const on = () => {
+      document.removeEventListener('pointerdown', on, true)
+      document.addEventListener('pointerup', lifted, true)
+      let n = 0
+      const tick = () => {
+        const slot = document.querySelector('.sb-slot[data-front]') ?? document.querySelector('.sb-slot[data-pictured]')
+        const app = slot?.querySelector('.sb-zoom__app'); const face = slot?.querySelector('.sb-zoom__face')
+        if (app && face) {
+          slot.setAttribute('data-pictured', '')
+          const zoom = getComputedStyle(app.closest('.sb-zoom'))
+          if (+getComputedStyle(face).opacity > 0.1 && zoom.visibility !== 'hidden' && +zoom.opacity > 0.1) { const w = app.getBoundingClientRect(), f = face.getBoundingClientRect(); out.push([Math.round(f.width), Math.round(f.height), Math.round(w.width), Math.round(f.top + f.height / 2 - (w.top + w.height / 2)), up]) }
+        }
+        if (n++ < frames) requestAnimationFrame(tick)
+        else { document.removeEventListener('pointerup', lifted, true); document.querySelectorAll('[data-pictured]').forEach((el) => el.removeAttribute('data-pictured')); done(out) }
+      }
+      requestAnimationFrame(tick)
+    }
+    document.addEventListener('pointerdown', on, true)
+  }), frames)
   // The app in front, frame by frame from the next press: [ms, width, height, drawn, its own screens are in it, the finger is up]
   const watch = (page, ms) => page.evaluate((ms) => new Promise((done) => {
     const out = []
@@ -71,8 +96,17 @@ const touchOf = (t) => ({
     const icon = await mid(p, '.sb-dock .sb-icon[aria-label^="Contacts"]')
     const tile = await p.evaluate(() => document.querySelector('.sb-dock .sb-icon[aria-label^="Contacts"] .sb-icon__tile').getBoundingClientRect().width)
     let watching = watch(p, 900)
+    // Whether its own screens were in it at the moment it was let go from its icon. Read as the page changes, not
+    // frame by frame: its screens are put together within a frame or two of that, and on a machine that is late
+    // with a frame the first one seen can already have them (it did one time in twelve, before any of this was changed)
+    const launching = p.evaluate(() => new Promise((done) => {
+      const seen = new MutationObserver(() => { const zoom = document.querySelector('.sb-slot[data-app="finder"] .sb-zoom'); if (zoom && !zoom.hasAttribute('data-shut')) { seen.disconnect(); done(!zoom.querySelector('.ios-screen')) } })
+      seen.observe(document.querySelector('.ph'), { subtree: true, childList: true, attributes: true, attributeFilter: ['data-shut'] })
+      setTimeout(() => done(null), 5000)
+    }))
     await t.touch.tap(...icon)
     let frames = await watching
+    const onLaunchScreen = await launching
     let seen = frames.filter((f) => f[3])
     say(seen.length > 6 && seen[0][0] < 150 && seen[0][1] < tile * 1.8, 'the first frames after the tap show the app at about the size of its icon', JSON.stringify(seen.slice(0, 3)))
     const widths = seen.map((f) => f[1])
@@ -80,7 +114,7 @@ const touchOf = (t) => ({
     // half-way there in well under the first third of the time, as a spring is
     const half = seen.find((f) => f[1] >= W / 2)
     say(!!half && half[0] - seen[0][0] < 190, 'most of the way in the first part of the move', half ? `half-way ${half[0] - seen[0][0]}ms after it was first seen` : 'never half-way')
-    say(seen.some((f) => !f[4]) && seen[seen.length - 1][4], 'it opens on its launch screen, and its own screens are in it by the time it has opened', JSON.stringify(seen.filter((f) => f[4])[0]))
+    say(onLaunchScreen === true && seen[seen.length - 1][4], 'it opens on its launch screen, and its own screens are in it by the time it has opened', `let go from its icon ${onLaunchScreen ? 'with only its launch screen' : 'with its screens already in it'}; first frame with them: ${JSON.stringify(seen.filter((f) => f[4])[0])}`)
     const style = await p.evaluate(() => { const app = document.querySelector('.sb-slot[data-front] .sb-zoom__app'); const zoom = app.closest('.sb-zoom'); return { clip: getComputedStyle(zoom).clipPath, moved: getComputedStyle(app).transitionProperty, busy: document.querySelector('.sb-slot[data-front] .sb-drag').getAttribute('aria-busy') } })
     say(style.clip === 'none' && /transform/.test(style.moved) && !/clip-path/.test(style.moved), 'it is moved by a transform, with no clip to redraw', JSON.stringify(style))
     say(style.busy === null, 'and is no longer marked as loading')
@@ -91,6 +125,21 @@ const touchOf = (t) => ({
     frames = await watching
     seen = frames.filter((f) => f[3])
     say(seen.length > 4 && seen.every((f) => f[4]), 'opened again, it is drawn whole from the first frame', JSON.stringify(seen.slice(0, 2)))
+    // the icon's picture keeps its own shape over the window as it grows: VIP's letters are not drawn tall and thin
+    await A.at(p, null, [], null, 900)
+    let pictured = picture(p, 40)
+    await t.touch.tap(...(await mid(p, '.sb-dock .sb-icon[aria-label^="VIP"]')))
+    let shape = await pictured
+    say(shape.length > 3 && shape.every(([w, h, across, off]) => Math.abs(w - h) <= 2 && Math.abs(w - across) <= 2 && Math.abs(off) <= 2), 'the icon\'s picture keeps its shape as the app opens: square, as wide as the window, in the middle of its height', JSON.stringify(shape.filter((_, i) => i % 3 === 0).map((f) => f.slice(0, 4))))
+    await p.waitForTimeout(900)
+    // out of the widget and back into its icon: the icon's picture is the window's size all the way, not a slab in its corner
+    await A.at(p, null, [], null, 900)
+    await t.touch.tap(...(await mid(p, '.sb-widget--wide .sb-widget__face'))); await p.waitForTimeout(1400)
+    pictured = picture(p, 50)
+    await t.touch.tap(W / 2, 760 - 8)
+    shape = await pictured
+    await p.waitForTimeout(400)
+    say((await A.state(p)).place?.app === null && shape.length > 3 && shape.every(([w, h, across, off]) => Math.abs(w - h) <= 2 && Math.abs(w - across) <= 2 && Math.abs(off) <= 2), 'opened out of the widget and sent home, the conversation goes into its icon with the icon\'s picture the size of its window all the way', JSON.stringify(shape.filter((_, i) => i % 3 === 0).map((f) => f.slice(0, 4))))
     say(A.realErrors(t.errors).length === 0, 'no errors', A.realErrors(t.errors).slice(0, 2).join(' | '))
     await t.ctx.close()
     // a card's launch screen is the card's own colour, not white: Contacts opened for the first time, on a company, out of the folder
@@ -104,11 +153,18 @@ const touchOf = (t) => ({
       const on = () => { document.removeEventListener('pointerdown', on, true); let n = 0; const tick = () => { const app = document.querySelector('.sb-slot[data-front] .sb-zoom__app'); if (app) out.push([getComputedStyle(app).backgroundColor, !!app.querySelector('.ios-screen')]); if (n++ < 40) requestAnimationFrame(tick); else done(out) }; requestAnimationFrame(tick) }
       document.addEventListener('pointerdown', on, true)
     }))
+    // (and what it was let go from its icon as, read as the page changes: see above)
+    const letGo = q.evaluate(() => new Promise((done) => {
+      const seen = new MutationObserver(() => { const zoom = document.querySelector('.sb-slot[data-app="finder"] .sb-zoom'); if (zoom && !zoom.hasAttribute('data-shut')) { seen.disconnect(); done([getComputedStyle(zoom.querySelector('.sb-zoom__app')).backgroundColor, !!zoom.querySelector('.ios-screen')]) } })
+      seen.observe(document.querySelector('.ph'), { subtree: true, childList: true, attributes: true, attributeFilter: ['data-shut'] })
+      setTimeout(() => done(null), 5000)
+    }))
     await u.touch.tap(...company)
     const got = await colours
+    const first = await letGo
     const s = await A.state(q)
     say(s.place?.app === 'finder' && /^co:/.test(s.place.stack?.[0] ?? ''), 'a company in the Portfolio folder opens its card in Contacts', JSON.stringify(s.place))
-    say(got.length > 0 && got.some(([, live]) => !live) && got.every(([c]) => c !== 'rgb(255, 255, 255)'), 'whose launch screen is the card\'s own colour from the first frame, not white', JSON.stringify([...new Set(got.map(([c, live]) => `${c} ${live ? 'drawn' : 'launch'}`))]))
+    say(got.length > 0 && !!first && !first[1] && first[0] !== 'rgb(255, 255, 255)' && got.every(([c]) => c !== 'rgb(255, 255, 255)'), 'whose launch screen is the card\'s own colour from the first frame, not white', JSON.stringify([`${first?.[0]} ${first?.[1] ? 'drawn' : 'launch'} as it was let go`, ...new Set(got.map(([c, live]) => `${c} ${live ? 'drawn' : 'launch'}`))]))
     say(A.realErrors(u.errors).length === 0, 'no errors', A.realErrors(u.errors).slice(0, 2).join(' | '))
     await u.ctx.close()
   })
@@ -143,6 +199,15 @@ const touchOf = (t) => ({
     await t.touch.up(); await p.waitForTimeout(700)
     const back = await p.evaluate(() => { const app = document.querySelector('.sb-slot[data-front] .sb-zoom__app'); const r = app?.getBoundingClientRect(); return app ? { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), top: Math.round(r.top), dragging: document.querySelector('.ph').hasAttribute('data-dragging') } : null })
     say(!!back && back.w === W && back.h === H && back.left === 0 && back.top === 0 && !back.dragging && (await A.state(p)).place?.app === 'notes', 'taken back down and let go, it settles back to the whole screen and stays open', JSON.stringify(back))
+    // carried a long way up and let go: its icon's picture comes up over the window where the window is, at the
+    // window's size (it is the window alone that the finger carries)
+    const pictured = picture(p, 90)
+    await t.touch.down(W / 2, H - 6)
+    for (let i = 1; i <= 14; i++) { await t.touch.move(W / 2, H - 6 - i * 29); await p.waitForTimeout(16) }
+    await t.touch.up()
+    const shape = (await pictured).filter((f) => f[4])
+    await p.waitForTimeout(500)
+    say((await A.state(p)).place?.app === null && shape.length > 3 && shape.every(([w, , across, off]) => Math.abs(w - across) <= 2 && Math.abs(off) <= 2), 'carried far up the screen and let go, its icon\'s picture comes up at the size of the window, not around it', JSON.stringify(shape.filter((_, i) => i % 3 === 0).map((f) => f.slice(0, 4))))
     say(A.realErrors(t.errors).length === 0, 'no errors', A.realErrors(t.errors).slice(0, 2).join(' | '))
     await t.ctx.close()
   })
@@ -323,9 +388,29 @@ const touchOf = (t) => ({
     await t.touch.tap(...(await mid(p, '.sb-open__note'))); await p.waitForTimeout(1300)
     s = await A.state(p)
     const inNote = s.place?.app === 'notes' && s.place.stack.length === 2
+    // Back: every frame of the note going back into its row, as [how much of it is drawn, how much of a picture over it]
+    const going = p.evaluate(() => new Promise((done) => {
+      const out = []
+      const on = () => {
+        document.removeEventListener('pointerdown', on, true)
+        let n = 0
+        const tick = () => {
+          const zoom = document.querySelector('.sb-slot[data-app="notes"] .sb-zoom')
+          if (zoom) { const cs = getComputedStyle(zoom); out.push([cs.visibility === 'hidden' ? 0 : +(+cs.opacity).toFixed(2), +(+getComputedStyle(zoom.querySelector('.sb-zoom__face')).opacity).toFixed(2), Math.round(zoom.querySelector('.sb-zoom__app').getBoundingClientRect().height)]) }
+          if (n++ < 60) requestAnimationFrame(tick); else done(out)
+        }
+        requestAnimationFrame(tick)
+      }
+      document.addEventListener('pointerdown', on, true)
+    }))
     await t.touch.tap(...(await mid(p, `${TOP} .ios-bar button[aria-label="Back"]`))); await p.waitForTimeout(1100)
     s = await A.state(p)
     say(inNote && s.place?.app === null && s.place.sheet === 'folder:faqs', 'a question picked in the FAQs folder goes back to that folder too', JSON.stringify(s.place))
+    // it fades away as it reaches the row: no white card is landed on the row and left there
+    const fading = await going
+    const small = fading.filter(([drawn, , tall]) => drawn > 0 && tall < 60)
+    const lastSeen = fading.filter(([drawn]) => drawn > 0).pop()
+    say(fading.some(([drawn, , tall]) => drawn === 1 && tall > 400) && fading.every(([, face]) => face < 0.05) && !!lastSeen && lastSeen[0] < 0.25 && small.filter(([drawn]) => drawn > 0.9).length <= 3, 'the note fades away as it reaches its row: no white card is landed on the row and left there', JSON.stringify(fading.filter((_, i) => i % 4 === 0)))
     say(A.realErrors(t.errors).length === 0, 'no errors', A.realErrors(t.errors).slice(0, 2).join(' | '))
     await t.ctx.close()
   })

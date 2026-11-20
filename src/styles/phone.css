@@ -333,14 +333,31 @@
   inset: 0;
   z-index: 1;
   touch-action: none;
-  transition:
-    transform 0.4s var(--glide),
-    opacity 0.3s ease;
+  transition: transform 0.4s var(--glide);
 }
 
 .sb-lock[data-leaving] {
+  --fade: 0;
   transform: translateY(-100%);
-  opacity: 0;
+}
+
+/* It thins as it is lifted, and as it goes (`--fade`: Springboard.tsx sets it under a finger). What is
+   on it is thinned piece by piece and never the screen as a whole. A pane of glass frosts what is behind
+   it only while nothing it is inside is itself see-through: faded as one, the notification went clear and
+   pale for as long as the screen was held, and came back frosted with a snap */
+.sb-lock__head,
+.sb-lock .sb-note,
+.sb-lock .sb-activity,
+.sb-lock .sb-stack::before,
+.sb-lock .sb-stack::after {
+  opacity: var(--fade, 1);
+  transition: opacity 0.3s ease;
+}
+
+.sb-lock[data-held] :is(.sb-lock__head, .sb-note, .sb-activity, .sb-lock__hint),
+.sb-lock[data-held] .sb-stack::before,
+.sb-lock[data-held] .sb-stack::after {
+  transition: none;
 }
 
 /* Tapped where there is nothing to press: it lifts a little and falls back, as
@@ -367,6 +384,16 @@
   30% {
     opacity: 1;
     transform: scale(1.08);
+  }
+}
+
+/* With motion turned down nothing lifts and nothing swells (below): the words are lit where they are,
+   for a second, so that a tap is still answered with how the screen opens */
+@keyframes sb-hint-lit {
+  15%,
+  70% {
+    background-color: rgb(255 255 255 / 0.26);
+    opacity: 1;
   }
 }
 
@@ -424,8 +451,9 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* A notification is a pane of the same glass */
-.sb-note.ss-notification {
+/* A notification is a pane of the same glass, and so is the Live Activity under it */
+.sb-note.ss-notification,
+.sb-activity {
   background: linear-gradient(180deg, rgb(248 249 253 / 0.66), rgb(244 246 252 / 0.54));
   -webkit-backdrop-filter: blur(22px) saturate(1.8);
   backdrop-filter: blur(22px) saturate(1.8);
@@ -435,9 +463,18 @@
     0 8px 26px rgb(8 10 60 / 0.12);
 }
 
-/* The replies wait just over the words that say how it opens: there are no round buttons under them to keep clear of */
+/* What waits at the foot of the Lock Screen, from the foot up: the words that say how it opens; 11
+   points over them the Live Activity; and over that the notification, with room between the two for the
+   edges of the older notifications under it (15 points of them, and 7 clear). There are no round buttons
+   under any of it to keep clear of. Nothing here lies over anything else at any size: where the screen is
+   too short for all of it, the edges of the stack are the first to go, then lines of the reply, and last
+   the Live Activity (below, with the other small screens) */
 .sb-lock .ss-lock__stack {
-  bottom: calc(72px + var(--below, 0px));
+  bottom: calc(64px + var(--below, 0px));
+}
+
+.sb-lock .sb-stack {
+  margin-bottom: 14px;
 }
 
 /* A short screen (a phone's browser, with its bars showing) keeps the clock clear of the notifications */
@@ -445,9 +482,85 @@
   .sb-lock__clock > svg {
     height: min(21.6cqw, 23.6cqh, 70px);
   }
+}
 
-  .sb-lock .ss-lock__stack {
-    bottom: calc(64px + var(--below, 0px));
+/* The Live Activity, as an iPhone keeps one at the foot of its Lock Screen: how many of the group have
+   replied so far, and a bar that fills as they do */
+.sb-activity {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 9px;
+  margin: 0 18px;
+  padding: 10px 16px 12px 14px;
+  border-radius: 23px;
+  color: #000;
+  font-size: 15px;
+  letter-spacing: -0.016em;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-activity:active {
+  filter: brightness(0.94);
+}
+
+.sb-activity__app {
+  display: block;
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 0 0.5px rgb(0 0 0 / 0.3));
+}
+
+.sb-activity__words {
+  overflow: hidden;
+  color: rgb(0 0 0 / 0.64);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sb-activity__words b {
+  color: #000;
+  font-weight: 600;
+}
+
+.sb-activity__bar {
+  display: block;
+  grid-column: 1 / -1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgb(0 0 0 / 0.14);
+}
+
+/* What has been said so far, of the whole of it (`--done`, from nothing to one). It is slid in from the
+   leading end and not stretched, so that its own end stays round */
+.sb-activity__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: #2ac34f;
+  transform: translateX(calc((var(--done, 0) - 1) * 100%));
+  transition: transform 0.5s var(--glide);
+}
+
+/* Forced colours take the glass and the bar's two fills away: the Live Activity is a solid sheet with an
+   edge, as the notification over it is (access.css), and its bar a line that fills in the system's own colours */
+@media (forced-colors: active) {
+  .ph .sb-activity {
+    background: Canvas;
+    outline: 1px solid CanvasText;
+  }
+
+  .sb-activity__bar {
+    outline: 1px solid CanvasText;
+  }
+
+  .sb-activity__bar > span {
+    background: Highlight;
+    forced-color-adjust: none;
   }
 }
 
@@ -459,13 +572,15 @@
   width: 190px;
   margin-left: -95px;
   padding: 7px 0;
+  border-radius: 17px;
   color: #fff;
   font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
   text-align: center;
   text-shadow: 0 1px 6px rgb(0 0 0 / 0.25);
-  opacity: 0.9;
+  opacity: calc(0.9 * var(--fade, 1));
+  transition: opacity 0.3s ease;
 }
 
 /* Over the wallpaper the accent does not show: the ring round what has the
@@ -505,24 +620,71 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   -webkit-backdrop-filter: blur(30px) saturate(1.25);
   backdrop-filter: blur(30px) saturate(1.25);
   content: '';
+  /* Only what is under the front notification's foot is drawn. The front one is glass: the rest of an
+     older one, behind it, showed through as a pale band across its last line. The cut follows the front
+     one's own round corners, which this starts 12 points in from */
+  clip-path: polygon(0 29.2px, 4px 30.9px, 8px 31.8px, 11px 32px, calc(100% - 11px) 32px, calc(100% - 8px) 31.8px, calc(100% - 4px) 30.9px, 100% 29.2px, 100% 100%, 0 100%);
 }
 
+/* (And the one behind that starts at the foot of the one in front of it, 14 points in from its corners) */
 .sb-stack[data-more='2']::after {
   right: 44px;
   bottom: -15px;
   left: 44px;
   z-index: -2;
   background: rgb(252 252 253 / 0.3);
+  clip-path: polygon(0 31.2px, 3px 32.2px, 6px 32.8px, 9px 33px, calc(100% - 9px) 33px, calc(100% - 6px) 32.8px, calc(100% - 3px) 32.2px, 100% 31.2px, 100% 100%, 0 100%);
 }
 
+/* The one notification takes the newest reply in its turn, and comes up afresh with each (`data-turn`
+   is 0 and 1 by turns, and the two moves are one move under two names: a name that changes is what starts
+   it over). The reply it showed before is not taken away first: a picture of it stays under the new one,
+   which is glass over it, until the new one is in, and goes as that lands. Replaced outright, the
+   notification blinked out and faded in from nothing with every reply, and none could be read */
 .sb-stack > .sb-note {
+  position: relative;
+  z-index: 1;
+}
+
+.sb-stack > .sb-note[data-turn='0'] {
   animation: sb-note-in 0.42s var(--glide);
+}
+
+.sb-stack > .sb-note[data-turn='1'] {
+  animation: sb-note-again 0.42s var(--glide);
 }
 
 @keyframes sb-note-in {
   from {
     opacity: 0;
-    transform: translateY(28px) scale(0.96);
+    transform: translateY(var(--rise, 18px)) scale(0.96);
+  }
+}
+
+@keyframes sb-note-again {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise, 18px)) scale(0.96);
+  }
+}
+
+.sb-stack > .sb-note--was {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  animation: sb-note-out 0.3s ease 0.2s both;
+}
+
+/* (Its words go first, and quickly: the pane is what stays, and two replies are not read through each other) */
+.sb-stack > .sb-note--was > * {
+  animation: sb-note-out 0.16s ease both;
+}
+
+@keyframes sb-note-out {
+  to {
+    opacity: 0;
   }
 }
 
@@ -597,8 +759,19 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   color: #fff;
   /* Nothing here scrolls: a drag on it is the pull that brings up search, not the browser's to pan */
   touch-action: none;
+  transition: transform 0.5s var(--spring);
+}
+
+/* The Home Screen is moved as one, and faded and put out of focus piece by piece: the Dock, the Search
+   pill, each widget's and each folder's face, each icon's tile and each name. Never as one. The Dock, the
+   pill and a folder are panes of glass, and glass frosts what is behind it only while nothing it is
+   inside is itself see-through or out of focus: faded as one, they went clear and pale for the length of
+   every fade (the phone opening, an app put away, a folder opened or shut) and came back frosted with a
+   snap. A pane's own fade and its own blur take nothing from it. (The Dock's icons go with the Dock.) */
+.sb-home :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+.sb-grid .sb-icon__tile,
+.sb-grid .sb-icon__name {
   transition:
-    transform 0.5s var(--spring),
     opacity 0.22s ease,
     filter 0.26s ease;
 }
@@ -607,9 +780,12 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
    opens out of one of them; they fall back into place from there when it is put away */
 .sb-home[data-covered] {
   transform: scale(1.16);
+}
+
+.sb-home[data-covered] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+.sb-home[data-covered] .sb-grid :is(.sb-icon__tile, .sb-icon__name) {
   opacity: 0;
   transition:
-    transform 0.5s var(--spring),
     opacity 0.16s ease,
     filter 0.26s ease;
 }
@@ -617,6 +793,10 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 /* Locked: the icons wait a little way out, and fly in when it opens */
 .sb-home[data-locked] {
   transform: scale(1.16);
+}
+
+.sb-home[data-locked] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+.sb-home[data-locked] .sb-grid :is(.sb-icon__tile, .sb-icon__name) {
   opacity: 0;
 }
 
@@ -624,7 +804,16 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
    its white type reads whatever was behind it (a white widget included) */
 .sb-home[data-searching] {
   transform: scale(0.94);
+}
+
+.sb-home[data-searching] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+.sb-home[data-searching] .sb-grid .sb-icon__name {
   filter: blur(20px);
+  opacity: 0.2;
+}
+
+.sb-home[data-searching] .sb-grid .sb-icon__tile {
+  filter: drop-shadow(0 2px 5px rgb(0 0 0 / 0.16)) blur(20px);
   opacity: 0.2;
 }
 
@@ -632,6 +821,11 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
    the whole way up the screen: Springboard.tsx), nearly in place by the time it is a third of the way */
 .ph[data-dragging] .sb-home[data-covered] {
   transform: scale(max(1.045, 1.16 - var(--carry, 0) * 0.4));
+  transition: none;
+}
+
+.ph[data-dragging] .sb-home[data-covered] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+.ph[data-dragging] .sb-home[data-covered] .sb-grid :is(.sb-icon__tile, .sb-icon__name) {
   opacity: calc(var(--carry, 0) * 5);
   transition: none;
 }
@@ -816,24 +1010,49 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 
 .sb-chat__name {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
+/* (The count is never broken over two lines: on a narrow widget the name gives way to it) */
 .sb-chat__count {
+  flex: none;
   color: var(--label-2);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The newest reply, and for a moment the one before it under it (as on the Lock Screen: above) */
+.sb-chat__news {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
 .sb-chat__reply {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1;
   align-items: flex-end;
   gap: 8px;
+  min-width: 0;
   min-height: 0;
+}
+
+.sb-chat__reply[data-turn='0'] {
   animation: sb-reply-in 0.4s var(--glide);
+}
+
+.sb-chat__reply[data-turn='1'] {
+  animation: sb-reply-again 0.4s var(--glide);
 }
 
 @keyframes sb-reply-in {
@@ -841,6 +1060,24 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
     opacity: 0;
     transform: translateY(10px);
   }
+}
+
+@keyframes sb-reply-again {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.sb-chat__reply--was {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  animation: sb-note-out 0.3s ease 0.2s both;
+}
+
+.sb-chat__reply--was .sb-chat__bubble > * {
+  animation: sb-note-out 0.16s ease both;
 }
 
 .sb-chat__bubble {
@@ -1112,6 +1349,30 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   }
 }
 
+/* Brought back by a swipe to the right along the home indicator (Springboard.tsx marks the screen for as
+   long as it takes), the app that was in front before comes in from the left, the way the finger went,
+   as it does on an iPhone, and the one it covers gives way to the right */
+.ph[data-swept] .sb-slot[data-slide='in'] > .sb-card {
+  box-shadow: 12px 0 32px rgb(0 0 0 / 0.16);
+  animation-name: sb-slide-back;
+}
+
+@keyframes sb-slide-back {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+.ph[data-swept] .sb-slot[data-slide='under'] > .sb-card {
+  animation-name: sb-slide-aside;
+}
+
+@keyframes sb-slide-aside {
+  to {
+    transform: translateX(28%);
+  }
+}
+
 /* The whole of an app: what takes the keyboard when it opens and has no screen of its own yet to give it to */
 .sb-drag {
   position: absolute;
@@ -1168,6 +1429,10 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   animation: none;
 }
 
+.sb-zoom__face .sb-chat__reply--was {
+  display: none;
+}
+
 /* ---- The App Switcher ---- */
 
 .sb-apps[data-switcher] {
@@ -1198,6 +1463,26 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   opacity: 0;
 }
 
+/* The app that was in front shrinks from the screen to its card. The others were not on the screen: they
+   come in from the side, already the size of a card. They are set down as cards with nothing to move from
+   (`data-entering` is on only until the browser has looked at them so: Springboard.tsx); moved there, each
+   was drawn once the size of the whole screen, behind the card that was held, and shrank away from that */
+.sb-apps[data-entering] .sb-slot:not([data-front]),
+.sb-apps[data-entering] .sb-slot:not([data-front]) > .sb-card {
+  transition: none;
+}
+
+.sb-apps[data-switcher] .sb-slot:not([data-front]) {
+  animation: sb-card-in 0.38s var(--glide) backwards;
+}
+
+@keyframes sb-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--pan, 0px) - var(--i) * var(--stride) - 34cqw)) translateY(var(--lift, 0px));
+  }
+}
+
 .sb-apps[data-panning] .sb-slot,
 .sb-slot[data-lifting] {
   transition: none;
@@ -1223,7 +1508,11 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   transition: opacity 0.2s ease;
 }
 
-.sb-apps[data-switcher] .sb-slot__label {
+/* A card's name, and the button that closes it (below), show for the card in the middle and no other
+   (`data-mid`: Springboard.tsx). A neighbour's sit where a corner of its card peeks in at the edge of the
+   screen: its ✕ there, in the screen's top corner, read as the middle card's own, and closed an app that
+   was not in view */
+.sb-apps[data-switcher] .sb-slot[data-mid] .sb-slot__label {
   opacity: 1;
   transition: opacity 0.3s ease 0.15s;
 }
@@ -1261,7 +1550,19 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   backdrop-filter: blur(20px) saturate(1.5);
   box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.3);
   color: #fff;
+  /* Out of sight, and out of reach of a finger and of Tab, until its card is the one in the middle */
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    visibility 0s 0.2s;
+}
+
+.sb-slot[data-mid] .sb-slot__close {
+  visibility: visible;
+  opacity: 1;
   pointer-events: auto;
+  transition: none;
   animation: sb-close-in 0.3s ease 0.15s backwards;
 }
 
@@ -1290,10 +1591,14 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   pointer-events: none;
 }
 
+/* The kit drops a banner in with a move that goes on holding it where it landed for good (its fill runs
+   both ways), and nothing set on a thing can move it while a move holds it: told to slide away, the banner
+   stayed put and then was gone in one frame. So the kit's move holds it only until it has landed, and it
+   leaves by a move of its own */
 .sb-banner .ss-notification {
   pointer-events: auto;
   touch-action: none;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 1, 1);
+  animation-fill-mode: backwards;
 }
 
 /* On a real phone there is no island to drop in under */
@@ -1302,7 +1607,13 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 }
 
 .sb-banner[data-leaving] .ss-notification {
-  transform: translateY(-180px);
+  animation: sb-banner-out 0.4s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes sb-banner-out {
+  to {
+    transform: translateY(-180px);
+  }
 }
 
 /* ---- The home indicator ---- */
@@ -1406,9 +1717,10 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
     height: min(21.6cqw, 23.6cqh, 64px);
   }
 
+  /* (The words are lower here, and what waits over them with them: 9 points clear) */
   .sb-lock .ss-lock__stack {
     right: 64px;
-    bottom: calc(52px + var(--below, 0px));
+    bottom: calc(56px + var(--below, 0px));
     left: 64px;
   }
 
@@ -1531,26 +1843,88 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   }
 }
 
+/* ---- A Lock Screen too short for all that waits at its foot ----
+   The clock, the notification with the edges of the older ones under it, the Live Activity and the words
+   that say how it opens need about 350 points of height between them (a phone on its side has it, just).
+   Under that something gives way, so that nothing lies over anything else: first the edges of the stack
+   and the room kept for them, and the reply keeps to a line under the conversation's name; on a screen
+   shorter still the Live Activity goes, and the notification says only who and where from. */
+@container (max-height: 400px) {
+  .sb-lock .sb-stack {
+    /* (and the notification comes up from less far under itself: the Live Activity is right there) */
+    --rise: 6px;
+    margin-bottom: 0;
+  }
+
+  .sb-lock .sb-stack::before,
+  .sb-lock .sb-stack::after {
+    display: none;
+  }
+
+  .sb-lock .sb-note .ss-notification__body {
+    -webkit-line-clamp: 2;
+  }
+}
+
+@container (max-height: 300px) {
+  .sb-lock .sb-activity {
+    display: none;
+  }
+
+  .sb-lock .sb-note .ss-notification__body {
+    -webkit-line-clamp: 1;
+  }
+}
+
+@container (max-height: 215px) {
+  .sb-lock .ss-lock__stack {
+    bottom: calc(52px + var(--below, 0px));
+  }
+
+  .sb-lock .sb-note {
+    padding-block: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sb-lock,
   .sb-home,
+  .sb-home :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+  .sb-home .sb-grid :is(.sb-icon__tile, .sb-icon__name),
+  .sb-home[data-covered] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+  .sb-home[data-covered] .sb-grid :is(.sb-icon__tile, .sb-icon__name),
   .sb-wall,
   .sb-slot,
+  .sb-apps[data-switcher] .sb-slot:not([data-front]),
   .sb-card,
   .sb-drag,
+  .sb-lock__head,
   .sb-lock__hint,
+  .sb-lock .sb-activity,
+  .sb-lock .sb-stack::before,
+  .sb-lock .sb-stack::after,
+  .sb-activity__bar > span,
   .sb-lock[data-nudge],
-  .sb-lock[data-nudge] .sb-lock__hint,
   .sb-apps,
   .sb-slot__close,
+  .sb-slot[data-mid] .sb-slot__close,
   .ph--bleed .sb-slot[data-open]::before,
   .sb-banner .ss-notification,
-  .sb-stack > .sb-note,
-  .sb-chat__reply,
+  .sb-banner[data-leaving] .ss-notification,
+  .sb-lock .sb-note,
+  .sb-stack > .sb-note[data-turn],
+  .sb-chat__reply[data-turn],
   .sb-badge,
   .sb-live[data-fresh],
   .sb-slot[data-slide] > .sb-card {
     animation: none;
+    transition: none;
+  }
+
+  /* Tapped, the Lock Screen does not lift and its words do not swell: they are lit where they are for a
+     second, so that the tap is still answered with how the screen opens */
+  .sb-lock[data-nudge] .sb-lock__hint {
+    animation: sb-hint-lit 1s ease;
     transition: none;
   }
 }

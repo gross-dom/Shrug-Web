@@ -8,13 +8,20 @@ import { useLayoutEffect, useRef } from 'react'
 
 // Whose hand is on the page. The site gives the keyboard to things itself (the first thing on the
 // Home Screen as the phone opens, a screen that has just been pushed), and a browser draws a ring
-// round whatever is given it that way. That ring is for someone using a keyboard: after a touch
-// there is nobody to show it to, and a ring round a widget nobody tabbed to is only a mark on the
-// screen. The page says which it was last (`data-input` on the root), and the stylesheets leave
-// the ring off after a touch (base.css). The next key pressed brings it back.
+// round whatever is given it that way. That ring is for someone using a keyboard: after a touch or
+// a press of the mouse there is nobody to show it to, and a ring round a widget nobody tabbed to
+// is only a mark on the screen. A browser does not always tell the two apart itself: what the site
+// focuses after a click on bare wallpaper, or before anything has been pressed at all (a reload),
+// it rings as if a key had been used. So the page says which it was last (`data-input` on the
+// root: "touch" for a hand on the page itself, a finger's or a mouse's, and from the start, when
+// nothing has been used yet), and the stylesheets leave the ring off then (base.css). The next key
+// pressed brings it back.
 if (typeof window !== 'undefined') {
   const root = document.documentElement
-  window.addEventListener('touchstart', () => root.setAttribute('data-input', 'touch'), { passive: true, capture: true })
+  const pointed = () => root.setAttribute('data-input', 'touch')
+  pointed()
+  window.addEventListener('touchstart', pointed, { passive: true, capture: true })
+  window.addEventListener('pointerdown', pointed, { passive: true, capture: true })
   window.addEventListener('keydown', () => root.removeAttribute('data-input'), true)
 }
 
