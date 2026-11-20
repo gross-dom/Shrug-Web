@@ -9,9 +9,14 @@ import { focusWindow, openApp, wm } from './wm'
 /** Opens an app the way the screen it is on opens things: a window out of the
  * Dock on a desktop; on a phone, the app itself. About Shrug is a window of the
  * desktop's and the phone has no app of that name: who Shrug is, there, is on
- * Shrug's own card in Contacts, so that is what opens. */
+ * Shrug's own card in Contacts, so that is what opens. (The desk's Wallpapers
+ * are nowhere on a phone, and asking for them there opens nothing.) */
 export function launchApp(id: AppId) {
-  if (wm.get().compact) return onPhone(id) ? launch(id) : launchAt('finder', [MY_CARD])
+  if (wm.get().compact) {
+    if (onPhone(id)) launch(id)
+    else if (id === 'about') launchAt('finder', [MY_CARD])
+    return
+  }
   openApp(id, dockPoint(id))
   focusWindow(id)
 }

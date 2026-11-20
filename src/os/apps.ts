@@ -1,7 +1,7 @@
 // The apps on the desktop: what each is called, how big its window opens and
 // how small it can get. The windows themselves are in src/apps.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'photos' | 'about'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'photos' | 'about' | 'wallpapers'
 
 export interface Size {
   w: number
@@ -107,6 +107,19 @@ export const APPS: Record<AppId, AppSpec> = {
     nudge: { x: 0, y: -30 },
     resizable: false,
     lightsY: 19,
+    dock: null,
+  },
+  // The desk's wallpapers, to look at, to keep on the desk and to download. It is a folder on the desk, not
+  // an app in the Dock: only the desktop has it (a phone has a wallpaper of its own)
+  wallpapers: {
+    id: 'wallpapers',
+    name: 'Wallpapers',
+    blurb: 'The desktop’s wallpapers',
+    size: fit({ w: 0.56, h: 0.68 }, { w: 720, h: 480 }, { w: 980, h: 660 }),
+    min: { w: 420, h: 340 },
+    nudge: { x: 30, y: 10 },
+    resizable: true,
+    lightsY: 26,
     dock: null,
   },
 }

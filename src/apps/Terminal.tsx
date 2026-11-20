@@ -221,7 +221,7 @@ const counts = (): Line[] => [
 /** The words a line can begin with, as Tab finishes them: the ones help lists, and the few it leaves to be found. */
 const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'fortune', 'help', 'ls', 'neofetch', 'open', 'please', 'pwd', 'whoami', 'whois']
 const READS = ['cat', 'less', 'more', 'head', 'tail', 'vi', 'vim', 'nano']
-const OPEN_NAMES = ['portfolio', 'faqs', 'vip', 'chat', 'about', 'one-pager']
+const OPEN_NAMES = ['portfolio', 'faqs', 'vip', 'chat', 'about', 'wallpapers', 'one-pager']
 const WHO = [...PEOPLE.map((person) => folded(person.name)), ...COMPANIES.map((company) => folded(company.name))]
 
 /** What the word being typed could be finished as: `head` is everything typed before it. */
@@ -330,6 +330,8 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
       if (name === 'one-pager' || name === 'onepager') return { lines: [{ kind: 'link', text: 'read the one-pager', href: SITE.onePager }] }
       const app = OPENS[name]
       if (app === 'terminal') return { lines: [out('you’re in it.')] }
+      // The wallpapers are the desktop's: a phone has one of its own, and no folder of them
+      if (app === 'wallpapers' && wm.get().compact) return { lines: [out('the wallpapers are on the desktop. try this on a bigger screen.')] }
       if (app) return { lines: [{ kind: 'ok', text: `opening ${arg}.` }], open: app }
       // One the listing shows and nobody may read: what can be opened is the company itself, where it is in the portfolio
       const shut = privateNamed(arg)

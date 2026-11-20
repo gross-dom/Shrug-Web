@@ -5,6 +5,7 @@ import { MessagesApp } from '../apps/Messages'
 import { NotesApp } from '../apps/Notes'
 import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
+import { WallpapersApp } from '../apps/Wallpapers'
 import { SITE } from '../data/site'
 import { APPS, APP_IDS, type AppId } from './apps'
 import { Boundary } from './Boundary'
@@ -33,6 +34,7 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   terminal: TerminalApp,
   photos: PhotosApp,
   about: AboutApp,
+  wallpapers: WallpapersApp,
 }
 
 interface DeskItem {
@@ -54,6 +56,17 @@ const DESK: DeskItem[] = [
       openApp('finder', dockPoint('finder'))
       // The window that was asked for takes the keyboard, as it does from the Dock
       focusWindow('finder')
+    },
+  },
+  {
+    id: 'wallpapers',
+    name: 'Wallpapers',
+    says: 'desktop icon',
+    icon: <FolderIcon />,
+    open: () => {
+      // It has no icon in the Dock to open out of: it opens out of its own, here on the desk (dockPoint)
+      openApp('wallpapers', dockPoint('wallpapers'))
+      focusWindow('wallpapers')
     },
   },
   { id: 'one-pager', name: 'One-pager', says: 'desktop icon, opens in a new tab', icon: <DocumentIcon />, open: () => window.open(SITE.onePager, '_blank', 'noopener,noreferrer') },
@@ -78,6 +91,7 @@ function DeskIcons() {
           <button
             type="button"
             className="desk__item"
+            data-desk={item.id}
             data-picked={picked === item.id || undefined}
             aria-label={`${item.name}, ${item.says}`}
             onPointerDown={(e) => {

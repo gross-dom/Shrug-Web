@@ -18,7 +18,7 @@ import { ZOOM } from './Zoom'
 /** The apps on the phone are the desktop's windows, each redrawn as its iPhone counterpart. All but
  * one: About Shrug is a window of the desktop's own (a Mac has one; an iPhone has no such app), and
  * the phone has nothing in its place. */
-export type PhoneApp = Exclude<AppId, 'about'>
+export type PhoneApp = Exclude<AppId, 'about' | 'wallpapers'>
 
 export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'photos']
 

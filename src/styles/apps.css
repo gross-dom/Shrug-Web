@@ -2664,6 +2664,107 @@
   right: 20px;
 }
 
+/* ---- Wallpapers: the desk's wallpapers as a photo library (apps/Wallpapers.tsx). It is VIP's window
+   again: its head, its tiles and its dark room for one picture. What is its own is below ---- */
+
+/* Each tile is the shape of a screen */
+.walls__grid {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 0 22px 24px;
+}
+
+.walls-tile {
+  grid-row: auto;
+  aspect-ratio: 16 / 9;
+}
+
+/* The one on the desk says so, and is ringed */
+.walls-tile[data-on] {
+  box-shadow: 0 0 0 3px var(--ss-accent);
+}
+
+.walls-tile__on {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px 4px 7px;
+  border-radius: 10px;
+  background: var(--ss-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* The switch in the bar: its words, then the kit's toggle */
+.os .walls-auto {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  border-radius: 8px;
+  color: var(--ss-text-strong);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.os .walls-auto:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* One wallpaper, large: what can be done with it is in the bar over it */
+.os .walls-act {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 15px;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.os .walls-act:hover {
+  background: rgb(255 255 255 / 0.24);
+}
+
+.os .walls-act[data-on] {
+  background: none;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.28);
+  color: rgb(255 255 255 / 0.82);
+}
+
+.walls-act__size {
+  color: rgb(255 255 255 / 0.66);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The picture keeps its own shape as it arrives: the room is not empty and then full */
+.walls-look .vip-look__media {
+  width: auto;
+  height: auto;
+}
+
+/* In a narrow window the count of its pixels gives way to the two things that can be done with it */
+@container (max-width: 520px) {
+  .walls-act__size {
+    display: none;
+  }
+}
+
 /* The kit's segmented control, at the tall bar's size and shape */
 .seg {
   flex: none;

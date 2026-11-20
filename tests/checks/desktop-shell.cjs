@@ -371,7 +371,7 @@ const parts = {
     }))
     check('menus: Pause Replies is in the mark\'s menu with Portfolio in front', names.app === 'Portfolio' && names.mark.includes('Pause Replies') && names.mark.includes('Screen Saver') && names.mark.includes('Never'), JSON.stringify(names.mark))
     check('copy: "Minimize", "Group Chat", "Questions about Shrug", "One-pager, opens in a new tab"', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager, opens in a new tab') && names.dock.includes('FAQs: Questions about Shrug') && names.dock.includes('One-pager, opens in a new tab') && names.lights.includes('Minimize Portfolio'), JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
-    check('desk: icons are named "…, desktop icon", sit inside main, and links do not drag', names.desk.join(' | ') === 'Portfolio, desktop icon | One-pager, desktop icon, opens in a new tab' && names.deskInMain && names.dockDrag === 'false', JSON.stringify(names.desk))
+    check('desk: icons are named "…, desktop icon", sit inside main, and links do not drag', names.desk.join(' | ') === 'Portfolio, desktop icon | Wallpapers, desktop icon | One-pager, desktop icon, opens in a new tab' && names.deskInMain && names.dockDrag === 'false', JSON.stringify(names.desk))
     check('title: names the window in front', names.title === 'Portfolio · Shrug', names.title)
     check('menus: What’s New in Shrug V is in the mark\'s menu, straight under About Shrug', names.mark[0] === 'About Shrug' && names.mark[1] === 'What’s New in Shrug V', JSON.stringify(names.mark.slice(0, 3)))
     await t.ctx.close()

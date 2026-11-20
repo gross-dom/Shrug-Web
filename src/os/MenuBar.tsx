@@ -11,6 +11,7 @@ import { focusLost } from './focus'
 import { askedIdle, saver, setSaverNever, startSaver } from './saver'
 import { shrugs } from './shrug'
 import { useStore } from './store'
+import { nextWallpaper, setWallpaperAuto, wallpaper } from './wallpaper'
 import { activeApp, bringAllToFront, closeApp, focusApp, focusWindow, minimizeApp, openApp, tileApp, toggleZoom, wm } from './wm'
 
 // The menu bar: Shrug's mark where the system menu goes, the front app's name
@@ -76,7 +77,7 @@ function Mark() {
 
 function useMenus(): MenuDef[] {
   const active = useStore(wm, activeApp)
-  const open = useStore(wm, (s) => DOCK_APPS.concat('about').filter((id) => s.wins[id].open).join(' '))
+  const open = useStore(wm, (s) => DOCK_APPS.concat('about', 'wallpapers').filter((id) => s.wins[id].open).join(' '))
   const tile = useStore(wm, (s) => (active ? s.wins[active].tile : null))
   const compact = useStore(wm, (s) => s.compact)
   const paused = useStore(chat, (s) => s.paused)
@@ -85,6 +86,7 @@ function useMenus(): MenuDef[] {
   const filter = useStore(photos, (s) => s.filter)
   const note = useStore(notes, (s) => s.note)
   const never = useStore(saver, (s) => s.never)
+  const auto = useStore(wallpaper, (s) => s.auto)
   /** The address sets the screen saver's wait itself (`?idle=20`): that is what it does, whatever was chosen. */
   const idle = askedIdle()
   const spec = active ? APPS[active] : null
@@ -103,7 +105,9 @@ function useMenus(): MenuDef[] {
             ]
           : active === 'notes'
             ? [item('Next Question', () => showNote((note + 1) % FAQS.length)), item('Previous Question', () => showNote((note + FAQS.length - 1) % FAQS.length))]
-            : []
+            : active === 'wallpapers'
+              ? [item('Next Wallpaper', nextWallpaper), rule, item('Change Automatically', () => setWallpaperAuto(!auto), { checked: auto })]
+              : []
 
   const menus: MenuDef[] = [
     {

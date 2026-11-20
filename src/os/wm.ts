@@ -169,7 +169,7 @@ function shared(a: Rect, b: Rect) {
 function deskIcons(viewport: Size): Rect {
   const el = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('.desk')
   const r = el?.getBoundingClientRect()
-  return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: viewport.w - 104, y: 42, w: 92, h: 196 }
+  return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: viewport.w - 104, y: 42, w: 92, h: 298 }
 }
 
 /** The smallest screen the desk's widget is shown on: under it the room is the

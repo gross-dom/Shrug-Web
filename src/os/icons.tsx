@@ -243,6 +243,7 @@ const ICONS: Record<AppId, () => ReactNode> = {
   finder: FinderIcon,
   photos: VipIcon,
   about: ShrugIcon,
+  wallpapers: FolderIcon,
 }
 
 export function AppIcon({ id }: { id: AppId }) {

@@ -64,6 +64,30 @@
   background-image: url('/wallpaper.webp');
 }
 
+/* The wallpaper the desk is showing (os/DeskWallpaper.tsx): the first is the picture above again, and the desk
+   moves on through the others (src/data/wallpapers.ts), each fading in over the one before it. Fetched, like
+   the picture above, only where the desktop's wallpaper shows */
+.os__picture {
+  position: absolute;
+  inset: 0;
+  background: center / cover no-repeat;
+}
+
+.os:not([data-compact]) .os__picture,
+.os:has(.ph-desk) .os__picture {
+  background-image: var(--picture);
+}
+
+.os__picture[data-arriving] {
+  animation: os-picture-in 1.6s ease both;
+}
+
+@keyframes os-picture-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* A photograph instead: put it in public/ and set --wallpaper on .os, e.g.
    --wallpaper: url('/wallpaper.jpg'). It covers the drawn one. */
 .os__wallpaper::after {

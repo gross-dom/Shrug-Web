@@ -12,6 +12,7 @@ import { addressable, addressOf, personAt, placeOfSpot } from './place'
 import { saver, startSaver } from './saver'
 import { Arriving, Stalled, unfetched } from './Stalled'
 import { useStore } from './store'
+import { DeskWallpaper } from './DeskWallpaper'
 import { openApp, PHONE_UNDER, setViewport, wm } from './wm'
 
 // The site's root: the wallpaper, and over it either the desktop (the menu
@@ -202,6 +203,7 @@ export function Desktop() {
   return (
     <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={compact || undefined}>
       <div className="os__wallpaper" aria-hidden>
+        <DeskWallpaper />
         <div className="os__grain" />
       </div>
       {/* The page's own heading: in a banner, so that nothing on the page sits outside a landmark */}

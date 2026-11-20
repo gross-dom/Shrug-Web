@@ -274,7 +274,7 @@ function typeAndSend(text: string, key: string, each: number, then: () => void) 
     at++
     chat.set((s) => ({ ...s, draft: text.slice(0, at) }))
     if (at < text.length) return after(paced(each, 'typing'), step)
-    after(paced(200, 'typing'), () => {
+    after(paced(260, 'typing'), () => {
       chat.set((s) => ({ ...s, draft: null, items: [...s.items, asMine(text, key)] }))
       then()
     })
@@ -283,12 +283,14 @@ function typeAndSend(text: string, key: string, each: number, then: () => void) 
 }
 
 /** Every reply keeps the same time: its dots show while it is written, it is
- * sent, and there is a moment before the next person starts. Quick, as a
- * group with something to say is: a reply lands a little over once a second,
- * so the first are there within a few seconds of arriving and the thread never
- * stands still. Out of sight (see above) each is shorter again. */
-export const WRITING = 800
-export const BETWEEN = 400
+ * sent, and there is a moment before the next person starts. A reply lands
+ * every two seconds: long enough for one to be seen before the next moves it
+ * up, and still a group with something to say. (It began at one every 2.8
+ * seconds, which dragged, and was then cut to 1.2, at which nobody could take
+ * in what was said: this is half-way between.) Out of sight (see above) each
+ * is shorter again. */
+export const WRITING = 1250
+export const BETWEEN = 750
 
 function person(index: number) {
   // The last reply is the end of the conversation
@@ -308,9 +310,10 @@ function person(index: number) {
 }
 
 function opening() {
-  typeAndSend(QUESTION[0]!, 'ask-0', 26, () =>
-    after(paced(240, 'typing'), () =>
-      typeAndSend(QUESTION[1]!, 'ask-1', 17, () => {
+  // (Shrug's own question is typed at a pace between the two as well: 46 and 30 at first, then 26 and 17)
+  typeAndSend(QUESTION[0]!, 'ask-0', 36, () =>
+    after(paced(310, 'typing'), () =>
+      typeAndSend(QUESTION[1]!, 'ask-1', 24, () => {
         chat.set((s) => ({ ...s, asked: true }))
         after(paced(BETWEEN, 'replies'), () => person(0))
       }),
@@ -358,7 +361,7 @@ export function startChat() {
   chat.set(base)
   // Under way: the next reply. Not yet begun: from the question
   if (base.asked) after(paced(BETWEEN, 'replies'), () => person(base.replied))
-  else after(paced(400, 'typing'), opening)
+  else after(paced(650, 'typing'), opening)
 }
 
 export function pauseChat() {
@@ -376,7 +379,7 @@ export const toggleChat = () => (chat.get().paused ? resumeChat() : pauseChat())
 export function replayChat() {
   reset()
   chat.set({ ...fresh(), started: true })
-  after(paced(400, 'typing'), opening)
+  after(paced(550, 'typing'), opening)
 }
 
 /** Everyone replies at once. */
