@@ -204,7 +204,7 @@ const touchOf = (t) => ({
       })
       const names = Object.keys(boxes).filter((k) => boxes[k]); const over = []
       for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) { const a = boxes[names[i]], b = boxes[names[j]]; if (a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1) over.push(`${names[i]} over ${names[j]}`) }
-      say(!!boxes.notification && !!boxes.words && over.length === 0 && (h < 301 || !!boxes.activity), `${w}x${h}: the clock, the notification and its stack, the Live Activity and the words that open it keep clear of one another`, over.join(', ') || JSON.stringify(boxes))
+      say(!!boxes.notification && !!boxes.words && over.length === 0 && !boxes.activity, `${w}x${h}: the clock, the notification and its stack and the words that open it keep clear of one another, with no bar among them`, over.join(', ') || JSON.stringify(boxes))
       await z.ctx.close()
     }
 
@@ -824,7 +824,7 @@ const touchOf = (t) => ({
     let watching = cut(1700)
     await t.touch.path([[196, 600], [196, 570], [196, 530], [196, 480], [196, 420], [196, 350], [196, 270], [196, 200]], 40)
     let got = await watching
-    say(!(await st(p)).locked && got.frames > 20 && got.panes >= 5 && got.bad.length === 0, 'the Lock Screen lifted under a finger and the phone opened: no pane of glass has anything see-through over it at any frame', JSON.stringify(got))
+    say(!(await st(p)).locked && got.frames > 20 && got.panes >= 4 && got.bad.length === 0, 'the Lock Screen lifted under a finger and the phone opened: no pane of glass has anything see-through over it at any frame', JSON.stringify(got))
     await p.waitForTimeout(500)
     watching = cut(2400)
     await t.touch.tap(...(await mid(p, '.sb-dock .sb-icon[aria-label^="Notes"]'))); await p.waitForTimeout(1200)
