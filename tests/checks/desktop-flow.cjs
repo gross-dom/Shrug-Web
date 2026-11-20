@@ -3,6 +3,8 @@ const { chromium } = require('playwright')
 ;(async () => {
   const browser = await chromium.launch()
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  // (the weather the desk's widget asks for is answered here: lib.cjs)
+  await require('./lib.cjs').weather(ctx)
   const page = await ctx.newPage()
   const errors = []
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))

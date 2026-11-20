@@ -312,10 +312,20 @@ export function push(view: string) {
   go({ app: s.app, stacks: { ...s.stacks, [s.app]: [...s.stacks[s.app], view] }, sheet: null })
 }
 
-/** Back a screen in the app in front. */
+/** Back a screen in the app in front. Where the app was opened on this very screen out of a folder on the
+ * Home Screen (a company picked in Portfolio, a question in FAQs), Back leads back out to that folder,
+ * open as it was, and not further into the app: the way back is the way in. */
 export function pop() {
   const s = sys.get()
   if (!s.app || !s.stacks[s.app].length) return
+  if (expected === null) {
+    const entry = here()
+    const before = steps.get(entry.n - 1)
+    if (entry.n > 0 && before && !before.app && !before.over && before.sheet?.startsWith('folder:') && same(entry.shrug, placeOf(s)) && s.origin?.startsWith('folder:')) {
+      moved()
+      return rewind(-1, before, true)
+    }
+  }
   back({ app: s.app, stacks: { ...s.stacks, [s.app]: s.stacks[s.app].slice(0, -1) }, sheet: null })
 }
 

@@ -4,9 +4,10 @@ import type { AppId } from './apps'
 
 // The desktop's own icons, drawn here: app icons in the rounded-square shape a
 // Dock expects, a document, a folder, and Shrug's logo. The group chat's, the
-// notes' and the portfolio's are drawn after the Mac apps they stand for
-// (Messages, Notes, the Finder); Case Studies, VIP and Shrug's own are
-// Shrug's. No file from an operating system is used.
+// notes', the portfolio's and the case studies' are drawn after the Mac apps
+// they stand for (Messages, Notes, the Finder, Terminal) as those are drawn
+// now, and the folder after a Mac's; VIP and Shrug's own are Shrug's. No file
+// from an operating system is used.
 
 /** A continuous-corner square (a superellipse), 100 units across. */
 const SQUIRCLE = (() => {
@@ -75,48 +76,59 @@ function Tile({ from, to, children, sheen = 0.5 }: { from: string; to: string; c
   )
 }
 
-/** Messages: a white speech bubble on green, as the app that sends them is drawn. */
+/** Messages: a pale speech bubble, lit from above, on a soft green, as the app that sends them is drawn now. */
 function ChatIcon() {
+  const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#6cf486" to="#0bbf2f" sheen={0.4}>
-      <path
-        d="M50 22.5c-18.5 0-33.5 12.1-33.5 27 0 9.1 5.6 17.1 14.2 22-.5 4.6-2.6 8.5-6.3 11.4-.6.5-.2 1.4.6 1.3 7-.9 12.8-3.7 16.8-7.9 2.6.5 5.4.8 8.2.8 18.5 0 33.5-12.4 33.5-27.6S68.5 22.5 50 22.500z"
-        fill="#fff"
-      />
+    <Tile from="#8eee8b" to="#4ec254" sheen={0.35}>
+      <defs>
+        <linearGradient id={`${id}-bubble`} gradientUnits="userSpaceOnUse" x1="0" y1="17" x2="0" y2="80">
+          <stop offset="0" stopColor="#fcfffb" />
+          <stop offset="1" stopColor="#d2f2d0" />
+        </linearGradient>
+        <filter id={`${id}-lift`} x="-20%" y="-20%" width="140%" height="150%">
+          <feDropShadow dx="0" dy="1.2" stdDeviation="1.6" floodColor="#0c6b1c" floodOpacity="0.22" />
+        </filter>
+      </defs>
+      <g fill={`url(#${id}-bubble)`} filter={`url(#${id}-lift)`}>
+        <ellipse cx="50.200" cy="47.500" rx="37.300" ry="30.300" />
+        {/* Its tail, down to the left */}
+        <path d="M21.6 66.500C22.6 71.600 21.400 75.900 17.700 78.500 17 79 17.300 80 18.200 80 23.800 80.100 29 78.600 33.200 75.600Z" />
+      </g>
     </Tile>
   )
 }
 
-/** FAQs: Notes. A pad with its yellow binding, the perforation under it, and two ruled lines. */
+/** FAQs: Notes. A white pad with its yellow binding, the perforation under it, and two ruled lines that stop short of its edges. */
 function NotesIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#ffffff" to="#f4f4f7" sheen={0.6}>
+    <Tile from="#fdfdfd" to="#f0f0f2" sheen={0.6}>
       <defs>
         <linearGradient id={`${id}-top`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffe35a" />
-          <stop offset="1" stopColor="#ffc905" />
+          <stop offset="0" stopColor="#fbdd58" />
+          <stop offset="1" stopColor="#f6c93a" />
         </linearGradient>
       </defs>
-      <rect width="100" height="30" fill={`url(#${id}-top)`} />
-      <rect y="30" width="100" height="1" fill="#000" opacity="0.1" />
+      <rect width="100" height="26.500" fill={`url(#${id}-top)`} />
       {Array.from({ length: 21 }, (_, i) => (
-        <circle key={i} cx={6 + i * 4.4} cy="38.5" r="1.05" fill="#b4b4ba" />
+        <circle key={i} cx={6.5 + i * 4.35} cy="30.300" r="0.850" fill="#bdb49a" />
       ))}
-      <rect y="55.5" width="100" height="1.3" fill="#d4d4d9" />
-      <rect y="73" width="100" height="1.3" fill="#d4d4d9" />
+      <g fill="none" stroke="#cbcbd0" strokeWidth="1.300" strokeLinecap="round">
+        <path d="M12.5 50.500h75M12.5 75.500h75" />
+      </g>
     </Tile>
   )
 }
 
+/** Case Studies: a terminal. A prompt and its cursor, small, in the top corner of a black tile. */
 function TerminalIcon() {
   return (
-    <Tile from="#4b4b55" to="#131316" sheen={0.35}>
-      <rect x="9" y="9" width="82" height="82" rx="17" fill="#0b0b0d" />
-      <g fill="none" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M27 36l14 12.5L27 61" stroke="#f4f4f6" />
-        <path d="M49 63h22" stroke="#6ee7a8" />
-      </g>
+    <Tile from="#262628" to="#0f0f11" sheen={0.3}>
+      {/* The tile's own edge, a shade lighter all round */}
+      <path d={SQUIRCLE} fill="none" stroke="#fff" strokeOpacity="0.090" strokeWidth="1.600" transform="translate(0.8 0.8) scale(0.984)" />
+      <path d="M19.2 23.400 35.400 33 19.200 42.600" fill="none" stroke="#f5f5f7" strokeWidth="4.300" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="40.200" y="48.900" width="20.800" height="4.300" rx="1" fill="#9a9a9f" />
     </Tile>
   )
 }
@@ -127,43 +139,34 @@ function FolderGlyph() {
     <>
       <defs>
         <linearGradient id={`${id}-front`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#7fcbff" />
-          <stop offset="1" stopColor="#3f9df5" />
+          <stop offset="0" stopColor="#93d1f8" />
+          <stop offset="1" stopColor="#62ade8" />
         </linearGradient>
       </defs>
-      <path d="M17 33a7 7 0 0 1 7-7h15.2a7 7 0 0 1 5.3 2.4l3 3.6H76a7 7 0 0 1 7 7v9H17z" fill="#2f86e6" />
-      <rect x="17" y="38" width="66" height="39" rx="8" fill={`url(#${id}-front)`} />
-      <rect x="17" y="38" width="66" height="2" rx="1" fill="#fff" opacity="0.45" />
+      {/* The back, with its tab; a sheet of what is in it showing over the front; the front */}
+      <path d="M17 32a6 6 0 0 1 6-6h14.600a6 6 0 0 1 4.700 2.300l1.200 1.500a3.400 3.400 0 0 0 2.700 1.300H77a6 6 0 0 1 6 6V47H17z" fill="#5faeea" />
+      <rect x="19.400" y="33.300" width="61.200" height="9" rx="1.500" fill="#fff" />
+      <rect x="17" y="35.700" width="66" height="41.300" rx="5.500" fill={`url(#${id}-front)`} />
+      <rect x="17.600" y="35.700" width="64.800" height="1.300" rx="0.650" fill="#fff" opacity="0.500" />
     </>
   )
 }
 
-/** Portfolio: the Finder. A face in two blues, one side in profile against the other, with its two eyes and its smile. */
+/** Portfolio: the Finder. A face on blue, its far side a pale pane set in from the tile's edge with the profile for its near side, two small eyes, and a smile across both. */
 function FinderIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#3fb4ff" to="#0a5be0" sheen={0.55}>
+    <Tile from="#1fbcfc" to="#2c8cf5" sheen={0.45}>
       <defs>
         <linearGradient id={`${id}-far`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#ffffff" />
-          <stop offset="1" stopColor="#d6e6fb" />
+          <stop offset="1" stopColor="#d7e9fc" />
         </linearGradient>
-        <linearGradient id={`${id}-ink`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#13306a" />
-          <stop offset="1" stopColor="#081a40" />
-        </linearGradient>
-        {/* The far side lies over the near one, as a second pane of glass: it throws a little shade back along the profile */}
-        <filter id={`${id}-lift`} x="-20%" y="-10%" width="140%" height="120%">
-          <feDropShadow dx="-1.3" dy="0" stdDeviation="1.5" floodColor="#052a72" floodOpacity="0.42" />
-        </filter>
       </defs>
-      {/* The far side of the face, from its profile to the edge of the tile */}
-      <path d="M57.5 -2C56 13 50.5 30.500 47.500 47.500H56.500C56.500 66 58 84 61 102H102V-2Z" fill={`url(#${id}-far)`} filter={`url(#${id}-lift)`} />
-      {/* The light the pane's own edge catches */}
-      <path d="M57.5 -2C56 13 50.5 30.500 47.500 47.500H56.500C56.500 66 58 84 61 102" fill="none" stroke="#fff" strokeOpacity="0.75" strokeWidth="0.900" />
-      <g fill="none" stroke={`url(#${id}-ink)`} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M29.500 27v12M71 27v12" strokeWidth="6.200" />
-        <path d="M20.500 60.500C32.500 80 67.500 80 79.500 60.500" strokeWidth="5.400" />
+      <path d="M56.5 8.500C55.500 24 48 39.500 41.500 54.500H50.500C50.500 68 51.800 81 54 93H82A10.500 10.500 0 0 0 92.500 82.500V19A10.500 10.500 0 0 0 82 8.500Z" fill={`url(#${id}-far)`} />
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M27.400 32.500v8M69.300 32.500v8" stroke="#16233f" strokeWidth="2.700" />
+        <path d="M20.500 66.500C31 80 66 80 77 65.500" stroke="#0b0b10" strokeWidth="3.100" />
       </g>
     </Tile>
   )

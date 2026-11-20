@@ -59,7 +59,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   await touch.swipe([note.x + note.width / 2, note.y + note.height / 2], [note.x + note.width / 2, note.y - 260], 150); await sleep(900)
   let s = await at()
   say(!s.locked && s.app === null, 'a swipe up opens it onto the Home Screen, even one that starts on a notification')
-  say((await page.locator('.sb-dock .sb-icon').count()) === 3 && s.replies >= 1 && s.badge === String(s.replies), 'the Dock holds three apps, and the badge on Messages counts the replies that have come in', `badge ${s.badge}, ${s.replies} replies`)
+  say((await page.locator('.sb-dock .sb-icon').count()) === 4 && s.replies >= 1 && s.badge === String(s.replies), 'the Dock holds four apps, and the badge on Messages counts the replies that have come in', `badge ${s.badge}, ${s.replies} replies`)
   say((await page.locator('.sb-widget--wide').count()) === 1 && (await page.locator('.sb-folder').count()) === 2, 'the newest reply as a widget, and the Portfolio and FAQs folders')
 
   // ---- Every app opens out of its icon and goes home on a flick ----

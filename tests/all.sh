@@ -44,6 +44,7 @@ run "messages"                       node messages.cjs $BASE
 if [ $webkit -eq 1 ]; then run "folders and search" node folders-search.cjs $BASE; else run "folders and search" node folders-search.cjs $BASE nowk; fi
 run "iOS parts, replies, About"      node ios-parts.cjs $BASE
 run "phone shell"                    node phone-shell.cjs $BASE
+run "between apps"                   node between-apps.cjs $BASE
 # Safari's engine, one driver at a time
 if [ $webkit -eq 1 ]; then
   for f in ios-parts messages phone-shell portfolio-faqs terminal-vip desktop-shell; do

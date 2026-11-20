@@ -14,6 +14,7 @@ import { focusFirst } from './focus'
 import { DocumentIcon, FolderIcon } from './icons'
 import { MenuBar } from './MenuBar'
 import { Notifications } from './Notifications'
+import { SanFrancisco } from './SanFrancisco'
 import { saver } from './saver'
 import { ScreenSaver } from './ScreenSaver'
 import { useStore } from './store'
@@ -190,6 +191,7 @@ export default function Surface() {
         <MenuBar />
         <main className="os__windows">
           <DeskIcons />
+          <SanFrancisco />
           <TilePreview />
           {APP_IDS.map((id) => {
             const Body = WINDOWS[id]

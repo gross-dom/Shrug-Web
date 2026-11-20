@@ -57,6 +57,19 @@ const NETWORK = {
 
 exports.launch = () => chromium.launch()
 
+/** Answers for the weather service the desk's widget asks (api.weather.gov), so that nothing a check finds
+ * depends on the weather or on the service: 58 degrees and mostly cloudy, by day. `as` changes the hour's
+ * forecast; `as: 'down'` has the service fail. */
+exports.weather = (ctx, as = {}) =>
+  ctx.route('https://api.weather.gov/**', (route) => {
+    if (as === 'down') return route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+    const url = route.request().url()
+    const headers = { 'access-control-allow-origin': '*' }
+    if (/\/points\//.test(url)) return route.fulfill({ status: 200, headers, contentType: 'application/geo+json', body: JSON.stringify({ properties: { forecastHourly: 'https://api.weather.gov/gridpoints/MTR/85,105/forecast/hourly' } }) })
+    const hour = { startTime: new Date(Date.now() - 600e3).toISOString(), endTime: new Date(Date.now() + 3000e3).toISOString(), temperature: 58, temperatureUnit: 'F', shortForecast: 'Mostly Cloudy', isDaytime: true, ...as }
+    return route.fulfill({ status: 200, headers, contentType: 'application/geo+json', body: JSON.stringify({ properties: { periods: [hour] } }) })
+  })
+
 /** Opens the site as a device. opts: device | {w,h,touch,dpr}, query, base, reducedMotion, colorScheme, forcedColors,
  * locale, timezoneId, userAgent, network ('slow3g' | 'fast3g' | '4g' | 'offline'), cpu (slowdown factor), js (false to
  * turn scripts off), goto (false to open nothing yet). */
@@ -77,6 +90,7 @@ exports.open = async (browser, opts = {}) => {
     javaScriptEnabled: opts.js !== false,
   })
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+  if (opts.weather !== false) await exports.weather(ctx, opts.weather)
   const page = await ctx.newPage()
   const errors = []
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
@@ -134,6 +148,7 @@ exports.PHONE_SCREENS = [
   ['folder-faqs', null, [], 'folder:faqs'],
   ['messages', 'messages', []],
   ['messages-group', 'messages', ['c:group']],
+  ['messages-new', 'messages', ['new']],
   ['messages-details', 'messages', ['c:group'], 'details'],
   ['messages-egg', 'messages', ['c:founder']],
   ['contacts', 'finder', []],

@@ -20,8 +20,10 @@ export const SITE = {
    * `inbox` is where a message written to Shrug on the phone is sent, with the
    * files that go with it (a deck, a one-pager: Messages, the compose button):
    * an address that takes a form by POST, the words as `text` and each file as
-   * `files`, and answers 2xx once it has them. There is none yet, so a message
-   * written there says it was not delivered, and nothing leaves the page. */
+   * `files`, and answers 2xx once it has them. Shrug means these to reach a
+   * forwarding number linked to an email account, to be built later. There is
+   * none yet, so a message written there says it was not delivered, and
+   * nothing leaves the page. */
   contact: { sms: null as string | null, email: null as string | null, inbox: null as string | null },
 }
 

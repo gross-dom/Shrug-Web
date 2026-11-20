@@ -296,15 +296,15 @@ const touchOf = (t) => ({
     const back = await mid(p, '.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label="Back"]')
     await t.touch.tap(...back); await p.waitForTimeout(230); await t.touch.tap(...back)
     await p.waitForTimeout(900)
-    let stack = (await st(p)).place?.stacks?.notes
+    let stack = (await st(p)).place?.stack
     say(JSON.stringify(stack) === '["f:faqs"]', 'two taps a quarter of a second apart on Back go back one screen, not two', JSON.stringify(stack))
     // ...and a press anywhere else is taken at once: Back, while the note is still sliding in
     const row = await mid(p, '.sb-slot[data-front] .ios-page[data-pos="top"] .notes-row, .sb-slot[data-front] .ios-page[data-pos="top"] .notes-list button')
     if (row) {
       await t.touch.tap(...row); await p.waitForTimeout(230)
-      const into = (await st(p)).place?.stacks?.notes
+      const into = (await st(p)).place?.stack
       await t.touch.tap(...back); await p.waitForTimeout(900)
-      stack = (await st(p)).place?.stacks?.notes
+      stack = (await st(p)).place?.stack
       say(into?.length === 2 && JSON.stringify(stack) === '["f:faqs"]', 'Back is taken while the screen it is on is still sliding in', `${JSON.stringify(into)} -> ${JSON.stringify(stack)}`)
     } else say(false, 'a note to press was not found')
     // and for real: two taps on the Portfolio folder open the folder, not a company in Contacts

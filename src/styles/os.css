@@ -534,6 +534,116 @@
   pointer-events: auto;
 }
 
+/* The widget on the desk, across from the icons: San Francisco, its time and its weather
+   (src/os/SanFrancisco.tsx). A small square of sky, as a Mac draws a weather widget: blue by day, gray
+   under cloud, dark at night. It is under the windows, as everything on the desk is */
+.sf {
+  position: absolute;
+  top: 46px;
+  left: 18px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 164px;
+  height: 164px;
+  padding: 15px 16px 14px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #2d7fe0 0%, #62acf2 100%);
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.22) inset,
+    0 10px 30px rgb(8 12 60 / 0.24);
+  color: #fff;
+  font-family: var(--font-ui);
+  letter-spacing: -0.01em;
+  pointer-events: auto;
+  transition: opacity 0.5s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sf[data-sky='gray'] {
+  background: linear-gradient(180deg, #5b7691 0%, #8fa6bd 100%);
+}
+
+.sf[data-sky='night'] {
+  background: linear-gradient(180deg, #0c1230 0%, #2c3769 100%);
+}
+
+.os:not([data-booted]) .sf {
+  opacity: 0;
+}
+
+.sf__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sf__city {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 19px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sf__glyph {
+  flex: none;
+}
+
+.sf__apart {
+  display: block;
+  margin-top: 1px;
+  /* White on the palest of the three skies' own top, where this sits: 4.6 to 1 */
+  opacity: 0.94;
+  font-size: 11.500px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.sf__apart small {
+  font-size: 0.860em;
+  letter-spacing: 0.020em;
+}
+
+.sf__time {
+  display: block;
+  margin-top: auto;
+  font-size: 33px;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 38px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sf__weather {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 17px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sf__weather b {
+  font-weight: 600;
+}
+
+/* A desk too small to spare the room keeps it for its windows */
+@media (max-width: 1040px), (max-height: 640px) {
+  .sf {
+    display: none;
+  }
+}
+
 .desk__item {
   display: flex;
   flex-direction: column;

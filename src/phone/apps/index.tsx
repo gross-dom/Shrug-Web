@@ -27,6 +27,9 @@ export interface PhoneAppSpec {
   /** What the app is drawn on at the screen it is opening at (`top` is that screen, null for its first):
    * the colour of its launch screen, shown while its own screens are put together (Springboard.tsx). */
   first?: (top: string | null) => FirstScreen
+  /** Its screens are put together with it, not a moment after on a launch screen: it takes typing the
+   * instant it opens, and whatever was typed before its screens were there would be lost. */
+  eager?: boolean
 }
 
 export const PHONE: Record<PhoneApp, PhoneAppSpec> = {
@@ -34,7 +37,7 @@ export const PHONE: Record<PhoneApp, PhoneAppSpec> = {
   finder: { label: 'Contacts', Root: ContactsApp, first: contactsFirst },
   // A note is a white page; the lists of them are on the gray that inset lists sit on
   notes: { label: 'Notes', Root: NotesApp, first: (top) => ({ tone: top && /^[nu]:/.test(top) ? 'plain' : 'grouped' }) },
-  terminal: { label: 'Case Studies', Root: TerminalApp, first: () => ({ tone: 'dark' }) },
+  terminal: { label: 'Case Studies', Root: TerminalApp, first: () => ({ tone: 'dark' }), eager: true },
   photos: { label: 'VIP', Root: PhotosApp },
 }
 

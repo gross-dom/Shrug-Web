@@ -39,6 +39,10 @@ export const useOpenFolder = () => useStore(sys, (s) => (s.app === null && !s.lo
 /** What shows through the closed Portfolio folder: the first nine companies that have a logo. */
 const PEEK = ALL.filter((c) => c.logo).slice(0, 9)
 
+/** What was last picked out of an open folder, and the page it was on: Back from it leads back to the folder
+ * as it was (src/phone/system.ts, `pop`), on that page and with the keyboard on what was picked. */
+let picked: { id: FolderId; page: number; origin: string } | null = null
+
 /** How many companies an open folder shows at a time, as a folder shows apps. */
 const PER_PAGE = 9
 
@@ -78,6 +82,8 @@ export function HomeFolder({ id }: { id: FolderId }) {
 export function OpenFolder() {
   const open = useOpenFolder()
   const motion = useStore(sys, (s) => s.motion)
+  /** The folder is open again because the app opened out of it has been backed out of. */
+  const back = useStore(sys, (s) => s.app === null && s.prev !== null && folderOf(s.sheet) !== null && picked?.id === folderOf(s.sheet))
   const [shown, setShown] = useState<{ id: FolderId; closing: boolean } | null>(open ? { id: open, closing: false } : null)
   if (open && (!shown || shown.id !== open || shown.closing)) setShown({ id: open, closing: false })
   // Something picked out of it opens from where it was: the folder stays drawn while that happens
@@ -90,14 +96,23 @@ export function OpenFolder() {
   }, [shown])
 
   if (!shown) return null
-  return <FolderView key={shown.id} id={shown.id} closing={shown.closing} still={!motion} />
+  // Come back to from the app that was opened out of it, the folder is simply there, open, as it was left:
+  // the app goes back into it (Springboard.tsx)
+  return <FolderView key={shown.id} id={shown.id} closing={shown.closing} still={!motion || (back && !shown.closing)} back={back} />
 }
 
-function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; still: boolean }) {
+function FolderView({ id, closing, still, back }: { id: FolderId; closing: boolean; still: boolean; back: boolean }) {
   const root = useRef<HTMLDivElement>(null)
   const box = useRef<HTMLDivElement>(null)
   const pages = useRef<HTMLDivElement>(null)
-  const [page, setPage] = useState(0)
+  /** Come back to: what was picked out of it, to be on the page of and to give the keyboard to. */
+  const [returned] = useState(() => (back && picked?.id === id ? picked : null))
+  const [page, setPage] = useState(returned?.page ?? 0)
+  // On the page it was left on, before anything measures where its companies are
+  useLayoutEffect(() => {
+    const el = pages.current
+    if (el && returned?.page) el.scrollLeft = returned.page * el.clientWidth
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   /** A page was turned from the keyboard: when it has turned, the keyboard goes to its first company. */
   const follow = useRef(false)
   /** Where the folder on the Home Screen is from the open one: it grows out of that, and goes back into it. */
@@ -132,8 +147,10 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
 
   // The keyboard goes to the folder when it opens and back to its tile when it closes
   useLayoutEffect(() => {
-    if (closing) giveBack()
-    else box.current?.focus({ preventScroll: true })
+    if (closing) return giveBack()
+    // Come back to from what was picked in it: the keyboard is on that again
+    const was = returned ? [...(root.current?.querySelectorAll<HTMLElement>('[data-origin]') ?? [])].find((el) => el.dataset.origin === returned.origin)?.closest<HTMLElement>('button') : null
+    if (!focusFirst(was)) box.current?.focus({ preventScroll: true })
   }, [closing]) // eslint-disable-line react-hooks/exhaustive-deps
   // Taken away without closing first (arrived at by the browser's Back, nothing moves): the same
   useEffect(
@@ -173,7 +190,7 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
     if (!el) return
     const next = Math.max(0, Math.min(PAGES.length - 1, to))
     // No glide for a visitor who has asked for less motion, nor when nothing else on the phone is moving
-    el.scrollTo({ left: next * el.clientWidth, behavior: still || prefersReducedMotion() ? 'auto' : 'smooth' })
+    el.scrollTo({ left: next * el.clientWidth, behavior: (still && !back) || prefersReducedMotion() ? 'auto' : 'smooth' })
   }
 
   return (
@@ -196,7 +213,15 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
                   <div key={i} className="sb-open__page" role="group" aria-label={`Page ${i + 1} of ${PAGES.length}`} {...(i === page ? null : ({ inert: '' } as object))}>
                     {companies.map((c) => (
                       // A company opens in Contacts, out of its icon here, as an app opens out of a folder
-                      <button key={c.key} type="button" className="sb-open__app" onClick={() => launchAt('finder', contactsFor(c.key), `folder:${c.key}`)}>
+                      <button
+                        key={c.key}
+                        type="button"
+                        className="sb-open__app"
+                        onClick={() => {
+                          picked = { id, page: i, origin: `folder:${c.key}` }
+                          launchAt('finder', contactsFor(c.key), `folder:${c.key}`)
+                        }}
+                      >
                         <span className="sb-open__icon" data-origin={`folder:${c.key}`}>
                           <CompanyLogo company={c} size={60} />
                         </span>
@@ -224,7 +249,16 @@ function FolderView({ id, closing, still }: { id: FolderId; closing: boolean; st
           ) : (
             <div className="sb-open__notes">
               {FAQS.map((f, i) => (
-                <button key={f.question} type="button" className="sb-open__note" data-origin={`folder:faq:${i}`} onClick={() => launchAt('notes', [FAQS_FOLDER, noteView(i)], `folder:faq:${i}`)}>
+                <button
+                  key={f.question}
+                  type="button"
+                  className="sb-open__note"
+                  data-origin={`folder:faq:${i}`}
+                  onClick={() => {
+                    picked = { id, page: 0, origin: `folder:faq:${i}` }
+                    launchAt('notes', [FAQS_FOLDER, noteView(i)], `folder:faq:${i}`)
+                  }}
+                >
                   {f.question}
                 </button>
               ))}

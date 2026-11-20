@@ -13,6 +13,7 @@ import type { Rect } from '../kit/measure'
 import { LockScreen, Notification } from '../kit/phone'
 import { LockClock } from './LockClock'
 import { Boundary } from '../os/Boundary'
+import { prefersReducedMotion } from '../os/dom'
 import { firstControl, focusFirst, focusLost } from '../os/focus'
 import { useStore } from '../os/store'
 import { setTitle } from '../os/title'
@@ -474,9 +475,12 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   // enough to hold the opening up. It opens as a flat screen in the colour of what it is opening on (a
   // launch screen, as an iPhone shows one), and its screens are drawn while that is under way and come
   // up over it. From then on the app is kept as it was left, so opening it again shows it at once.
-  // (Arrived at with no move to draw, on a reload or from a link, it is simply there.)
-  const [loaded, setLoaded] = useState(() => !sys.get().motion)
+  // (Arrived at with no move to draw, on a reload or from a link, it is simply there; and so is one that
+  // takes typing the instant it opens: `eager`, apps/index.tsx.)
+  const [loaded, setLoaded] = useState(() => !sys.get().motion || !!PHONE[id].eager)
   const cold = useRef(!loaded)
+  /** What it is going back into, when that is not its icon: the thing in a folder it was opened out of. */
+  const [dest, setDest] = useState<string | null>(null)
   // Cards stay drawn for a moment after the switcher closes, while they clear the screen
   const [lingering, setLingering] = useState(false)
   // One app opened from inside another slides in over it, as iOS takes you from app to app
@@ -544,11 +548,16 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
         const t = setTimeout(() => setSlide(null), SETTLE + 80)
         return () => clearTimeout(t)
       }
-      // Home: back into its icon
-      const from = originRect(iconOrigin(id))
+      // Home: back into its icon. Or, backed out of to the folder it was opened from (a company picked in
+      // Portfolio: `pop`, system.ts), back into what was pressed there, which is in sight again
+      const out = now.sheet?.startsWith('folder:') ? cameFrom.get(id) : undefined
+      const into = out?.startsWith('folder:') ? originRect(out) : null
+      const from = into ?? originRect(iconOrigin(id))
+      setDest(into ? out! : null)
       setZoom((z) => ({ open: false, from: from ?? z.from, still: !motion || !from }))
       return
     }
+    setDest(null)
     const from = originRect(origin ?? iconOrigin(id)) ?? originRect(iconOrigin(id))
     if (motion && now.prev && now.prev !== id && !origin) {
       // Opened from inside another app: there is no icon in sight to grow out of
@@ -591,8 +600,10 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
     })
     return () => cancelAnimationFrame(frame)
   }, [active, open, loaded])
-  // Out of anything but its icon (a widget, a notification), it grows from the shape of that thing
-  const card = origin !== null && !origin.startsWith('icon:')
+  // Out of anything but its icon (a widget, a notification), it grows from the shape of that thing; and goes
+  // back into the shape of what it is going back into
+  const out = front ? origin : dest
+  const card = out !== null && !out.startsWith('icon:')
   return (
     <div ref={slot} className="sb-slot" data-app={id} data-front={front || undefined} data-open={(front && zoom.open) || undefined} data-lingering={lingering || undefined} data-slide={slide ?? undefined} style={{ '--i': order, '--tone': ground } as CSSProperties}>
       <div className="sb-slot__label" aria-hidden>
@@ -606,10 +617,10 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
         <Zoom
           open={open}
           from={zoom.from}
-          radius={card ? (origin === 'widget:chat' ? 24 : Math.min(24, zoom.from.width * 0.23, zoom.from.height * 0.5)) : zoom.from.width * 0.225}
+          radius={card ? (out === 'widget:chat' ? 24 : Math.min(24, zoom.from.width * 0.23, zoom.from.height * 0.5)) : zoom.from.width * 0.225}
           still={still}
-          face={<Face id={id} origin={origin} />}
-          quick={card}
+          face={<Face id={id} origin={out} />}
+          quick={card && front}
           className="sb-app"
           data-app={id}
           data-shut={!open || undefined}
@@ -902,8 +913,6 @@ function HomeBar({ drawn }: { drawn: boolean }) {
   const drag = useRef<{ x: number; y: number; t: number; dy: number; dx: number; v: number; k: number; w: number; h: number; reach: number; el: HTMLElement | null; was: { transform: string; transition: string; radius: string } | null } | null>(null)
   const hold = useRef<ReturnType<typeof setTimeout>>()
   const press = useRef<ReturnType<typeof setTimeout>>()
-  /** Puts back how the app's own part moves, once it has glided back to where it was. */
-  const eased = useRef<ReturnType<typeof setTimeout>>()
   /** An app let go on its way home: until the phone says it has gone, it is held where it was let go. */
   const thrown = useRef<ReturnType<typeof setTimeout>>()
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
@@ -937,19 +946,25 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     carried.set(false)
   }
 
-  /** Let go without being sent home (or picked up and never moved): it glides back to where it was. */
+  /** Let go without being sent home (or picked up and never moved): it glides back to where it was. How
+   * it was set is put back at once, as the phone itself keeps it, and the glide is an animation of its
+   * own over that: whatever the phone does to it meanwhile (the App Switcher takes it up) does not cut it short. */
   const settle = (d: NonNullable<typeof drag.current>) => {
     unmark()
     const { el, was } = d
-    if (!el || !was || el.style.transform === was.transform) return
-    el.style.transition = 'transform 0.4s var(--spring), border-radius 0.4s var(--spring)'
+    if (!el || !was) return
+    const from = { transform: el.style.transform, borderRadius: el.style.borderRadius }
+    el.style.transition = 'none'
     el.style.transform = was.transform
     el.style.borderRadius = was.radius
-    const mine = el.style.transition
-    clearTimeout(eased.current)
-    eased.current = setTimeout(() => {
-      if (el.style.transition === mine) el.style.transition = was.transition
-    }, 420)
+    void el.offsetWidth
+    el.style.transition = was.transition
+    if (from.transform === was.transform || prefersReducedMotion()) return
+    try {
+      el.animate([from, { transform: was.transform, borderRadius: was.radius }], { duration: 400, easing: getComputedStyle(el).getPropertyValue('--spring').trim() || 'ease-out' })
+    } catch {
+      // A curve this browser does not read: it is back where it was already
+    }
   }
 
   /** Let go on its way home: it stays exactly where it was let go until the phone has gone home (the
@@ -973,13 +988,7 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     thrown.current = undefined
     unmark()
   }, [at]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(
-    () => () => {
-      clearTimeout(thrown.current)
-      clearTimeout(eased.current)
-    },
-    [],
-  )
+  useEffect(() => () => clearTimeout(thrown.current), [])
 
   const down = (e: ReactPointerEvent) => {
     const screen = screenOf()
@@ -1031,10 +1040,10 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     if (at === 'app' && dy < -6 && d.el) {
       // Picked up: how it was set is kept, to put back
       if (!d.was) {
-        clearTimeout(eased.current)
         clearTimeout(thrown.current)
         thrown.current = undefined
-        d.was = { transform: 'translate(0px, 0px) scale(1, 1)', transition: d.el.style.transition === 'none' || d.el.style.transition.startsWith('transform 0.4s') ? `transform 0ms var(--spring), border-radius 0ms var(--spring)` : d.el.style.transition, radius: '0px' }
+        d.el.getAnimations().forEach((animation) => animation.cancel())
+        d.was = { transform: 'translate(0px, 0px) scale(1, 1)', transition: d.el.style.transition === 'none' ? 'transform 0ms var(--spring), border-radius 0ms var(--spring)' : d.el.style.transition, radius: '0px' }
       }
       screenOf()?.setAttribute('data-dragging', '')
       carried.set(true)

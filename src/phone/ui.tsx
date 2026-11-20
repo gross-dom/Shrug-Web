@@ -283,9 +283,33 @@ interface Gone {
  * in `sys`: `push`, `pop`. */
 export function NavStack({ children }: { children: (view: string | null, depth: number) => ReactNode }) {
   const { app, active } = useApp()
-  const stack = useStore(sys, (s) => s.stacks[app])
-  const motion = useStore(sys, (s) => s.motion)
-  const [seen, setSeen] = useState<{ stack: string[]; gone: Gone[] }>({ stack, gone: [] })
+  const theirs = useStore(sys, (s) => s.stacks[app])
+  const front = useStore(sys, (s) => s.app === app)
+  const moves = useStore(sys, (s) => s.motion)
+  const [seen, setSeen] = useState<{ stack: string[]; gone: Gone[] }>({ stack: theirs, gone: [] })
+  // An app that is put away as its screens change (backed out of, to the folder it was opened from) leaves
+  // as it was: the screen it was on goes with it into what it came out of, and its screens are changed once
+  // it has gone, with nothing to be seen moving
+  const [held, setHeld] = useState<string[] | null>(null)
+  const late = useRef(false)
+  const holding = !held && !late.current && seen.stack !== theirs && !front && moves
+  if (holding) setHeld(seen.stack)
+  const stack = holding ? seen.stack : (held ?? theirs)
+  const motion = moves && !late.current
+  useEffect(() => {
+    if (!held) return
+    const release = () => {
+      late.current = true
+      setHeld(null)
+    }
+    // (Brought back to the front before it had gone: at once)
+    if (front) return release()
+    const t = setTimeout(release, 470)
+    return () => clearTimeout(t)
+  }, [held, front])
+  useEffect(() => {
+    if (!held) late.current = false
+  })
   // Screens that are there when the app first draws are simply there
   const first = useRef(true)
   const fresh = useRef(new Set<string>())
