@@ -27,7 +27,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   check('phone: every tile is one of Shrug’s pictures, none a stand-in', lib.tiles === 33 && lib.pictures === 33 && lib.empty === 0, JSON.stringify({ tiles: lib.tiles, pictures: lib.pictures, empty: lib.empty }))
   check('phone: each tile says which drop it is from', lib.named)
   check('phone: the first picture heads the page from its very top, with how many there are under the name', lib.head.top === 0 && lib.head.tall > 300 && lib.head.picture && lib.head.line === '33 Items', JSON.stringify(lib.head))
-  check('phone: what is counted is what is there, and nothing is promised', /^33 Photos From the people who got a drop\.$/.test(lib.note) && !SLOT.test(lib.text), lib.note)
+  check('phone: what is counted is what is there, and nothing is promised', lib.note === '33 Photos' && !SLOT.test(lib.text), lib.note)
   // The bar over the picture is given the colour along the picture's top, so that it reads as running up under it
   const edge = await p.evaluate(() => ({ page: getComputedStyle(document.documentElement).backgroundColor, theme: document.querySelector('meta[name="theme-color"]')?.content ?? null }))
   check('phone: the browser’s bar over VIP is in the colour of the picture’s top edge, not a flat dark gray', !/^rgb\((28, 28, 30|0, 0, 0|255, 255, 255)\)$/.test(edge.page), JSON.stringify(edge))
@@ -48,7 +48,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await p.waitForTimeout(1200)
   const desk = await win.evaluate((el) => ({ tiles: el.querySelectorAll('.vip-tile').length, open: el.querySelectorAll('.vip-tile--open img').length, quiet: el.querySelectorAll('.vip-tile--quiet, .vip-tile[data-empty]').length, sub: el.querySelector('.vip__sub')?.innerText, text: el.innerText }))
   check('desktop: the same 33 pictures, none a stand-in', desk.tiles === 33 && desk.open === 33 && desk.quiet === 0, JSON.stringify({ tiles: desk.tiles, open: desk.open, quiet: desk.quiet }))
-  check('desktop: the heading says whose they are, and promises nothing', desk.sub === 'From the people who got one.' && !SLOT.test(desk.text), desk.sub)
+  check('desktop: the heading is VIP and no more, and nothing is promised', desk.sub === undefined && (await win.locator('.vip__title').innerText()) === 'VIP' && !SLOT.test(desk.text), String(desk.sub))
   await win.locator('.vip-tile').nth(2).click()
   await p.waitForTimeout(900)
   const look = await win.evaluate((el) => { const l = el.querySelector('.vip-look'); return l ? { says: l.getAttribute('aria-label'), picture: !!l.querySelector('img.vip-look__media') } : null })

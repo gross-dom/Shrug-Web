@@ -484,28 +484,10 @@ async function phone(browser) {
   const atRest = await footOf()
   const listed = await p.evaluate((F) => ({ rows: [...document.querySelectorAll(`${F} .msg-row`)].map((row) => ({ name: row.querySelector('.ss-row__title').textContent.replace(/, unread$/, ''), when: row.querySelector('.ss-row__meta')?.textContent.trim(), said: row.querySelector('.ss-row__preview')?.textContent.trim() })), now: [0, 60_000, 120_000].map((ago) => new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(Date.now() - ago)) }), F)
   say(listed.rows[1]?.name === 'Akash Nigam' && listed.rows[1].said === 'congrats' && listed.now.includes(listed.rows[1].when), 'phone: the row of a conversation written in says what was written, and the time', JSON.stringify(listed))
-  // DK-5 on the phone: search finds someone who has not replied yet by name, and says that they have not
-  await p.fill(`${F} .ios-search__input`, 'maggie norris')
-  await p.waitForTimeout(500)
-  const yet = await p.evaluate((F) => [...document.querySelectorAll(`${F} .msg-row`)].map((row) => ({ row: row.dataset.row, said: row.querySelector('.ss-row__preview')?.textContent.trim() })), F)
-  say(yet.length === 1 && yet[0].row === 'p:88' && yet[0].said === 'Hasn’t replied yet', 'DK-5 the phone’s search finds someone who has not replied yet, marked "Hasn’t replied yet"', JSON.stringify(yet))
-  // (a name nobody here has: someone still to reply is found now, above)
-  await p.fill(`${F} .ios-search__input`, 'zzqx nobody')
-  await p.waitForTimeout(500)
-  say((await p.locator(`${F} .msg-row`).count()) === 0, 'the phone’s search finds nobody for a name nobody here has')
-  // Nothing found is said as Contacts and Notes say it, and while a search is on the foot offers the way out of it
-  const none = await p.evaluate((F) => { const e = document.querySelector(`${F} .ios-page[data-pos="top"] .ios-empty`); return e ? { says: e.innerText.replace(/\s*\n+\s*/g, ' ').trim(), glyph: !!e.querySelector('.ios-empty__icon svg') } : null }, F)
-  say(!!none && none.says === 'No Results for “zzqx nobody” Check the spelling or try a new search.' && none.glyph, 'UX-19 Messages: an empty search says "No Results for “x”" and what to try, under the glass the others show', JSON.stringify(none))
-  say(atRest === 'New message' && (await footOf()) === 'Cancel', 'while a search is on, the button beside the field ends it, where compose was', `${atRest} -> ${await footOf()}`)
-  await p.locator(`${F} .ios-page[data-pos="top"] .ios-foot button[aria-label="Cancel"]`).tap()
-  await p.waitForTimeout(500)
-  const over = await p.evaluate((F) => ({ typed: document.querySelector(`${F} .ios-search__input`).value, rows: document.querySelectorAll(`${F} .msg-row`).length, field: document.activeElement === document.querySelector(`${F} .ios-search__input`) }), F)
-  say(over.typed === '' && over.rows === 4 && !over.field && (await footOf()) === 'New message', 'pressed, the search is over: the list is whole, the field is let go of and compose is back', JSON.stringify({ ...over, foot: await footOf() }))
-  await p.fill(`${F} .ios-search__input`, '')
+  // (The phone's list has no search of its own for now: Shrug took it off. Its foot holds the compose button alone)
+  say(atRest === 'New message' && (await p.locator(`${F} .ios-search__input`).count()) === 0 && (await p.locator(`${F} .msg-row`).count()) === 4, 'phone: the list has no search field, and its foot holds compose', atRest)
 
   // MK-13: flicked out of the App Switcher, Messages starts over: nothing is still being looked for
-  await p.fill(`${F} .ios-search__input`, 'akash')
-  await p.waitForTimeout(400)
   const cdp = t.cdp
   const swipe = async ([x0, y0], [x1, y1], ms = 160, hold = 0) => {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] })
@@ -528,7 +510,7 @@ async function phone(browser) {
   await p.locator('.sb-dock .sb-icon[aria-label^="Messages"]').tap()
   await p.waitForTimeout(1100)
   const after = await p.evaluate((F) => ({ q: document.querySelector(`${F} .ios-search__input`)?.value, rows: document.querySelectorAll(`${F} .msg-row`).length }), F)
-  say(quit && after.q === '' && after.rows === 4, 'MK-13 flicked out of the switcher, Messages comes back with no search', JSON.stringify({ quit, ...after }))
+  say(quit && after.q === undefined && after.rows === 4, 'MK-13 flicked out of the switcher, Messages comes back whole', JSON.stringify({ quit, ...after }))
   // UX-23 on the phone (as it is now): everyone in, the last reply is the end of the conversation
   await A.at(p, 'messages', ['c:group'], 'details')
   await p.locator(`${F} .ios-sheet .ios-cell`, { hasText: 'Show Every Reply' }).tap()
@@ -564,14 +546,6 @@ async function phone(browser) {
   await p.waitForTimeout(700)
   const backOn = await p.evaluate(() => ({ on: document.activeElement?.getAttribute('aria-label'), sheet: history.state?.shrug?.sheet, place: history.state?.shrug?.stacks?.messages?.join() }))
   say(trapped && backOn.on === 'FaceTime' && backOn.sheet === null && backOn.place === 'c:group', 'UX-17 the alert keeps Tab, closes on Escape alone, and gives the keyboard back', JSON.stringify({ trapped, ...backOn }))
-  // DK-5: someone found in the list before they have replied. Pressed, everyone's replies are brought in and theirs is gone to
-  await A.at(p, 'messages', [])
-  await p.fill(`${F} .ios-search__input`, 'maggie norris')
-  await p.waitForTimeout(500)
-  await p.locator(`${F} .msg-row[data-row="p:88"]`).click()
-  await p.waitForTimeout(2200)
-  const brought = await p.evaluate((F) => { const top = document.querySelector(`${F} .ios-page[data-pos="top"]`); const s = top.querySelector('.chat__scroll')?.getBoundingClientRect(); const b = top.querySelector('.chat__thread [data-person="88"]')?.getBoundingClientRect(); return { place: history.state?.shrug?.stacks?.messages?.join(), people: top.querySelectorAll('.chat__thread [data-person]:not([data-typing])').length, inView: !!s && !!b && b.top >= s.top - 2 && b.bottom <= s.bottom + 2 } }, F)
-  say(brought.place === 'c:group' && brought.people === 89 && brought.inView, 'DK-5 phone: pressed, everyone’s replies are brought in and theirs is gone to', JSON.stringify(brought))
   say(A.realErrors(t.errors).length === 0, 'framed phone: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 }

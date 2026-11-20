@@ -18,7 +18,7 @@ const type = async (t, text) => { await t.page.fill('.spot-input', text); await 
 const read = (page) =>
   page.evaluate(() => {
     const row = (r) => ({ title: r.querySelector('.spot-row__title')?.textContent.trim(), sub: r.querySelector('.spot-row__sub')?.textContent.trim() ?? '', tag: r.tagName, href: r.getAttribute('href'), target: r.getAttribute('target') })
-    const top = document.querySelector('.spot-row[data-top]')
+    const top = document.querySelector('.spot [data-top]')
     return {
       top: top ? row(top) : null,
       groups: [...document.querySelectorAll('.spot-group')].map((g) => ({ name: g.getAttribute('aria-label'), rows: [...g.querySelectorAll('.spot-row')].map(row) })),
@@ -135,7 +135,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await A.at(t.page, null, [])
   await openSearch(t)
   await type(t, "what's new")
-  await t.page.locator('.spot-row[data-top]').click(); await t.sleep(1300)
+  await t.page.locator('.spot [data-top]').click(); await t.sleep(1300)
   s = await A.state(t.page)
   const note = await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .notes-note__title').innerText().catch(() => '')
   check('"what\'s new", pressed, opens the note on what is different about Shrug V', s.place?.app === 'notes' && /^f:faqs,n:\d+$/.test(s.place.stack.join()) && note.trim() === 'What’s different about Shrug V?', `${JSON.stringify(s.place)} ${note}`)
