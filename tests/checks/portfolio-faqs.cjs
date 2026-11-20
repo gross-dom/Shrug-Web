@@ -401,7 +401,7 @@ const BRACKET = '[Shrug’s answer goes here'
     // UX-16: Contacts, a company with no site
     await A.at(t.page, 'finder', ['co:YOLO'])
     const fate = t.page.locator(`${front} .contact-field__none`)
-    const site = await t.page.evaluate((front) => { const top = [...document.querySelectorAll(`${front} .ios-page`)].pop(); return { acts: [...top.querySelectorAll('.contact-act')].map((a) => a.textContent.trim()), words: top.querySelector('.contact-list')?.innerText ?? '' } }, front)
+    const site = await t.page.evaluate((front) => { const top = [...document.querySelectorAll(front)].pop(); return { acts: [...top.querySelectorAll('.contact-act')].map((a) => a.textContent.trim()), words: top.querySelector('.contact-list')?.innerText ?? '' } }, front)
     check('UX-16 Contacts: a company with no site has no website button and no website row: nothing is said in their place', (await fate.count()) === 0 && site.acts.join() === 'Share' && !/website/i.test(site.words) && (await t.page.locator(`${front} .contact-field a`).count()) === 0, JSON.stringify(site))
     await t.page.evaluate(() => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }) })
     const shareAndRead = async (by = '.ios-bar [aria-label="Share"]') => {
