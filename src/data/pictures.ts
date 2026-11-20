@@ -13,6 +13,7 @@ export const SUPPLIED_LOGOS: Record<string, string> = {
   'Cameo': 'cameo.webp',
   'Cloud23': 'cloud23.webp',
   'Copilot': 'copilot.webp',
+  'Dispo': 'dispo.webp',
   'Drumroll': 'drumroll.webp',
   'Eight Sleep': 'eight-sleep.webp',
   'Enigma': 'enigma.webp',
@@ -42,6 +43,7 @@ export const SUPPLIED_LOGOS: Record<string, string> = {
   'Thirdweb': 'thirdweb.webp',
   'Tone': 'tone.webp',
   'W Labs': 'w-labs.webp',
+  'YOLO': 'yolo.webp',
 }
 
 /** A person's name, as people.ts has it, to their photograph's file. */

@@ -626,7 +626,8 @@ function CompanyCard({ id }: { id: string }) {
       {poster && <Poster file={poster} />}
       <Head face={poster ? null : <Face company={company} eager />} name={company.name} poster={!!poster} />
       <div className="contact-acts">
-        <Act label={study ? 'Case study' : 'Website'} icon={study ? <PageGlyph /> : <SiteGlyph />} href={company.url} none={fate} />
+        {/* A company with no site and no line on what became of it has no website button, and no website row below */}
+        {(company.url || fate) && <Act label={study ? 'Case study' : 'Website'} icon={study ? <PageGlyph /> : <SiteGlyph />} href={company.url} none={fate} />}
         {/* Where a contact's card has Message: here it goes to what their founder said, in Messages */}
         {voices.length > 0 && <Act label={`${PEOPLE[voices[0]!]!.name} in ${GROUP_NAME}`} icon={<BubbleGlyph />} onClick={() => showReply(voices[0]!)} />}
         <Act label="Share" icon={<PassOnGlyph />} onClick={send} />
@@ -643,10 +644,12 @@ function CompanyCard({ id }: { id: string }) {
                 {study ? 'Read the case study' : hostOf(company.url)}
               </Field>
             ) : (
-              // Nowhere to send anyone: said where the link would be
-              <Field label="website">
-                <span className="contact-field__none">{fate}</span>
-              </Field>
+              // Nowhere to send anyone: what became of it, where Shrug has written that, and otherwise nothing
+              fate && (
+                <Field label="website">
+                  <span className="contact-field__none">{fate}</span>
+                </Field>
+              )
             )}
             <Field label="vertical">{company.vertical}</Field>
             {company.blurb && <Field label="about">{company.blurb}</Field>}

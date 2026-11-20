@@ -3,9 +3,10 @@
 // list; the verticals are from the design canvas; a company's website and
 // one-line description are from the portfolio page of shrug.vc, where it has
 // them. (Clubhouse, Dispo and Popshop Live have no link there: theirs are the
-// addresses their own App Store listings give. HQ Trivia, Poparazzi and YOLO
-// have shut, and Drumroll could not be told from others of its name: they
-// keep `url: null` until Shrug says where to send a visitor.) A logo is the company's own site icon, kept in public/logos;
+// addresses their own App Store listings give, and Drumroll's, the snack
+// company its supplied logo shows it to be, is the one its LinkedIn page
+// gives. HQ Trivia, Poparazzi and YOLO have shut: they keep `url: null`, and
+// have no website area at all.) A logo is the company's own site icon, kept in public/logos;
 // `logo: null` means none could be confirmed, and the window shows the
 // company's initial until a file is added.
 
@@ -50,10 +51,10 @@ type VerticalName = (typeof VERTICAL_ORDER)[number]
 
 /** What became of the companies that have no site, by key. Shrug's to write, one line each:
  *
- *   Drumroll: 'Acquired by …',
+ *   Poparazzi: 'Acquired by …',
  *   'HQ Trivia': '2017 to 2020',
  *
- * A company with no site and no line here says only that it has no website listed. */
+ * A company with no site and no line here has no website area at all: nothing is said where its link would be. */
 const NOTES: Record<string, string> = {}
 
 /** The companies with a picture to show, by key: the file in public/posters that heads the company's
@@ -121,7 +122,7 @@ export const COMPANIES: Company[] = [
   c('Primer', 'Consumer', 'http://primer.com', 'primer.webp', 'Where ambitious kids unlock their potential'),
   c('Hype & Vice', 'Consumer', 'http://hypeandvice.com', 'hype-vice.webp', '#1 college apparel brand for women'),
   c('Light Phone', 'Consumer', 'http://thelightphone.com', 'light-phone.webp'),
-  c('Drumroll', 'Consumer', null, null),
+  c('Drumroll', 'Consumer', 'https://eatdrumroll.com', null),
   c('Cameo', 'Consumer', 'http://cameo.com/', 'cameo.webp', 'Personalized videos from your favorite people'),
   c('Lula', 'Fintech', 'https://shrug.notion.site/Lula-5b80af9245dd441d931194856fa0f9d3', 'lula.webp', 'Insurance API for the modern economy'),
   c('Aidaly', 'Fintech', 'http://aidaly.com', 'aidaly.webp', 'Getting family caregivers paid for their work'),

@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent, type MutableRefObject, type ReactElement, type ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronsDown, FileText, Pause, Plus, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronsDown, FileText, Pause, Plus, UserRound, X } from 'lucide-react'
 import { EGGS, eggOf, lastWords, type Egg, type EggLink } from '../data/eggs'
 import { COMPANY_OF } from '../data/founders'
 import { PEOPLE, RELATION_LABEL } from '../data/people'
@@ -8,17 +8,14 @@ import { SITE } from '../data/site'
 import { Badge } from '../kit/controls/Badge'
 import { Toggle } from '../kit/controls/Toggle'
 import { Bubble, Receipt, Stamp, Thread } from '../kit/messages'
-import { Popover } from '../kit/motion/Popover'
 import { Avatar } from '../kit/parts/Avatar'
 import { Row } from '../kit/parts/Row'
-import { APPS, DOCK_APPS } from '../os/apps'
 import { prefersReducedMotion } from '../os/dom'
 import { firstControl, focusFirst, useReturnFocus } from '../os/focus'
-import { AppIcon, DocumentIcon } from '../os/icons'
 import { launchApp, showCompany } from '../os/launch'
 import { atPerson, linkTo } from '../os/place'
 import { useStore } from '../os/store'
-import { chat, finishChat, replayChat, resumeChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatFile, type ChatItem, type Written } from './chat'
+import { attach, attached, attachedTo, chat, detach, finishChat, MOST_FILES, replayChat, resumeChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatFile, type ChatItem, type Written } from './chat'
 import { folded } from './fold'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
 import { SearchField, ShrugAvatar } from './ui'
@@ -691,65 +688,6 @@ export function Transcript({ conversation, source, active = true, shut = false }
 
 // ---- The message field ----
 
-/** A menu that opens from a button, worked from the keyboard the way the menu
- * bar's are: Enter, Space or the down arrow opens it on its first item (the up
- * arrow on its last); the arrows, Home and End move through it; Escape puts it
- * away and Tab leaves it. However it closes, the keyboard goes back to the
- * button if it would otherwise be left with nothing. The menu is the
- * `role="menu"` beside the button, its items the `role="menuitem"`s in it. */
-export function useMenuKeys(open: boolean, setOpen: (open: boolean) => void) {
-  const button = useRef<HTMLButtonElement>(null)
-  /** Asked for from the keyboard: where the keyboard goes once the menu is open. */
-  const want = useRef<'first' | 'last' | null>(null)
-  const entries = () => Array.from(button.current?.parentElement?.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"]') ?? [])
-  const land = (which: 'first' | 'last') => {
-    const all = entries()
-    ;(which === 'first' ? all[0] : all[all.length - 1])?.focus()
-  }
-
-  useReturnFocus(open, () => button.current)
-
-  useEffect(() => {
-    const which = want.current
-    want.current = null
-    if (!open || !which) return
-    // Once it is drawn, and no longer shut off
-    const frame = requestAnimationFrame(() => land(which))
-    return () => cancelAnimationFrame(frame)
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const onButtonKey = (e: KeyboardEvent) => {
-    const opens = e.key === 'ArrowDown' || e.key === 'ArrowUp' || ((e.key === 'Enter' || e.key === ' ') && !open)
-    if (!opens) return
-    e.preventDefault()
-    const which = e.key === 'ArrowUp' ? 'last' : 'first'
-    if (open) return land(which)
-    want.current = which
-    setOpen(true)
-  }
-
-  const onMenuKey = (e: KeyboardEvent) => {
-    const all = entries()
-    const at = all.indexOf(document.activeElement as HTMLElement)
-    const go = (to: HTMLElement | undefined) => {
-      e.preventDefault()
-      to?.focus()
-    }
-    if (e.key === 'ArrowDown') go(all[(at + 1) % all.length])
-    else if (e.key === 'ArrowUp') go(all[(at - 1 + all.length) % all.length])
-    else if (e.key === 'Home') go(all[0])
-    else if (e.key === 'End') go(all[all.length - 1])
-    else if (e.key === 'Tab') setOpen(false)
-    else if (e.key === 'Escape') {
-      e.preventDefault()
-      setOpen(false)
-      button.current?.focus()
-    }
-  }
-
-  return { button, onButtonKey, onMenuKey }
-}
-
 /** A press on a button that sends or clears never takes the caret out of the
  * field it works on: on a touch screen the keyboard would go down with it. */
 export const keepsCaret = {
@@ -763,29 +701,13 @@ export const keepsCaret = {
  * not in the field. */
 export function Composer({ conversation, target }: { conversation: Conversation; target: string }) {
   const text = useStore(unsent, (s) => s[conversation] ?? '')
-  const [more, setMore] = useState(false)
+  const waiting = useStore(attached, (s) => attachedTo(s, conversation))
   const draft = useStore(chat, (s) => (conversation === 'group' ? s.draft : null))
-  const root = useRef<HTMLFormElement>(null)
   const input = useRef<HTMLInputElement>(null)
-  const menu = useMenuKeys(more, setMore)
-  const ready = text.trim().length > 0
-  const ghost = draft !== null && !text
-
-  useEffect(() => {
-    if (!more) return
-    const away = (e: PointerEvent) => {
-      if (!(e.target as HTMLElement).closest('.composer__more, .composer__plus')) setMore(false)
-    }
-    const key = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') setMore(false)
-    }
-    document.addEventListener('pointerdown', away, true)
-    window.addEventListener('keydown', key)
-    return () => {
-      document.removeEventListener('pointerdown', away, true)
-      window.removeEventListener('keydown', key)
-    }
-  }, [more])
+  const files = useRef<HTMLInputElement>(null)
+  const ready = text.trim().length > 0 || waiting.length > 0
+  const ghost = draft !== null && !text && !waiting.length
+  const full = waiting.length >= MOST_FILES
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -797,49 +719,63 @@ export function Composer({ conversation, target }: { conversation: Conversation;
   }
 
   return (
-    <form ref={root} className="composer" onSubmit={submit}>
-      <button ref={menu.button} type="button" className="composer__plus" aria-label="More from Shrug" aria-haspopup="menu" aria-expanded={more} onClick={() => setMore((m) => !m)} onKeyDown={menu.onButtonKey}>
+    <form className="composer" onSubmit={submit}>
+      {/* The plus is the browser's own file picker, as it is on the phone: what is picked waits in the field,
+          and goes into the conversation with the words. It is shown from where it is on the visitor's own
+          computer: nothing is sent anywhere (chat.ts) */}
+      <input
+        ref={files}
+        className="composer__picker"
+        type="file"
+        multiple
+        tabIndex={-1}
+        aria-hidden
+        onChange={(e) => {
+          attach(conversation, [...(e.target.files ?? [])])
+          e.target.value = ''
+          input.current?.focus({ preventScroll: true })
+        }}
+      />
+      <button type="button" className="composer__plus" aria-label="Add files" aria-disabled={full || undefined} onClick={() => !full && files.current?.click()}>
         <Plus size={18} strokeWidth={2.2} aria-hidden />
       </button>
-      <Popover show={more} origin="bottom left" className="composer__more" role="menu" aria-label="More from Shrug" onKeyDown={menu.onMenuKey} {...(more ? null : ({ inert: '' } as object))}>
-        {DOCK_APPS.filter((id) => id !== 'messages').map((id) => (
-          <button
-            key={id}
-            type="button"
-            className="composer__app"
-            role="menuitem"
-            onClick={() => {
-              setMore(false)
-              launchApp(id)
-            }}
-          >
-            <span className="composer__app-icon">
-              <AppIcon id={id} />
-            </span>
-            {APPS[id].name}
-          </button>
-        ))}
-        <a className="composer__app" role="menuitem" href={SITE.onePager} target="_blank" rel="noreferrer" onClick={() => setMore(false)}>
-          <span className="composer__app-icon">
-            <DocumentIcon />
-          </span>
-          One-pager
-          <span className="sr-only">, opens in a new tab</span>
-        </a>
-      </Popover>
       <div className="composer__field" data-ghost={ghost || undefined}>
-        {/* Where the words start: a sent bubble forms out of this spot */}
-        <span className="composer__origin" data-target={target} aria-hidden />
-        {ghost && (
-          <span className="composer__ghost" aria-hidden>
-            {draft}
-            <i className="composer__caret" />
-          </span>
+        {waiting.length > 0 && (
+          <ul className="composer__files" aria-label="Attached">
+            {waiting.map((a) => (
+              <li key={a.id} className="composer__file" data-picture={a.url ? '' : undefined}>
+                {a.url ? (
+                  <img src={a.url} alt={a.file.name} draggable={false} />
+                ) : (
+                  <>
+                    <FileText size={18} strokeWidth={1.8} aria-hidden />
+                    <span className="composer__file-words">
+                      <b dir="auto">{a.file.name}</b>
+                      <span>{sizeOf(a.file.size)}</span>
+                    </span>
+                  </>
+                )}
+                <button type="button" className="composer__file-drop" aria-label={`Remove ${a.file.name}`} onClick={() => detach(conversation, a.id)} {...keepsCaret}>
+                  <X size={10} strokeWidth={3.2} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
-        <input ref={input} className="composer__input" type="text" dir="auto" placeholder={ghost ? '' : 'iMessage'} aria-label="iMessage" autoComplete="off" enterKeyHint="send" value={text} onChange={(e) => setUnsent(conversation, e.target.value)} />
-        <button type="submit" className="composer__send" aria-label="Send" data-ready={ready || undefined} aria-disabled={!ready} tabIndex={ready ? 0 : -1} {...keepsCaret}>
-          <ArrowUp size={15} strokeWidth={2.8} aria-hidden />
-        </button>
+        <span className="composer__row">
+          {/* Where the words start: a sent bubble forms out of this spot */}
+          <span className="composer__origin" data-target={target} aria-hidden />
+          {ghost && (
+            <span className="composer__ghost" aria-hidden>
+              {draft}
+              <i className="composer__caret" />
+            </span>
+          )}
+          <input ref={input} className="composer__input" type="text" dir="auto" placeholder={ghost ? '' : waiting.length ? 'Add comment or Send' : 'iMessage'} aria-label="iMessage" autoComplete="off" enterKeyHint="send" value={text} onChange={(e) => setUnsent(conversation, e.target.value)} />
+          <button type="submit" className="composer__send" aria-label="Send" data-ready={ready || undefined} aria-disabled={!ready} tabIndex={ready ? 0 : -1} {...keepsCaret}>
+            <ArrowUp size={15} strokeWidth={2.8} aria-hidden />
+          </button>
+        </span>
       </div>
     </form>
   )

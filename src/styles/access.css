@@ -137,8 +137,6 @@
 
   .menu__item:hover,
   .menu__item:focus-visible,
-  .composer__app:hover,
-  .composer__app:focus-visible,
   .tile-menu__option:hover,
   .tile-menu__option:focus-visible,
   .tile-menu__option[aria-pressed='true'] {
@@ -256,8 +254,6 @@
      be trusted to show. Pictures are left alone. */
   .menu__item:not([aria-disabled='true']):hover *,
   .menu__item:not([aria-disabled='true']):focus-visible *,
-  .composer__app:hover *,
-  .composer__app:focus-visible *,
   .conv[data-selected] :not(.ss-avatar, .ss-avatar *, .shrug-avatar, .shrug-avatar *),
   .side-item[aria-current] *,
   .chip[aria-pressed='true'] *,

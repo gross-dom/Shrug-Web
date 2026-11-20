@@ -125,11 +125,10 @@ export function hostOf(url: string) {
 /** What the link to a company is called: its address, or its Shrug case study. */
 export const visitLabel = (company: Company) => (!company.url ? null : /notion\.site/.test(company.url) ? 'Read the case study' : `Visit ${hostOf(company.url)}`)
 
-/** What a company with no site says where its link would be, until Shrug has written what became of it (`note` in the data). */
-export const NO_SITE = 'No website listed'
-
-/** For a company with nowhere to send a visitor: the line that stands where its link would be. Null for one that has a site. */
-export const fateOf = (company: Company) => (company.url ? null : (company.note ?? NO_SITE))
+/** For a company with nowhere to send a visitor: what Shrug has written of what became of it (`note` in the
+ * data), which stands where its link would be. Null for one that has a site, and for one with neither: that
+ * company has no website area at all, and nothing is said in its place. */
+export const fateOf = (company: Company) => (company.url ? null : company.note)
 
 /** Two companies can have one name (there are two called Atoms). Where both show, each says which it is. */
 export const namesake = (company: Company) => ALL.some((other) => other !== company && other.name === company.name)

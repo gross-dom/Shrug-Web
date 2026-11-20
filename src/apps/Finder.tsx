@@ -20,8 +20,9 @@ import { SearchField, SideLabel, ToolSet, ToolSetButton } from './ui'
 // where someone in the group chat speaks for the company (src/data/founders.ts)
 // the preview has the way to what they said.
 // Back and Forward retrace the verticals visited; the search narrows whatever
-// is showing. A company with no site says so where its link would be, and a
-// double-click on one is answered there rather than by nothing.
+// is showing. A company with no site has nothing where its link would be,
+// unless Shrug has written what became of it: then that line stands there, and
+// a double-click on the company stirs it and says it aloud.
 
 // lucide for the sidebar and toolbar glyphs, as the kit's own Finder does:
 // one family, one stroke
@@ -46,7 +47,8 @@ function Sidebar() {
   )
 }
 
-/** The way in to a company: the link to its site, or, for one with no site, the line that says so.
+/** The way in to a company: the link to its site, or, for one with no site, Shrug's line on what became of
+ * it. One with neither has nothing here.
  * `nudge` counts the times that company was asked to open with nothing to open: the line stirs each time.
  * A company's own site is told where a visit came from (`noopener`, not `noreferrer`). */
 function WayIn({ company, at, nudge = 0 }: { company: Listed; at: 'preview' | 'foot'; nudge?: number }) {
@@ -59,9 +61,11 @@ function WayIn({ company, at, nudge = 0 }: { company: Listed; at: 'preview' | 'f
         <span className="sr-only">, opens in a new tab</span>
       </a>
     )
+  const fate = fateOf(company)
+  if (!fate) return null
   return (
     <span key={nudge} className={at === 'preview' ? 'pf-preview__fate' : 'pf__foot-fate'} data-nudged={nudge ? '' : undefined}>
-      {fateOf(company)}
+      {fate}
     </span>
   )
 }
@@ -244,7 +248,7 @@ export function FinderApp() {
                   aria-selected={on}
                   tabIndex={on ? 0 : -1}
                   data-company={c.key}
-                  title={`${c.name}: ${c.blurb ?? (c.url ? hostOf(c.url) : fateOf(c))}`}
+                  title={[c.name, c.blurb ?? (c.url ? hostOf(c.url) : fateOf(c))].filter(Boolean).join(': ')}
                   onClick={() => pickCompany(c.key)}
                   onDoubleClick={() => open(c)}
                 >
@@ -267,7 +271,7 @@ export function FinderApp() {
             {shown.map((c) => {
               const on = c === chosen
               const apart = tellApart(c)
-              // What it does; failing that where it lives; failing that, that it has nowhere
+              // What it does; failing that where it lives; failing that, what became of it, if Shrug has said
               const about = c.blurb ?? (c.url ? hostOf(c.url) : fateOf(c)) ?? ''
               return (
                 <button key={c.key} type="button" className="pf-row" role="option" aria-selected={on} tabIndex={on ? 0 : -1} data-company={c.key} onClick={() => pickCompany(c.key)} onDoubleClick={() => open(c)}>
@@ -313,7 +317,7 @@ export function FinderApp() {
         </span>
         {/* Said aloud when a company with no site is asked to open */}
         <span className="sr-only" role="status">
-          {chosen && nudge ? `${chosen.name}: ${fateOf(chosen)}.` : ''}
+          {chosen && nudge && fateOf(chosen) ? `${chosen.name}: ${fateOf(chosen)}.` : ''}
         </span>
       </div>
     </Window>

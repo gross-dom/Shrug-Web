@@ -34,7 +34,7 @@ export const LOGO_COLOURS: Record<string, LogoColours> = {
   'clubhouse.webp': { ground: '#ffffff', page: '#6b653e' },
   'copilot.webp': { ground: '#07162a', page: '#5a6670' },
   'crossmint.webp': { ground: '#0e171b', page: '#366e5f' },
-  'dispo.webp': { ground: '#ffffff', page: '#526776' },
+  'dispo.webp': { ground: '#fffcf1', page: '#5a6670' },
   'donotpay.webp': { ground: '#ffffff', page: '#8f4b8c' },
   'drumroll.webp': { ground: '#ad78f5', page: '#6f5c8a' },
   'eight-sleep.webp': { ground: '#000000', page: '#5a6670' },
@@ -68,7 +68,7 @@ export const LOGO_COLOURS: Record<string, LogoColours> = {
   'outtake.webp': { ground: null, page: '#8a5844' },
   'playgroundai.webp': { ground: '#ffffff', page: '#5a6670' },
   'pogo.webp': { ground: '#8e5aea', page: '#6f5994' },
-  'poparazzi.webp': { ground: '#f2efe5', page: '#6b663f' },
+  'poparazzi.webp': { ground: '#1610ef', page: '#5d5aae' },
   'popshop.webp': { ground: null, page: '#5a6b34' },
   'primer.webp': { ground: null, page: '#885945' },
   'robs-popcorn.webp': { ground: '#ffffff', page: '#6f634c' },
@@ -91,6 +91,7 @@ export const LOGO_COLOURS: Record<string, LogoColours> = {
   'varda.webp': { ground: '#0a3065', page: '#476690' },
   'voiceflow.webp': { ground: '#ffffff', page: '#5a6670' },
   'w-labs.webp': { ground: null, page: '#676735' },
+  'yolo.webp': { ground: '#ffb727', page: '#75623a' },
 }
 
 export interface PosterColours {
