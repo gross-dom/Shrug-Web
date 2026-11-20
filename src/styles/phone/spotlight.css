@@ -817,3 +817,44 @@
     animation: none;
   }
 }
+
+/* Beside an app found first, what it holds: the app goes by its iPhone name, and that may not be what was typed */
+.spot-app--top {
+  grid-template-columns: auto 1fr;
+  column-gap: 16px;
+  align-items: center;
+  justify-self: stretch;
+  text-align: left;
+}
+
+.spot-app--top .spot-app__icon,
+.spot-app--top .spot-app__name {
+  grid-column: 1;
+  justify-self: center;
+}
+
+.spot-app__holds {
+  grid-row: 1;
+  grid-column: 2;
+  color: rgb(235 235 245 / 0.62);
+  font-size: 15px;
+  letter-spacing: -0.015em;
+  line-height: 20px;
+}
+
+/* A phone on its side: the keys are smaller still, so that something of what was found shows over the field */
+@container (max-height: 520px) {
+  .spot[data-keys] {
+    --key: 27px;
+    --key-gap: 5px;
+  }
+
+  .kb {
+    padding-top: 6px;
+  }
+
+  .kb-key {
+    font-size: 17px;
+    border-radius: 7px;
+  }
+}

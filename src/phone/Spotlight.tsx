@@ -416,6 +416,8 @@ function Row({ hit, top, onLeave }: { hit: Hit; top?: boolean; onLeave: () => vo
       <button type="button" className="spot-app spot-app--top" role="option" aria-selected={false} tabIndex={-1} data-top data-spot-item onClick={hit.open}>
         <span className="spot-app__icon">{hit.lead(64)}</span>
         <span className="spot-app__name spot-row__title">{hit.title}</span>
+        {/* What is in it, beside it: an app here goes by its iPhone name (Contacts), and what was looked for may be what it holds (the portfolio) */}
+        {hit.subtitle && <span className="spot-app__holds spot-row__sub">{hit.subtitle}</span>}
       </button>
     )
   const inside = (

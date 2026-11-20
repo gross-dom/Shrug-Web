@@ -201,7 +201,9 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
       const f = document.querySelector('.spot-foot').getBoundingClientRect(), sc = document.querySelector('.spot-scroll').getBoundingClientRect(), bar = document.querySelector('.sb-homebar')?.getBoundingClientRect()
       return { under: Math.round(innerHeight - f.bottom), list: Math.round(sc.height), bar: bar ? Math.round(innerHeight - bar.top) : 0 }
     })
-    check(`PH-9 ${w}x${h}: the field is at the foot (${m.under}px under it), ${m.list}px of results over it`, m.under <= most && m.under >= 8, JSON.stringify(m))
+    // (On a finger's phone the field sits on search's own keyboard, which lies along the foot: what is under the field is the keyboard)
+    const keys = await t.page.evaluate(() => { const k = document.querySelector('.kb')?.getBoundingClientRect(); const f = document.querySelector('.spot-foot').getBoundingClientRect(); return k ? { gap: Math.round(k.top - f.bottom), foot: Math.round(innerHeight - k.bottom) } : null })
+    check(`PH-9 ${w}x${h}: the field sits on the keyboard at the foot (${m.under}px under it), ${m.list}px of results over it`, !!keys && keys.gap >= 6 && keys.gap <= 14 && keys.foot === 0 && m.list >= 30, JSON.stringify({ ...m, keys }))
     if (w === 667 || w === 320) await A.shot(t.page, `fix-s2-search-${w}x${h}`)
     await t.ctx.close()
   }
@@ -211,7 +213,8 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   const pill = await t.page.evaluate(() => Math.round(document.querySelector('.sb-search').getBoundingClientRect().bottom))
   await openSearch(t)
   const field = await t.page.evaluate(() => Math.round(document.querySelector('.spot-foot').getBoundingClientRect().bottom))
-  check('upright: the field is where the Search pill was, over the Dock', Math.abs(field - pill) <= 8, `${field} vs ${pill}`)
+  const kbTop = await t.page.evaluate(() => Math.round(document.querySelector('.kb').getBoundingClientRect().top))
+  check('upright: the field sits on the keyboard, lower than half way down the screen, with the keyboard along the foot', kbTop - field >= 6 && kbTop - field <= 14 && field > 760 / 2, `${field} over ${kbTop} (the pill was at ${pill})`)
   await t.ctx.close()
 
   // ---- A short search finds what a word begins with, among people, questions and drops as among companies ----
