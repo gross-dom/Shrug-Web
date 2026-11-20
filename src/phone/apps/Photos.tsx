@@ -5,8 +5,8 @@ import { DRAFT } from '../../data/site'
 import { prefersReducedMotion } from '../../os/dom'
 import { createStore, useStore } from '../../os/store'
 import { haptic, share } from '../native'
-import { openSheet, push, swap, sys, topOf } from '../system'
-import { Cell, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, Section, ShareGlyph, Sheet, SheetHost, scaleOf, useApp, usePageHeadingId, type MenuItem } from '../ui'
+import { goHome, openSheet, pop, push, swap, sys, topOf } from '../system'
+import { BackButton, Cell, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, Section, ShareGlyph, Sheet, SheetHost, scaleOf, useApp, usePageHeadingId, type MenuItem } from '../ui'
 import { mediaView } from './routes'
 import '../../styles/phone/photos.css'
 
@@ -175,8 +175,9 @@ function mixed(a: string, b: string, share: number) {
 const headTop = (index: number) => (MEDIA[index]!.src ? '#1c1c1e' : mixed(hueOf(MEDIA[index]!.drop), '#17171c', 0.5))
 
 /** The head of the library, as a collection's is in Photos: its first picture, large, with the name and the
- * count over its foot. The name is the page's heading. */
-function Head({ index, line, innerRef }: { index: number; line: ReactNode; innerRef: Ref<HTMLDivElement> }) {
+ * count over its foot. The name is the page's heading. The picture is pressed as its square in the grid is,
+ * and opens the same: the button is laid over it and not round it, so that the heading stays a heading. */
+function Head({ index, line, innerRef, onOpen }: { index: number; line: ReactNode; innerRef: Ref<HTMLDivElement>; onOpen: () => void }) {
   const headingId = usePageHeadingId()
   const slot = MEDIA[index]!
   return (
@@ -193,6 +194,8 @@ function Head({ index, line, innerRef }: { index: number; line: ReactNode; inner
         </h2>
         <p className="photos-head__line">{line}</p>
       </div>
+      {/* After the words, so that the page's name is read before the picture under it is offered */}
+      <button type="button" className="photos-head__open" aria-label={describe(index)} onClick={onOpen} />
     </div>
   )
 }
@@ -224,9 +227,13 @@ function Library() {
     </Menu>
   )
 
+  // The way out, where a collection in Photos has Back to the rest of the app: VIP goes no further back than
+  // this, and the Home Screen is next
+  const home = <BackButton label="Home Screen" onClick={goHome} />
+
   if (first === undefined)
     return (
-      <Screen title="VIP" className="photos-library" foot={sorter}>
+      <Screen title="VIP" className="photos-library" leading={home} foot={sorter}>
         <Empty icon={none.icon} title={none.title}>
           {none.text}
         </Empty>
@@ -255,9 +262,10 @@ function Library() {
       scrollRef={scroll}
       under={past ? undefined : 'dark'}
       ground={past ? undefined : { top: headTop(first), foot: '#ffffff' }}
+      leading={home}
       foot={sorter}
     >
-      <Head innerRef={head} index={first} line={line} />
+      <Head innerRef={head} index={first} line={line} onOpen={() => view(first, shown)} />
       <Grid indices={shown} />
       {/* How Photos ends its library: what is in it, and a quieter line under that. Nothing is
           counted that has not arrived: until something has, the quieter line says so by itself */}
@@ -278,6 +286,9 @@ function Library() {
 
 /** How far apart two neighbours sit while one is swiped to the next. */
 const GAP = 16
+
+/** How far down a picture is pulled, in points, before letting go of it closes the viewer. */
+const PULLED_AWAY = 90
 
 /** A menu is open in the app: the keys are the menu's until it closes. */
 const menuOpen = () => !!document.querySelector('.sb-app[data-app="photos"] .ios-menu > [aria-expanded="true"]')
@@ -364,41 +375,96 @@ function Viewer({ index }: { index: number }) {
 
   const step = (by: -1 | 1) => glideTo(at + by)
 
-  // A finger scrolls the pages itself. A mouse has no such thing, so it drags them:
-  // the pages follow it, and land on the next one after a fair pull
-  const drag = useRef<{ x: number; left: number; k: number; moved: boolean } | null>(null)
+  // What a pointer does to the picture. Sideways it turns the pages: a finger scrolls them itself (the
+  // browser's own scrolling, which photos.css leaves it, and that way only), and a mouse, which has no such
+  // thing, drags them, to land on the next one after a fair pull. Downward, either pulls the picture off
+  // the page, as Photos has it: the picture follows, and let go far enough down the viewer closes; let go
+  // sooner, it springs back. Which of the two a movement is, is settled by its first few points and holds
+  // until the pointer lifts, so that neither can turn into the other half-way.
+  const drag = useRef<{ x: number; y: number; left: number; k: number; mouse: boolean; doing: 'turning' | 'pulling' | null; down: number } | null>(null)
   const dragged = useRef(false)
+
+  /** What a pull moves: the picture that is showing (not its page, which the pages' own scrolling places). */
+  const picture = () => pager.current?.children[at]?.firstElementChild as HTMLElement | null | undefined
+  const room = () => pager.current?.closest<HTMLElement>('.ios-screen')
+
+  /** The picture is `by` points down from where it sits, a little smaller the further it goes; the bars fade as it leaves. */
+  const pullTo = (by: number) => {
+    const el = picture()
+    if (!el) return
+    el.style.transition = 'none'
+    el.style.transform = `translateY(${by}px) scale(${1 - Math.min(0.2, by / 1400)})`
+    room()?.setAttribute('data-pulled', '')
+    room()?.style.setProperty('--pulled', String(Math.min(1, by / 140)))
+  }
+
+  /** Back where it sits: at once, or on the spring everything here settles on. */
+  const putBack = (spring: boolean) => {
+    const el = picture()
+    if (!el) return
+    el.style.transition = spring && !prefersReducedMotion() ? 'transform 0.4s var(--spring), opacity 0.2s ease' : 'none'
+    el.style.transform = ''
+    el.style.opacity = ''
+    room()?.removeAttribute('data-pulled')
+    room()?.style.removeProperty('--pulled')
+  }
+
+  /** Let go far enough down: the picture carries on out of sight and the viewer goes, as Back would take it. */
+  const pullAway = (from: number) => {
+    const el = picture()
+    if (el) {
+      el.style.transition = prefersReducedMotion() ? 'none' : 'transform 0.3s ease-in, opacity 0.22s ease'
+      el.style.transform = `translateY(${from + 220}px) scale(0.8)`
+      el.style.opacity = '0'
+    }
+    pop()
+    // Should the phone not have gone back (it takes one move at a time), the picture is not left out of sight
+    setTimeout(() => onTop() && putBack(true), 700)
+  }
 
   const down = (e: ReactPointerEvent<HTMLDivElement>) => {
     const el = pager.current
-    if (!el || e.pointerType !== 'mouse' || e.button !== 0 || (e.target as HTMLElement).closest('video')) return
-    drag.current = { x: e.clientX, left: el.scrollLeft, k: scaleOf(el), moved: false }
+    // (A second finger is a pinch: whatever the first had begun is let go of)
+    if (!e.isPrimary) return up(e)
+    if (!el || (e.pointerType === 'mouse' && e.button !== 0) || (e.target as HTMLElement).closest('video')) return
+    drag.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, k: scaleOf(el), mouse: e.pointerType === 'mouse', doing: null, down: 0 }
   }
 
   const move = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = drag.current
     const el = pager.current
-    if (!d || !el) return
+    if (!d || !el || !e.isPrimary) return
     const dx = (e.clientX - d.x) / d.k
-    if (!d.moved) {
-      if (Math.abs(dx) < 5) return
-      d.moved = true
+    const dy = (e.clientY - d.y) / d.k
+    if (!d.doing) {
+      // Downward, and plainly so: a pull, if the pages are at rest on this picture. Sideways: a mouse's
+      // drag (a finger's is the browser's, which says so by taking the pointer away: `up`, below)
+      if (dy > 8 && dy > Math.abs(dx) * 1.5 && Math.abs(el.scrollLeft - at * stride()) < 2) d.doing = 'pulling'
+      else if (d.mouse && Math.abs(dx) >= 5) d.doing = 'turning'
+      else return
       held.current = true
       el.setPointerCapture(e.pointerId)
-      el.style.scrollSnapType = 'none'
+      if (d.doing === 'turning') el.style.scrollSnapType = 'none'
     }
-    el.scrollLeft = d.left - dx
+    if (d.doing === 'turning') el.scrollLeft = d.left - dx
+    else pullTo((d.down = Math.max(0, dy)))
   }
 
   const up = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = drag.current
     const el = pager.current
     drag.current = null
-    if (!d?.moved || !el) return
+    if (!d?.doing || !el) return
     held.current = false
     // The click that ends a drag is not a tap on the picture
     dragged.current = true
     setTimeout(() => (dragged.current = false), 0)
+    if (d.doing === 'pulling') {
+      // (taken away, not lifted: the browser had another use for the pointer, and nothing is closed by that)
+      if (e.type === 'pointerup' && d.down > PULLED_AWAY) pullAway(d.down)
+      else putBack(true)
+      return
+    }
     const dx = (e.clientX - d.x) / d.k
     const from = Math.round(d.left / stride())
     glideTo(Math.abs(dx) > el.clientWidth * 0.16 ? from + (dx < 0 ? 1 : -1) : from)

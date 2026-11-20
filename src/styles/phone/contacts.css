@@ -50,6 +50,27 @@
   background: linear-gradient(180deg, #a3bbdb, #7986bf);
 }
 
+/* A logo that has not arrived yet waits over the initial that stands in for it, unseen and out of the
+   letter's way; it is still there for the browser to see come into sight and fetch */
+.contact-face > img[data-coming] {
+  position: absolute;
+  opacity: 0;
+}
+
+/* The initial stands in only for a logo that is slow in coming. For the first quarter of a second the
+   face is the plain disc it would be with its logo on it: a logo that is nearly there is not announced
+   by a letter that is gone as soon as it is seen */
+.contact-face[data-waiting] {
+  animation: contact-waiting 0.25s step-end;
+}
+
+@keyframes contact-waiting {
+  from {
+    background: #fff;
+    color: transparent;
+  }
+}
+
 /* A hairline round it: a white logo keeps its edge on a white page */
 .contact-face::after {
   position: absolute;
@@ -153,11 +174,13 @@
   text-overflow: ellipsis;
 }
 
-/* The rule under it, from the faces' edge to where the rows' own rules end */
+/* The rule under it, from the faces' edge to where the rows' own rules end. It is half a point up from
+   the band's foot, not on it: a browser that draws to whole points puts a half-point rule at the very
+   foot on the point below, which is outside the band, and the band cuts off what is outside it */
 .contacts-letter::after {
   position: absolute;
   right: 16px;
-  bottom: 0;
+  bottom: 0.5px;
   left: var(--inset);
   height: 0.5px;
   background: var(--sep);
@@ -511,10 +534,11 @@
   line-height: 18px;
 }
 
+/* (17 points, as a contact's card sets what it knows) */
 .contact-field__value {
-  font-size: 18px;
-  letter-spacing: -0.022em;
-  line-height: 23px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;
@@ -570,9 +594,9 @@
   width: 100%;
   min-height: 52px;
   padding: 8px 16px;
-  font-size: 18px;
-  letter-spacing: -0.022em;
-  line-height: 23px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  line-height: 22px;
   text-align: left;
 }
 

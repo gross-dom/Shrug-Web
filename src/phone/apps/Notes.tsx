@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type RefObject } from 'react'
 import { ArrowUpRight, Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, Trash2, X } from 'lucide-react'
 import { showNote, sought } from '../../apps/state'
 import { Answer } from '../../apps/answer'
@@ -8,7 +8,7 @@ import { useStore } from '../../os/store'
 import '../../styles/phone/notes.css'
 import { pageUrl, share } from '../native'
 import { closeSheet, goHome, launchAt, openSheet, pop, push, sys, topOf } from '../system'
-import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, Screen, SearchBar, ShareGlyph, Sheet, SheetHost, type MenuItem } from '../ui'
+import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, ShareGlyph, Sheet, SheetHost, type MenuItem } from '../ui'
 import {
   FAQS_ID,
   NAME_LENGTH,
@@ -24,6 +24,7 @@ import {
   faqEntry,
   folderName,
   folderViewOf,
+  folded,
   found,
   isBlank,
   isFolder,
@@ -31,6 +32,7 @@ import {
   nameOnOffer,
   ownView,
   pageDate,
+  placeOf,
   removeFolder,
   removeNote,
   restOf,
@@ -120,15 +122,16 @@ function discard(id: string) {
 
 // ---- Search ----
 
-/** Text with the part that matched the search marked, as Notes marks it. */
+/** Text with the part that matched the search marked, as Notes marks it. `q` is as search compares it
+ * (`folded`): what is marked is the text as it is written, its capitals and its curled marks with it. */
 function Marked({ text, q }: { text: string; q: string }): ReactNode {
-  const at = q ? text.toLowerCase().indexOf(q) : -1
-  if (at < 0) return text
+  const place = placeOf(text, q)
+  if (!place) return text
   return (
     <>
-      {text.slice(0, at)}
-      <mark className="notes-hit">{text.slice(at, at + q.length)}</mark>
-      {text.slice(at + q.length)}
+      {text.slice(0, place[0])}
+      <mark className="notes-hit">{text.slice(place[0], place[1])}</mark>
+      {text.slice(place[1])}
     </>
   )
 }
@@ -137,7 +140,7 @@ function Marked({ text, q }: { text: string; q: string }): ReactNode {
  * that line reaches, the line starts just before the match instead. */
 function lineFor(entry: Entry, q: string) {
   const text = entry.text.replace(/\s+/g, ' ').trim()
-  const at = q ? text.toLowerCase().indexOf(q) : -1
+  const at = placeOf(text, q)?.[0] ?? -1
   if (at < 0) return restOf(entry)
   if (at < 26) return text
   const from = text.lastIndexOf(' ', at - 12)
@@ -146,7 +149,7 @@ function lineFor(entry: Entry, q: string) {
 
 interface Searching {
   query: string
-  /** The query as it is matched: trimmed, in lower case. */
+  /** The query as it is matched: trimmed, and folded as search folds what it compares (notes-store.ts). */
   q: string
   /** The field has the keyboard, or has something in it: the screen is given over to the search. */
   active: boolean
@@ -156,16 +159,35 @@ interface Searching {
   cancel: () => void
 }
 
-function useSearching(): Searching {
+/** `page` is what scrolls on the screen that is searched: what a search finds takes the list's place
+ * there, beginning at its top, and the list comes back where it was left when the search is over (or has
+ * nothing typed in it any more). */
+function useSearching(page: RefObject<HTMLDivElement>): Searching {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const leaving = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => () => clearTimeout(leaving.current), [])
+  const q = folded(query.trim())
+  /** Where the list was when what was found took its place: read as the first letter is typed, while the list is still what the page holds. */
+  const place = useRef<number | null>(null)
+  const finding = q !== ''
+  useLayoutEffect(() => {
+    const el = page.current
+    if (!el) return
+    if (finding) el.scrollTop = 0
+    else if (place.current !== null) {
+      el.scrollTop = place.current
+      place.current = null
+    }
+  }, [finding]) // eslint-disable-line react-hooks/exhaustive-deps
   return {
     query,
-    q: query.trim().toLowerCase(),
+    q,
     active: focused || query !== '',
-    setQuery,
+    setQuery: (next) => {
+      if (!q && folded(next.trim()) && place.current === null) place.current = page.current?.scrollTop ?? null
+      setQuery(next)
+    },
     onFocus: () => {
       clearTimeout(leaving.current)
       setFocused(true)
@@ -202,6 +224,77 @@ function FootEnd({ search, folder }: { search: Searching; folder: string }) {
   )
 }
 
+// ---- What a search found, in its note ----
+
+/** What a search was looking for (folded, as it is matched) when one of the notes it found was opened,
+ * and which note, and when: the note's page takes it up as it arrives. */
+let carried: { view: string; q: string; at: number } | null = null
+
+/** What the note at `view` was opened looking for, if it was opened from what a search found a moment ago. */
+const carriedTo = (view: string) => (carried && carried.view === view && performance.now() - carried.at < 2000 ? carried.q : '')
+
+/** The name the marks go by in the browser's own registry of them. notes.css colours them as it colours
+ * a match in the list (`.notes-hit`). */
+const HITS = 'notes-hit'
+
+/** Shows where in a note the words a search was looking for are: every place is marked, and the first
+ * is brought into sight. The note's words are not all this file's to draw (an answer is drawn by what the
+ * desktop's window draws it with), so nothing is put round them: the browser is given the places and
+ * paints them itself, where it can do that (where it cannot, the first is still brought into sight).
+ * Only what is drawn as text can be marked so: a note of the visitor's own is two fields, and is left. */
+function useHits(root: RefObject<HTMLElement>, q: string) {
+  useLayoutEffect(() => {
+    const el = root.current
+    if (!q || !el) return
+    // The note's words as search compares them, each folded letter known by the text it is in and where
+    let all = ''
+    const from: { node: Text; start: number; end: number }[] = []
+    let block: Element | null = null
+    const texts = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, { acceptNode: (node) => (node.parentElement?.closest('.sr-only, .notes-note__date') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) })
+    for (let node = texts.nextNode() as Text | null; node; node = texts.nextNode() as Text | null) {
+      // (the end of one paragraph and the start of the next are not one run of words)
+      const within = node.parentElement?.closest('p, li, h2') ?? null
+      if (block && within !== block) {
+        all += '\n'
+        from.push({ node, start: 0, end: 0 })
+      }
+      block = within
+      let at = 0
+      for (const ch of node.data) {
+        const one = folded(ch)
+        for (let i = 0; i < one.length; i++) from.push({ node, start: at, end: at + ch.length })
+        all += one
+        at += ch.length
+      }
+    }
+    const places: Range[] = []
+    for (let at = all.indexOf(q); at >= 0; at = all.indexOf(q, at + q.length)) {
+      const first = from[at]!
+      const last = from[at + q.length - 1]!
+      const place = document.createRange()
+      place.setStart(first.node, first.start)
+      place.setEnd(last.node, last.end)
+      places.push(place)
+    }
+    if (!places.length) return
+    const marks = typeof Highlight === 'function' && typeof CSS !== 'undefined' && CSS.highlights ? new Highlight(...places) : null
+    if (marks) CSS.highlights.set(HITS, marks)
+    // The first of them, brought to a third of the way down the page unless it is in plain sight already
+    // (under the bar, and over what floats at the foot)
+    const page = el.closest<HTMLElement>('[data-scroller]')
+    if (page) {
+      const k = scaleOf(page)
+      const top = (places[0]!.getBoundingClientRect().top - page.getBoundingClientRect().top) / k
+      const clear = parseFloat(getComputedStyle(page).paddingTop) || 0
+      if (top < clear + 8 || top > page.clientHeight - 150) page.scrollTop += top - Math.max(clear + 24, page.clientHeight / 3)
+    }
+    return () => {
+      // (only its own: the next note to be opened may have set its marks before this one has gone)
+      if (marks && CSS.highlights.get(HITS) === marks) CSS.highlights.delete(HITS)
+    }
+  }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 // ---- A note in a list ----
 
 /** A note's row: its name, then one line with its date and how it starts. `where` adds the folder it is in. */
@@ -233,7 +326,11 @@ function Row({ entry, q = '', where }: { entry: Entry; q?: string; where?: strin
           )}
         </>
       }
-      onClick={() => push(entry.view)}
+      onClick={() => {
+        // Opened from what a search found, the note is told what was looked for: it shows where
+        carried = q ? { view: entry.view, q, at: performance.now() } : null
+        push(entry.view)
+      }}
     />
   )
 }
@@ -290,7 +387,8 @@ function Folders() {
   const notes = useStore(book, (s) => s.notes)
   const [editing, setEditing] = useState(false)
   const [open, setOpen] = useState(true)
-  const search = useSearching()
+  const scroll = useRef<HTMLDivElement>(null)
+  const search = useSearching(scroll)
   const within = (id: string) => notes.filter((n) => n.folder === id).length
   const rows = [{ id: FAQS_ID, name: 'FAQs', count: FAQS.length, own: false }, { id: NOTES_ID, name: 'Notes', count: within(NOTES_ID), own: false }, ...folders.map((f) => ({ id: f.id, name: f.name, count: within(f.id), own: true }))]
   const icon = <Folder className="notes-folder__icon" size={24} strokeWidth={1.9} aria-hidden />
@@ -301,6 +399,7 @@ function Folders() {
       large
       tone="grouped"
       className="notes-screen"
+      scrollRef={scroll}
       // Where Notes has Edit, the way out: this is as far back as the app goes, and the Home Screen is next.
       // (Edit is still there, across the bar, once there is a folder of the visitor's own to take away)
       leading={
@@ -473,7 +572,8 @@ function NotesList({ folder }: { folder: string }) {
   const gallery = useStore(book, (s) => s.gallery)
   const sort = useStore(book, (s) => s.sort)
   const grouped = useStore(book, (s) => s.grouped)
-  const search = useSearching()
+  const scroll = useRef<HTMLDivElement>(null)
+  const search = useSearching(scroll)
   const entries = useMemo(() => sorted(entriesIn(notes, folder), sort), [notes, folder, sort])
   // The headings are by date, so they are for a folder in date order
   const dated = grouped && sort === 'edited'
@@ -492,6 +592,7 @@ function NotesList({ folder }: { folder: string }) {
       subtitle={countOf(entries.length)}
       tone="grouped"
       className="notes-screen"
+      scrollRef={scroll}
       trailing={
         <Menu label="More" items={items}>
           <Ellipsis size={24} strokeWidth={2.3} aria-hidden />
@@ -654,10 +755,20 @@ function FaqNote({ index }: { index: number }) {
   // The desktop's notes window shows the same note, should the screen become one
   useEffect(() => showNote(index), [index])
 
+  // Opened from what a search found: where the words looked for are is marked, and brought into sight.
+  // (What was looked for is read as the page is first drawn, and let go of once it has been)
+  const page = useRef<HTMLElement>(null)
+  const [q] = useState(() => carriedTo(entry.view))
+  useEffect(() => {
+    carried = null
+  }, [])
+  useHits(page, q)
+
   return (
     <NoteScreen entry={entry}>
-      <article className="notes-note">
-        <p className="notes-note__date">{pageDate(entry.edited)}</p>
+      {/* No date over it, as there is over a note of the visitor's own: Notes shows none until the page is
+          pulled down, and the dates the questions are filed under are dressing (notes-store.ts) */}
+      <article ref={page} className="notes-note">
         <h2 className="notes-note__title">{faq.question}</h2>
         {faq.answer ? (
           <Answer text={faq.answer} className="notes-note__body" />

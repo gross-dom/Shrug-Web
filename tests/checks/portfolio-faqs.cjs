@@ -335,6 +335,8 @@ const BRACKET = '[Shrug’s answer goes here'
     check('UX-26 Contacts: a company link is rel="noopener" and says it opens in a new tab', [open, link].every((l) => l.rel === 'noopener' && l.target === '_blank' && /, opens in a new tab$/.test(l.says)), JSON.stringify([open, link]))
     const info = (await t.page.locator(`${front} .contact-fields`).first().innerText()).replace(/\s+/g, ' ').trim()
     check('Contacts: a company\'s card says its site, its vertical and what it does, and nothing of folders or tags', /^website varda\.com/.test(info) && /vertical Deep tech/.test(info) && /about Space factories/.test(info) && !/Tags|Kind|Where/.test(info), info)
+    const set = await t.page.evaluate((front) => ['.contact-field__value', '.contact-row'].map((sel) => { const cs = getComputedStyle(document.querySelector(`${front} ${sel}`)); return `${cs.fontSize}/${cs.lineHeight}` }), front)
+    check('Contacts: what a card knows, and Share Contact, are set in 17 points, as a contact\'s card sets them', set.join() === '17px/22px,17px/22px', set.join())
 
     // UX-19: Contacts, an empty search
     await A.at(t.page, 'finder', [])
@@ -351,6 +353,55 @@ const BRACKET = '[Shrug’s answer goes here'
     check('Contacts: the list is all there is: no tabs, no Recents, Shared or Browse, no cards', left.tabs === 0 && !left.words && left.cards === 0 && left.sections === 13, JSON.stringify(left))
     check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | ').slice(0, 200))
     await t.ctx.close()
+
+    // The rule under a vertical's name is drawn, on a screen with one dot to a point as on one with more (it
+    // was half a point too low for a browser that draws to whole points: outside its band, which cut it off).
+    // Looked for in the picture itself: the two points over the heading's foot, down the middle of the screen
+    const inkDown = async (page, x, y, tall) => {
+      const shot = (await page.screenshot({ clip: { x, y, width: 1, height: tall } })).toString('base64')
+      return page.evaluate(async (shot) => {
+        const bitmap = await createImageBitmap(new Blob([Uint8Array.from(atob(shot), (c) => c.charCodeAt(0))], { type: 'image/png' }))
+        const ink = new OffscreenCanvas(bitmap.width, bitmap.height).getContext('2d')
+        ink.drawImage(bitmap, 0, 0)
+        const { data } = ink.getImageData(0, 0, 1, bitmap.height)
+        return Array.from({ length: bitmap.height }, (_, i) => data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2])
+      }, shot)
+    }
+    for (const dpr of [1, 2, 3]) {
+      const r = await A.open(browser, { device: { w: 402, h: 874, touch: true, dpr }, base: BASE, query: 'still' })
+      await A.unlock(r.page)
+      await r.page.addStyleTag({ content: '.sb-banner{display:none!important}' })
+      await A.at(r.page, 'finder', [])
+      for (const scrolled of [0, 437]) {
+        await r.page.locator(`${front} [data-scroller]`).evaluate((el, top) => (el.scrollTop = top), scrolled)
+        await r.sleep(250)
+        const foot = await r.page.evaluate((front) => { const all = [...document.querySelectorAll(`${front} .contacts-letter`)]; return Math.round((all.find((h) => h.getBoundingClientRect().bottom > 80) ?? all[0]).getBoundingClientRect().bottom) }, front)
+        const down = await inkDown(r.page, 200, foot - 2, 2)
+        check(`Contacts at ${dpr}x: the rule under a vertical's name is drawn${scrolled ? ' while the name is held under the bar' : ''}`, down.some((sum) => sum < 735), JSON.stringify(down))
+      }
+      await r.ctx.close()
+    }
+
+    // A logo that is slow in coming: its row is the company's initial until it arrives, not an empty disc.
+    // (The logos are held back here until they are let go, so that what is seen first does not depend on a clock)
+    {
+      let letGo
+      const held = new Promise((done) => (letGo = done))
+      const s = await A.open(browser, { device: 'iphone', base: BASE, query: 'still', goto: false })
+      await s.page.route('**/logos/**', async (route) => { await held; await route.continue().catch(() => {}) })
+      await s.page.goto(BASE + '?still')
+      await A.unlock(s.page)
+      await A.at(s.page, 'finder', [])
+      await s.sleep(500)
+      const faces = () => s.page.evaluate((front) => [...document.querySelectorAll(`${front} .contacts-section .contacts-row`)].slice(0, 6).map((row) => { const face = row.querySelector('.contact-face'); return { name: row.dataset.company, letter: face.hasAttribute('data-empty') ? face.textContent.trim() : null, seen: getComputedStyle(face).color !== 'rgba(0, 0, 0, 0)', coming: !!face.querySelector('img') } }), front)
+      const waiting = await faces()
+      check('Contacts on a slow line: a row whose logo has not arrived is the company\'s initial', waiting.length === 6 && waiting.every((f) => f.coming && f.seen && f.letter === f.name.trim()[0].toUpperCase()), JSON.stringify(waiting.map((f) => `${f.name}: ${f.letter}`)))
+      letGo()
+      await s.page.waitForFunction((front) => [...document.querySelectorAll(`${front} .contacts-section .contacts-row`)].slice(0, 6).every((row) => !row.querySelector('.contact-face').hasAttribute('data-empty')), front, { timeout: 15000 }).catch(() => {})
+      const arrived = await faces()
+      check('Contacts on a slow line: and its logo once that has', arrived.every((f) => f.letter === null && f.coming), JSON.stringify(arrived.map((f) => `${f.name}: ${f.letter}`)))
+      await s.ctx.close()
+    }
 
     // The editor's view has nothing left to show in Notes: an answered question reads the same
     const d = await A.open(browser, { device: 'iphone', base: BASE, query: 'still&draft' })

@@ -17,6 +17,12 @@ const where = (page) =>
     if (!el || el === document.body) return 'BODY'
     return `${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]} "${(el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 36)}"`
   })
+/** The ring round the search capsule on the screen in front: 'none', or how it is drawn. */
+const ringOf = (page) =>
+  page.evaluate((TOP) => {
+    const cs = getComputedStyle(document.querySelector(`${TOP} .ios-search`))
+    return cs.outlineStyle === 'none' ? 'none' : `${cs.outlineStyle} ${cs.outlineWidth}`
+  }, TOP)
 
 ;(async () => {
   const browser = await A.launch()
@@ -92,8 +98,12 @@ const where = (page) =>
     // PH-12: the clear button in a search bar takes a finger
     await contactsSearch(t, '')
     await page.locator(`${TOP} .ios-search__input`).tap()
+    const ringTapped = await ringOf(page)
     await page.keyboard.type('gen')
     await t.sleep(300)
+    // The capsule's ring is a keyboard's: a finger put in the field is shown the caret and nothing more, as iOS shows
+    // it, and the phone's own keyboard does not bring the ring back with the first letter typed
+    check('the search field wears no ring for a finger: not when it is tapped, nor as it is typed into', ringTapped === 'none' && (await ringOf(page)) === 'none', `${ringTapped} / ${await ringOf(page)}`)
     const clear = await page.evaluate((TOP) => {
       const b = document.querySelector(`${TOP} .ios-search__clear`)
       const r = b.getBoundingClientRect()
@@ -155,6 +165,25 @@ const where = (page) =>
     })
     check('MK-14 New Folder opened again straight after Done comes up fresh, its field ready', again && again.value !== 'First' && again.focused, JSON.stringify(again))
     await A.at(page, 'notes', [], null, 600)
+
+    // A name too long for the bar gives way to the buttons either side of it: it is cut short, and runs under neither
+    await A.at(page, 'notes', [], 'new-folder', 900)
+    await page.locator('.sb-slot[data-front] .ios-sheet input').first().fill('A folder with a very long name that goes on and on')
+    await page.locator('.sb-slot[data-front] .ios-sheet button[aria-label="Done"]').first().tap()
+    await t.sleep(700)
+    await page.locator(`${TOP} .notes-folder`, { hasText: 'A folder with a very long name' }).tap()
+    await t.sleep(1000)
+    const bar = await page.evaluate((TOP) => {
+      const b = document.querySelector(`${TOP} .ios-bar`)
+      const name = b.querySelector('.ios-bar__heading')
+      const at = (el) => el.getBoundingClientRect()
+      return { back: Math.round(at(b.querySelector('.ios-bar__side button')).right), from: Math.round(at(name).left), to: Math.round(at(name).right), more: Math.round(at(b.querySelector('.ios-bar__side--end button')).left), cut: name.scrollWidth > name.clientWidth }
+    }, TOP)
+    check('a folder with a long name: its name in the bar is cut short between Back and More, and runs under neither', bar.cut && bar.from >= bar.back + 8 && bar.to <= bar.more - 8, JSON.stringify(bar))
+    // …and what a bar holds between its sides is in the middle of the screen as it was (a conversation's face and name)
+    await A.at(page, 'messages', ['c:group'], null, 800)
+    const off = await page.evaluate((TOP) => { const r = document.querySelector(`${TOP} .msg-head`).getBoundingClientRect(); return Math.round(((r.left + r.right) / 2 - innerWidth / 2) * 10) / 10 }, TOP)
+    check('a conversation\'s face and name are still in the middle of its bar', Math.abs(off) <= 0.5, String(off))
     check('touch run: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
     await t.ctx.close()
 
@@ -302,6 +331,16 @@ const where = (page) =>
     // a sheet named by something the app has no sheet for shuts nothing off
     await A.at(page, 'notes', [], 'no-such-sheet', 700)
     check('a sheet that does not exist leaves the screen usable', !(await page.evaluate((TOP) => document.querySelector(TOP).hasAttribute('inert'), TOP)))
+
+    // The search field's ring is a keyboard's: tabbed to, the capsule wears it (a finger sees none: the touch run, above)
+    await A.at(page, 'notes', [], null, 800)
+    let onField = false
+    for (let i = 0; i < 30 && !onField; i++) {
+      await page.keyboard.press('Tab')
+      onField = await page.evaluate((TOP) => document.activeElement === document.querySelector(`${TOP} .ios-search__input`), TOP)
+    }
+    check('the search field, tabbed to, wears its ring round the capsule', onField && (await ringOf(page)) === 'solid 3px', `${onField} ${await ringOf(page)}`)
+    await page.evaluate(() => document.activeElement?.blur())
 
     // MK-15: Escape in a search field: clear, let go, then the phone's own
     await A.at(page, 'notes', [], null, 800)

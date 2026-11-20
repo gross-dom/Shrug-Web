@@ -1,5 +1,6 @@
 // What happens between apps on the iPhone, and what came with it: how an app opens and is put away, what is seen
-// while it loads, the ways out of Notes and Messages, a message to Shrug with files, and the widget on the desk.
+// while it loads, the ways out of Messages, Notes, Contacts and VIP, a message to Shrug with files (and what a
+// reload keeps of it), and the widget on the desk.
 //   node between-apps.cjs [base] [sections]     sections: letters to run (all by default). Exits non-zero if anything fails.
 // A opening  B put away by hand  C the ways out  D a message to Shrug  E the desk's widget  F the desktop's icons
 // G back out to the folder
@@ -165,8 +166,21 @@ const touchOf = (t) => ({
     say((await exit.count()) === 1 && (await p.locator(`${TOP} .ios-bar button`, { hasText: 'Edit' }).count()) === 0, 'Notes\' folders have Exit where Edit was')
     await exit.tap(); await p.waitForTimeout(900)
     say((await A.state(p)).place?.app === null, 'which goes to the Home Screen too')
+    // Contacts and VIP have the round Back that those apps have in that corner on an iPhone, named for where it leads
+    await A.at(p, 'finder', [], null, 900)
+    let back = p.locator(`${TOP} .ios-bar__side:not(.ios-bar__side--end) button`)
+    say((await back.count()) === 1 && (await back.getAttribute('aria-label')) === 'Home Screen' && (await back.locator('svg').count()) === 1, 'Contacts\' list has Back in its corner, which says Home Screen')
+    await back.tap(); await p.waitForTimeout(900)
+    say((await A.state(p)).place?.app === null, 'and goes there')
     await A.at(p, 'photos', [], null, 900)
-    say((await p.locator(`${TOP} .photos-head`).count()) === 1 && (await p.locator(`${TOP} .photos-head button`).count()) === 0, 'VIP\'s library has no Play button')
+    back = p.locator(`${TOP} .ios-bar__side:not(.ios-bar__side--end) button`)
+    const glass = await back.evaluate((b) => { const cs = getComputedStyle(b); const head = document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"] .photos-head').getBoundingClientRect(); const r = b.getBoundingClientRect(); return { ground: cs.backgroundColor, ink: cs.color, overHead: r.bottom < head.bottom && r.top >= head.top } }).catch(() => null)
+    say((await back.count()) === 1 && (await back.getAttribute('aria-label')) === 'Home Screen' && !!glass && glass.overHead && /^rgba\(255, 255, 255, 0\.[6-9]/.test(glass.ground) && glass.ink === 'rgb(28, 28, 30)', 'VIP\'s library has it too, on pale glass over the picture at its head', JSON.stringify(glass))
+    await back.tap(); await p.waitForTimeout(900)
+    say((await A.state(p)).place?.app === null, 'and it goes there too')
+    await A.at(p, 'photos', [], null, 900)
+    // (the head's picture is itself pressed, as its square in the grid is: that is the one button in it)
+    say((await p.locator(`${TOP} .photos-head`).count()) === 1 && (await p.locator(`${TOP} .photos-head button:not(.photos-head__open)`).count()) === 0 && (await p.locator(`${TOP} .photos-head button.photos-head__open`).count()) === 1, 'VIP\'s library has no Play button: the picture at its head is the one thing there to press')
     // a card's buttons are clear of the strip along the top of a real phone's page
     await A.at(p, 'finder', ['me'], null, 900)
     const card = await p.evaluate((TOP) => { const b = document.querySelector(`${TOP} .ios-bar button`).getBoundingClientRect(); const strip = document.querySelector('.ph-edge--top').getBoundingClientRect(); const screen = document.querySelector(`${TOP} .ios-screen`); return { button: Math.round(b.top), strip: Math.round(strip.bottom), page: getComputedStyle(screen).backgroundColor } }, TOP)
@@ -200,6 +214,10 @@ const touchOf = (t) => ({
     await p.waitForTimeout(300)
     const picked = await p.evaluate((TOP) => ({ names: [...document.querySelectorAll(`${TOP} .msgn-pick b`)].map((b) => b.textContent), said: document.querySelector(`${TOP} [role="status"]`)?.textContent }), TOP)
     say(JSON.stringify(picked.names) === '["Seed Deck.pdf"]' && /25 MB/.test(picked.said || ''), 'a file is shown waiting in the field; one over 25 MB is left out, and that is said', JSON.stringify(picked))
+    // What was turned away is news, not a state the message is left in: it is taken back a few seconds on
+    await p.waitForTimeout(4400)
+    const later = await p.evaluate((TOP) => ({ waiting: document.querySelectorAll(`${TOP} .msgn-pick`).length, said: document.querySelector(`${TOP} [role="status"]`)?.textContent, shown: !!document.querySelector(`${TOP} .msgn-refused`) }), TOP)
+    say(later.waiting === 1 && later.said === '' && !later.shown, 'and is no longer said four seconds on, with the file that fitted still waiting', JSON.stringify(later))
     await p.locator(`${TOP} .msg-field__input`).fill('Our seed deck')
     await p.locator(`${TOP} .msg-field__send`).tap()
     await p.waitForTimeout(250)
@@ -208,6 +226,13 @@ const touchOf = (t) => ({
     const sent = await p.evaluate((TOP) => ({ receipt: document.querySelector(`${TOP} .msgn-receipt`)?.textContent, file: document.querySelector(`${TOP} .msgn-file b`)?.textContent, words: document.querySelector(`${TOP} .msgn-bubble`)?.textContent, field: document.querySelector(`${TOP} .msg-field__input`).value, waiting: document.querySelectorAll(`${TOP} .msgn-pick`).length, head: document.querySelector(`${TOP} .msg-head__name`)?.textContent }), TOP)
     say(/^Sending/.test(sending || '') && sent.file === 'Seed Deck.pdf' && sent.words === 'Our seed deck' && sent.field === '' && sent.waiting === 0 && sent.head === 'Shrug', 'sent, it is in the conversation with its file, and the field is empty', JSON.stringify({ sending, ...sent }))
     say(sent.receipt === 'Not Delivered', 'with nowhere to send it yet it says Not Delivered: never Delivered', sent.receipt)
+    const laid = await p.evaluate((TOP) => {
+      const mid = (el) => { const r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2 }
+      const [words, file, mark] = ['.msgn-bubble', '.msgn-file', '.msgn-alert'].map((sel) => document.querySelector(`${TOP} ${sel}`))
+      return { level: Math.round(mid(mark) - mid(words)), underFile: Math.round(mid(mark) - mid(file)), beside: Math.round(mark.getBoundingClientRect().left - words.getBoundingClientRect().right), stamp: document.querySelector(`${TOP} .msgn-stamp`).innerText.replace(/\s*\n\s*/g, ' / ') }
+    }, TOP)
+    say(laid.level === 0 && laid.beside === 6 && laid.underFile > 20, 'the mark that says so is beside the last part of the message (its words), not half-way up the file over them', JSON.stringify(laid))
+    say(/^iMessage \/ Today \d{1,2}:\d\d/.test(laid.stamp), 'and the conversation is stamped with the time it began, as every conversation is', laid.stamp)
     await p.locator(`${TOP} .msgn-alert`).tap(); await p.waitForTimeout(700)
     const why = await p.locator('.msg-alert__box').innerText().catch(() => '')
     say(/Not Delivered/.test(why) && /Nothing has left your phone/.test(why), 'and its mark says why', why.replace(/\n/g, ' | '))
@@ -216,6 +241,24 @@ const touchOf = (t) => ({
     await p.locator(`${TOP} .ios-bar button[aria-label^="Back"]`).tap(); await p.waitForTimeout(900)
     const row = await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-rows > :first-child`)?.textContent ?? '', TOP)
     say(/^Shrug/.test(row) && /Not Delivered/.test(row), 'the list of conversations has it at its head, and says it did not go', row.slice(0, 80))
+    // looked for, it is found: by its name, by what was written in it, by the name of a file sent
+    const finds = []
+    for (const q of ['shrug', 'seed deck', 'deck.pdf', 'zzzz']) {
+      await p.locator(`${TOP} .ios-search__input`).fill(q); await p.waitForTimeout(350)
+      finds.push(await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-row[data-row="shrug"] .ss-row__preview`)?.textContent ?? null, TOP))
+    }
+    say(/Our seed deck$/.test(finds[0] || '') && /Our seed deck$/.test(finds[1] || '') && /Seed Deck\.pdf$/.test(finds[2] || '') && finds[3] === null, 'a search of the list finds it by its name, by its words and by its file\'s name, showing which', JSON.stringify(finds))
+    await p.locator(`${TOP} .ios-foot button[aria-label="Cancel"]`).tap(); await p.waitForTimeout(400)
+    // a reload brings it back with what was being written; a file that was only picked is not kept
+    await p.locator(`${TOP} .msg-row[data-row="shrug"]`).tap(); await p.waitForTimeout(900)
+    await p.locator(`${TOP} .msg-field__input`).fill('And one more thing')
+    await picker.setInputFiles([{ name: 'only picked.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(4000) }])
+    await p.waitForTimeout(300)
+    await p.reload({ waitUntil: 'load' })
+    await p.waitForSelector(`${TOP} .msgn-thread`, { timeout: 20000 }); await p.waitForTimeout(900)
+    const kept = await p.evaluate((TOP) => ({ draft: document.querySelector(`${TOP} .msg-field__input`).value, waiting: document.querySelectorAll(`${TOP} .msgn-pick`).length, words: document.querySelector(`${TOP} .msgn-bubble`)?.textContent, file: [...document.querySelectorAll(`${TOP} .msgn-file__words`)].map((f) => f.innerText.replace(/\s*\n\s*/g, ', ')).join(), receipt: document.querySelector(`${TOP} .msgn-receipt`)?.textContent, stamped: /Today \d/.test(document.querySelector(`${TOP} .msgn-stamp`)?.innerText ?? '') }), TOP)
+    say(kept.draft === 'And one more thing' && kept.words === 'Our seed deck' && kept.file === 'Seed Deck.pdf, 2.2 MB' && kept.receipt === 'Not Delivered' && kept.stamped, 'a reload brings the conversation back: what was sent, its file by name and size, and what was being written', JSON.stringify(kept))
+    say(kept.waiting === 0, 'a file that was only picked is not kept', String(kept.waiting))
     // nothing was asked of anywhere
     say(A.realErrors(t.errors).length === 0, 'no errors, and nothing was sent anywhere', A.realErrors(t.errors).slice(0, 2).join(' | '))
     await t.ctx.close()
