@@ -31,6 +31,17 @@ export function shortDay(t: number | Date) {
   return `${of('weekday')} ${of('day')} ${of('month')}`
 }
 
+const LONG_DAY = () => formatter({ weekday: 'long', day: 'numeric', month: 'long' })
+let longDayFormat: Intl.DateTimeFormat | undefined
+
+/** The same day where there is room to write it out, in the same order as the short one, so that the
+ * screen saver and the menu bar it comes down over say one date: Wednesday 18 November. */
+export function longDay(t: number | Date) {
+  const parts = (longDayFormat ??= LONG_DAY()).formatToParts(t)
+  const of = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ''
+  return `${of('weekday')} ${of('day')} ${of('month')}`
+}
+
 /** A date or time formatter in the site's language. An hour asked for as `numeric` is written with
  * two digits on a 24-hour clock, as those are: 09:41, 00:30. */
 export function formatter(options: Intl.DateTimeFormatOptions) {

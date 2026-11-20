@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { chat } from '../apps/chat'
 import { inbox } from '../apps/state'
 import { PEOPLE, type Person } from '../data/people'
-import { formatter } from './dates'
+import { formatter, longDay } from './dates'
 import { useReturnFocus } from './focus'
 import { idleSeconds, saver, startSaver, startsItself, wakeSaver } from './saver'
 import { useStore } from './store'
@@ -16,7 +16,6 @@ import { isShowing, wm } from './wm'
 // read is not one. A phone has none: nobody should be locked out of a page
 // for reading it.
 
-const DATE = formatter({ weekday: 'long', day: 'numeric', month: 'long' })
 const TIME = formatter({ hour: 'numeric', minute: '2-digit' })
 
 /** The hour and the minute alone, as a lock screen writes them: no AM or PM, wherever a language puts it. */
@@ -190,7 +189,7 @@ export function ScreenSaver() {
     >
       <div className="saver__sky" />
       <div ref={clock} className="saver__clock">
-        <div className="saver__date">{DATE.format(now)}</div>
+        <div className="saver__date">{longDay(now)}</div>
         <div className="saver__time">{clockOf(now)}</div>
       </div>
       <div ref={foot} className="saver__foot">

@@ -73,7 +73,8 @@ const check = (name, ok, detail = '') => {
     ['#faqs', 'notes', 'f:faqs'],
     // (About Shrug is the desktop's: who Shrug is, on a phone, is on Shrug's own card in Contacts, and that is where a link to it arrives)
     ['?open=about', 'finder', 'me'],
-    ['?open=settings', 'finder', 'me'],
+    // (Settings, which an old link may name, is nowhere on the phone: its Home Screen, open)
+    ['?open=settings', 'home', null],
     // (one person's reply: the conversation, which is then brought to what they said)
     ['?open=chat&at=tony-hawk', 'messages', 'c:group'],
     ['?open=nonsense', null, null],

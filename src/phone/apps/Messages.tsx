@@ -822,7 +822,9 @@ function DetailsSheet() {
     const who = PEOPLE[person]!
     const tags = relationsOf(person)
     const first = who.name.split(' ')[0]
+    // The company in the portfolio that is theirs, where their role names one (src/data/founders.ts): a row that goes to its card
     const theirs = COMPANIES.find((company) => company.key === COMPANY_OF[person]) ?? null
+    const theirsRow = theirs && <Cell title={`Show ${theirs.name} in Contacts`} tint onClick={() => showCompany(theirs.key)} />
     return (
       <Sheet label={`${who.name} details`} className="msg-details" leading={<BackButton label={`Back to ${GROUP_NAME}`} onClick={() => setPerson(null)} />}>
         <div ref={inner}>
@@ -852,21 +854,23 @@ function DetailsSheet() {
                     closeSheet()
                   }}
                 />
+              </Section>
+              <Section>
                 {/* A link to what they said, to pass on: it opens the conversation at their reply */}
                 <Cell title={copied ? 'Link Copied' : 'Share Reply…'} tint onClick={() => void share({ title: who.name, url: linkTo({ app: 'messages', at: atPerson(person) }) }).then((sent) => sent === 'copied' && setCopied(true))} />
+                {theirsRow}
               </Section>
             </List>
           ) : (
-            // Two people under one name (“Courtne Smith & Filip Diarra”) are spoken of as the two they are
-            <p className="msg-card__note">{who.name.includes('&') ? `${who.name} haven’t` : `${first} hasn’t`} replied yet.</p>
-          )}
-          {/* The company in the portfolio that is theirs, where their role names one (src/data/founders.ts) */}
-          {theirs && (
-            <List>
-              <Section>
-                <Cell title={`Show ${theirs.name} in Contacts`} tint onClick={() => showCompany(theirs.key)} />
-              </Section>
-            </List>
+            <>
+              {/* Two people under one name (“Courtne Smith & Filip Diarra”) are spoken of as the two they are */}
+              <p className="msg-card__note">{who.name.includes('&') ? `${who.name} haven’t` : `${first} hasn’t`} replied yet.</p>
+              {theirsRow && (
+                <List>
+                  <Section>{theirsRow}</Section>
+                </List>
+              )}
+            </>
           )}
         </div>
       </Sheet>

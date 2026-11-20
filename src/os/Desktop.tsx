@@ -2,8 +2,8 @@ import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 
 import { startChat } from '../apps/chat'
 import { finder, inbox, notes, photos, showInGroup } from '../apps/state'
 import { MY_CARD } from '../phone/apps/routes'
-import { arriveIn, onPhone, startSystem, watchHistory } from '../phone/system'
-import { asked, isOn, opens } from './address'
+import { arriveIn, onPhone, startSystem, unlock, watchHistory } from '../phone/system'
+import { asked, isOn, opens, says } from './address'
 import { Boundary } from './Boundary'
 import { cross, showOnDesk, spotOfDesk } from './crossing'
 import { keepDesk, restoreDesk, returning } from './deskmemory'
@@ -120,9 +120,11 @@ export function Desktop() {
         const who = named === 'messages' ? personAt(at) : null
         if (who !== null) showInGroup(who)
       }
-      // An app the phone does not have (About Shrug is the desktop's): who Shrug is, there, is on Shrug's own
-      // card in Contacts, so that is where the link arrives
-      else arriveIn('finder', [MY_CARD])
+      // An app the phone does not have. About Shrug is the desktop's: who Shrug is, on a phone, is on Shrug's
+      // own card in Contacts, so that is where a link to it arrives. (Settings, which an old link may still
+      // name, is nowhere on the phone: its Home Screen, unlocked)
+      else if (says('about')) arriveIn('finder', [MY_CARD])
+      else unlock()
     }
     let gone = false
     let t1: ReturnType<typeof setTimeout> | undefined

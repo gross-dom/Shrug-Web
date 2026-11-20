@@ -1040,6 +1040,21 @@ function Banners() {
         if (drag.current && drag.current.dy < -14) setShown((b) => (b ? { ...b, leaving: true } : b))
         drag.current = null
       }}
+      // What a banner has dropped over still works. It lands on the top bar of whatever app is open, where
+      // Back and Share are, and stays for seconds: a press on it where one of those is lies goes to that
+      // button, and the banner gets out of the way. Anywhere else on it opens the conversation. (A click
+      // with no place is the keyboard's, and is the banner's own)
+      onClickCapture={(e) => {
+        if (!e.detail) return
+        const banner = e.currentTarget
+        const under = document.elementsFromPoint(e.clientX, e.clientY).find((el) => !banner.contains(el))
+        const control = under?.closest<HTMLElement>('.sb-slot[data-front] :is(button, a[href], [role="button"])')
+        if (!control || control.getAttribute('aria-disabled') === 'true') return
+        e.preventDefault()
+        e.stopPropagation()
+        setShown((b) => (b ? { ...b, leaving: true } : b))
+        control.click()
+      }}
     >
       <Reply
         index={shown.index}

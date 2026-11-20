@@ -65,6 +65,41 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   const tabbed = await page.evaluate(() => { const a = document.activeElement; const top = document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"]'); return !!top && top.contains(a) && a !== top })
   say(tabbed, 'and Tab goes on to that screen’s own controls')
 
+  // ---- A company and its founder's words lead to each other
+  await home()
+  await search('living carbon', 'Living Carbon')
+  const top = '.sb-slot[data-front] .ios-page[data-pos="top"]'
+  let card = await page.evaluate((top) => ({ acts: [...document.querySelectorAll(`${top} .contact-act`)].map((a) => a.textContent.trim()), fields: [...document.querySelectorAll(`${top} .contact-field`)].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`) }), top)
+  say(card.acts.join(' | ') === 'Website, opens in a new tab | Maddie Hall in Testimonials | Share' && card.fields.slice(-1)[0] === 'in testimonials: Maddie Hall', 'a company whose founder is in the conversation has the way to what they said: a round button, and a row', JSON.stringify(card))
+  await page.locator(`${top} .contact-field[data-link] button`).tap(); await sleep(2800)
+  s = await st()
+  const reply = await page.evaluate(() => { const sc = document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"] .chat__scroll'); const b = sc?.querySelector('[data-person="5"]'); if (!b) return null; const r = sc.getBoundingClientRect(), q = b.getBoundingClientRect(); return q.top > r.top + 40 && q.top < r.bottom - 100 })
+  say(s.app === 'messages' && s.stacks.messages.join() === 'c:group' && reply === true, 'the row opens the conversation at their reply', JSON.stringify({ app: s.app, stack: s.stacks.messages, reply }))
+  await page.locator(`${top} .msg-head`).tap(); await sleep(900)
+  await page.locator('.msg-person').nth(5).scrollIntoViewIfNeeded(); await page.locator('.msg-person').nth(5).tap(); await sleep(700)
+  const rows = await page.locator('.ios-sheet .ios-cell, .ios-sheet [class*="cell"] button, .ios-sheet button').allInnerTexts()
+  say(rows.some((r) => /^Show in Testimonials$/.test(r.trim())) && rows.some((r) => /^Share Reply…$/.test(r.trim())) && rows.some((r) => /^Show Living Carbon in Contacts$/.test(r.trim())), 'their card has the way to the reply, a link to it to pass on, and the way to their company', rows.map((r) => r.trim()).filter(Boolean).join(' | '))
+  await page.locator('.ios-sheet button', { hasText: 'Show Living Carbon in Contacts' }).tap(); await sleep(1400)
+  s = await st()
+  say(s.app === 'finder' && s.stacks.finder.join() === 'co:Living Carbon' && s.sheet === null, 'and that row opens the company’s card in Contacts', JSON.stringify({ app: s.app, stack: s.stacks.finder, sheet: s.sheet }))
+  // A company nobody in the conversation speaks for has neither
+  await home()
+  await search('hadrian', 'Hadrian')
+  card = await page.evaluate((top) => ({ acts: document.querySelectorAll(`${top} .contact-act`).length, fields: [...document.querySelectorAll(`${top} .contact-field dt`)].map((f) => f.textContent) }), top)
+  say(card.acts === 2 && !card.fields.includes('in testimonials'), 'a company nobody there speaks for has neither', JSON.stringify(card))
+
+  // ---- A banner drops over the bar: what it has dropped over still works
+  // (Replies are landing all the while; one that lands while Contacts is showing drops a banner, no more often than every twenty seconds)
+  const dropped = await page.waitForSelector('.sb-banner:not([data-leaving])', { timeout: 45000 }).then(() => true, () => false)
+  if (!dropped) say(true, '(no banner dropped in this run: everyone had replied; its presses are not tried)')
+  else {
+    await sleep(700)
+    const spot = await page.evaluate((top) => { const b = document.querySelector(`${top} .ios-bar button[aria-label="Back"]`).getBoundingClientRect(); const n = document.querySelector('.sb-banner .ss-notification').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, under: b.y + b.height / 2 > n.top && b.y + b.height / 2 < n.bottom } }, top)
+    await page.touchscreen.tap(spot.x, spot.y); await sleep(1300)
+    s = await st()
+    say(spot.under && s.app === 'finder' && s.stacks.finder.length === 0, 'a press on a banner where Back lies under it goes Back, and not to the conversation', JSON.stringify({ under: spot.under, app: s.app, stack: s.stacks.finder }))
+  }
+
   const seen = [...new Set(errors)].filter((e) => !/Failed to load resource|\[vite\]/.test(e))
   say(seen.length === 0, seen.length ? 'console errors: ' + seen.slice(0, 6).join(' | ') : 'no console errors')
   await browser.close()

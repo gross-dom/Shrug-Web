@@ -22,14 +22,21 @@ const appNamed = (name: string): AppId | null => {
   return (APP_IDS as string[]).includes(id) ? (id as AppId) : null
 }
 
-/** The apps the address names, in the order it names them. */
-export function opens(): AppId[] {
+/** The words the address names apps by, as it has them: after `open`, as its path, after its hash. */
+function words(): string[] {
   if (typeof window === 'undefined') return []
   const last = (text: string) => decodeURIComponent(text).split('/').filter(Boolean).pop() ?? ''
-  const names = [...(asked('open') ?? '').split(/[,;+\s]+/), safely(() => last(window.location.pathname)), safely(() => last(window.location.hash.replace(/^#/, '')))]
-  const apps = names.map((name) => appNamed(name.trim().toLowerCase())).filter((id): id is AppId => id !== null)
+  return [...(asked('open') ?? '').split(/[,;+\s]+/), safely(() => last(window.location.pathname)), safely(() => last(window.location.hash.replace(/^#/, '')))].map((name) => name.trim().toLowerCase())
+}
+
+/** The apps the address names, in the order it names them. */
+export function opens(): AppId[] {
+  const apps = words().map(appNamed).filter((id): id is AppId => id !== null)
   return [...new Set(apps)]
 }
+
+/** Whether the address names an app by this very word (`?open=about`), and not by another word for the same app. */
+export const says = (word: string) => words().includes(word)
 
 /** A path or a hash that is not valid text names nothing. */
 function safely(read: () => string) {

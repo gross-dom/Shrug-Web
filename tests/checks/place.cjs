@@ -47,11 +47,11 @@ const windows = (page) =>
   await t.page.goBack(); await settle(t.page, 900)
   s = await A.state(t.page)
   check('phone, Back: the address goes back with it, to the list', tail(t.page) === '/?still&open=portfolio' && s.place?.app === 'finder' && s.place.stack.length === 0, `${tail(t.page)} ${JSON.stringify(s.place)}`)
-  // Shrug's own card is a place in the app, and not a company: the address is the portfolio's
+  // Shrug's own card is what the desktop keeps in About Shrug: the two have one address
   await t.page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] [data-scroller]').evaluate((el) => (el.scrollTop = 0)); await settle(t.page, 200)
   await t.page.locator('.sb-slot[data-front] .contacts-me').tap(); await settle(t.page, 1000)
   s = await A.state(t.page)
-  check('phone, My Card: the address is the portfolio still', s.place?.stack.join() === 'me' && tail(t.page) === '/?still&open=portfolio', `${tail(t.page)} ${JSON.stringify(s.place)}`)
+  check('phone, My Card: the address is About Shrug’s', s.place?.stack.join() === 'me' && tail(t.page) === '/?still&open=about', `${tail(t.page)} ${JSON.stringify(s.place)}`)
   await t.page.goBack(); await settle(t.page, 900)
   await t.page.goBack(); await settle(t.page, 900)
   check('phone, Back to the Home Screen: no app named', tail(t.page) === '/?still', tail(t.page))

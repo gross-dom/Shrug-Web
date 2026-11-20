@@ -25,8 +25,8 @@ Run against a build (`all.sh` does), not only the dev server: the dev server kee
 | `crossing` | A change of layout keeps the visitor's place; a keyboard is not a change of layout |
 | `addresses` | What a phone fetches, the order of the stylesheets in a build, forgiving addresses |
 | `place` | The address follows the visitor on both layouts, a link opens where it says, Share passes that link on, and a reload brings the desktop back |
-| `portfolio-faqs`, `terminal-vip`, `messages`, `folders-search`, `ios-parts`, `phone-shell`, `desktop-shell` | Each of the audit's fixes, by area |
-| `between-apps` | What happens between apps on the iPhone (an app opening out of its icon frame by frame, its launch screen, being carried off by hand), the ways out of Notes and Messages, a message to Shrug with files, and on the desktop the widget and the redrawn icons |
+| `portfolio-faqs`, `terminal-vip`, `messages`, `folders-search`, `ios-parts`, `phone-shell`, `desktop-shell` | Each of the audit's fixes, and of the review's after it, by area (`terminal-vip` also holds to Tab, `whois`, `fortune` and a founder's company; `phone-shell` to the glass, the Lock Screen and a second tap) |
+| `between-apps` | What happens between apps on the iPhone (an app opening out of its icon frame by frame, its launch screen, being carried off by hand), the Exit buttons of Notes and Messages, a message to Shrug with files, Back leading back out to a folder, and on the desktop the widget and the redrawn icons |
 | `forced-colours` | Windows High Contrast (Chromium's emulation), and the kit's parts under reduced motion |
 | `*-webkit` | The same in Safari's engine |
 | `phone-axe` | axe-core over every iPhone screen. It prints what it finds and does not fail the run: read its last lines, which should be "no violations" |
