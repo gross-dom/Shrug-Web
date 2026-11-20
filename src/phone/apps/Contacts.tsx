@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Keyb
 import { Check, Search, UserRound, X } from 'lucide-react'
 import { companiesIn, companyKeyed, fateOf, hostOf, tellApart, useLogo, type Listed } from '../../apps/portfolio-ui'
 import { sought } from '../../apps/state'
+import { sentenceSaying } from '../../data/faqs'
 import { LOGO_COLOURS, PLAIN_PAGE, POSTER_COLOURS } from '../../data/logoColours'
 import { COMPANY_COUNT, VERTICALS, type Company } from '../../data/portfolio'
 import { ABOUT, reach, reachable, SITE } from '../../data/site'
@@ -499,6 +500,11 @@ export function contactsFirst(top: string | null): { tone: Tone; ground?: Ground
   return company ? { tone: 'dark', ground: groundOf(company) } : { tone: 'plain' }
 }
 
+/** Shrug's rule for putting two people in touch, as its FAQs give it (src/data/faqs.ts): said under the
+ * row that passes a company on, in the FAQs' own sentence. Null, and nothing is said there, once the FAQs
+ * no longer say it. */
+const BOTH_ASKED = sentenceSaying(/double opt-in/i)
+
 /** A company's card: what it is, the things to do with it, and what is known about it. */
 function CompanyCard({ id }: { id: string }) {
   const company = companyKeyed(id)
@@ -565,7 +571,7 @@ function CompanyCard({ id }: { id: string }) {
             {company.blurb && <Field label="about">{company.blurb}</Field>}
           </dl>
         </Section>
-        <Section>
+        <Section footer={BOTH_ASKED}>
           <button type="button" className="contact-row" onClick={send}>
             Share Contact
           </button>

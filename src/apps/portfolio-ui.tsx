@@ -13,11 +13,36 @@ export const ALL: Listed[] = COMPANIES
 /** The company with this key. A key is the company's name, except where two companies share a name (see `key` in the data). */
 export const companyKeyed = (key: string | null) => ALL.find((c) => c.key === key) ?? null
 
+/** A search this short finds only what begins with it. Looked for anywhere, two or three letters turn up
+ * inside words that have nothing to do with them: "AI" is in "Mountain", and once put a water company at
+ * the head of the list. */
+const SHORT = 3
+
+/** Whether a word in `text` begins with `q` (which is in lower case). A word begins at the start of the
+ * text, after anything that is not a letter or a figure, and at a capital or a figure inside a name that
+ * runs its words together (PlaygroundAI, Cloud23). */
+function beginsWord(text: string, q: string) {
+  const whole = text.toLowerCase()
+  const apart = text.replace(/[a-z](?=[A-Z])|[A-Za-z](?=[0-9])/g, '$& ').toLowerCase()
+  return [whole, apart].some((words) => {
+    for (let at = words.indexOf(q); at >= 0; at = words.indexOf(q, at + 1)) if (at === 0 || !/[a-z0-9]/.test(words[at - 1]!)) return true
+    return false
+  })
+}
+
+/** Whether a company answers a search (`q`: trimmed, in lower case): by its name, its vertical or what it
+ * does. It is the one rule for every place the companies are searched: the window's field, the search in
+ * Contacts, and the phone's own search. */
+export function companyAnswers(company: Company, q: string) {
+  const has = q.length <= SHORT ? (text: string) => beginsWord(text, q) : (text: string) => text.toLowerCase().includes(q)
+  return has(company.name) || has(company.vertical) || has(company.blurb ?? '')
+}
+
 /** The companies showing: one vertical or all of them, narrowed by a search. They stay in the order of the list. */
 export function companiesIn(vertical: number, query: string) {
   const q = query.trim().toLowerCase()
   const base = vertical === -1 ? ALL : ALL.filter((c) => c.vertical === VERTICALS[vertical]!.name)
-  return q ? base.filter((c) => c.name.toLowerCase().includes(q) || c.vertical.toLowerCase().includes(q) || (c.blurb ?? '').toLowerCase().includes(q)) : base
+  return q ? base.filter((c) => companyAnswers(c, q)) : base
 }
 
 // A logo that did not arrive (the line dropped as the folder was opened, say)

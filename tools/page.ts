@@ -31,7 +31,9 @@ const served = env.SITE_URL || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${e
 const HOME = served.endsWith('/') ? served : `${served}/`
 
 const TITLE = SITE.name
-const DESCRIPTION = `${SITE.line} See what ${PEOPLE.length} people say about working with it and the ${COMPANY_COUNT} companies it has backed, on a desktop you can click around or an iPhone you can tap through.`
+/** What a link to the site says under its name: what Shrug is (`SITE.line`), and then what the site
+ * holds, counted from the data. Nothing is said of the fund here that the data does not say. */
+const DESCRIPTION = `${SITE.line} On its site: what ${PEOPLE.length} people say about working with it, the ${COMPANY_COUNT} companies in its portfolio, and its answers to the questions it gets asked.`
 const PICTURE = `${HOME}og.png`
 const PICTURE_SAYS = 'The Testimonials group chat. Shrug asks: ok be honest. what’s it actually like working with us? The first reply is under it.'
 
@@ -70,13 +72,14 @@ function tags() {
 /** Where a link to one of the site's own apps goes when there is no app to open: the address that opens it. */
 const appAddress = (app: AppId) => `${HOME}?open=${Object.keys(ALIASES).find((name) => ALIASES[name] === app) ?? app}`
 
-/** An answer as plain HTML: its paragraphs, its lists, and the links and stress in them. */
+/** An answer as plain HTML: its paragraphs, its lists, and the links, the stress and the crossings-out in them. */
 function drawn(answer: string) {
   const run = (parts: Inline[]) =>
     parts
       .map((part) => {
         if (typeof part === 'string') return esc(part)
         if ('em' in part) return `<em>${esc(part.em)}</em>`
+        if ('struck' in part) return `<s>${esc(part.struck)}</s>`
         return 'app' in part ? `<a href="${esc(appAddress(part.app))}">${esc(part.label)}</a>` : `<a href="${esc(part.href)}" rel="noopener">${esc(part.label)}</a>`
       })
       .join('')

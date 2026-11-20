@@ -292,6 +292,10 @@ async function desk(browser) {
   await p.waitForTimeout(1200)
   const whole = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); return { replies: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, top: s.scrollTop, pill: document.querySelector(`${W} .chat__new[data-show]`)?.textContent.trim(), badge: document.querySelector('.dock__badge')?.textContent ?? null, next: !!document.querySelector(`${W} .chat__thread .chat-link`), all: !!document.querySelector(`${W} .chat__all[data-show]`) } }, W)
   say(whole.replies === 89 && whole.top === 0 && whole.pill === 'Latest' && whole.badge === null && !whole.next && !whole.all, 'AX-14 reduced motion: all eighty-nine, from the top, "Latest" offered, nothing unread and nothing left to load', JSON.stringify(whole))
+  // With every reply drawn: a phrase quoted in the middle of a sentence, with no space on either side of it, has a
+  // mark at each end that faces it (it opens straight after a full stop, in a reply written in Japanese)
+  const quoted = await p.evaluate((W) => [...document.querySelectorAll(`${W} .chat__thread .ss-bubble__text`)].map((b) => b.textContent).find((text) => text.includes('The next big thing')) ?? '', W)
+  say(quoted.includes('“The next big thing will start out looking like a toy.”') && !quoted.includes('”The'), 'a quotation hard against the words round it opens with an opening mark and closes with a closing one', quoted.slice(quoted.indexOf('The next') - 12, quoted.indexOf('The next') + 60))
   await t.ctx.close()
   t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still', reducedMotion: true })
   p = t.page
@@ -316,6 +320,11 @@ async function phone(browser) {
   await p.waitForFunction(() => /^1 of 89/.test([...document.querySelectorAll('.ios-sheet *')].map((x) => (x.children.length ? '' : x.textContent)).find((x) => /of 89/.test(x)) || ''), null, { timeout: 30000 }).catch(() => {})
   const f1 = await foot()
   say(/^(No one has replied yet\.|\d+ of 89 ha(s|ve) replied so far\.)$/.test(f0 || '') && (f1 === null || /^\d+ of 89 ha(s|ve) replied so far\.$/.test(f1)) && !/^1 of 89 have/.test(f1 || '') && !/^1 of 89 have/.test(f0 || ''), 'UX-19 "No one has replied yet." / "1 of 89 has replied so far."', `${f0} -> ${f1}`)
+  // The card of someone who has replied: under its one row, what the row does, said the way iOS says such things
+  await p.locator(`${F} .ios-sheet .msg-person`).first().tap()
+  await p.waitForTimeout(700)
+  const theirs = await p.evaluate((F) => { const s = document.querySelector(`${F} .ios-sheet`); return { name: s?.querySelector('.msg-card__name')?.textContent ?? '', row: s?.querySelector('.ios-cell')?.textContent ?? null, under: s?.querySelector('.ios-section__footer')?.textContent ?? null } }, F)
+  say(theirs.row === 'Show in Testimonials' && theirs.under === `Opens the conversation at ${theirs.name.split(' ')[0]}’s reply.`, 'under Show in Testimonials on a person’s card: "Opens the conversation at Kevin’s reply."', JSON.stringify(theirs))
   await A.at(p, 'messages', ['c:group'])
 
   // AX-23: one control for Details; the camera is FaceTime

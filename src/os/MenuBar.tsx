@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { chat, finishChat, replayChat, toggleChat } from '../apps/chat'
-import { finder, photos, setFinderView, setMediaFilter, showNote, notes } from '../apps/state'
-import { FAQS } from '../data/faqs'
+import { finder, photos, setFinderView, setMediaFilter, setNotesQuery, showNote, notes } from '../apps/state'
+import { FAQS, WHATS_NEW } from '../data/faqs'
 import { SITE } from '../data/site'
 import { Popover } from '../kit/motion/Popover'
 import { APPS, DOCK_APPS, type AppId } from './apps'
@@ -9,6 +9,7 @@ import { formatter, shortDay } from './dates'
 import { dockPoint } from './dom'
 import { focusLost } from './focus'
 import { askedIdle, saver, setSaverNever, startSaver } from './saver'
+import { shrugs } from './shrug'
 import { useStore } from './store'
 import { activeApp, bringAllToFront, closeApp, focusApp, focusWindow, minimizeApp, openApp, tileApp, toggleZoom, wm } from './wm'
 
@@ -36,6 +37,42 @@ const item = (label: string, run: () => void, more: { checked?: boolean; disable
 const rule: Item = { kind: 'rule' }
 
 const launch = (id: AppId) => openApp(id, dockPoint(id))
+
+/** Opens the FAQs on the question that says what has changed with this fund. */
+function showWhatsNew() {
+  // Whatever was being looked for in the FAQs is let go of, so that the question is among those listed
+  setNotesQuery('')
+  showNote(WHATS_NEW)
+  launch('notes')
+}
+
+/** The mark as a shrug has it: an arm, the face, an arm. With no face to be found in it, it is one piece. */
+const SHRUG = SITE.mark.match(/^(.*?)(\(.*\))(.*)$/)
+
+/** Shrug's mark, where the system menu goes. Each time the desk has nothing to give (os/shrug.ts) it
+ * lifts its arms, once: it is drawn afresh for each, so that a second shrug begun while the first is on
+ * its way down starts from rest. One that happened before the bar was drawn is not acted out late. */
+function Mark() {
+  const times = useStore(shrugs, (n) => n)
+  const [before] = useState(times)
+  return (
+    <span key={times} className="menubar__mark" data-menu-mark data-shrug={times > before ? times - before : undefined}>
+      {SHRUG ? (
+        <>
+          <span className="menubar__arm" data-side="left">
+            {SHRUG[1]}
+          </span>
+          {SHRUG[2]}
+          <span className="menubar__arm" data-side="right">
+            {SHRUG[3]}
+          </span>
+        </>
+      ) : (
+        SITE.mark
+      )}
+    </span>
+  )
+}
 
 function useMenus(): MenuDef[] {
   const active = useStore(wm, activeApp)
@@ -72,13 +109,11 @@ function useMenus(): MenuDef[] {
     {
       id: 'mark',
       label: 'Shrug menu',
-      title: (
-        <span className="menubar__mark" data-menu-mark>
-          {SITE.mark}
-        </span>
-      ),
+      title: <Mark />,
       items: [
         item('About Shrug', () => launch('about')),
+        // What is new is what the FAQs say is: the item is there for as long as they have the question
+        ...(WHATS_NEW >= 0 ? [item('What’s New in Shrug V', showWhatsNew)] : []),
         rule,
         // The replies can be held from here whatever window is in front, or none
         item(paused ? 'Resume Replies' : 'Pause Replies', toggleChat, { disabled: done }),

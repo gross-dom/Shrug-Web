@@ -3,6 +3,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, Folder, LayoutGrid, List } fro
 import { COMPANY_COUNT, VERTICALS } from '../data/portfolio'
 import { Window } from '../kit/window'
 import { FolderIcon } from '../os/icons'
+import { shrug } from '../os/shrug'
 import { useStore } from '../os/store'
 import { companiesIn, CompanyLogo, fateOf, hostOf, openCompany, tellApart, visitLabel, type Listed } from './portfolio-ui'
 import { finder, pickCompany, setFinderQuery, setFinderView, showVertical, sought, stepVertical } from './state'
@@ -82,6 +83,12 @@ export function FinderApp() {
   const { vertical, view, query, at, trail, picked } = useStore(finder, (s) => s)
   const name = vertical === -1 ? 'All' : VERTICALS[vertical]!.name
   const shown = useMemo(() => companiesIn(vertical, query), [vertical, query])
+  // A search that finds no company: the mark in the menu bar shrugs. Once as the window comes up empty,
+  // not again for each letter typed after that
+  const none = shown.length === 0
+  useEffect(() => {
+    if (none) shrug()
+  }, [none])
   // Something is always selected: the one that was picked, or the first showing
   const chosen = shown.find((c) => c.key === picked) ?? shown[0] ?? null
   const count = `${shown.length} ${shown.length === 1 ? 'company' : 'companies'}`

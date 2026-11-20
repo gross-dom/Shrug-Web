@@ -45,13 +45,15 @@ async function terminal(browser) {
     await p.waitForTimeout(120)
   }
   check('desktop: opens on the listing, the refusal and the question', /permission denied/.test(await log()) && /request access\? \(y\/n\)/.test(await log()))
+  const listing = (await lines())[1]
+  check('desktop: the listing has the two public case studies after the private ones', /^varda\/ .*superhuman\/  alt\/  lula\/$/.test(listing) && !/\.rules/.test(listing), listing)
   check('desktop: no keys with a mouse', (await p.locator('.term__keys').evaluate((el) => getComputedStyle(el).display)) === 'none')
   const title = await p.locator('.wf[data-app="terminal"] .ss-term__title').evaluate((el) => getComputedStyle(el).color)
   check('desktop: the title is a grey that reads (AX-15)', title === 'rgb(142, 142, 147)', title)
 
   await type('y')
   let text = await log()
-  check('y: asks for nothing; says how case studies go out (UX-3)', /go out by hand/.test(text) && !/email\?/i.test(text) && !/prototype/.test(text), text.slice(-260))
+  check('y: asks for nothing and takes no request; says two are public and the rest are not (UX-3)', /two are public:/.test(text) && /the rest aren’t\. start with the one-pager:/.test(text) && !/by hand|request (sent|received|taken)|we’ll|email\?/i.test(text) && !/prototype/.test(text), text.slice(-260))
   const links = await p.$$eval('.wf[data-app="terminal"] .term__link', (as) => as.map((a) => [a.childNodes[0].textContent, a.getAttribute('href'), a.target, a.rel]))
   check('y: the two public case studies are links to their pages', links.some(([t, h]) => t === 'alt/' && /shrug\.notion\.site\/Alt-/.test(h)) && links.some(([t, h]) => t === 'lula/' && /shrug\.notion\.site\/Lula-/.test(h)), JSON.stringify(links))
   check('y: then the way on: the one-pager, in a new tab', links.some(([t, h, target, rel]) => t === 'read the one-pager' && /docsend\.com/.test(h) && target === '_blank' && rel === 'noreferrer'), JSON.stringify(links))
@@ -67,8 +69,32 @@ async function terminal(browser) {
   // in character (UX-22, DK-12)
   await type('help')
   check('help: says what can be typed', /cat <name>/.test(await log()) && /open <app>/.test(await log()) && /clear/.test(await log()))
+  const help = (await lines()).slice(-8)
+  check('help: has please and date, and leaves .rules to be found', help.some((l) => /^please +ask nicely$/.test(l)) && help.some((l) => /^date +the time in san francisco$/.test(l)) && !help.some((l) => /rules/.test(l)), help.join(' | '))
   await type('ls')
-  check('ls: lists the case studies again', (await lines()).slice(-1)[0].includes('varda/') && (await lines()).slice(-1)[0].includes('superhuman/'))
+  check('ls: lists the case studies again, the public ones with them', (await lines()).slice(-1)[0] === listing, (await lines()).slice(-1)[0])
+  // a file to be found: ls -a shows it, and it holds the rules of engagement as the FAQs give them
+  await type('ls -a')
+  check('ls -a: lists .rules too, first', (await lines()).slice(-1)[0] === '.rules  ' + listing, (await lines()).slice(-1)[0])
+  await type('ll -la')
+  check('ll -la: the same', (await lines()).slice(-1)[0] === '.rules  ' + listing, (await lines()).slice(-1)[0])
+  await type('cat .rules')
+  const rules = (await lines()).slice(-6)
+  check('cat .rules: Shrug’s rules of engagement, a line each', (await lines()).slice(-7)[0] === '> cat .rules' && /^We don’t talk about ourselves publicly$/.test(rules[0]) && /^We always come with gifts!$/.test(rules[5]), rules.join(' | '))
+  // the time where the desk's widget keeps its clock
+  const there = () => {
+    const of = Object.fromEntries(new Intl.DateTimeFormat('en-US', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' }).formatToParts(new Date()).map((part) => [part.type, part.value]))
+    return `${of.weekday} ${of.day} ${of.month}, ${of.hour}:${of.minute} ${of.dayPeriod} in san francisco.`.toLowerCase()
+  }
+  const around = [there()]
+  await type('date')
+  around.push(there())
+  check('date: the day and the time in San Francisco, in the terminal’s lower case', around.includes((await lines()).slice(-1)[0]), `${(await lines()).slice(-1)[0]} (there it is: ${around[1]})`)
+  // asked nicely, as the Dock's label says to
+  await type('please')
+  const nicely = (await lines()).slice(-3)
+  const given = await p.$$eval('.wf[data-app="terminal"] .term__link', (as) => as.slice(-2).map((a) => [a.childNodes[0].textContent, a.getAttribute('href')]))
+  check('please: the two public case studies, with their links', nicely[0] === 'since you asked nicely. two are public:' && given[0][0] === 'alt/' && /shrug\.notion\.site\/Alt-/.test(given[0][1]) && given[1][0] === 'lula/' && /shrug\.notion\.site\/Lula-/.test(given[1][1]) && !/command not found: please/.test(await log()), nicely.join(' | '))
   await type('cat feastables/README')
   check('cat <a private one>: refused, and the question', /permission denied/.test((await lines()).slice(-2)[0]) && /\(y\/n\)/.test((await lines()).slice(-1)[0]))
   await type('cat alt/README')
@@ -85,7 +111,7 @@ async function terminal(browser) {
   check('anything else: command not found, and where to look', /command not found: frobnicate/.test((await lines()).slice(-2)[0]) && /help/.test((await lines()).slice(-1)[0]))
   await type('someone@example.com')
   text = (await lines()).slice(-3).join(' | ')
-  check('an email typed anyway: not "noted", told it went nowhere and where to go', /nothing is sent from here/.test(text) && /one-pager/.test(text) && !/noted/.test(await log()), text)
+  check('an email typed anyway: not "noted", told it was not taken and where to go', /we don’t take addresses here\. that one stays with you\./.test(text) && /one-pager/.test(text) && !/noted/.test(await log()), text)
 
   // Up and Down walk what was typed
   const field = p.locator('.wf[data-app="terminal"] .term__input')
@@ -124,6 +150,27 @@ async function terminal(browser) {
   check('open portfolio: the Portfolio window comes to the front', (await front()) === 'finder', await front())
   await p.click('[data-dock-app="terminal"]')
   await p.waitForTimeout(500)
+  // every app help offers opens (the hint is the one help prints)
+  const offered = help.find((l) => /^open <app>/.test(l)).replace(/^open <app> +/, '').split(', ')
+  const windows = { portfolio: 'finder', faqs: 'notes', vip: 'photos', chat: 'messages', about: 'about' }
+  const opened = []
+  for (const name of offered) {
+    await type(`open ${name}`)
+    await p.waitForTimeout(700)
+    opened.push(`${name}:${await front()}`)
+    await p.click('[data-dock-app="terminal"]')
+    await p.waitForTimeout(500)
+  }
+  check('open <app>: each of the five help offers opens its window', offered.length === 5 && opened.join() === offered.map((name) => `${name}:${windows[name]}`).join(), opened.join())
+  // the rules the terminal printed are the FAQs' own, word for word
+  await p.click('[data-dock-app="notes"]')
+  await p.waitForTimeout(500)
+  await p.locator('.wf[data-app="notes"] .faq-row', { hasText: 'How do you do marketing?' }).click()
+  await p.waitForTimeout(300)
+  const asked = await p.$$eval('.wf[data-app="notes"] .faq__note ul.answer__list', (lists) => [...lists[lists.length - 1].children].map((li) => li.textContent))
+  check('cat .rules: the same lines as the list under "Our rules of engagement" in the FAQs', asked.length === 6 && asked.join('|') === rules.join('|'), asked.join(' | '))
+  await p.click('[data-dock-app="terminal"]')
+  await p.waitForTimeout(500)
   await type('open nothing-like-this')
   check('open <unknown>: says so, with what there is', /nothing called nothing-like-this/.test((await lines()).slice(-1)[0]))
   await type('open case studies')
@@ -159,7 +206,7 @@ async function terminal(browser) {
   check('touch: y and n to tap, 44px tall (tb-17, tb-8)', keys.length === 2 && keys[0].text === 'y' && keys[1].text === 'n' && keys.every((k) => k.h >= 44 && k.w >= 44), JSON.stringify(keys))
   await p.locator('.wf[data-app="terminal"] .term__key', { hasText: 'y' }).tap()
   await p.waitForTimeout(300)
-  check('touch: the y key answers', /go out by hand/.test(await p.locator('.wf[data-app="terminal"] .term__log').innerText()))
+  check('touch: the y key answers', /two are public:/.test(await p.locator('.wf[data-app="terminal"] .term__log').innerText()))
   check('touch: tapping a key leaves the caret in the line', await p.evaluate(() => document.activeElement?.classList.contains('term__input')))
   const after = await p.$$eval('.wf[data-app="terminal"] .term__key', (els) => els.map((e) => e.textContent))
   check('touch: then help and clear to tap', after.join() === 'help,clear', after.join())
@@ -184,7 +231,7 @@ async function terminal(browser) {
   await app.locator('.term-ios-key', { hasText: /^y$/ }).tap()
   await p.waitForTimeout(700)
   text = await app.locator('.term__log').innerText()
-  check('phone: y asks for nothing and gives the public ones and the one-pager', /go out by hand/.test(text) && /alt\//.test(text) && /lula\//.test(text) && /one-pager/.test(text) && !/email/i.test(text), text.slice(-200))
+  check('phone: y asks for nothing and gives the public ones and the one-pager', /two are public:/.test(text) && /the rest aren’t\./.test(text) && /alt\//.test(text) && /lula\//.test(text) && /one-pager/.test(text) && !/email|by hand/i.test(text), text.slice(-200))
   check('phone: no email keyboard, no keys for one', (await app.locator('.term__input').getAttribute('inputmode')) === null && !(await names()).includes('@'), (await names()).join())
   check('phone: then help, ls and clear at the foot', (await names()).join() === 'help,ls,clear', (await names()).join())
   const tall = await app.locator('.term__link').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
@@ -202,7 +249,7 @@ async function terminal(browser) {
   await p.waitForTimeout(450)
   await app.locator('[role^="menuitem"]', { hasText: 'Request Access' }).first().tap()
   await p.waitForTimeout(700)
-  check('phone: More › Request Access is a yes', /go out by hand/.test(await app.locator('.term__log').innerText()))
+  check('phone: More › Request Access is a yes', /two are public:/.test(await app.locator('.term__log').innerText()))
   // typed, with Escape: the line first (the phone's own Escape leaves the app only once it is empty)
   await app.locator('.term__input').fill('half a thought')
   await app.locator('.term__input').press('Escape')
@@ -214,6 +261,24 @@ async function terminal(browser) {
   await p.waitForTimeout(1200)
   check('phone: open vip launches VIP', (await A.state(p)).place?.app === 'photos', JSON.stringify((await A.state(p)).place))
   await A.at(p, 'terminal', [])
+  // every other app help offers opens something too. The phone has no About Shrug: Shrug's own card in Contacts opens
+  const term = p.locator('.sb-slot[data-app="terminal"]')
+  const reached = []
+  for (const name of ['portfolio', 'faqs', 'chat', 'about']) {
+    await term.locator('.term__input').fill(`open ${name}`)
+    await term.locator('.term__input').press('Enter')
+    await p.waitForTimeout(1200)
+    const at = (await A.state(p)).place
+    reached.push(`${name}:${at?.app}/${at?.stack.join()}`)
+    await A.at(p, 'terminal', [])
+  }
+  check('phone: open portfolio, faqs and chat launch their apps, and open about Shrug’s card in Contacts', reached.join(' ') === 'portfolio:finder/ faqs:notes/f:faqs chat:messages/ about:finder/me', reached.join(' '))
+  check('phone: …and the terminal said so each time', /opening about\./.test(await term.locator('.term__log').innerText()))
+  await term.locator('.term__input').fill('cat .rules')
+  await term.locator('.term__input').press('Enter')
+  await p.waitForTimeout(400)
+  const said = await term.locator('.term__log > *').evaluateAll((els) => els.slice(-6).map((e) => e.textContent))
+  check('phone: cat .rules prints the six rules there too, and none runs off the side', /^We don’t talk about ourselves publicly$/.test(said[0]) && /^We always come with gifts!$/.test(said[5]) && (await term.locator('.term__log').evaluate((el) => [...el.children].every((c) => c.scrollWidth <= c.clientWidth + 1))), said.join(' | '))
   check('phone: a line is capped at 120 too (MK-17)', (await p.locator('.sb-slot[data-app="terminal"] .term__input').getAttribute('maxlength')) === '120')
   check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()

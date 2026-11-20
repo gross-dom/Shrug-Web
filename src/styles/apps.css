@@ -1862,6 +1862,19 @@
   text-decoration-thickness: 0.09em;
 }
 
+/* Words crossed out and left to be read: a line through them, in their own ink. What a screen reader is
+   told of where the crossing-out starts and stops (apps/answer.tsx) is no part of the words, and stays
+   out of a selection of them */
+.answer__struck {
+  text-decoration: line-through;
+  text-decoration-thickness: max(1px, 0.07em);
+}
+
+.answer__struck > .sr-only {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* An answer still to be written, as a visitor meets it: said plainly, with the way on */
 .faq__pending {
   font-size: 15px;

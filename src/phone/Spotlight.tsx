@@ -2,19 +2,20 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEve
 import { ArrowUpLeft, AtSign, LayoutGrid, Lightbulb, MessageCircle, Search, X } from 'lucide-react'
 import { chat } from '../apps/chat'
 import { ConversationAvatar, GROUP_NAME, PersonAvatar } from '../apps/chat-ui'
-import { ALL, CompanyLogo, hostOf } from '../apps/portfolio-ui'
+import { ALL, companyAnswers, CompanyLogo, hostOf } from '../apps/portfolio-ui'
 import { showInGroup } from '../apps/state'
 import { arrived, DROPS, MEDIA } from '../data/drops'
 import { EGGS, lastWords } from '../data/eggs'
-import { answerWords, FAQS } from '../data/faqs'
+import { answerWords, FAQS, WHATS_NEW } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
-import { DRAFT, reach, SITE } from '../data/site'
+import { ABOUT, DRAFT, reach, SITE } from '../data/site'
 import { APPS } from '../os/apps'
+import { LogoDisc } from '../os/icons'
 import { useStore } from '../os/store'
 import { OnePagerIcon, PhoneIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { contactsFor, conversationView, FAQS_FOLDER, GROUP_VIEW, mediaView, noteView } from './apps/routes'
+import { contactsFor, conversationView, FAQS_FOLDER, GROUP_VIEW, mediaView, MY_CARD, noteView } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
 import '../styles/phone/spotlight.css'
 
@@ -30,8 +31,11 @@ const shared = new Set(ALL.map((c) => c.name).filter((name, i, all) => all.index
 // an app by either of its names (Contacts is the Portfolio, Notes the FAQs) and
 // by the words for what it holds; the one-pager; and
 // the words for getting hold of Shrug (contact, email, pitch), which find the
-// way there is (`reach` in src/data/site.ts). A search that finds nothing
-// still leaves two things to press.
+// way there is (`reach` in src/data/site.ts). Shrug's own name, the words for
+// who is behind it (about, team, partners) and a partner's name find Shrug's
+// card in Contacts, which is where the phone says what the desktop's About
+// Shrug does; asking what is new finds the question that says. A search that
+// finds nothing still leaves two things to press.
 
 // ---- What matches ----
 
@@ -136,6 +140,18 @@ const ONE_PAGER = { names: ['one-pager', 'one pager', 'onepager'], words: ['deck
 /** What someone types who wants to get hold of Shrug. */
 const REACH = ['contact', 'get in touch', 'touch', 'email', 'e-mail', 'mail', 'reach', 'reach out', 'pitch', 'apply', 'application', 'intro', 'introduction', 'talk', 'call', 'phone', 'meet', 'meeting', 'hello', 'submit', 'raise', 'raising', 'fundraise', 'fundraising']
 
+/** What Shrug's own card answers to by name: its names, and the name of the desktop's window that says who Shrug is. */
+const SHRUG = [SITE.legalName, SITE.name, APPS.about.name]
+
+/** The words for who is behind Shrug. */
+const WHO = ['team', 'who', 'partners']
+
+/** The partners, as About Shrug gives them (`ABOUT` in src/data/site.ts). */
+const PARTNERS = ABOUT.facts.find((fact) => fact.label === 'Partners')?.value.split(/,\s*/) ?? []
+
+/** What someone types who wants to know what has changed. It finds the question that says (`WHATS_NEW` in src/data/faqs.ts). */
+const NEW = ['what\'s new', 'whats new', 'new', 'shrug v']
+
 /** A group shows this many at most. */
 const MOST = 4
 
@@ -172,6 +188,25 @@ function toShrug(key: string, score: number): Hit {
     subtitle: way.kind === 'doc' ? 'Start with the one-pager' : way.label,
     href: way.href,
     open: () => follow(way.href),
+  }
+}
+
+/** Shrug's own card in Contacts (My Card), if it is what was asked for: by Shrug's name, by a word for who
+ * is behind it, or by a partner's name. The whole of one, or three letters into the start of one or of a
+ * word in it; null for anything else. */
+function myCard(q: string): Hit | null {
+  const begins = (names: string[]) => ((r) => r === 0 || (r > 0 && r <= 2 && q.length >= 3))(best(names, q))
+  const partner = begins(PARTNERS)
+  if (!partner && !begins(SHRUG) && !begins(WHO)) return null
+  return {
+    key: 'me',
+    kind: 'company',
+    score: 0,
+    lead: (size) => <LogoDisc size={size} />,
+    title: <Marked text={SITE.legalName} q={q} />,
+    // Found by a partner's name, it says who the partners are; otherwise what Contacts calls it
+    subtitle: partner ? <Marked text={PARTNERS.join(', ')} q={q} /> : 'My Card',
+    open: () => launchAt('finder', [MY_CARD]),
   }
 }
 
@@ -261,6 +296,9 @@ function find(raw: string, replied: number): Found {
 
   const companies: Hit[] = []
   ALL.forEach((company) => {
+    // What the portfolio's own search would not find, this does not: two or three letters find a company
+    // by what begins with them, not by where they fall inside a word
+    if (!companyAnswers(company, q)) return
     const named = rank(company.name, q)
     const field = named < 0 ? rank(company.vertical, q) : -1
     const described = named < 0 && field < 0 && !!company.blurb && company.blurb.toLowerCase().includes(q)
@@ -282,15 +320,20 @@ function find(raw: string, replied: number): Found {
 
   const faqs: Hit[] = []
   const anyFaq = kindOf('faqs', 'questions', 'notes')
+  // Asked what is new, in so many words (the whole of them, or well into them, with either kind of
+  // apostrophe): the question that says what has changed is what was wanted, whatever else has the words
+  const plain = q.replace(/[‘’]/g, '\'')
+  const news = WHATS_NEW >= 0 && NEW.some((ask) => ask === plain || (plain.length >= 6 && ask.startsWith(plain)))
   FAQS.forEach((faq, i) => {
+    const wanted = news && i === WHATS_NEW
     const asked = rank(faq.question, q)
     const words = faq.answer ? answerWords(faq.answer) : ''
     const answered = asked < 0 && words.toLowerCase().includes(q)
-    if (asked < 0 && !answered && !anyFaq) return
+    if (asked < 0 && !answered && !anyFaq && !wanted) return
     faqs.push({
       key: `faq:${i}`,
       kind: 'faq',
-      score: asked >= 0 ? asked : answered ? 9 : 10,
+      score: wanted ? 0 : asked >= 0 ? asked : answered ? 9 : 10,
       lead: tile('notes'),
       title: <Marked text={faq.question} q={q} />,
       subtitle: answered ? <Marked text={around(words, q)} q={q} /> : 'Note',
@@ -313,12 +356,15 @@ function find(raw: string, replied: number): Found {
   const all = Object.values(lists).flat()
 
   // The best of them all, if it is a name that what was typed begins (or begins a word of). Level, the
-  // site's own things come first: an app, the way to Shrug, then what is in the apps
-  let top: Hit | null = null
-  for (const kind of ['app', 'reach', 'person', 'company', 'faq', 'drop'] as Kind[]) {
-    const eligible = lists[kind].find((hit) => !(hit.shy && all.some((other) => !other.shy)))
-    if (eligible && eligible.score <= 2 && (!top || eligible.score < top.score)) top = eligible
-  }
+  // site's own things come first: an app, the way to Shrug, then what is in the apps. Two things come
+  // before any of that when they were asked for in so many words: Shrug's own card, and the question
+  // that says what is new
+  let top: Hit | null = myCard(q) ?? (news ? (faqs.find((hit) => hit.key === `faq:${WHATS_NEW}`) ?? null) : null)
+  if (!top)
+    for (const kind of ['app', 'reach', 'person', 'company', 'faq', 'drop'] as Kind[]) {
+      const eligible = lists[kind].find((hit) => !(hit.shy && all.some((other) => !other.shy)))
+      if (eligible && eligible.score <= 2 && (!top || eligible.score < top.score)) top = eligible
+    }
   const rest = (kind: Kind) => lists[kind].filter((hit) => hit !== top).slice(0, MOST)
 
   const icon = (id: PhoneApp) => <PhoneIcon id={id} />
