@@ -184,7 +184,9 @@ const parts = {
       const r = await t.page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.wf[data-open]')].map((w) => { const b = w.getBoundingClientRect(); return [w.dataset.app, { x: b.x, y: b.y, w: b.width, h: b.height }] })))
       const shared = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y))
       const worst = Math.max(shared(r.finder, r.messages) / (r.finder.w * r.finder.h), shared(r.photos, r.messages) / (r.photos.w * r.photos.h), shared(r.photos, r.finder) / (r.photos.w * r.photos.h))
-      check(`windows: on ${device} no new window opens on the same pile (at most 72% of it over another; they used to be 90% and more)`, worst <= 0.72, `worst overlap ${(worst * 100).toFixed(0)}% ` + JSON.stringify(await rects(t.page)))
+      // (72% while the desk had two icons to keep clear of. With the Wallpapers folder there are three, and a window
+      // that keeps clear of the taller column sits a little further over its neighbour: 77% on the smallest of these desks)
+      check(`windows: on ${device} no new window opens on the same pile (at most 80% of it over another; they used to be 90% and more)`, worst <= 0.8, `worst overlap ${(worst * 100).toFixed(0)}% ` + JSON.stringify(await rects(t.page)))
       if (device === 'fhd') await t.page.screenshot({ path: path.join(OUT, 'big-fhd.png') })
       await t.ctx.close()
     }
@@ -214,7 +216,7 @@ const parts = {
       t = await fresh({ w, h, dpr: 1 }, 'still')
       const over = await lying(t.page, 'messages', '.desk__item')
       const chat = await t.page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"]'); const side = el.querySelector('.chat-side'); return { wide: Math.round(el.getBoundingClientRect().width), list: !!side && side.getBoundingClientRect().width > 120 } })
-      check(`windows: at ${w}x${h} the conversation opens beside the desk's icons, not on them, and keeps its list`, over.length === 2 && over.every((v) => v === 0) && chat.wide >= 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
+      check(`windows: at ${w}x${h} the conversation opens beside the desk's icons, not on them, and keeps its list`, over.length === 3 && over.every((v) => v === 0) && chat.wide >= 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
       await t.ctx.close()
     }
 
