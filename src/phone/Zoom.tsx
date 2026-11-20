@@ -12,19 +12,52 @@ import { useReducedMotion } from '../kit/reduced-motion'
 //
 // Two things move, on one clock and one curve: the app (from the icon's box to
 // its own size, its corners from the icon's to the screen's) and the icon's
-// picture over it (from its own size to the screen's). Both are moved by a
-// transform and nothing else, so the browser can draw the whole of it without
-// the page's own thread: an app that is still being put together while it
-// opens does not hold the opening up, and the window is never somewhere its
-// contents are not. (A clip that had to be redrawn each frame was: on a phone
-// it fell behind, and the app seemed to start from the middle of the screen.)
-// The corners are the one thing set each frame, and are only a shape.
+// picture over it (from its own size to as wide as the screen). Both are
+// moved by a transform and nothing else, so the browser can draw the whole of
+// it without the page's own thread: an app that is still being put together
+// while it opens does not hold the opening up, and the window is never
+// somewhere its contents are not. (A clip that had to be redrawn each frame
+// was: on a phone it fell behind, and the app seemed to start from the middle
+// of the screen.) The corners are the one thing set each frame, and are only
+// a shape.
+//
+// The picture keeps its own shape as it grows. The window goes from a square
+// to the shape of the screen, twice as tall as it is wide, and a picture
+// stretched to cover it all the way was drawn tall and thin in mid-flight
+// (VIP's letters, a company's logo). So the picture grows by one amount, the
+// one that keeps it as wide as the window, and stays in the middle of the
+// window's height while it fades.
 
 /** How long an app takes to open and to be put away. Both follow the phone's spring (`--spring`, ios.css):
  * off from a standstill, most of the way in the first third of the time, and a long soft landing. */
 export const ZOOM = { open: 500, close: 440 }
 
-export function Zoom({ open, from, radius = 16, still, face, quick, children, className, style, ...rest }: HTMLAttributes<HTMLDivElement> & { open: boolean; /** What it opens out of, in the stage's pixels. */ from: Rect; radius?: number; /** It is where it is going already: nothing moves. */ still?: boolean; face: ReactNode; /** What it opens out of has words on it (a widget), which stretch as it grows: its picture goes sooner. */ quick?: boolean }) {
+export function Zoom({
+  open,
+  from,
+  radius = 16,
+  still,
+  face,
+  quick,
+  vanish,
+  children,
+  className,
+  style,
+  ...rest
+}: HTMLAttributes<HTMLDivElement> & {
+  open: boolean
+  /** What it opens out of, in the stage's pixels. */
+  from: Rect
+  radius?: number
+  /** It is where it is going already: nothing moves. */
+  still?: boolean
+  face: ReactNode
+  /** What it opens out of has words on it (a widget): its picture goes sooner, before the app's own words are read through it. */
+  quick?: boolean
+  /** What it is going back into is not a picture of it (a row of words in a list): no picture comes up
+   * over it, and it fades away over the last third of the way there instead of landing on the row. */
+  vanish?: boolean
+}) {
   const ref = useRef<HTMLDivElement>(null)
   // Where the screen sits on the stage, and how much it is scaled there (the stage's scale, times a framed phone's own)
   const [box, setBox] = useState({ w: 0, h: 0, x: 0, y: 0, k: 1 })
@@ -68,15 +101,23 @@ export function Zoom({ open, from, radius = 16, still, face, quick, children, cl
     borderRadius: open || !sx || !sy ? '0px' : `${radius / sx}px / ${radius / sy}px`,
     transition: `transform ${go}, border-radius ${go}`,
   }
+  // The picture grows by the one amount, across and down, that keeps it as wide as the window, and is kept
+  // in the middle of the window's height. The window's height and the picture's both change evenly with
+  // the move, so a picture that is in the middle at either end is in the middle all the way
+  const grown = sx ? 1 / sx : 1
   const faceAt: CSSProperties = {
     width: w,
     height: h,
-    transform: open ? `translate(0px, 0px) scale(${sx ? 1 / sx : 1}, ${sy ? 1 / sy : 1})` : `translate(${x}px, ${y}px) scale(1, 1)`,
-    opacity: open ? 0 : 1,
-    transition: `transform ${go}, ${open ? (quick ? fade(0.2, 0) : fade(0.34, 0.02)) : fade(0.3, 0.22)}`,
+    transform: open ? `translate(0px, ${(box.h - h * grown) / 2}px) scale(${grown})` : `translate(${x}px, ${y}px) scale(1)`,
+    opacity: open || vanish ? 0 : 1,
+    // (While the window is much taller than the picture, the app shows over and under it: so the picture is
+    // gone early on the way out, and comes back late on the way in, when the window is all but its shape again)
+    transition: `transform ${go}, ${open ? (quick ? fade(0.2, 0) : fade(0.26, 0.02)) : fade(0.3, 0.48)}`,
   }
+  // Going back into a row, the whole of it fades over the last third of the way; opening, it is simply there
+  const rootAt: CSSProperties = !open && vanish ? { opacity: 0, transition: `opacity ${Math.round(ms / 3)}ms ease ${Math.round((ms * 2) / 3)}ms` } : {}
   return (
-    <div {...rest} ref={ref} className={`sb-zoom${className ? ` ${className}` : ''}`} data-open={open || undefined} style={{ ...(unmeasured ? { visibility: 'hidden' } : null), ...style }}>
+    <div {...rest} ref={ref} className={`sb-zoom${className ? ` ${className}` : ''}`} data-open={open || undefined} style={{ ...(unmeasured ? { visibility: 'hidden' } : null), ...rootAt, ...style }}>
       <div className="sb-zoom__app" style={appAt}>
         {children}
       </div>

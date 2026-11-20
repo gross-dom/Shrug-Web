@@ -113,6 +113,22 @@ function FolderView({ id, closing, still, back }: { id: FolderId; closing: boole
     const el = pages.current
     if (el && returned?.page) el.scrollLeft = returned.page * el.clientWidth
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  /** The questions, where the screen is too short to show them all: which way they run on past what shows.
+   * The list fades out at that end (folder.css), so that it reads as going on. */
+  const notes = useRef<HTMLDivElement>(null)
+  const [more, setMore] = useState<'above' | 'below' | 'both' | null>(null)
+  const measure = () => {
+    const el = notes.current
+    if (!el) return
+    const above = el.scrollTop > 1
+    const below = el.scrollHeight - el.clientHeight - el.scrollTop > 1
+    setMore(above && below ? 'both' : above ? 'above' : below ? 'below' : null)
+  }
+  useLayoutEffect(() => {
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
   /** A page was turned from the keyboard: when it has turned, the keyboard goes to its first company. */
   const follow = useRef(false)
   /** Where the folder on the Home Screen is from the open one: it grows out of that, and goes back into it. */
@@ -247,7 +263,7 @@ function FolderView({ id, closing, still, back }: { id: FolderId; closing: boole
               </div>
             </>
           ) : (
-            <div className="sb-open__notes">
+            <div ref={notes} className="sb-open__notes" data-more={more ?? undefined} onScroll={measure}>
               {FAQS.map((f, i) => (
                 <button
                   key={f.question}

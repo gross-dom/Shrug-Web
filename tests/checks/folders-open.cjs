@@ -129,6 +129,30 @@ const pageNow = (page) => page.evaluate(() => [...document.querySelectorAll('.sb
     await t.ctx.close()
   }
 
+  // ---- FAQs: all ten questions in sight on a phone with its browser's bars showing; where the screen is too short
+  // for them all they scroll, and the list fades out at the end there is more past, so that it reads as going on ----
+  for (const [w, h, allFit] of [[402, 700, true], [393, 660, false], [375, 667, false], [320, 568, false]]) {
+    t = await A.open(browser, { device: { w, h, touch: true, dpr: 1 }, base: BASE, query: 'still' })
+    await home(t)
+    await A.at(t.page, null, [], 'folder:faqs')
+    const list = () => t.page.evaluate(() => {
+      const el = document.querySelector('.sb-open__notes'); const r = el.getBoundingClientRect(); const cs = getComputedStyle(el)
+      const rows = [...el.children].map((c) => { const b = c.getBoundingClientRect(); return b.bottom <= r.bottom + 0.5 && b.top >= r.top - 0.5 ? 'whole' : b.top >= r.bottom || b.bottom <= r.top ? 'hidden' : 'cut' })
+      return { rows: rows.length, whole: rows.filter((x) => x === 'whole').length, scrolls: el.scrollHeight > el.clientHeight + 1, more: el.dataset.more ?? null, fades: [cs.maskImage, cs.webkitMaskImage].some((m) => /gradient/.test(m || '')) }
+    })
+    let l = await list()
+    if (allFit) check(`${w}x${h}: all ten questions are in sight in the FAQs folder, none of them cut`, l.rows === 10 && l.whole === 10 && !l.scrolls && l.more === null && !l.fades, JSON.stringify(l))
+    else if (!l.scrolls) check(`${w}x${h}: all ten questions fit`, l.whole === 10 && l.more === null, JSON.stringify(l))
+    else {
+      check(`${w}x${h}: the questions scroll, and the list fades out at its foot to say there are more`, l.more === 'below' && l.fades, JSON.stringify(l))
+      await t.page.evaluate(() => { const el = document.querySelector('.sb-open__notes'); el.scrollTop = el.scrollHeight }); await t.sleep(250)
+      l = await list()
+      check(`${w}x${h}: …scrolled to its end, it fades at its head instead`, l.more === 'above' && l.fades, JSON.stringify(l))
+    }
+    if (w === 320) await A.shot(t.page, 'fix-s2-faqs-scrolled')
+    await t.ctx.close()
+  }
+
   // ---- raised text spacing: the FAQs face still shows whole titles only ----
   for (const [w, h] of [[393, 760], [360, 640], [760, 340]]) {
     t = await A.open(browser, { device: { w, h, touch: true, dpr: 1 }, base: BASE, query: 'still&phone=hand' })

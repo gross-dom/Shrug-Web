@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { startTransition, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Search, X } from 'lucide-react'
 import { chat, QUESTION, setChatUnseen, TOTAL } from '../apps/chat'
 import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
@@ -15,7 +15,7 @@ import { LockClock } from './LockClock'
 import { Boundary } from '../os/Boundary'
 import { prefersReducedMotion } from '../os/dom'
 import { firstControl, focusFirst, focusLost } from '../os/focus'
-import { useStore } from '../os/store'
+import { createStore, useStore } from '../os/store'
 import { setTitle } from '../os/title'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { companyOf, GROUP_VIEW, MY_CARD } from './apps/routes'
@@ -68,6 +68,26 @@ function originRect(name: string): Rect | null {
 
 const iconOrigin = (id: PhoneApp) => `icon:${id}`
 
+/** Puts an app's picture where its window is, before both are sent back into its icon. The two move as
+ * one (Zoom.tsx) except under a finger: carried up the screen by the home indicator, the window alone is
+ * moved, and is small and off to one side by the time it is let go, while its picture is still the size
+ * of the screen it was left on, and came up oversized around it. The picture is set as wide as the window
+ * and in the middle of its height, as it is all through the move. */
+function gather(slot: HTMLElement | null) {
+  const app = slot?.querySelector<HTMLElement>('.sb-zoom__app')
+  const face = slot?.querySelector<HTMLElement>('.sb-zoom__face')
+  if (!app || !face || !app.offsetWidth || !face.offsetWidth) return
+  const box = app.getBoundingClientRect()
+  const picture = face.getBoundingClientRect()
+  // It is there already (nothing carried the window off): left as it is, mid-move or not
+  if (Math.abs(box.width - picture.width) < 1 && Math.abs(box.left - picture.left) < 1) return
+  const at = new DOMMatrixReadOnly(getComputedStyle(app).transform)
+  const k = (at.a * app.offsetWidth) / face.offsetWidth
+  // Put there at once. (How far it has faded is left to carry on: only where it is drawn is set)
+  face.style.transitionProperty = 'opacity'
+  face.style.transform = `translate(${at.e}px, ${at.f + (at.d * app.offsetHeight - k * face.offsetHeight) / 2}px) scale(${k})`
+}
+
 /** What each app last opened out of, when that was not its own icon (a widget, a notification): where the
  * keyboard goes back to when the app is put away. */
 const cameFrom = new Map<PhoneApp, string>()
@@ -81,24 +101,29 @@ function opener(home: HTMLElement | null, app: PhoneApp | null) {
   return (from ? marked(from) : null) ?? marked(iconOrigin(app))
 }
 
-/** Something opens the conversation: the reply it is about, as a notification shows it. */
-function Reply({ index, banner, origin, onOpen, className }: { index: number; banner?: boolean; origin: string; onOpen: () => void; className?: string }) {
+/** Something opens the conversation: the reply it is about, as a notification shows it. `was`: it is the
+ * one that was showing, kept drawn under the one taking its place: a picture of it, with nothing to press.
+ * `turn` counts the replies it has shown: with each it comes in afresh (phone.css). */
+function Reply({ index, banner, origin, onOpen, was, turn }: { index: number; banner?: boolean; origin?: string; onOpen?: () => void; was?: boolean; turn?: number }) {
   const person = PEOPLE[index]!
   const previews = useStore(settings, (s) => s.previews)
+  const onKey = (e: ReactKeyboardEvent) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    onOpen?.()
+  }
   return (
     <Notification
       banner={banner}
-      className={`sb-note${className ? ` ${className}` : ''}`}
-      data-origin={origin}
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onOpen()
-        }
-      }}
+      className={`sb-note${was ? ' sb-note--was' : ''}`}
+      data-origin={was ? undefined : origin}
+      data-turn={turn === undefined ? undefined : turn % 2}
+      role={was ? undefined : 'button'}
+      tabIndex={was ? undefined : 0}
+      aria-hidden={was || undefined}
+      onClick={was ? undefined : onOpen}
+      onKeyDown={was ? undefined : onKey}
+      {...(was ? ({ inert: '' } as object) : null)}
       icon={
         <span className="sb-note__face">
           <PersonAvatar index={index} size={38} />
@@ -124,17 +149,85 @@ function Reply({ index, banner, origin, onOpen, className }: { index: number; ba
   )
 }
 
-const openGroup = (origin: string) => launchAt('messages', [GROUP_VIEW], origin)
+/** Opens the conversation, out of what was pressed (`origin`); with none, as an app comes in over another. */
+const openGroup = (origin: string | null) => launchAt('messages', [GROUP_VIEW], origin)
+
+// ---- The newest reply, as news ----
+
+/** How long a reply is shown, at the least, where it is news (the Lock Screen's notification, the widget)
+ * before the next takes its place. Out of the conversation a reply lands every 0.8 seconds, and one shown
+ * for that long and no longer cannot be read: each was gone as it finished arriving. The conversation is
+ * not slowed for it (src/apps/chat.ts keeps its own time); what is shown here skips to the newest. */
+const READ = 2600
+
+/** How long one reply takes to cross over to the next: the one going stays drawn under the one coming until it is in. */
+const CROSS = 520
+
+/** How many had replied when the reply now shown as news was the newest. */
+const news = createStore(chat.get().replied)
+let newsAt = -Infinity
+let newsDue: ReturnType<typeof setTimeout> | undefined
+chat.subscribe(() => {
+  const { replied } = chat.get()
+  const shown = news.get()
+  if (replied === shown) return
+  const show = () => {
+    newsAt = performance.now()
+    news.set(chat.get().replied)
+  }
+  clearTimeout(newsDue)
+  // The first is shown as it lands, and a conversation played from the start is back at its start at once
+  const wait = shown === 0 || replied < shown ? 0 : READ - (performance.now() - newsAt)
+  if (wait <= 0) show()
+  else newsDue = setTimeout(show, wait)
+})
+
+/** The reply to show as news (`now`: how many had replied when it landed, so it is that many less one),
+ * the one it took over from (`was`, or 0), which is kept drawn under it while it arrives, and how many
+ * times it has changed (`turn`). */
+function useNews() {
+  const shown = useStore(news, (n) => n)
+  const [reply, setReply] = useState({ now: shown, was: 0, turn: 0 })
+  if (reply.now !== shown) setReply({ now: shown, was: prefersReducedMotion() ? 0 : reply.now, turn: reply.turn + 1 })
+  useEffect(() => {
+    if (!reply.was) return
+    const t = setTimeout(() => setReply((r) => (r.was ? { ...r, was: 0 } : r)), CROSS)
+    return () => clearTimeout(t)
+  }, [reply])
+  return reply
+}
 
 // ---- The Lock Screen ----
 
+/** A Live Activity under the notification, as an iPhone keeps one at the foot of its Lock Screen: how many
+ * of the group have replied so far, and a bar that fills as they do. The notification stays on one reply
+ * long enough for it to be read, so it no longer counts them as they land; this does. Pressed, it opens
+ * the conversation, as the notification does. */
+function Activity() {
+  const replied = useStore(chat, (s) => s.replied)
+  return (
+    <button type="button" className="sb-activity" data-origin="lock-activity" aria-label={`${GROUP_NAME}: ${replied} of ${TOTAL} ${replied === 1 ? 'has' : 'have'} replied. Open the conversation`} onClick={() => openGroup('lock-activity')}>
+      <span className="sb-activity__app">
+        <PhoneIcon id="messages" />
+      </span>
+      <span className="sb-activity__words">
+        <b>{GROUP_NAME}</b> · {replied} of {TOTAL}
+      </span>
+      <span className="sb-activity__bar">
+        <span style={{ '--done': replied / TOTAL } as CSSProperties} />
+      </span>
+    </button>
+  )
+}
+
 function Lock() {
   const locked = useStore(sys, (s) => s.locked)
-  const replied = useStore(chat, (s) => s.replied)
+  const reply = useNews()
   const announced = useStore(settings, (s) => s.notifications)
   const now = useNow()
   const root = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ y: number; t: number; dy: number; v: number; k: number; moving: boolean } | null>(null)
+  /** `reach` is the farthest the finger has been from where it came down, whichever way. */
+  const drag = useRef<{ x: number; y: number; t: number; dy: number; v: number; k: number; reach: number; moving: boolean } | null>(null)
   /** When the screen was last tapped where there is nothing to press: a second tap soon after opens it. */
   const tapped = useRef(0)
   // It stays drawn while it slides away
@@ -164,22 +257,30 @@ function Lock() {
     return () => window.removeEventListener('keydown', key)
   }, [locked])
 
+  /** The screen is where the finger has lifted it to, thinner the higher it is. What is on it is thinned
+   * piece by piece (`--fade`, which each takes for itself: phone.css), never the screen as a whole: a
+   * notification is a pane of glass, and glass inside anything see-through has nothing behind it to frost. */
   const place = (dy: number, moving: boolean) => {
     const el = root.current
     if (!el) return
     el.style.transition = moving ? 'none' : ''
     el.style.transform = dy ? `translateY(${dy}px)` : ''
-    el.style.opacity = dy ? String(Math.max(0.2, 1 + dy / 520)) : ''
+    if (dy) el.style.setProperty('--fade', String(Math.max(0.2, 1 + dy / 520)))
+    else el.style.removeProperty('--fade')
+    el.toggleAttribute('data-held', moving)
   }
+
+  const reached = (d: NonNullable<typeof drag.current>, e: ReactPointerEvent) => Math.max(d.reach, Math.hypot(e.clientX - d.x, e.clientY - d.y) / d.k)
 
   const down = (e: ReactPointerEvent) => {
     if (!locked) return
-    drag.current = { y: e.clientY, t: e.timeStamp, dy: 0, v: 0, k: scaleOf(root.current), moving: false }
+    drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dy: 0, v: 0, k: scaleOf(root.current), reach: 0, moving: false }
   }
 
   const move = (e: ReactPointerEvent) => {
     const d = drag.current
     if (!d) return
+    d.reach = reached(d, e)
     const dy = Math.min(0, (e.clientY - d.y) / d.k)
     // The swipe can start anywhere, a notification included. Until the finger
     // has moved it may still be a tap on one; once it has, the screen has it,
@@ -211,6 +312,9 @@ function Lock() {
     drag.current = null
     if (!d) return
     if (!d.moving) {
+      // A press that went somewhere and was not the swipe up (a drag across the screen, or down it) is not
+      // a tap either: two of those do not open the phone
+      if (reached(d, e) >= 10) return
       // A tap, which is what most people try first. On a notification or a button it is theirs. Anywhere
       // else the screen answers it (it lifts and falls back under the words that say how it opens), and a
       // second tap soon after opens it
@@ -258,10 +362,16 @@ function Lock() {
         <LockClock time={clockOf(now)} />
       </div>
       <LockScreen clock={false} controls={false}>
-        {announced && replied > 0 && (
-          <div className="sb-stack" data-more={replied > 1 ? (replied > 2 ? 2 : 1) : undefined}>
-            <Reply key={replied} index={replied - 1} origin="lock-note" onOpen={() => openGroup('lock-note')} />
-          </div>
+        {announced && reply.now > 0 && (
+          <>
+            {/* The one notification stays, and takes the newest reply in its turn: the keyboard is not thrown
+                off it each time. The reply it showed before is drawn under it until the new one is in */}
+            <div className="sb-stack" data-more={reply.now > 1 ? (reply.now > 2 ? 2 : 1) : undefined}>
+              <Reply index={reply.now - 1} turn={reply.turn} origin="lock-note" onOpen={() => openGroup('lock-note')} />
+              {reply.was > 0 && <Reply key={reply.was} index={reply.was - 1} was />}
+            </div>
+            <Activity />
+          </>
         )}
       </LockScreen>
       {/* A swipe opens it, as on any iPhone; the words can be pressed too, for a mouse or a keyboard */}
@@ -310,7 +420,20 @@ function LinkIcon({ name, href, children }: { name: string; href: string; childr
  * and again over the conversation as it opens out of the widget (`origin` marks the one on the Home Screen). */
 function ChatFace({ origin }: { origin?: string }) {
   const replied = useStore(chat, (s) => s.replied)
-  const latest = replied > 0 ? PEOPLE[replied - 1]! : null
+  // The count follows every reply as it lands; the reply shown stays long enough to be read (`READ`)
+  const reply = useNews()
+  const said = (index: number, was?: boolean) => {
+    const person = PEOPLE[index]!
+    return (
+      <span className={`sb-chat__reply${was ? ' sb-chat__reply--was' : ''}`} key={was ? `was-${index}` : 'now'} data-turn={was ? undefined : reply.turn % 2} aria-hidden={was || undefined}>
+        <PersonAvatar index={index} size={30} />
+        <span className="sb-chat__bubble">
+          <b>{person.name}</b>
+          <span>{person.quote ?? person.role}</span>
+        </span>
+      </span>
+    )
+  }
   return (
     <span className="sb-widget__face sb-chat" data-origin={origin}>
       <span className="sb-chat__head">
@@ -323,13 +446,11 @@ function ChatFace({ origin }: { origin?: string }) {
           {origin && <span className="sr-only">{replied === 0 ? 'No one has replied yet' : `${replied} of ${TOTAL} ${replied === 1 ? 'has' : 'have'} replied`}</span>}
         </span>
       </span>
-      {latest ? (
-        <span className="sb-chat__reply" key={replied}>
-          <PersonAvatar index={replied - 1} size={30} />
-          <span className="sb-chat__bubble">
-            <b>{latest.name}</b>
-            <span>{latest.quote ?? latest.role}</span>
-          </span>
+      {reply.now > 0 ? (
+        // The reply that was showing stays drawn under the one taking its place until that one is in
+        <span className="sb-chat__news">
+          {said(reply.now - 1)}
+          {reply.was > 0 && said(reply.was - 1, true)}
         </span>
       ) : (
         <span className="sb-chat__ask">
@@ -361,6 +482,9 @@ function Home() {
   // A folder open over the Home Screen: the icons fall out of focus behind it
   const open = useOpenFolder()
   const folder = open !== null
+  // Come back to from the app that was opened out of it: the icons are out of focus behind it already as
+  // they come into sight, not sharp for a moment first (phone.css)
+  const returned = useStore(sys, (s) => s.app === null && s.prev !== null)
   const hidden = covered || locked || spotlight || folder
   // A pull down on the Home Screen brings up search, as it does on an iPhone
   const pull = useRef<{ x: number; y: number; k: number } | null>(null)
@@ -392,7 +516,7 @@ function Home() {
       data-covered={covered || undefined}
       data-locked={locked || undefined}
       data-searching={spotlight || undefined}
-      data-folder={folder || undefined}
+      data-folder={folder ? (returned ? 'back' : '') : undefined}
       onPointerDown={(e) => {
         // Where the Home Screen scrolls (a screen too small to lay it out on), a drag down is a scroll, not the pull
         const scrolls = e.currentTarget.scrollHeight > e.currentTarget.clientHeight + 1
@@ -487,8 +611,8 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const [slide, setSlide] = useState<'in' | 'under' | null>(null)
   const wasSwitcher = useRef(switcher)
   const slot = useRef<HTMLDivElement>(null)
-  /** What it has been placed on to open out of, until it is let go from there. */
-  const placed = useRef<Rect | null>(null)
+  /** What it has been placed on, shut to open out of it or open to go back into it, until it is let go from there. */
+  const placed = useRef<{ on: Rect; open: boolean } | null>(null)
   /** Ends `lingering`. Kept here, not in the effect that starts it: that effect's own cleanup runs when
    * the app is left again a moment later, and would take the timer with it and leave the mark on for good. */
   const settle = useRef<ReturnType<typeof setTimeout>>()
@@ -554,7 +678,14 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
       const into = out?.startsWith('folder:') ? originRect(out) : null
       const from = into ?? originRect(iconOrigin(id))
       setDest(into ? out! : null)
-      setZoom((z) => ({ open: false, from: from ?? z.from, still: !motion || !from }))
+      if (!motion || !from || !zoom.open) return setZoom((z) => ({ open: false, from: from ?? z.from, still: true }))
+      // What it goes back into need not be what it came out of (opened out of the widget, it goes back into
+      // its icon). So it is first set open on what it is going into, which changes nothing that is seen,
+      // and let go from there (below). Sent straight there, its picture would start from the size it had
+      // been stretched to over the other thing: a squeezed slab, landing as a small tile in the corner of
+      // a larger window
+      placed.current = { on: from, open: false }
+      setZoom({ open: true, from, still: true })
       return
     }
     setDest(null)
@@ -568,18 +699,21 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
     }
     if (!motion || !from) return setZoom((z) => ({ open: true, from: from ?? z.from, still: true }))
     // Opening: placed on what it opens out of first (below lets it go)
-    placed.current = from
+    placed.current = { on: from, open: true }
     setZoom({ open: false, from, still: true })
   }, [front, switcher]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Placed on what it opens out of (and drawn so: this runs once that has been): the browser is made to
-  // look at it there (the read does that), and it is let go in the same breath, so the first frame drawn
-  // after the tap is already the opening
+  // Placed on what it opens out of, or goes back into (and drawn so: this runs once that has been): the
+  // browser is made to look at it there (the read does that), and it is let go in the same breath, so the
+  // first frame drawn after the tap is already the move
   useLayoutEffect(() => {
-    if (!placed.current || zoom.from !== placed.current || zoom.open) return
+    const at = placed.current
+    if (!at || zoom.from !== at.on || zoom.open === at.open) return
     placed.current = null
+    // Going back, its picture is put where its window is before both are let go
+    if (!at.open) gather(slot.current)
     void slot.current?.offsetWidth
-    setZoom((z) => ({ ...z, open: true, still: false }))
+    setZoom((z) => ({ ...z, open: at.open, still: false }))
   }, [zoom])
 
   const open = switcher || lingering || slide === 'under' ? true : zoom.open
@@ -621,6 +755,8 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
           still={still}
           face={<Face id={id} origin={out} />}
           quick={card && front}
+          // Back into a question's row in the FAQs folder, which is words and no picture of the app
+          vanish={!front && dest !== null && !/^folder:(?!faq:)/.test(dest)}
           className="sb-app"
           data-app={id}
           data-shut={!open || undefined}
@@ -653,11 +789,21 @@ const slotOf = (el: Element) => el.closest<HTMLElement>('.sb-slot')
 /** How far apart the App Switcher's cards are, as a share of the screen's width. */
 const STRIDE = 0.76
 
+/** Marks the card in the middle of the App Switcher (`at`, counted from the app last in front). Its name
+ * and the button that closes it are the only ones shown (phone.css): a neighbour's sit over the edge of
+ * the screen, where a corner of its card peeks in, and its ✕ there read as the middle card's own while
+ * it closed an app that was not in view. */
+function midOn(apps: HTMLElement, at: number) {
+  const id = sys.get().recents[at]
+  for (const el of apps.querySelectorAll<HTMLElement>('.sb-slot')) el.toggleAttribute('data-mid', el.dataset.app === id)
+}
+
 /** Rests the App Switcher on one of its cards (0 is the app last in front). The card is remembered, not
  * the distance: when the screen turns, the distance is worked out again for the new width. */
 function restOn(apps: HTMLElement, at: number) {
   apps.dataset.at = String(at)
   apps.style.setProperty('--pan', `${at * apps.offsetWidth * STRIDE}px`)
+  midOn(apps, at)
 }
 
 /** The card the App Switcher is resting on, as the button that takes the keyboard. The cards are in the page in
@@ -733,6 +879,8 @@ function CardHandle({ id }: { id: PhoneApp }) {
     if (d.axis === 'x') {
       apps.setAttribute('data-panning', '')
       apps.style.setProperty('--pan', `${d.pan + dx}px`)
+      // The name and the ✕ go with whichever card is nearest the middle
+      midOn(apps, Math.max(0, Math.min(sys.get().recents.length - 1, Math.round((d.pan + dx) / (apps.offsetWidth * STRIDE)))))
     } else if (d.axis === 'y') {
       el.setAttribute('data-lifting', '')
       el.style.setProperty('--lift', `${Math.min(24, dy)}px`)
@@ -805,6 +953,12 @@ function Apps() {
     const el = root.current
     if (!switcher || !el) return
     restOn(el, 0)
+    // The cards that were not in front come in from the side, at the size of a card. They are set down
+    // there with nothing to move from (the mark stays only until the browser has looked at them so):
+    // moved there, each was drawn once at the size of the screen, behind the card being held, and shrank away
+    el.setAttribute('data-entering', '')
+    void el.offsetWidth
+    el.removeAttribute('data-entering')
     const turned = () => restOn(el, Number(el.dataset.at ?? 0))
     window.addEventListener('resize', turned)
     return () => window.removeEventListener('resize', turned)
@@ -893,7 +1047,11 @@ function Banners() {
         origin="banner"
         onOpen={() => {
           if (performance.now() - last.current.at < BANNER.live) return
-          if (!(drag.current && drag.current.dy < -14)) openGroup('banner')
+          if (drag.current && drag.current.dy < -14) return
+          // Over the Home Screen the conversation opens out of the banner. From inside another app it
+          // comes in over that app from the side, as one app does from another: grown out of the banner
+          // while the app under it slid away, it left the wallpaper showing down one side and along the foot
+          openGroup(sys.get().app ? null : 'banner')
         }}
       />
     </div>
@@ -903,9 +1061,10 @@ function Banners() {
 // ---- The home indicator ----
 
 /** The bar at the foot of the screen. Swipe it up to go home; swipe up and
- * hold for the App Switcher. A real phone has one of its own below the
- * browser, which leaves the browser; this one is the site's. `drawn` is false
- * where the phone's frame draws the bar itself. */
+ * hold for the App Switcher; swipe along it for the app that was in front
+ * before this one. A real phone has one of its own below the browser, which
+ * leaves the browser; this one is the site's. `drawn` is false where the
+ * phone's frame draws the bar itself. */
 function HomeBar({ drawn }: { drawn: boolean }) {
   const root = useRef<HTMLDivElement>(null)
   /** `reach` is the farthest the finger has been from where it came down, whichever way. `el` is the app
@@ -915,6 +1074,8 @@ function HomeBar({ drawn }: { drawn: boolean }) {
   const press = useRef<ReturnType<typeof setTimeout>>()
   /** An app let go on its way home: until the phone says it has gone, it is held where it was let go. */
   const thrown = useRef<ReturnType<typeof setTimeout>>()
+  /** Takes off the mark that says which side the app before comes in from (`data-swept`, phone.css), once it is in. */
+  const swept = useRef<ReturnType<typeof setTimeout>>()
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
   // Something is over the Home Screen that "Home Screen" would put away: an app, the switcher, search, a folder
   const away = useStore(sys, (s) => !s.locked && (s.app !== null || s.switcher || s.spotlight || s.sheet !== null))
@@ -988,7 +1149,13 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     thrown.current = undefined
     unmark()
   }, [at]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => clearTimeout(thrown.current), [])
+  useEffect(
+    () => () => {
+      clearTimeout(thrown.current)
+      clearTimeout(swept.current)
+    },
+    [],
+  )
 
   const down = (e: ReactPointerEvent) => {
     const screen = screenOf()
@@ -1059,10 +1226,13 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     if (!d) return
     const speed = e.timeStamp - d.t > 90 ? 0 : d.v
     const far = -d.dy / d.h
-    // A tap is a press that never went anywhere: a swipe that was taken back to where it began, or went
-    // along the bar, is neither a tap nor a swipe up, and does nothing
+    // A tap is a press that never went anywhere: a swipe that was taken back to where it began is neither
+    // a tap nor a swipe up, and does nothing
     const tap = d.reach < 6
     const flick = d.dy <= -6 && (far > 0.22 || speed < -0.4)
+    // Along the bar, and hardly up it at all. (Whatever is a swipe up is taken as one first, so this
+    // takes nothing from that)
+    const along = !flick && Math.abs(d.dx) > 48 && Math.abs(d.dx) > 2.5 * -d.dy
     if (at === 'app' && d.was && flick && e.type !== 'pointercancel') {
       haptic()
       return sendHome(d)
@@ -1079,6 +1249,16 @@ function HomeBar({ drawn }: { drawn: boolean }) {
       haptic()
       return goHome()
     }
+    // A swipe along the bar goes to the app that was in front before this one, as it does on an iPhone:
+    // to the right brings it back in from the left, and a swipe the other way goes on to it from the right
+    const before = sys.get().recents[1]
+    if (!along || !before) return
+    const screen = screenOf()
+    clearTimeout(swept.current)
+    screen?.toggleAttribute('data-swept', d.dx > 0)
+    swept.current = setTimeout(() => screen?.removeAttribute('data-swept'), SETTLE + 240)
+    haptic()
+    launch(before)
   }
 
   return (

@@ -199,12 +199,33 @@
   }
 }
 
-/* ---- Behind an open folder ---- */
+/* ---- Behind an open folder ----
+   The Home Screen falls back a little and out of focus. Each thing on it is faded and blurred for itself,
+   not the screen as one (src/styles/phone.css says why: the Dock and the folders are glass) */
 
 .sb-home[data-folder] {
   transform: scale(0.97);
+}
+
+.sb-home[data-folder] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+.sb-home[data-folder] .sb-grid .sb-icon__name {
   filter: blur(12px);
   opacity: 0.82;
+}
+
+.sb-home[data-folder] .sb-grid .sb-icon__tile {
+  filter: drop-shadow(0 2px 5px rgb(0 0 0 / 0.16)) blur(12px);
+  opacity: 0.82;
+}
+
+/* Come back to from the app that was opened out of the folder (Back on a company's card), the Home Screen
+   comes into sight behind the folder already out of focus. Brought out of focus as it came, it was sharp
+   behind the folder for the first moment */
+.sb-home[data-folder='back'] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+.sb-home[data-folder='back'] .sb-grid :is(.sb-icon__tile, .sb-icon__name) {
+  transition:
+    opacity 0.22s ease,
+    filter 0s;
 }
 
 /* ---- Open ---- */
@@ -236,9 +257,15 @@
   margin-top: -4cqh;
   outline: none;
   animation: sb-open-in 0.36s var(--glide);
-  transition:
-    transform 0.3s var(--glide),
-    opacity 0.26s ease;
+  transition: transform 0.3s var(--glide);
+}
+
+/* The folder grows as one, and its name and its pane of glass fade each for itself: faded as one, the
+   pane had nothing behind it to frost until the fade was over, and went from clear to frosted in a frame */
+.sb-open__name,
+.sb-open__panel {
+  animation: sb-open-shade 0.36s var(--glide);
+  transition: opacity 0.26s ease;
 }
 
 .sb-open[data-folder='faqs'] .sb-open__box {
@@ -255,7 +282,6 @@
 @keyframes sb-open-in {
   from {
     transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(var(--from-k, 0.5));
-    opacity: 0;
   }
 }
 
@@ -267,14 +293,13 @@
 
 .sb-open[data-closing] .sb-open__box {
   transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(var(--from-k, 0.5));
+}
+
+.sb-open[data-closing] :is(.sb-open__away, .sb-open__name, .sb-open__panel) {
   opacity: 0;
 }
 
-.sb-open[data-closing] .sb-open__away {
-  opacity: 0;
-}
-
-.sb-open[data-still] :is(.sb-open__box, .sb-open__away) {
+.sb-open[data-still] :is(.sb-open__box, .sb-open__away, .sb-open__name, .sb-open__panel) {
   animation: none;
   transition: none;
 }
@@ -400,7 +425,8 @@
   background: #fff;
 }
 
-/* FAQs: the questions, one to a row. However many there are, the folder keeps to the screen: past what
+/* FAQs: the questions, one to a row, set close enough that all ten are in sight on a phone with its
+   browser's bars showing (402 by 700). However many there are, the folder keeps to the screen: past what
    it has room for, they scroll inside it */
 .sb-open__notes {
   display: grid;
@@ -416,9 +442,26 @@
   display: none;
 }
 
+/* Where they do scroll, the list fades out at whichever end there is more past (Folder.tsx marks which):
+   a row cut off mid-line at a hard edge read as the end of the list, with nothing to say it went on */
+.sb-open__notes[data-more='below'] {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 52px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 52px), transparent);
+}
+
+.sb-open__notes[data-more='above'] {
+  -webkit-mask-image: linear-gradient(transparent, #000 52px);
+  mask-image: linear-gradient(transparent, #000 52px);
+}
+
+.sb-open__notes[data-more='both'] {
+  -webkit-mask-image: linear-gradient(transparent, #000 52px, #000 calc(100% - 52px), transparent);
+  mask-image: linear-gradient(transparent, #000 52px, #000 calc(100% - 52px), transparent);
+}
+
 .sb-open__note {
   position: relative;
-  padding: 13px 24px;
+  padding: 10px 24px;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.015em;
@@ -494,7 +537,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sb-open__box,
-  .sb-open__away {
+  .sb-open__away,
+  .sb-open__name,
+  .sb-open__panel,
+  .sb-home[data-folder='back'] :is(.sb-dock, .sb-search, .sb-widget__face, .sb-folder__face),
+  .sb-home[data-folder='back'] .sb-grid :is(.sb-icon__tile, .sb-icon__name) {
     animation: none;
     transition: none;
   }

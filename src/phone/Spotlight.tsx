@@ -63,13 +63,33 @@ interface Found {
   groups: { id: Kind; title: string; icon: ReactNode; hits: Hit[] }[]
 }
 
+/** A search this short finds only what a word begins with, as the portfolio's own search has it
+ * (`companyAnswers`, src/apps/portfolio-ui.tsx). Looked for anywhere, two or three letters turn up inside
+ * words that have nothing to do with them: "ai" found a Chainsmoker and a Co-Chair. */
+const SHORT = 3
+
+/** Whether a word begins at `at` in `text`: at its start, after anything that is not a letter or a figure,
+ * and at a capital or a figure inside a name that runs its words together (PlaygroundAI, K5). */
+const begins = (text: string, at: number) => at === 0 || !/[a-z0-9]/i.test(text[at - 1]!) || (/[a-z]/.test(text[at - 1]!) && /[A-Z]/.test(text[at]!)) || (/[a-z]/i.test(text[at - 1]!) && /[0-9]/.test(text[at]!))
+
+/** Where in `text` what was typed (`q`, in lower case) is found, or -1: the first place at all, or for a
+ * short search the first place a word begins with it. */
+function foundAt(text: string, q: string) {
+  const t = text.toLowerCase()
+  if (q.length > SHORT) return t.indexOf(q)
+  for (let at = t.indexOf(q); at >= 0; at = t.indexOf(q, at + 1)) if (begins(text, at)) return at
+  return -1
+}
+
+/** Whether `text` answers `q` at all. */
+const has = (text: string, q: string) => foundAt(text, q) >= 0
+
 /** How well `text` answers `q` as a name: the whole of it, its start, the start of a word in it, somewhere in it, or not at all (-1). */
 function rank(text: string, q: string) {
-  const t = text.toLowerCase()
-  const at = t.indexOf(q)
+  const at = foundAt(text, q)
   if (at < 0) return -1
-  if (at === 0) return t.length === q.length ? 0 : 1
-  return /[^a-z0-9]/.test(t[at - 1]!) ? 2 : 3
+  if (at === 0) return text.length === q.length ? 0 : 1
+  return begins(text, at) ? 2 : 3
 }
 
 /** The best `rank` among several names, or -1 if none answers. */
@@ -77,7 +97,7 @@ const best = (names: string[], q: string) => names.reduce((least, name) => ((r) 
 
 /** `text` with what was typed picked out in it. */
 function Marked({ text, q }: { text: string; q: string }) {
-  const at = text.toLowerCase().indexOf(q)
+  const at = foundAt(text, q)
   if (at < 0) return <>{text}</>
   return (
     <>
@@ -90,7 +110,7 @@ function Marked({ text, q }: { text: string; q: string }) {
 
 /** The part of a long text that holds what was typed: from a few words before it. */
 function around(text: string, q: string) {
-  const at = text.toLowerCase().indexOf(q)
+  const at = foundAt(text, q)
   if (at <= 30) return text
   const from = text.indexOf(' ', at - 30)
   return `…${text.slice(from >= 0 && from < at ? from + 1 : at)}`
@@ -195,9 +215,9 @@ function toShrug(key: string, score: number): Hit {
  * is behind it, or by a partner's name. The whole of one, or three letters into the start of one or of a
  * word in it; null for anything else. */
 function myCard(q: string): Hit | null {
-  const begins = (names: string[]) => ((r) => r === 0 || (r > 0 && r <= 2 && q.length >= 3))(best(names, q))
-  const partner = begins(PARTNERS)
-  if (!partner && !begins(SHRUG) && !begins(WHO)) return null
+  const asked = (names: string[]) => ((r) => r === 0 || (r > 0 && r <= 2 && q.length >= 3))(best(names, q))
+  const partner = asked(PARTNERS)
+  if (!partner && !asked(SHRUG) && !asked(WHO)) return null
   return {
     key: 'me',
     kind: 'company',
@@ -262,7 +282,7 @@ function find(raw: string, replied: number): Found {
   PEOPLE.slice(0, replied).forEach((person, i) => {
     const named = rank(person.name, q)
     const role = named < 0 ? rank(person.role, q) : -1
-    const said = named < 0 && role < 0 && !!person.quote && person.quote.toLowerCase().includes(q)
+    const said = named < 0 && role < 0 && !!person.quote && has(person.quote, q)
     if (named < 0 && role < 0 && !said) return
     people.push({
       key: `person:${i}`,
@@ -301,7 +321,7 @@ function find(raw: string, replied: number): Found {
     if (!companyAnswers(company, q)) return
     const named = rank(company.name, q)
     const field = named < 0 ? rank(company.vertical, q) : -1
-    const described = named < 0 && field < 0 && !!company.blurb && company.blurb.toLowerCase().includes(q)
+    const described = named < 0 && field < 0 && !!company.blurb && has(company.blurb, q)
     if (named < 0 && field < 0 && !described) return
     companies.push({
       key: `company:${company.key}`,
@@ -328,7 +348,7 @@ function find(raw: string, replied: number): Found {
     const wanted = news && i === WHATS_NEW
     const asked = rank(faq.question, q)
     const words = faq.answer ? answerWords(faq.answer) : ''
-    const answered = asked < 0 && words.toLowerCase().includes(q)
+    const answered = asked < 0 && has(words, q)
     if (asked < 0 && !answered && !anyFaq && !wanted) return
     faqs.push({
       key: `faq:${i}`,

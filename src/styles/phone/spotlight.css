@@ -329,13 +329,16 @@
   min-width: 0;
 }
 
+/* A title runs to a second line before it is cut short: a question is most of what there is to read of
+   its note, and on one line most questions lost their end */
 .spot-row__title {
+  display: -webkit-box;
   overflow: hidden;
   font-size: 17px;
   letter-spacing: -0.02em;
   line-height: 22px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .spot-row__sub {
