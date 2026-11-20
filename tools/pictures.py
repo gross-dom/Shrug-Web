@@ -27,7 +27,10 @@ OUT = os.path.join(ROOT, 'src', 'data', 'pictures.ts')
 KINDS = ('.png', '.jpg', '.jpeg', '.webp', '.avif', '.heic', '.tif', '.tiff', '.gif', '.bmp')
 
 # A file's name (as it is written, less its ending) for a name the site has, where the two would not be matched
-ALIASES = {}
+ALIASES = {
+    # The site has him as Bryant Chou, of Webflow; the file's name has one letter fewer
+    'bryan chou webflow': 'Bryant Chou',
+}
 
 # How large each is kept: twice the most points it is drawn across, for a screen with two pixels to the
 # point. A logo in a list, a folder or a window is 88 points at most; at the head of its card on the iPhone

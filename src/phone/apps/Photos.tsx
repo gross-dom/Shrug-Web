@@ -277,16 +277,14 @@ function Library() {
       <Head innerRef={head} index={first} line={line} onOpen={() => view(first, shown)} />
       <Grid indices={shown} />
       {/* How Photos ends its library: what is in it, and a quieter line under that. Nothing is
-          counted that has not arrived: until something has, the quieter line says so by itself */}
+          counted that has not arrived: until something has, nothing is said here */}
       {tally(shown) ? (
         <p className="photos-note">
           {tally(shown)}
           <br />
           From the people who got a drop.
         </p>
-      ) : (
-        <p className="photos-note photos-note--plain">The first ones are on their way.</p>
-      )}
+      ) : null}
     </Screen>
   )
 }

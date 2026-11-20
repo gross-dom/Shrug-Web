@@ -54,7 +54,7 @@ exports.vipChecks = async ({ A, browser, BASE, DEV, check, shot, arrived, swap }
   check('phone: each tile carries its drop', names.length === 12 && names[0] === 'Deep Tech Mat' && names[3] === 'Billboards', names.slice(0, 4).join(' | '))
   const note = (await top().locator('.photos-note').innerText()).replace(/\s+/g, ' ')
   const under = (await top().locator('.photos-head__line').innerText()).replace(/\s+/g, ' ')
-  check('phone: nothing is counted that is not there; under the name it says whose they are, and the line at the foot that they are on their way', under === 'From the people who got a drop' && note === 'The first ones are on their way.' && !/\d+ (Photo|Video|Item)/.test(text), `${under} | ${note}`)
+  check('phone: nothing is counted that is not there; under the name it says whose they are, and there is no line at the foot', under === 'From the people who got a drop' && !note && !/\d+ (Photo|Video|Item)/.test(text), `${under} | ${note}`)
   check('phone: a tile says what it is and that it is on its way', (await top().locator('.photos-tile').first().getAttribute('aria-label')) === 'Photo from Deep Tech Mat, on its way')
   const ink = await worstInk(top().locator('.photos-tile'), '.photos-pic__name', '.photos-pic__slot')
   check('phone: the name on every tile reads (4.5:1 or better, at the worse end of its ground)', ink >= 4.5 && ink < 22, ink.toFixed(2))
@@ -175,7 +175,7 @@ exports.vipChecks = async ({ A, browser, BASE, DEV, check, shot, arrived, swap }
   check('desktop: twelve quiet tiles with their drops, none a button, no wireframe words (UX-5)', tiles.length === 12 && tiles.every(([tag, quiet, name]) => tag === 'FIGURE' && quiet && name) && !SLOT.test(text), JSON.stringify(tiles.slice(0, 2)) + (text.match(SLOT)?.[0] ?? ''))
   const dink = await worstInk(win.locator('.vip-tile--quiet'), '.vip-tile__name', null)
   check('desktop: the name on every tile reads (4.5:1 or better)', dink >= 4.5 && dink < 22, dink.toFixed(2))
-  check('desktop: the heading says they are on their way', (await win.locator('.vip__sub').innerText()) === 'From the people who got a drop. The first ones are on their way.')
+  check('desktop: the heading says whose they are, and no more', (await win.locator('.vip__sub').innerText()) === 'From the people who got a drop.')
   const plain = { side: await win.locator('.side, .side-item').count(), chips: await win.locator('.vip__chips, .chip').count(), name: await win.locator('.ss-window__title').first().innerText() }
   check('desktop: VIP is one grid, in a window called VIP: no sidebar of drops, no row of them', plain.side === 0 && plain.chips === 0 && plain.name === 'VIP', JSON.stringify(plain))
   const seg = win.locator('.seg')
