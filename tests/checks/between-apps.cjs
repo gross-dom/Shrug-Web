@@ -342,7 +342,10 @@ const touchOf = (t) => ({
     const now = [there('America/Los_Angeles', true)]
     say(!!w && w.city === 'San Francisco' && w.box[2] === 164 && w.box[0] < 40 && w.box[1] > 28, 'a widget on the desk, top left under the menu bar: San Francisco', JSON.stringify(w))
     say(!!w && (now.includes(w.time) || /^\d{1,2}:\d{2}\s?[AP]M$/.test(w.time || '')), 'with the time there, on the visitor\'s own kind of clock', `${w?.time} (there it is ${now[0]})`)
-    say(!!w && /Today/.test(w.apart || '') && /3 hours behind/.test(w.apart || ''), 'how far that is from the visitor\'s own (New York: three hours behind)', w?.apart)
+    // (Which day it is there depends on the hour: in the small hours of New York's morning it is still yesterday in San Francisco)
+    const dayOf = (zone) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    const dayThere = dayOf('America/Los_Angeles') < dayOf('America/New_York') ? 'Yesterday' : 'Today'
+    say(!!w && (w.apart || '').startsWith(dayThere) && /3 hours behind/.test(w.apart || ''), `how far that is from the visitor's own (New York: three hours behind, and ${dayThere.toLowerCase()} there)`, w?.apart)
     say(!!w && /^58°/.test(w.weather || '') && /Mostly Cloudy/.test(w.weather || '') && w.sky === 'gray', 'and the weather it was told, in Fahrenheit for an American', `${w?.weather} (${w?.sky})`)
     say(A.realErrors(t.errors).length === 0, 'no errors', A.realErrors(t.errors).slice(0, 2).join(' | '))
     await t.ctx.close()
