@@ -1892,8 +1892,7 @@
   }
 }
 
-.pf__none,
-.vip__none {
+.pf__none {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -2366,31 +2365,21 @@
   }
 }
 
-/* ---- VIP ---- */
+/* ---- The photo library's window: a head, picture tiles, and a dark room for one picture opened
+   large. It was drawn for VIP and goes by its name (`vip…`). VIP itself has no window (it is the
+   Dock's link to the points site); these stay because two windows are laid out with them:
+   Wallpapers (the head, the tiles and the room) and LP Updates (the head) ---- */
 
 .vip__body {
   display: flex;
   flex-direction: column;
 }
 
-/* The drops along the top, the heading and the grid: what a picture opened large takes the place of */
+/* The heading and the grid: what a picture opened large takes the place of */
 .vip__browse {
   display: flex;
   flex: 1 0 auto;
   flex-direction: column;
-}
-
-/* Nothing of a kind: the line under it is the grey that reads */
-.vip__none {
-  gap: 4px;
-  color: var(--ss-text);
-}
-
-.vip__none > b {
-  margin-top: 4px;
-  color: var(--ss-text-strong);
-  font-size: 14px;
-  font-weight: 600;
 }
 
 .vip__head {
@@ -2414,61 +2403,12 @@
   color: var(--ss-text);
 }
 
-.vip__grid {
-  display: grid;
-  flex: none;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 96px;
-  grid-auto-flow: dense;
-  gap: 10px;
-  padding: 0 22px 24px;
-}
-
 .vip-tile {
   position: relative;
   grid-row: span 2;
   overflow: hidden;
   border-radius: 16px;
   background: #f0f1f4;
-}
-
-.vip-tile[data-span='big'] {
-  grid-column: span 2;
-  grid-row: span 3;
-}
-
-.vip-tile[data-span='tall'] {
-  grid-row: span 3;
-}
-
-.vip-tile[data-span='wide'] {
-  grid-column: span 2;
-}
-
-.vip-tile__slot {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding-bottom: 38px;
-  background-image: repeating-linear-gradient(135deg, transparent 0, transparent 10px, rgba(0, 0, 0, 0.026) 10px, rgba(0, 0, 0, 0.026) 12px);
-  color: var(--ss-text-faint);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.vip-tile[data-kind='video'][data-empty] {
-  background: #1d1d1f;
-}
-
-.vip-tile[data-kind='video'] .vip-tile__slot {
-  background-image: none;
-  color: rgba(255, 255, 255, 0.72);
 }
 
 .vip-tile__media {
@@ -2505,42 +2445,7 @@
   white-space: nowrap;
 }
 
-/* A slot whose picture has not arrived, as a visitor sees it: the drop's own
-   colour, let down to paper, with its name on it and what kind of thing is
-   coming. A finished tile, not a wireframe; nothing to press, so not a button */
-.vip-tile--quiet {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 13px 14px 12px;
-  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 13%, #fff), color-mix(in srgb, var(--hue) 27%, #f3f4f8));
-  color: color-mix(in srgb, var(--hue) 30%, #1c1d24);
-}
-
-.vip-tile--quiet > svg {
-  flex: none;
-  color: color-mix(in srgb, var(--hue) 62%, #4a4b5e);
-}
-
-/* A video's is the same colour in the dark, as a video's poster usually is */
-.vip-tile--quiet[data-kind='video'] {
-  background: linear-gradient(155deg, color-mix(in srgb, var(--hue) 44%, #1d1d22), color-mix(in srgb, var(--hue) 20%, #131317));
-  color: rgb(255 255 255 / 0.94);
-}
-
-.vip-tile--quiet[data-kind='video'] > svg {
-  color: rgb(255 255 255 / 0.8);
-}
-
-.vip-tile__name {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
-}
-
-/* One that has arrived is pressed to see it large */
+/* A tile is pressed to see its picture large */
 .os .vip-tile--open {
   display: block;
 }
@@ -2553,15 +2458,7 @@
   outline-offset: 2px;
 }
 
-.vip-tile__play {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  color: #fff;
-  filter: drop-shadow(0 0 3px rgb(0 0 0 / 0.5));
-}
-
-/* ---- A photo or video opened large: it has the grid's place in the window ---- */
+/* ---- A picture opened large: it has the grid's place in the window ---- */
 
 .vip__body--look {
   overflow: hidden;
@@ -2602,8 +2499,7 @@
   white-space: nowrap;
 }
 
-.vip-look__title > span,
-.vip-look__count {
+.vip-look__title > span {
   color: rgb(255 255 255 / 0.66);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -2664,8 +2560,8 @@
   right: 20px;
 }
 
-/* ---- LP Updates: the folder logging in unlocks (apps/Updates.tsx). VIP's window and head again, and
-   under them a plain list of documents ---- */
+/* ---- LP Updates: the folder logging in unlocks (apps/Updates.tsx). The photo library's window and
+   head again, and under them a plain list of documents ---- */
 
 .updates__list {
   flex: none;
@@ -2718,7 +2614,9 @@
   padding: 0 12px;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.06);
-  color: var(--ss-accent);
+  /* The accent, a shade darker: on this grey plate the accent itself is 3.9:1 at this size, and this is
+     5.1:1 (4.6:1 on the darker plate under a pointer) */
+  color: color-mix(in srgb, var(--ss-accent) 84%, #000);
   font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
@@ -2743,8 +2641,8 @@
   text-align: center;
 }
 
-/* ---- Wallpapers: the desk's wallpapers as a photo library (apps/Wallpapers.tsx). It is VIP's window
-   again: its head, its tiles and its dark room for one picture. What is its own is below ---- */
+/* ---- Wallpapers: the desk's wallpapers as a photo library (apps/Wallpapers.tsx). It is the photo
+   library's window above: its head, its tiles and its dark room for one picture. What is its own is below ---- */
 
 /* Each tile is the shape of a screen */
 .walls__grid {
@@ -2844,51 +2742,8 @@
   }
 }
 
-/* The kit's segmented control, at the tall bar's size and shape */
-.seg {
-  flex: none;
-  border-radius: 16px;
-}
-
-.seg .ss-seg {
-  --ss-row: 28px;
-  border-radius: 16px;
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.seg .ss-seg__thumb {
-  border-radius: 14px;
-}
-
-.seg .ss-seg__option {
-  padding: 0 13px;
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-
-/* How many of each have arrived: the grey that reads (the fainter one is 3.4:1 here) */
-.seg__count {
-  color: var(--ss-text);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Where there is a touch screen the parts are a finger's size, and so are the picture's buttons */
+/* Where there is a touch screen the picture's buttons are a finger's size */
 @media (any-pointer: coarse) {
-  .seg .ss-seg {
-    --ss-row: 36px;
-    border-radius: 18px;
-  }
-
-  .seg .ss-seg__thumb {
-    border-radius: 16px;
-  }
-
-  .seg .ss-seg__option {
-    min-width: 40px;
-    padding: 0 16px;
-    font-size: 14px;
-  }
-
   .os .vip-look__button {
     width: 44px;
     height: 44px;
@@ -3174,17 +3029,6 @@
   .pf-preview__visit {
     flex: none;
     max-width: 44%;
-  }
-
-  .vip__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding-inline: 14px;
-  }
-
-  /* Two columns have no room for a tile two wide beside another */
-  .vip-tile[data-span='big'],
-  .vip-tile[data-span='wide'] {
-    grid-column: span 1;
   }
 
   .vip__head {

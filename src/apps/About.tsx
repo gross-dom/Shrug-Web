@@ -14,13 +14,15 @@ import { openApp } from '../os/wm'
 // which fund this is and what it backs: src/data/site.ts); what is on the
 // site, each figure counted from the site's own data and each row opening
 // what it counts; and the ways on: the one-pager, and a way to write to Shrug
-// once there is one.
+// once there is one. The drops are counted with the rest and are not on this
+// site: they are VIP's, which is the points site, so that row is a link to it.
 
-const FACTS: { label: string; value: string; open: () => void }[] = [
+/** A row either opens a window of the desk's (`open`) or leaves for a page in a tab of its own (`href`). */
+const FACTS: ({ label: string; value: string } & ({ open: () => void } | { href: string }))[] = [
   { label: APPS.messages.name, value: `${PEOPLE.length} people`, open: () => openApp('messages', dockPoint('messages')) },
   { label: APPS.finder.name, value: `${COMPANY_COUNT} companies`, open: () => openApp('finder', dockPoint('finder')) },
   { label: 'Verticals', value: String(VERTICALS.length), open: () => openApp('finder', dockPoint('finder')) },
-  { label: 'Drops', value: String(DROPS.length), open: () => openApp('photos', dockPoint('photos')) },
+  { label: 'Drops', value: String(DROPS.length), href: SITE.points },
 ]
 
 export function AboutApp() {
@@ -44,12 +46,22 @@ export function AboutApp() {
         </dl>
       </Card>
       <Card className="about__facts" flush pad="small" tone="sunken">
-        {FACTS.map((fact) => (
-          <button key={fact.label} type="button" className="about__fact" onClick={fact.open}>
-            <span>{fact.label}</span>
-            <span className="about__value">{fact.value}</span>
-          </button>
-        ))}
+        {FACTS.map((fact) =>
+          'href' in fact ? (
+            <a key={fact.label} className="about__fact" href={fact.href} target="_blank" rel="noopener noreferrer" draggable={false}>
+              <span>{fact.label}</span>
+              <span className="about__value">
+                {fact.value}
+                <span className="sr-only">, opens in a new tab</span>
+              </span>
+            </a>
+          ) : (
+            <button key={fact.label} type="button" className="about__fact" onClick={fact.open}>
+              <span>{fact.label}</span>
+              <span className="about__value">{fact.value}</span>
+            </button>
+          ),
+        )}
       </Card>
       <div className="about__links">
         {way && (

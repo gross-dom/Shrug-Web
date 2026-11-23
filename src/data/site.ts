@@ -13,7 +13,8 @@ export const SITE = {
   url: 'https://www.shrug.vc/',
   onePager: 'https://docsend.com/view/4659mp7f5ci9zdxa',
   /** The points site: a member's card, and the store their points are spent in. (Its testing address,
-   * until it has a domain of its own.) */
+   * until it has a domain of its own.) It is where VIP leads: VIP is a link to it wherever it appears,
+   * in the Dock of the desktop and of the iPhone, and opens in a tab of its own. */
   points: 'https://shrug-store.vercel.app/',
   store: 'https://shrug-store.vercel.app/store/',
   /** How a visitor gets hold of Shrug for real: a number to text
@@ -69,6 +70,6 @@ export function reach(words = '', subject = ''): Reach {
 export const reachable = () => reach().kind !== 'doc'
 
 /** The address asks for the editor's view (`?draft`): what Shrug has still to
- * supply (an FAQ's answer, a VIP picture) is drawn as the note that says so.
+ * supply (an FAQ's answer) is drawn as the note that says so.
  * Without it a visitor is shown a line written for them instead. */
 export const DRAFT = typeof window !== 'undefined' && /[?&]draft(?![^&=]*=(0|false|off|no)(&|$))/i.test(window.location.search)

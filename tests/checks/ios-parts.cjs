@@ -190,9 +190,9 @@ const ringOf = (page) =>
     // PH-4: on its side, a menu fits the screen and sits over the foot bar
     t = await fresh('se1-land', 'still', { quiet: true })
     page = t.page
-    for (const [name, app, stack] of [['Notes More', 'notes', ['f:faqs']], ['VIP Sort and Filter', 'photos', []]]) {
+    for (const [name, app, stack] of [['Notes More', 'notes', ['f:faqs']], ['Case Studies More', 'terminal', []]]) {
       await A.at(page, app, stack, null, 800)
-      // (Notes' hangs from its bar; VIP's rises out of the button at the foot of its library)
+      // (each hangs from its bar: Notes' over a list, the terminal's over its log)
       await page.locator(`${TOP} .ios-menu > button`).first().tap()
       await t.sleep(600)
       const menu = await page.evaluate(async (TOP) => {
@@ -465,7 +465,7 @@ const ringOf = (page) =>
         // what is left under its last row (12px is the window's own margin there)
         const foot = Math.round(b.getBoundingClientRect().bottom - shown().at(-1).getBoundingClientRect().bottom)
         const facts = [...win.querySelectorAll('.about__fact--said')].map((f) => f.querySelector('dt').textContent.trim())
-        const rows = [...win.querySelectorAll('button.about__fact')].map((f) => f.textContent.trim())
+        const rows = [...win.querySelectorAll('button.about__fact, a.about__fact')].map((f) => `${f.tagName === 'A' ? 'link ' : ''}${f.textContent.trim()}`)
         // scrolled to its foot, the last thing in it is inside the window
         b.scrollTop = b.scrollHeight
         const last = shown().at(-1).getBoundingClientRect().bottom <= b.getBoundingClientRect().bottom + 0.5
@@ -477,7 +477,8 @@ const ringOf = (page) =>
       if (w === 1440) {
         check('About at its own size is as tall as what is in it: no band of nothing at its foot', m.foot >= 11 && m.foot <= 16, `foot ${m.foot}px`)
         check('About says more about Shrug: when it started, who runs it, which fund this is, what it backs', m.facts.length >= 4 && m.facts.includes('Backs'), m.facts.join(' / '))
-        check('About counts what is on the site, each row a button', m.rows.length === 4 && /89 people/.test(m.rows[0]) && /79 companies/.test(m.rows[1]), m.rows.join(' / '))
+        // (three open the window that holds what they count; the drops are VIP's, which is the points site, so that row is a link there)
+        check('About counts what there is, each row to be pressed: three buttons, and the drops a link that says it opens in a new tab', m.rows.length === 4 && /^Group Chat ?89 people$/.test(m.rows[0]) && /^Portfolio ?79 companies$/.test(m.rows[1]) && /^Verticals ?\d+$/.test(m.rows[2]) && /^link Drops ?\d+, opens in a new tab$/.test(m.rows[3]), m.rows.join(' / '))
         check('About has no shrug emoticon in it', !m.emoticon && !(await t.page.$('.wf[data-app="about"] .about__mark')))
         check('About: the one-pager says it opens in a new tab', m.links.some((l) => /One-pager, opens in a new tab/.test(l)), m.links.join(' / '))
       }

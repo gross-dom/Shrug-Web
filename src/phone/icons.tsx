@@ -128,8 +128,10 @@ function Notes() {
   )
 }
 
-/** VIP: black, with its name in white capitals, as on the desktop. It is Shrug's own app, so it has no iOS icon to be drawn after. */
-function Vip() {
+/** VIP: black, with its name in white capitals, as on the desktop. It is Shrug's own, so it has no iOS icon
+ * to be drawn after; and it is not an app but the link to the points site, in the Dock where an app would be
+ * (Springboard.tsx), as the one-pager is on the Home Screen. */
+export function VipIcon() {
   return (
     <Tile from="#2a2a2e" to="#000000" sheen={0.3}>
       <path d={VIP_LETTERS} fill="#fff" fillRule="evenodd" />
@@ -153,7 +155,6 @@ const ICONS: Record<PhoneApp, () => ReactNode> = {
   messages: Messages,
   finder: Contacts,
   notes: Notes,
-  photos: Vip,
   terminal: Terminal,
 }
 

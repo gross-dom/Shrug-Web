@@ -1,0 +1,204 @@
+// VIP's checks, run by terminal-vip.cjs (which hands over its helpers). VIP is the way to the points site
+// (`SITE.points` in src/data/site.ts): a link, in a tab of its own, wherever it appears, and nowhere a window
+// or an app. These hold to that on both layouts, by every route there is besides the Dock's own icon (which
+// desktop-flow.cjs and phone-flow.cjs press) and an address (addresses.cjs, phone-apps.cjs); and to the two
+// windows that are still laid out with the classes VIP's window had, Wallpapers and LP Updates.
+
+exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
+  const POINTS = A.POINTS
+  /** A link as these checks ask of one: where it goes, that it opens a tab that cannot reach back, and what it says. */
+  const linkOf = (a) => ({ tag: a.tagName, href: a.getAttribute('href'), target: a.target, rel: a.rel, says: (a.getAttribute('aria-label') ?? a.textContent).replace(/\s+/g, ' ').trim() })
+  const leaves = (l) => !!l && l.tag === 'A' && l.href === POINTS && l.target === '_blank' && /\bnoreferrer\b/.test(l.rel)
+  const noVip = (p) => p.evaluate(() => document.querySelectorAll('.wf[data-app="photos"], .wf[data-app="vip"], .sb-slot[data-app="photos"], .sb-slot[data-app="vip"], [data-dock-app="photos"]').length === 0)
+
+  // ================= the desktop
+  let t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still' })
+  let p = t.page
+  await arrived(p)
+  await p.waitForSelector('.wf[data-app="messages"] .conv', { timeout: 15000 })
+  await p.waitForTimeout(1200)
+
+  // What the page says it holds, to someone who is told it and not shown it
+  const heading = await p.locator('header.sr-only h1').innerText()
+  check('desktop: the page’s own heading names what is on it, and the drops are not', heading === 'Shrug: what people say, the portfolio and FAQs', heading)
+
+  // The conversation that pointed at VIP still does, in the same words, and its link leaves for the points site
+  await p.locator('.wf[data-app="messages"] [data-conversation="drops"]').click()
+  await p.waitForTimeout(600)
+  const egg = await p.evaluate(() => { const said = [...document.querySelectorAll('.wf[data-app="messages"] .chat__thread .ss-bubble')].map((b) => b.textContent.trim()); const a = document.querySelector('.wf[data-app="messages"] .chat__thread .chat-link'); return { said, link: a && { tag: a.tagName, words: a.childNodes[0].textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel, says: a.textContent } } })
+  check('desktop: the Drops conversation says what it said, word for word', egg.said.length === 2 && egg.said[0] === 'Your drop is out for delivery.' && /^See who got one in VIP/.test(egg.said[1]), JSON.stringify(egg.said))
+  check('desktop: and its “See who got one in VIP” is a link to the points site that says it opens in a new tab', leaves(egg.link) && egg.link.words === 'See who got one in VIP' && egg.link.says === 'See who got one in VIP, opens in a new tab', JSON.stringify(egg.link))
+  const fromEgg = await A.tabFrom(t.ctx, () => p.locator('.wf[data-app="messages"] .chat__thread .chat-link').click())
+  await p.waitForTimeout(500)
+  check('desktop: pressed, it opens the points site in a tab of its own, and no window for VIP', !!fromEgg && fromEgg.url === POINTS && fromEgg.alone === true && (await noVip(p)), JSON.stringify(fromEgg))
+
+  // About Shrug counts the drops with the rest; that row is VIP's, and leaves as VIP does
+  await p.click('[data-menu-title="mark"]')
+  await p.locator('[data-menu="mark"] .menu__item', { hasText: 'About Shrug' }).click()
+  await p.waitForSelector('.wf[data-app="about"] .about__fact', { timeout: 8000 })
+  await p.waitForTimeout(700)
+  const about = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="about"] .about__facts:last-of-type .about__fact, .wf[data-app="about"] button.about__fact, .wf[data-app="about"] a.about__fact')].filter((el, i, all) => all.indexOf(el) === i).filter((el) => !el.classList.contains('about__fact--said')).map((el) => ({ tag: el.tagName, label: el.firstElementChild.textContent.trim(), value: el.lastElementChild.childNodes[0].textContent.trim(), href: el.getAttribute('href'), target: el.target || null, rel: el.rel || null, says: el.textContent.replace(/\s+/g, ' ').trim(), tall: Math.round(el.getBoundingClientRect().height), ink: getComputedStyle(el).color, line: getComputedStyle(el).textDecorationLine })))
+  const drops = about.find((row) => row.label === 'Drops')
+  check('desktop: About Shrug still has its four rows, three that open windows and Drops', about.map((row) => `${row.tag} ${row.label}`).join(' | ') === 'BUTTON Group Chat | BUTTON Portfolio | BUTTON Verticals | A Drops', about.map((row) => `${row.tag} ${row.label}`).join(' | '))
+  check('desktop: the Drops row is a link to the points site, in a new tab, and says so', !!drops && drops.href === POINTS && drops.target === '_blank' && drops.rel === 'noopener noreferrer' && /^Drops ?\d+, opens in a new tab$/.test(drops.says), JSON.stringify(drops))
+  // (the row before it is the one to go by: the first of the four has no rule over it, and is a pixel shorter)
+  check('desktop: and it is drawn as the row before it is: its height, its ink, no underline', !!drops && drops.tall === about[2].tall && drops.ink === about[2].ink && drops.line === 'none', JSON.stringify(about.map((row) => [row.label, row.tall, row.ink, row.line])))
+  const fromAbout = await A.tabFrom(t.ctx, () => p.locator('.wf[data-app="about"] a.about__fact').click())
+  await p.waitForTimeout(500)
+  check('desktop: pressed, it opens the points site in a tab of its own, and no window for VIP', !!fromAbout && fromAbout.url === POINTS && fromAbout.alone === true && (await noVip(p)), JSON.stringify(fromAbout))
+
+  // Nothing in the menus opens a VIP window, or is there for one: the Window menu lists what is open, the
+  // View menu belongs to the window in front, and neither has anything of VIP's
+  const menus = {}
+  for (const id of ['app', 'go', 'view', 'window']) {
+    const title = p.locator(`[data-menu-title="${id}"]`)
+    if (!(await title.count())) { menus[id] = null; continue }
+    await title.click(); await p.waitForTimeout(250)
+    menus[id] = await p.evaluate((id) => [...document.querySelectorAll(`[data-menu="${id}"] [data-menu-item]`)].map((el) => `${el.tagName === 'A' ? 'link' : 'item'} ${el.querySelector('.menu__label').textContent.trim()}`), id)
+    await p.keyboard.press('Escape'); await p.waitForTimeout(200)
+  }
+  const vipItems = Object.values(menus).flat().filter((item) => item && /VIP|Photos|Videos/.test(item))
+  check('desktop: the only thing of VIP’s in the menus is the Go menu’s link', vipItems.join() === 'link VIP' && menus.go.includes('link VIP'), JSON.stringify(menus))
+
+  // A desk kept by the site as it was, with a VIP window on it (a tab left open over the change, then reloaded):
+  // the windows the site still has come back, and nothing comes back for VIP
+  await p.evaluate(() => {
+    const kept = JSON.parse(sessionStorage.getItem('shrug:desk'))
+    const like = Object.values(kept.windows.wins)[0]
+    kept.windows.wins.photos = { ...like, minimized: false }
+    kept.windows.order = [...kept.windows.order, 'photos']
+    kept.photos = { filter: 'video' }
+    sessionStorage.setItem('shrug:desk', JSON.stringify(kept))
+    // (so that leaving the page does not write the desk over what was just put there)
+    window.addEventListener('pagehide', (e) => e.stopImmediatePropagation(), true)
+  })
+  await p.reload({ waitUntil: 'load' })
+  await arrived(p)
+  await p.waitForTimeout(1800)
+  const back = await p.evaluate(() => ({ wins: [...document.querySelectorAll('.wf[data-app]')].map((w) => w.dataset.app).sort().join(), front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, kept: Object.keys(JSON.parse(sessionStorage.getItem('shrug:desk') ?? '{}').windows?.wins ?? {}).sort().join() }))
+  check('desktop: a reload of a desk that was kept with a VIP window brings back the others and no VIP window', back.wins === 'about,messages' && (await noVip(p)) && !!back.front, JSON.stringify(back))
+  check('desktop: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
+  await t.ctx.close()
+
+  // ================= the two windows laid out with the classes VIP's window had
+  // (What each does is in wallpapers.cjs and account.cjs. This is how they are drawn: the head, the tiles and the
+  // dark room for one picture, by the rules those classes have always had.)
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=wallpapers' })
+  p = t.page
+  await arrived(p)
+  const W = '.wf[data-app="wallpapers"]'
+  await p.waitForSelector(`${W} .walls-tile`, { timeout: 15000 })
+  await p.waitForTimeout(1500)
+  const walls = await p.evaluate((W) => {
+    const w = document.querySelector(W)
+    const cs = (sel) => getComputedStyle(w.querySelector(sel))
+    const box = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), r: Math.round(r.right), b: Math.round(r.bottom) } }
+    const body = w.querySelector('.vip__body')
+    const tiles = [...w.querySelectorAll('.vip-tile')]
+    const first = tiles[0]
+    const cap = first.querySelector('.vip-tile__cap')
+    const media = first.querySelector('.vip-tile__media')
+    return {
+      body: { display: cs('.vip__body').display, way: cs('.vip__body').flexDirection, wide: body.scrollWidth <= body.clientWidth },
+      head: { pad: cs('.vip__head').padding, title: `${cs('.vip__title').fontSize} ${cs('.vip__title').fontWeight}`, sub: `${cs('.vip__sub').fontSize} ${cs('.vip__sub').marginTop}`, titleAt: box(w.querySelector('.vip__title')), subAt: box(w.querySelector('.vip__sub')), gridAt: box(w.querySelector('.walls__grid')) },
+      tiles: tiles.map((tile) => { const b = box(tile); return { ...b, shape: +(b.w / b.h).toFixed(2), radius: getComputedStyle(tile).borderRadius, clip: getComputedStyle(tile).overflow, how: getComputedStyle(tile).display } }),
+      media: { ...box(media), fit: getComputedStyle(media).objectFit, loaded: media.complete && media.naturalWidth > 0, tile: box(first) },
+      cap: { ...box(cap), ground: getComputedStyle(cap).backgroundColor, radius: getComputedStyle(cap).borderRadius, weight: getComputedStyle(cap.querySelector('b')).fontWeight, tile: box(first) },
+    }
+  }, W)
+  check('Wallpapers: the window’s body is a column that does not scroll sideways', walls.body.display === 'flex' && walls.body.way === 'column' && walls.body.wide, JSON.stringify(walls.body))
+  check('Wallpapers: its head is set as the library’s is: a 30px title in the heaviest weight, the line under it at 14px, and room round them', walls.head.pad === '4px 22px 18px' && walls.head.title === '30px 800' && walls.head.sub === '14px 6px' && walls.head.subAt.y >= walls.head.titleAt.b && walls.head.gridAt.y >= walls.head.subAt.b + 18, JSON.stringify(walls.head))
+  const row = walls.tiles.filter((tile) => tile.y === walls.tiles[0].y)
+  check('Wallpapers: the five tiles are rounded pictures the shape of a screen, side by side with air between, none over another', walls.tiles.length === 5 && walls.tiles.every((tile) => tile.radius === '16px' && tile.clip === 'hidden' && tile.how === 'block' && Math.abs(tile.shape - 1.78) <= 0.02 && tile.w >= 220) && row.length >= 2 && row.slice(1).every((tile, i) => tile.x - row[i].r === 12), JSON.stringify(walls.tiles))
+  check('Wallpapers: a tile’s picture fills it, cut to cover', walls.media.loaded && walls.media.fit === 'cover' && walls.media.x === walls.media.tile.x && walls.media.y === walls.media.tile.y && walls.media.w === walls.media.tile.w && walls.media.h === walls.media.tile.h, JSON.stringify(walls.media))
+  check('Wallpapers: its name is on a pale plate in the tile’s lower left corner', walls.cap.ground === 'rgba(255, 255, 255, 0.92)' && walls.cap.radius === '10px' && walls.cap.weight === '600' && walls.cap.x - walls.cap.tile.x === 8 && walls.cap.tile.b - walls.cap.b === 8, JSON.stringify(walls.cap))
+  await shot(p, 'vip-classes-wallpapers')
+  await p.locator(`${W} .walls-tile`).nth(1).click()
+  await p.waitForSelector(`${W} .vip-look__media`, { timeout: 8000 })
+  await p.waitForFunction((W) => { const i = document.querySelector(`${W} .vip-look__media`); return i.complete && i.naturalWidth > 0 }, W, { timeout: 15000 }).catch(() => {})
+  await p.waitForTimeout(600)
+  const room = await p.evaluate((W) => {
+    const w = document.querySelector(W)
+    const box = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), r: Math.round(r.right), b: Math.round(r.bottom) } }
+    const look = w.querySelector('.vip-look')
+    const body = w.querySelector('.vip__body')
+    const img = w.querySelector('.vip-look__media')
+    const stage = w.querySelector('.vip-look__stage')
+    const buttons = [...w.querySelectorAll('.vip-look__button')].map((b) => ({ ...box(b), radius: getComputedStyle(b).borderRadius, ink: getComputedStyle(b).color, step: b.dataset.side ?? null }))
+    return { ground: getComputedStyle(look).backgroundColor, ink: getComputedStyle(look).color, look: box(look), body: box(body), clipped: getComputedStyle(body).overflow, browse: getComputedStyle(w.querySelector('.vip__browse')).display, img: { ...box(img), fit: getComputedStyle(img).objectFit, radius: getComputedStyle(img).borderRadius, shape: +(img.getBoundingClientRect().width / img.getBoundingClientRect().height).toFixed(2), loaded: img.complete && img.naturalWidth > 0 }, stage: box(stage), bar: box(w.querySelector('.vip-look__bar')), title: getComputedStyle(w.querySelector('.vip-look__title > b')).fontWeight, buttons }
+  }, W)
+  check('Wallpapers: one opened large has the grid’s place: a dark room that fills the window’s body, the grid put away', room.ground === 'rgb(18, 18, 21)' && room.ink === 'rgb(255, 255, 255)' && room.browse === 'none' && room.clipped === 'hidden' && room.look.x === room.body.x && room.look.w === room.body.w && room.look.b === room.body.b, JSON.stringify({ ground: room.ground, look: room.look, body: room.body, browse: room.browse }))
+  check('Wallpapers: the picture is whole in the room under its bar: inside the stage, its own shape, its corners rounded', room.img.loaded && room.img.fit === 'contain' && room.img.radius === '8px' && Math.abs(room.img.shape - 1.78) <= 0.02 && room.img.x >= room.stage.x && room.img.r <= room.stage.r && room.img.y >= room.bar.b - 1 && room.img.b <= room.stage.b && room.title === '600', JSON.stringify({ img: room.img, stage: room.stage, bar: room.bar }))
+  const close = room.buttons.find((b) => !b.step)
+  const steps = room.buttons.filter((b) => b.step)
+  check('Wallpapers: Close is a round button in the bar, and the two arrows are round buttons at the picture’s sides, half way down', !!close && close.w === 30 && close.h === 30 && close.radius === '15px' && close.ink === 'rgb(255, 255, 255)' && steps.length === 2 && steps.every((b) => b.w === 36 && b.h === 36 && b.radius === '18px' && Math.abs(b.y + b.h / 2 - (room.stage.y + room.stage.h / 2)) <= 12) && steps.find((b) => b.step === 'back').x - room.stage.x === 20 && room.stage.r - steps.find((b) => b.step === 'on').r === 20, JSON.stringify(room.buttons))
+  await shot(p, 'vip-classes-wallpapers-large')
+  check('Wallpapers: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
+  await t.ctx.close()
+
+  // A narrow window: the head draws in, as the library's did
+  t = await A.open(browser, { device: 'narrow', base: BASE, query: 'still&empty&open=wallpapers' })
+  p = t.page
+  await arrived(p)
+  await p.waitForSelector(`${W} .walls-tile`, { timeout: 15000 })
+  await p.waitForTimeout(1500)
+  const slim = await p.evaluate((W) => { const w = document.querySelector(W); const body = w.querySelector('.vip__body'); return { wide: Math.round(w.getBoundingClientRect().width), pad: getComputedStyle(w.querySelector('.vip__head')).paddingLeft, fits: body.scrollWidth <= body.clientWidth, tiles: [...w.querySelectorAll('.vip-tile')].every((tile) => { const r = tile.getBoundingClientRect(); const b = body.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right }) } }, W)
+  check('Wallpapers, on a small screen: nothing runs off the side of the window', slim.fits && slim.tiles, JSON.stringify(slim))
+  await t.ctx.close()
+
+  // LP Updates: the library's window and head, over a list of its own
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=updates' })
+  p = t.page
+  await arrived(p)
+  const U = '.wf[data-app="updates"]'
+  await p.waitForSelector(`${U} .vip__title`, { timeout: 15000 })
+  await p.waitForTimeout(1200)
+  const head = (p) => p.evaluate((U) => {
+    const w = document.querySelector(U)
+    const cs = (sel) => getComputedStyle(w.querySelector(sel))
+    const box = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), r: Math.round(r.right), b: Math.round(r.bottom) } }
+    const body = w.querySelector('.vip__body')
+    const list = w.querySelector('.updates__list')
+    return { across: Math.round(w.getBoundingClientRect().width), body: { display: cs('.vip__body').display, way: cs('.vip__body').flexDirection, wide: body.scrollWidth <= body.clientWidth, tall: body.scrollHeight <= body.clientHeight }, title: `${w.querySelector('.vip__title').textContent} ${cs('.vip__title').fontSize} ${cs('.vip__title').fontWeight}`, sub: `${cs('.vip__sub').fontSize} ${cs('.vip__sub').marginTop}`, subInk: cs('.vip__sub').color, titleAt: box(w.querySelector('.vip__title')), subAt: box(w.querySelector('.vip__sub')), pad: w.querySelector('.vip__head') ? cs('.vip__head').padding : null, list: list ? box(list) : null, inside: [...w.querySelectorAll('.vip__title, .vip__sub')].every((el) => { const r = el.getBoundingClientRect(); const b = body.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom }) }
+  }, U)
+  const locked = await head(p)
+  check('LP Updates, locked: its body is the library’s column, and Locked is set as the library’s title is, with its line under it at 14px, all of it inside the window', locked.body.display === 'flex' && locked.body.way === 'column' && locked.body.wide && locked.title === 'Locked 30px 800' && locked.sub === '14px 6px' && locked.subAt.y >= locked.titleAt.b && locked.inside, JSON.stringify(locked))
+  await shot(p, 'vip-classes-updates-locked')
+  await p.locator('.menubar__login').click()
+  await p.locator('.account input[type=email]').fill('lp@example.test')
+  await p.keyboard.press('Enter')
+  await p.waitForTimeout(900)
+  await p.keyboard.type('246810')
+  await p.keyboard.press('Enter')
+  await p.waitForSelector(`${U} .updates__row`, { timeout: 8000 })
+  await p.waitForTimeout(1200)
+  const opened = await head(p)
+  // (a window 640 points across or less draws the head's sides in from 22 to 14, as the library's did: apps.css)
+  check('LP Updates, logged in: the library’s head (a 30px title in the heaviest weight, the line under it, its room round them) over the list of documents', opened.pad === (opened.across <= 640 ? '4px 14px 18px' : '4px 22px 18px') && opened.title === 'LP Updates 30px 800' && opened.sub === '14px 6px' && opened.subAt.y >= opened.titleAt.b && !!opened.list && opened.list.y >= opened.subAt.b + 18 && opened.body.wide && opened.inside, JSON.stringify(opened))
+  await shot(p, 'vip-classes-updates')
+  check('LP Updates: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
+  await t.ctx.close()
+
+  // ================= the iPhone
+  t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still&open=chat&at=drops' })
+  p = t.page
+  await arrived(p)
+  const front = '.sb-slot[data-front]'
+  await p.waitForSelector(`${front} .chat-link`, { timeout: 15000 })
+  await p.waitForTimeout(1000)
+  const said = await p.evaluate((front) => { const a = document.querySelector(`${front} .chat__thread .chat-link`); return { bubbles: [...document.querySelectorAll(`${front} .chat__thread .ss-bubble`)].map((b) => b.textContent.trim()), link: { tag: a.tagName, words: a.childNodes[0].textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel, says: a.textContent } } }, front)
+  check('phone: the Drops conversation says what it said, and its link to VIP is a link to the points site, in a new tab', said.bubbles[0] === 'Your drop is out for delivery.' && leaves(said.link) && said.link.says === 'See who got one in VIP, opens in a new tab', JSON.stringify(said))
+  const fromPhone = await A.tabFrom(t.ctx, () => p.locator(`${front} .chat__thread .chat-link`).tap())
+  await p.waitForTimeout(700)
+  const after = await A.state(p)
+  check('phone: tapped, it opens the points site in a tab of its own; the phone stays in the conversation, and no app opens for VIP', !!fromPhone && fromPhone.url === POINTS && fromPhone.alone === true && after.place?.app === 'messages' && after.place.stack.join() === 'c:drops' && (await noVip(p)), JSON.stringify({ fromPhone, place: after.place }))
+  // The Home Screen: VIP where it was, drawn as an app is, and not one
+  await A.at(p, null, [])
+  const dock = await p.evaluate(() => { const items = [...document.querySelectorAll('.sb-dock > .sb-icon')]; const tile = (el) => { const r = el.querySelector('.sb-icon__tile').getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } }; return { names: items.map((el) => `${el.tagName === 'A' ? 'link' : 'app'} ${el.getAttribute('aria-label').replace(/, \d+ unread$/, '')}`), tiles: items.map(tile), full: document.querySelector('.sb-dock').hasAttribute('data-full'), named: getComputedStyle(items.at(-1).querySelector('.sb-icon__name')).display } })
+  const gaps = dock.tiles.slice(1).map((tile, i) => tile.x - dock.tiles[i].x)
+  check('phone: the Dock is Messages, Contacts and Notes, then VIP, which is a link', dock.names.join(' | ') === 'app Messages | app Contacts | app Notes | link VIP, opens in a new tab', dock.names.join(' | '))
+  check('phone: its tile is the size of theirs, on their line and as far from the last of them as they are from each other, the four from end to end of the Dock', dock.full && dock.tiles.every((tile) => tile.w === dock.tiles[0].w && tile.h === dock.tiles[0].h && tile.y === dock.tiles[0].y) && Math.max(...gaps) - Math.min(...gaps) <= 1 && dock.named === 'none', JSON.stringify(dock.tiles))
+  await shot(p, 'vip-phone-home')
+  check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
+  await t.ctx.close()
+}

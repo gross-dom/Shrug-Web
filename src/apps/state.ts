@@ -49,22 +49,6 @@ export const setFinderView = (view: FinderState['view']) => finder.set((s) => ({
 export const setFinderQuery = (query: string) => finder.set((s) => ({ ...s, query, picked: null }))
 export const pickCompany = (picked: string | null) => finder.set((s) => (s.picked === picked ? s : { ...s, picked }))
 
-// ---- VIP (the photo library) ----
-
-export type MediaFilter = 'all' | 'photo' | 'video'
-
-export interface PhotosState {
-  filter: MediaFilter
-  /** The photo or video opened large in the window, by its place in MEDIA; null while the grid is showing. */
-  look: number | null
-}
-
-export const photos = createStore<PhotosState>({ filter: 'all', look: null })
-
-// Changing what the grid shows goes back to the grid
-export const setMediaFilter = (filter: MediaFilter) => photos.set((s) => ({ ...s, filter, look: null }))
-export const lookAt = (look: number | null) => photos.set((s) => (s.look === look ? s : { ...s, look }))
-
 // ---- FAQs (the notes window) ----
 
 export const notes = createStore<{ note: number; query: string }>({ note: 0, query: '' })

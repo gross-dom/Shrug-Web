@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { startChat } from '../apps/chat'
-import { finder, inbox, notes, photos, showInGroup } from '../apps/state'
+import { finder, inbox, notes, showInGroup } from '../apps/state'
 import { MY_CARD } from '../phone/apps/routes'
 import { arriveIn, onPhone, startSystem, unlock, watchHistory } from '../phone/system'
 import { asked, isOn, opens, says } from './address'
@@ -187,7 +187,7 @@ export function Desktop() {
         // An address the page may not write: it keeps the one it has
       }
     }
-    const stops = [wm, finder, notes, inbox, photos].map((store) => store.subscribe(tell))
+    const stops = [wm, finder, notes, inbox].map((store) => store.subscribe(tell))
     tell()
     return () => {
       stopKeeping()
@@ -211,7 +211,7 @@ export function Desktop() {
       </div>
       {/* The page's own heading: in a banner, so that nothing on the page sits outside a landmark */}
       <header className="sr-only">
-        <h1>Shrug: what people say, the portfolio, FAQs and drops</h1>
+        <h1>Shrug: what people say, the portfolio and FAQs</h1>
       </header>
       {/* One for each: a size change away from the half that failed puts the other back as it was */}
       <Boundary

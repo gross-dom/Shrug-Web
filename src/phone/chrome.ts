@@ -20,7 +20,7 @@ export const WALLPAPER_FOOT = '#8297de'
  * rgb(10 11 16 / 0.82) over it, and at the foot the keyboard's own glass over that, or none when it is put away: one colour between the two). */
 export const WALLPAPER_DIMMED = { switcher: { top: '#0a0c29', foot: '#485481' }, search: { top: '#0b0c16', foot: '#23252f' } }
 
-export const chrome = createStore<Record<PhoneApp, Tone>>({ messages: 'plain', finder: 'plain', notes: 'plain', terminal: 'dark', photos: 'plain' })
+export const chrome = createStore<Record<PhoneApp, Tone>>({ messages: 'plain', finder: 'plain', notes: 'plain', terminal: 'dark' })
 
 /** A screen in a colour of its own (a contact's card takes its picture's): what is at its top edge and at
  * its foot. One colour for a page that is one colour; two for one that runs from a picture down into another. */

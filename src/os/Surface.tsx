@@ -3,7 +3,6 @@ import { AboutApp } from '../apps/About'
 import { FinderApp } from '../apps/Finder'
 import { MessagesApp } from '../apps/Messages'
 import { NotesApp } from '../apps/Notes'
-import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
 import { UpdatesApp } from '../apps/Updates'
 import { WallpapersApp } from '../apps/Wallpapers'
@@ -34,7 +33,6 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   messages: MessagesApp,
   notes: NotesApp,
   terminal: TerminalApp,
-  photos: PhotosApp,
   about: AboutApp,
   wallpapers: WallpapersApp,
   updates: UpdatesApp,

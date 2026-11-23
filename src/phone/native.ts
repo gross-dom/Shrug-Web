@@ -5,8 +5,8 @@ import { linkTo, spotOfPlace } from '../os/place'
 import { settings } from './settings'
 import { sys } from './system'
 
-/** The address to pass on: a link to where the phone is now (the app, and the company, question,
- * conversation or drop that is open in it). Where the page has no address of its own (a preview
+/** The address to pass on: a link to where the phone is now (the app, and the company, question
+ * or conversation that is open in it). Where the page has no address of its own (a preview
  * opened from a file) it is the site's. */
 export const pageUrl = () => linkTo(spotOfPlace(sys.get()))
 

@@ -240,7 +240,6 @@
   .pf-row[aria-selected='true']:nth-child(odd),
   .faq-row[data-selected],
   .faq-row[data-selected]:hover,
-  .seg [role='radio'][aria-checked='true'],
   .ss-seg__option[data-on],
   .composer__send[data-ready] {
     background-color: Highlight;
@@ -259,7 +258,6 @@
   .chip[aria-pressed='true'] *,
   .pf-row[aria-selected='true'] :not(.logo, .logo *),
   .faq-row[data-selected] *,
-  .seg [role='radio'][aria-checked='true'] *,
   .ss-seg__option[data-on] * {
     color: HighlightText !important;
   }
@@ -351,7 +349,7 @@
     background-color: HighlightText;
   }
 
-  /* VIP's tiles and their captions */
+  /* The picture tiles of the Wallpapers window, and their captions */
   .vip-tile {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
@@ -705,46 +703,6 @@
 
   .ios-switch[aria-checked='true'] .ios-switch__knob {
     background-color: HighlightText;
-  }
-
-  /* VIP: a tile with no picture yet still has its place. The line is on what
-     fills the tile, since anything the tile drew itself would be under it */
-  .photos-pic__slot,
-  .photos-thumb,
-  .photos-big {
-    outline: 1px solid CanvasText;
-    outline-offset: -1px;
-  }
-
-  /* The head of the library: until its picture arrives it is the system's ground with a line under it; over
-     a picture its words stand on a plate; the button on it has an edge. The small pictures over the viewer's
-     toolbar are edged squares, the one showing filled */
-  .ph .photos-head[data-empty] {
-    border-bottom: 1px solid CanvasText;
-    background: Canvas;
-  }
-
-  .ph .photos-head::after {
-    display: none;
-  }
-
-  .ph .photos-head__words {
-    width: fit-content;
-    max-width: calc(100% - 36px);
-    padding: 0 8px;
-    background-color: Canvas;
-    color: CanvasText;
-  }
-
-  .ph .photos-strip__one {
-    outline: 1px solid CanvasText;
-    outline-offset: -1px;
-    background: Canvas;
-  }
-
-  .ph .photos-strip__one[data-on] {
-    background: Highlight;
-    forced-color-adjust: none;
   }
 }
 

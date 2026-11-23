@@ -20,7 +20,7 @@ import { ZOOM } from './Zoom'
  * the phone has nothing in its place. */
 export type PhoneApp = Exclude<AppId, 'about' | 'wallpapers' | 'updates'>
 
-export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'photos']
+export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal']
 
 /** Whether an app of the site's is one the phone has. */
 export const onPhone = (app: AppId | null | undefined): app is PhoneApp => (PHONE_APPS as unknown[]).includes(app)
@@ -60,7 +60,7 @@ export interface Sys extends Place {
 /** Where each app is when it is first opened. An iPhone's apps come back to
  * where they were last used: Notes inside FAQs, a step in from its first
  * screen, with the way back out showing. Contacts opens on its list. */
-const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [FAQS_FOLDER], terminal: [], photos: [] })
+const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [FAQS_FOLDER], terminal: [] })
 
 export const sys = createStore<Sys>({ app: null, stacks: noStacks(), sheet: null, locked: true, recents: [], switcher: false, spotlight: false, motion: false, prev: null, origin: null })
 
@@ -407,15 +407,6 @@ export function pop() {
     }
   }
   back({ app: s.app, stacks: { ...s.stacks, [s.app]: s.stacks[s.app].slice(0, -1) }, sheet: null })
-}
-
-/** Swaps the screen the app in front is on for another, at the same depth. */
-export function swap(view: string) {
-  const s = sys.get()
-  if (!s.app || !s.stacks[s.app].length) return
-  const place: Place = { app: s.app, stacks: { ...s.stacks, [s.app]: [...s.stacks[s.app].slice(0, -1), view] }, sheet: s.sheet }
-  amend(place)
-  sys.set((now) => ({ ...now, ...place, motion: false }))
 }
 
 /** Brings a sheet up over the app in front. */

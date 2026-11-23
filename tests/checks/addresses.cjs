@@ -68,7 +68,12 @@ const check = (name, ok, detail = '') => {
     ['?open=files', 'finder', ''],
     ['?open=portfolio&at=varda', 'finder', 'co:Varda'],
     ['?open=portfolio;faqs', 'notes', 'f:faqs'],
-    ['?open=portfolio+vip', 'photos', ''],
+    ['?open=faqs+portfolio', 'finder', ''],
+    // (VIP is no app: it is the Dock's link to the points site. Named with an app, the app is what opens;
+    // named alone, by either of the names it had as an app, it names nothing, and the visit begins as any does)
+    ['?open=portfolio+vip', 'finder', ''],
+    ['?open=vip', null, null],
+    ['?open=photos', null, null],
     ['portfolio', 'finder', ''],
     ['#faqs', 'notes', 'f:faqs'],
     // (About Shrug is the desktop's: who Shrug is, on a phone, is on Shrug's own card in Contacts, and that is where a link to it arrives)
@@ -86,8 +91,9 @@ const check = (name, ok, detail = '') => {
     if (app && app !== 'home') check(`…with no Lock Screen on the way`, !v.seenLock.v)
     await v.t.ctx.close()
   }
-  // and on the desktop
-  for (const [tail, want] of [['?open=Portfolio;FAQs', 'finder,messages,notes'], ['vip', 'messages,photos'], ['?phone=0', 'messages'], ['?PHONE', null], ['?phone=off&open=faqs', 'messages,notes']]) {
+  // and on the desktop (where an address that asks for VIP, by a path or by name, opens no window for it:
+  // the desk is as any visit finds it, with the conversation)
+  for (const [tail, want] of [['?open=Portfolio;FAQs', 'finder,messages,notes'], ['case-studies', 'messages,terminal'], ['vip', 'messages'], ['?open=vip', 'messages'], ['?open=photos,portfolio', 'finder,messages'], ['?phone=0', 'messages'], ['?PHONE', null], ['?phone=off&open=faqs', 'messages,notes']]) {
     v = await visit('desktop', tail, 1500)
     const got = await v.t.page.evaluate(() => (document.querySelector('.dock') ? [...document.querySelectorAll('.wf[data-app]')].filter((w) => !w.hasAttribute('inert') && getComputedStyle(w).visibility !== 'hidden').map((w) => w.getAttribute('data-app')).sort().join() : null))
     check(`desktop ${tail} -> ${want ?? 'the iPhone'}`, got === want, String(got))

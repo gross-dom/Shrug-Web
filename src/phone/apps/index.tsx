@@ -4,14 +4,14 @@ import type { PhoneApp } from '../system'
 import { ContactsApp, contactsFirst } from './Contacts'
 import { MessagesApp } from './Messages'
 import { NotesApp } from './Notes'
-import { PhotosApp, photosFirst } from './Photos'
 import { TerminalApp } from './Terminal'
 
 // The apps on the phone: each of the desktop's windows, as the iPhone app it
 // corresponds to, under that app's own name. What is in each (the portfolio,
 // the FAQs) is named on its widget: the portfolio is kept in Contacts, a
-// company to a row and a section to a vertical. Case Studies and VIP are
-// Shrug's own apps and keep their own names: VIP is laid out as Photos is.
+// company to a row and a section to a vertical. Case Studies is Shrug's own
+// app and keeps its own name. (VIP is in the Dock beside these and is not one
+// of them: it is a link to the points site, drawn by Springboard.tsx.)
 
 /** What a screen is drawn on, as the status bar and the browser's bars are told it (src/phone/chrome.ts). */
 export interface FirstScreen {
@@ -38,12 +38,10 @@ export const PHONE: Record<PhoneApp, PhoneAppSpec> = {
   // A note is a white page; the lists of them are on the gray that inset lists sit on
   notes: { label: 'Notes', Root: NotesApp, first: (top) => ({ tone: top && /^[nu]:/.test(top) ? 'plain' : 'grouped' }) },
   terminal: { label: 'Case Studies', Root: TerminalApp, first: () => ({ tone: 'dark' }), eager: true },
-  // The library is headed by a picture, dark to the top of the screen; a picture opened by itself is in a white room
-  photos: { label: 'VIP', Root: PhotosApp, first: photosFirst },
 }
 
-/** In the Dock, left to right: the four that are always to hand. */
-export const DOCKED: PhoneApp[] = ['messages', 'finder', 'notes', 'photos']
+/** In the Dock, left to right: the apps that are always to hand. VIP's link is the fourth thing there, after them. */
+export const DOCKED: PhoneApp[] = ['messages', 'finder', 'notes']
 
 /** On the Home Screen itself, under the widgets. The one-pager's link goes after it. */
 export const ON_HOME: PhoneApp[] = ['terminal']

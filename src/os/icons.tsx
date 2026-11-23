@@ -218,8 +218,9 @@ function FinderIcon() {
   )
 }
 
-/** VIP: black, with its name in white capitals. */
-function VipIcon() {
+/** VIP: black, with its name in white capitals. It is not an app's icon: VIP is the Dock's link to the points
+ * site (Dock.tsx), drawn on a tile so that it sits among the apps as one of them would. */
+export function VipIcon() {
   return (
     <Tile from="#2a2a2e" to="#000000">
       <path d={VIP_LETTERS} fill="#fff" fillRule="evenodd" />
@@ -241,7 +242,6 @@ const ICONS: Record<AppId, () => ReactNode> = {
   notes: NotesIcon,
   terminal: TerminalIcon,
   finder: FinderIcon,
-  photos: VipIcon,
   about: ShrugIcon,
   wallpapers: FolderIcon,
   updates: FolderIcon,

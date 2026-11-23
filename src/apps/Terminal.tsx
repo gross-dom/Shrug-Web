@@ -328,6 +328,9 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
       const study = publicNamed(arg)
       if (study) return { lines: [out(`${study.dir} is public:`), { kind: 'link', text: study.dir, href: study.url }] }
       if (name === 'one-pager' || name === 'onepager') return { lines: [{ kind: 'link', text: 'read the one-pager', href: SITE.onePager }] }
+      // VIP is no app of the site's: it is the points site, and is handed over as the one-pager is, a line
+      // to press that opens in a tab of its own
+      if (name === 'vip') return { lines: [out('vip is on the points site:'), { kind: 'link', text: 'open vip', href: SITE.points }] }
       const app = OPENS[name]
       if (app === 'terminal') return { lines: [out('you’re in it.')] }
       // The wallpapers are the desktop's: a phone has one of its own, and no folder of them
@@ -509,8 +512,9 @@ function LinkLine({ text, href }: { text: string; href: string }) {
       <a
         className="term__link"
         href={href}
-        // The one-pager is on someone else's site and is told nothing of where the visit came from; Shrug's own pages are
-        {...(page ? { target: '_blank', rel: href.startsWith(SITE.onePager) ? 'noreferrer' : 'noopener' } : null)}
+        // The one-pager is on someone else's site and is told nothing of where the visit came from, and nor is
+        // VIP (the points site), which is linked here as it is from the Dock; Shrug's own pages are
+        {...(page ? { target: '_blank', rel: href.startsWith(SITE.onePager) ? 'noreferrer' : href === SITE.points ? 'noopener noreferrer' : 'noopener' } : null)}
       >
         {text}
         {page && <span className="sr-only">, in a new tab</span>}

@@ -1,4 +1,6 @@
 // axe over fixer T's screens on both layouts: node terminal-vip-axe.cjs [base]
+// The terminal; where VIP is (a link in each layout's Dock, in About Shrug and in the Drops conversation); and the
+// two windows laid out with the classes VIP's window had, Wallpapers and LP Updates.
 const A = require('./lib.cjs')
 const path = require('path')
 const AXE = (() => {
@@ -10,7 +12,6 @@ const AXE = (() => {
   }
 })()
 const BASE = process.argv[2] || 'http://127.0.0.1:5173/'
-const DEV = /:5173\//.test(BASE)
 let bad = 0
 const run = async (page, name, scope) => {
   await page.addScriptTag({ path: AXE }).catch(() => {})
@@ -24,52 +25,64 @@ const run = async (page, name, scope) => {
   console.log((real.length ? 'FAIL ' : 'ok   ') + name + (res.length ? '  ' + JSON.stringify(real.length ? real : res.map((v) => v.id)) : ''))
 }
 const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') && !!document.querySelector('.os[data-booted]'), null, { timeout: 30000 })
-const WITH_FILES = (js) => js.replace('from: null, src: null', 'from: drop === "Billboards" ? "A Founder" : null, src: kind === "photo" && ["Deep Tech Mat", "Billboards", "VC Sticker Pack"].includes(drop) ? "/og.png" : null')
 ;(async () => {
   const browser = await A.launch()
   // ---- phone
-  let t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still&open=vip', reducedMotion: true })
+  let t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still&open=case-studies', reducedMotion: true })
   let p = t.page
   await arrived(p); await p.waitForTimeout(1200)
   const front = '.sb-slot[data-front]'
-  await run(p, 'phone VIP library', front)
-  await A.at(p, 'photos', ['m:0']); await run(p, 'phone VIP viewer (tile on its way)', front)
-  await A.at(p, 'photos', ['m:1'], 'info'); await run(p, 'phone VIP info', front)
-  await A.at(p, 'photos', []); await p.locator(front + ' .ios-page[data-pos="top"] button[aria-haspopup="menu"]').first().tap(); await p.waitForTimeout(500); await run(p, 'phone VIP, the filter open', front)
-  await p.keyboard.press('Escape'); await p.waitForTimeout(300)
-  await A.at(p, 'terminal', []); await run(p, 'phone terminal, question waiting', front)
+  await run(p, 'phone terminal, question waiting', front)
   await p.locator(front + ' .term-ios-key', { hasText: /^y$/ }).tap(); await p.waitForTimeout(500)
   await run(p, 'phone terminal, after y', front)
   await p.locator(front + ' .term-ios-key', { hasText: 'help' }).tap(); await p.waitForTimeout(300)
   await run(p, 'phone terminal, after help', front)
+  await p.locator(front + ' .term__input').fill('open vip'); await p.locator(front + ' .term__input').press('Enter'); await p.waitForTimeout(500)
+  await run(p, 'phone terminal, the link to VIP handed over', front)
+  await A.at(p, 'messages', ['c:drops']); await run(p, 'phone, the Drops conversation and its link to VIP', front)
+  await A.at(p, null, []); await run(p, 'phone Home Screen, VIP in its Dock', '.sb-home')
   await t.ctx.close()
   // ---- desktop
-  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&open=vip,case-studies', reducedMotion: true })
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&open=case-studies', reducedMotion: true })
   p = t.page
   await arrived(p); await p.waitForTimeout(1500)
-  await run(p, 'desktop VIP', '.wf[data-app="photos"]')
+  await run(p, 'desktop Dock, VIP a link in it', '.dock')
   await p.locator('.wf[data-app="terminal"] .term__input').click()
-  for (const text of ['y', 'help', 'nonsense', 'n']) { await p.keyboard.type(text); await p.keyboard.press('Enter') }
+  for (const text of ['y', 'help', 'nonsense', 'open vip', 'n']) { await p.keyboard.type(text); await p.keyboard.press('Enter') }
   await p.waitForTimeout(300)
   await run(p, 'desktop terminal, used', '.wf[data-app="terminal"]')
+  await p.click('[data-menu-title="go"]'); await p.waitForTimeout(300)
+  await run(p, 'desktop Go menu, VIP a link in it', '[data-menu="go"]')
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200)
+  await p.click('[data-dock-app="messages"]'); await p.waitForTimeout(500)
+  await p.locator('.wf[data-app="messages"] [data-conversation="drops"]').click(); await p.waitForTimeout(500)
+  await run(p, 'desktop, the Drops conversation and its link to VIP', '.wf[data-app="messages"]')
   await t.ctx.close()
-  t = await A.open(browser, { device: 'ipad-land', base: BASE, query: 'still&open=vip,case-studies', reducedMotion: true })
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=about', reducedMotion: true })
+  p = t.page
+  await arrived(p); await p.waitForTimeout(1500)
+  await run(p, 'desktop About Shrug, its Drops row a link', '.wf[data-app="about"]')
+  await t.ctx.close()
+  // The windows laid out with VIP's classes
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=wallpapers,updates', reducedMotion: true })
+  p = t.page
+  await arrived(p); await p.waitForTimeout(1500)
+  await run(p, 'desktop LP Updates, locked', '.wf[data-app="updates"]')
+  await p.locator('.menubar__login').click(); await p.locator('.account input[type=email]').fill('lp@example.test'); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
+  await p.keyboard.type('246810'); await p.keyboard.press('Enter'); await p.waitForTimeout(2400)
+  await run(p, 'desktop LP Updates, its documents', '.wf[data-app="updates"]')
+  await p.locator('.wf[data-app="wallpapers"] .ss-window__bar').click({ position: { x: 200, y: 12 } }).catch(() => {}); await p.waitForTimeout(400)
+  await run(p, 'desktop Wallpapers', '.wf[data-app="wallpapers"]')
+  await p.locator('.wf[data-app="wallpapers"] .walls-tile').first().click(); await p.waitForTimeout(700)
+  await run(p, 'desktop Wallpapers, one open large', '.wf[data-app="wallpapers"]')
+  await t.ctx.close()
+  t = await A.open(browser, { device: 'ipad-land', base: BASE, query: 'still&open=wallpapers,case-studies', reducedMotion: true })
   p = t.page
   await arrived(p); await p.waitForTimeout(1500)
   await run(p, 'desktop (touch) terminal with its keys', '.wf[data-app="terminal"]')
-  await run(p, 'desktop (touch) VIP', '.wf[data-app="photos"]')
+  await run(p, 'desktop (touch) Wallpapers', '.wf[data-app="wallpapers"]')
+  await run(p, 'desktop (touch) Dock, VIP a link in it', '.dock')
   await t.ctx.close()
-  if (DEV) {
-    t = await A.open(browser, { device: 'desktop', base: BASE, goto: false, reducedMotion: true })
-    p = t.page
-    await p.route('**/src/data/drops.ts*', async (route) => { const res = await route.fetch(); await route.fulfill({ response: res, body: WITH_FILES(await res.text()) }) })
-    await p.goto(BASE + '?still&open=vip')
-    await arrived(p); await p.waitForTimeout(1500)
-    await run(p, 'desktop VIP with pictures', '.wf[data-app="photos"]')
-    await p.locator('.wf[data-app="photos"] .vip-tile--open').first().click(); await p.waitForTimeout(500)
-    await run(p, 'desktop VIP, a picture open large', '.wf[data-app="photos"]')
-    await t.ctx.close()
-  }
   await browser.close()
   console.log(bad ? `${bad} violations` : 'no violations')
   process.exit(bad ? 1 : 0)

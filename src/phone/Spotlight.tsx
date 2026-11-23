@@ -4,18 +4,17 @@ import { chat } from '../apps/chat'
 import { ConversationAvatar, GROUP_NAME, PersonAvatar } from '../apps/chat-ui'
 import { ALL, companyAnswers, CompanyLogo, hostOf } from '../apps/portfolio-ui'
 import { showInGroup } from '../apps/state'
-import { arrived, DROPS, MEDIA } from '../data/drops'
 import { EGGS, lastWords } from '../data/eggs'
 import { answerWords, FAQS, WHATS_NEW } from '../data/faqs'
 import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
-import { ABOUT, DRAFT, reach, SITE } from '../data/site'
+import { ABOUT, reach, SITE } from '../data/site'
 import { APPS } from '../os/apps'
 import { LogoDisc } from '../os/icons'
 import { useStore } from '../os/store'
-import { OnePagerIcon, PhoneIcon } from './icons'
+import { OnePagerIcon, PhoneIcon, VipIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
-import { contactsFor, conversationView, FAQS_FOLDER, GROUP_VIEW, mediaView, MY_CARD, noteView } from './apps/routes'
+import { contactsFor, conversationView, FAQS_FOLDER, GROUP_VIEW, MY_CARD, noteView } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
 import '../styles/phone/spotlight.css'
 
@@ -29,7 +28,8 @@ const shared = new Set(ALL.map((c) => c.name).filter((name, i, all) => all.index
 //
 // It answers to the site's own nouns and to what a visitor is likely to type:
 // an app by either of its names (Contacts is the Portfolio, Notes the FAQs) and
-// by the words for what it holds; the one-pager; and
+// by the words for what it holds; the one-pager and VIP, which are links out
+// of the site and are found as links; and
 // the words for getting hold of Shrug (contact, email, pitch), which find the
 // way there is (`reach` in src/data/site.ts). Shrug's own name, the words for
 // who is behind it (about, team, partners) and a partner's name find Shrug's
@@ -39,7 +39,7 @@ const shared = new Set(ALL.map((c) => c.name).filter((name, i, all) => all.index
 
 // ---- What matches ----
 
-type Kind = 'app' | 'reach' | 'person' | 'company' | 'faq' | 'drop'
+type Kind = 'app' | 'reach' | 'person' | 'company' | 'faq'
 
 interface Hit {
   key: string
@@ -54,8 +54,6 @@ interface Hit {
   open: () => void
   /** Where it goes, if that is out of the site. It is drawn as a link then, and opens as one. */
   href?: string
-  /** Never the Top Hit while anything else was found: something Shrug has yet to supply. */
-  shy?: boolean
 }
 
 interface Found {
@@ -129,33 +127,28 @@ const glyph = (icon: ReactNode) => (size: number) => (
   </span>
 )
 
-/** What has arrived from a drop, in words. Only what has arrived is counted; with the editor's view
- * (`?draft`) a drop with nothing yet says so, and otherwise it is just a drop. */
-function mediaOf(drop: string) {
-  const photos = arrived('photo', drop)
-  const videos = arrived('video', drop)
-  const said = [photos && `${photos} photo${photos === 1 ? '' : 's'}`, videos && `${videos} video${videos === 1 ? '' : 's'}`].filter(Boolean)
-  return said.length ? said.join(', ') : DRAFT ? 'Drop · nothing supplied yet' : 'Drop'
-}
-
 /** The apps, in the order the Home Screen has them: the Dock's, then the rest. */
 const APP_ORDER: PhoneApp[] = [...DOCKED, ...ON_HOME]
 
 /** The site's own word for what an app is, where that is neither of its names (the one here, the one
- * on the desktop): it counts as a name. Drops are what VIP holds, and the site says "drops" throughout. */
-const NOUN: Partial<Record<PhoneApp, string[]>> = { photos: ['drops'], messages: ['chat'], terminal: ['terminal'] }
+ * on the desktop): it counts as a name. */
+const NOUN: Partial<Record<PhoneApp, string[]>> = { messages: ['chat'], terminal: ['terminal'] }
 
 /** What else each app answers to, a little less surely: the words for what it holds. */
 const ALSO: Record<PhoneApp, string[]> = {
   messages: ['group chat', 'testimonials', 'what people say', 'replies', 'texts'],
   finder: ['portfolio', 'companies', 'backed', 'investments', 'startups'],
   notes: ['faq', 'faqs', 'questions', 'answers'],
-  photos: ['photos', 'videos', 'merch'],
   terminal: ['access', 'case study'],
 }
 
 /** What the one-pager answers to besides its name. */
 const ONE_PAGER = { names: ['one-pager', 'one pager', 'onepager'], words: ['deck', 'summary', 'overview', 'pdf', 'docsend', 'memo'] }
+
+/** What VIP answers to: its name and the site's own word for what it is about (the drops), and a little
+ * less surely the words for what the points site holds. It is in the Dock among the apps and is found
+ * among them, as the one-pager is; like the one-pager it is a link, and leaves for a tab of its own. */
+const VIP = { names: ['VIP', 'drops'], words: ['points', 'store', 'merch'] }
 
 /** What someone types who wants to get hold of Shrug. */
 const REACH = ['contact', 'get in touch', 'touch', 'email', 'e-mail', 'mail', 'reach', 'reach out', 'pitch', 'apply', 'application', 'intro', 'introduction', 'talk', 'call', 'phone', 'meet', 'meeting', 'hello', 'submit', 'raise', 'raising', 'fundraise', 'fundraising']
@@ -181,20 +174,23 @@ function follow(href: string) {
   else window.location.href = href
 }
 
-const onePager = (key: string, score: number, title: ReactNode): Hit => ({
+/** A link that sits among the apps, under a tile of its own: where it goes is the line under its name. */
+const linkOut = (key: string, score: number, title: ReactNode, href: string, icon: ReactNode): Hit => ({
   key,
   kind: 'app',
   score,
   lead: (size) => (
     <span className="spot-tile" style={{ width: size, height: size }}>
-      <OnePagerIcon />
+      {icon}
     </span>
   ),
   title,
-  subtitle: hostOf(SITE.onePager),
-  href: SITE.onePager,
-  open: () => follow(SITE.onePager),
+  subtitle: hostOf(href),
+  href,
+  open: () => follow(href),
 })
+
+const onePager = (key: string, score: number, title: ReactNode): Hit => linkOut(key, score, title, SITE.onePager, <OnePagerIcon />)
 
 /** The way to Shrug there is today (src/data/site.ts): an email, a text, or with neither the one-pager. */
 function toShrug(key: string, score: number): Hit {
@@ -258,6 +254,12 @@ function find(raw: string, replied: number): Found {
     const line = name !== PHONE[id].label && name !== blurb ? `${name} · ${blurb}` : blurb
     apps.push({ key: `app:${id}`, kind: 'app', score: named >= 0 ? named : also >= 0 ? 1.5 + also : 4 + said, lead: tile(id), title: <Marked text={PHONE[id].label} q={q} />, subtitle: <Marked text={line} q={q} />, open: () => launch(id) })
   })
+  // VIP is in the Dock among the apps, and is found among them: it is the points site, and opens as a link does
+  {
+    const named = best(VIP.names, q)
+    const word = named < 0 && q.length >= 3 ? best(VIP.words, q) : -1
+    if (named >= 0 || (word >= 0 && word <= 1)) apps.push(linkOut('link:vip', named >= 0 ? named : 1.25 + word, <Marked text="VIP" q={q} />, SITE.points, <VipIcon />))
+  }
   // The one-pager is on the Home Screen among the apps, and is found among them
   {
     const named = best(['One-pager', ...ONE_PAGER.names], q)
@@ -335,7 +337,7 @@ function find(raw: string, replied: number): Found {
     })
   })
 
-  // Asking for a kind of thing by its name ("faqs", "drops") finds all of that kind
+  // Asking for a kind of thing by its name ("faqs") finds all of that kind
   const kindOf = (...names: string[]) => q.length >= 3 && names.some((name) => name.startsWith(q))
 
   const faqs: Hit[] = []
@@ -361,19 +363,7 @@ function find(raw: string, replied: number): Found {
     })
   })
 
-  const drops: Hit[] = []
-  const anyDrop = kindOf('drops', 'albums')
-  DROPS.forEach((drop) => {
-    const named = rank(drop, q)
-    if (named < 0 && !anyDrop) return
-    // A drop nothing has arrived for yet is found, but is not what search puts first. It opens as the first of its
-    // photos and videos, in the viewer, over the library
-    const first = MEDIA.findIndex((slot) => slot.drop === drop)
-    drops.push({ key: `drop:${drop}`, kind: 'drop', score: named >= 0 ? named : 10, shy: arrived(undefined, drop) === 0, lead: tile('photos'), title: <Marked text={drop} q={q} />, subtitle: mediaOf(drop), open: () => launchAt('photos', first < 0 ? [] : [mediaView(first)]) })
-  })
-
-  const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), reach: reaching, person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore), drop: drops.sort(byScore) }
-  const all = Object.values(lists).flat()
+  const lists: Record<Kind, Hit[]> = { app: apps.sort(byScore), reach: reaching, person: people.sort(byScore), company: companies.sort(byScore), faq: faqs.sort(byScore) }
 
   // The best of them all, if it is a name that what was typed begins (or begins a word of). Level, the
   // site's own things come first: an app, the way to Shrug, then what is in the apps. Two things come
@@ -381,9 +371,9 @@ function find(raw: string, replied: number): Found {
   // that says what is new
   let top: Hit | null = myCard(q) ?? (news ? (faqs.find((hit) => hit.key === `faq:${WHATS_NEW}`) ?? null) : null)
   if (!top)
-    for (const kind of ['app', 'reach', 'person', 'company', 'faq', 'drop'] as Kind[]) {
-      const eligible = lists[kind].find((hit) => !(hit.shy && all.some((other) => !other.shy)))
-      if (eligible && eligible.score <= 2 && (!top || eligible.score < top.score)) top = eligible
+    for (const kind of ['app', 'reach', 'person', 'company', 'faq'] as Kind[]) {
+      const head = lists[kind][0]
+      if (head && head.score <= 2 && (!top || head.score < top.score)) top = head
     }
   const rest = (kind: Kind) => lists[kind].filter((hit) => hit !== top).slice(0, MOST)
 
@@ -394,7 +384,6 @@ function find(raw: string, replied: number): Found {
     { id: 'person' as const, title: PHONE.messages.label, icon: icon('messages'), hits: rest('person') },
     { id: 'company' as const, title: PHONE.finder.label, icon: icon('finder'), hits: rest('company') },
     { id: 'faq' as const, title: PHONE.notes.label, icon: icon('notes'), hits: rest('faq') },
-    { id: 'drop' as const, title: PHONE.photos.label, icon: icon('photos'), hits: rest('drop') },
   ].filter((group) => group.hits.length > 0)
   return { top, groups }
 }
@@ -525,7 +514,8 @@ function SpotKeys({ typed, ready, onType, onDelete, onGo }: { typed: boolean; /*
         </button>
       </div>
       <div className="kb-row">
-        <button type="button" className="kb-key kb-key--mode" data-key="123" tabIndex={-1} aria-label={figures ? 'Letters' : 'Numbers'} {...key(() => setFigures((on) => !on))}>
+        {/* Named by what is written on it, and then what that is: someone who speaks the key's name to press it says what they see */}
+        <button type="button" className="kb-key kb-key--mode" data-key="123" tabIndex={-1} aria-label={figures ? 'ABC, letters' : '123, numbers'} {...key(() => setFigures((on) => !on))}>
           <span className="kb-key__word">{figures ? 'ABC' : '123'}</span>
         </button>
         <button type="button" className="kb-key kb-key--space" data-key=" " tabIndex={-1} aria-label="Space" {...key(() => onType(' '))} />

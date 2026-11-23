@@ -1119,7 +1119,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
   line-height: 19px;
 }
 
-/* The Dock: a strip of glass with the four apps that are always to hand */
+/* The Dock: a strip of glass with what is always to hand, three apps and VIP's link */
 .sb-dock {
   --inset: var(--dock-inset);
   position: absolute;
@@ -1144,7 +1144,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
     0 10px 30px rgb(8 10 60 / 0.16);
 }
 
-/* Four apps run from end to end of it; fewer share the Dock out evenly, as iOS does */
+/* Four icons run from end to end of it; fewer share the Dock out evenly, as iOS does */
 .sb-dock:not([data-full]) {
   justify-content: space-evenly;
 }

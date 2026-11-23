@@ -3,7 +3,7 @@ import { useNewReplies } from '../apps/state'
 import { SITE } from '../data/site'
 import { APPS, DOCK_APPS, type AppId } from './apps'
 import { dockPoint, prefersReducedMotion } from './dom'
-import { AppIcon, DocumentIcon } from './icons'
+import { AppIcon, DocumentIcon, VipIcon } from './icons'
 import { useStore } from './store'
 import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 
@@ -12,6 +12,10 @@ import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 // has asked for less motion). Minimized windows go back into their app's
 // icon, and the group chat's icon counts the replies that came in while the
 // conversation wasn't showing.
+//
+// Two of its icons are links and open no window: VIP, last among the apps,
+// which is the way to the points site, and the one-pager after the rule.
+// Each opens in a tab of its own and says so.
 
 /** How much the icon under the pointer grows, and how far the swell reaches. */
 const SWELL = 0.55
@@ -116,6 +120,18 @@ export function Dock() {
             <span className="dock__dot" aria-hidden />
           </button>
         ))}
+        {/* VIP keeps its place, its tile and its name, and is a link: it has no window to open, no dot to
+            light and nothing to hop for. The tab it opens is given no way back to this page, and is not
+            told where the visit came from */}
+        <a className="dock__item" data-dock-item data-dock-link="vip" href={SITE.points} target="_blank" rel="noopener noreferrer" draggable={false} aria-label="VIP, opens in a new tab">
+          <span className="dock__label" aria-hidden>
+            VIP
+          </span>
+          <span className="dock__icon">
+            <VipIcon />
+          </span>
+          <span className="dock__dot" aria-hidden />
+        </a>
         <span className="dock__rule" aria-hidden />
         <a className="dock__item" data-dock-item href={SITE.onePager} target="_blank" rel="noreferrer" draggable={false} aria-label="One-pager, opens in a new tab">
           <span className="dock__label" aria-hidden>

@@ -5,7 +5,6 @@ import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
 import { eggOf } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { PEOPLE } from '../data/people'
-import { MEDIA } from '../data/drops'
 import { COMPANIES } from '../data/portfolio'
 import { CompanyLogo, warmLogos } from '../apps/portfolio-ui'
 import { SITE } from '../data/site'
@@ -21,7 +20,7 @@ import { DOCKED, ON_HOME, PHONE } from './apps'
 import { companyOf, GROUP_VIEW, MY_CARD } from './apps/routes'
 import { COLOR, carried, chrome, grounds, setTone } from './chrome'
 import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
-import { OnePagerIcon, PhoneIcon } from './icons'
+import { OnePagerIcon, PhoneIcon, VipIcon } from './icons'
 import { haptic } from './native'
 import { settings } from './settings'
 import { Spotlight } from './Spotlight'
@@ -382,10 +381,11 @@ function HomeIcon({ id }: { id: PhoneApp }) {
   )
 }
 
-/** A link dressed as an app: the one-pager opens in the browser. */
+/** A link dressed as an app: the one-pager, and VIP (the points site), each of which opens in a tab of its
+ * own. It is named on the link itself as well as under its tile, since the Dock shows no names. */
 function LinkIcon({ name, href, children }: { name: string; href: string; children: ReactNode }) {
   return (
-    <a className="sb-icon" href={href} target="_blank" rel="noreferrer" draggable={false}>
+    <a className="sb-icon" href={href} target="_blank" rel="noopener noreferrer" draggable={false} aria-label={`${name}, opens in a new tab`}>
       <span className="sb-icon__tile">{children}</span>
       <span className="sb-icon__name">
         {name}
@@ -533,10 +533,14 @@ function Home() {
         <Search size={12} strokeWidth={3} aria-hidden />
         Search
       </button>
-      <nav className="sb-dock" aria-label="Dock" data-full={DOCKED.length >= 4 || undefined}>
+      {/* The apps, and after them VIP, which is a link as the one-pager is: it leads to the points site */}
+      <nav className="sb-dock" aria-label="Dock" data-full={DOCKED.length + 1 >= 4 || undefined}>
         {DOCKED.map((id) => (
           <HomeIcon key={id} id={id} />
         ))}
+        <LinkIcon name="VIP" href={SITE.points}>
+          <VipIcon />
+        </LinkIcon>
       </nav>
     </div>
   )
@@ -1318,7 +1322,7 @@ function reading(s: Sys) {
 }
 
 /** Where the phone is, as the page's title says it, innermost first and one to a line: the conversation,
- * company, question or drop where the screen is one, then the app. Nothing on the Lock Screen and the
+ * company or question where the screen is one, then the app. Nothing on the Lock Screen and the
  * Home Screen, which are the site itself. */
 function placeName(s: Sys) {
   if (s.locked) return ''
@@ -1331,7 +1335,6 @@ function placeName(s: Sys) {
   if (s.app === 'messages' && top.startsWith('c:')) screen = at === 'group' ? GROUP_NAME : eggOf(at)?.name
   else if (s.app === 'finder') screen = companyOf(top) ? COMPANIES.find((company) => company.key === companyOf(top))?.name : top === MY_CARD ? SITE.legalName : 'Portfolio'
   else if (s.app === 'notes') screen = top.startsWith('n:') ? FAQS[Number(at)]?.question : top === 'f:faqs' ? 'FAQs' : null
-  else if (s.app === 'photos' && top.startsWith('m:')) screen = MEDIA[Number(at)]?.drop
   return [screen, PHONE[s.app].label].filter(Boolean).join('\n')
 }
 

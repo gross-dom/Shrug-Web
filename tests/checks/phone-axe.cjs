@@ -54,7 +54,6 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
     ['messages', 'messages', []], ['conversation', 'messages', ['c:group']], ['details', 'messages', ['c:group'], 'details'], ['easter egg', 'messages', ['c:founder']], ['portfolio folder', null, [], 'folder:portfolio'], ['faqs folder', null, [], 'folder:faqs'],
     ['contacts', 'finder', []], ['company', 'finder', ['co:Varda']], ['company with no site', 'finder', ['co:HQ Trivia']], ['my card', 'finder', ['me']],
     ['notes list', 'notes', ['f:faqs']], ['note', 'notes', ['f:faqs', 'n:4']], ['folders', 'notes', []], ['new folder', 'notes', [], 'new-folder'], ['notes folder', 'notes', ['f:notes']],
-    ['library', 'photos', []], ['viewer', 'photos', ['m:0']], ['info', 'photos', ['m:0'], 'info'],
     ['terminal', 'terminal', []],
   ]) { await at(app, stack, sheet ?? null); await run(where) }
   // Screens reached by their own controls
@@ -66,12 +65,15 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await must('contacts search results', async () => { await top().locator('.ios-search__input').fill('an', { timeout: 8000 }); await sleep(500) }); await run('contacts search results')
   await must('contacts search with nothing found', async () => { await top().locator('.ios-search__input').fill('zzzz', { timeout: 8000 }); await sleep(500) }); await run('contacts search, nothing found')
   await must('contacts search ending', async () => { await top().locator('button[aria-label="Cancel"]').tap({ timeout: 8000 }); await sleep(500) })
-  // VIP's one menu
-  await at('photos', [])
-  await must('vip menu', async () => { await top().locator('button[aria-label="Sort and Filter"]').first().tap({ timeout: 8000 }); await sleep(500) }); await run('vip menu'); await page.keyboard.press('Escape'); await sleep(300)
+  // VIP has no screens of its own: it is a link in the Dock (the Home Screen, above), and what search finds of it is a link too
+  await at(null, [])
+  await must('search, VIP found', async () => { await page.locator('.sb-search').tap({ timeout: 8000 }); await sleep(700); await page.locator('.ph input[aria-label*="Search" i]').last().fill('vip', { timeout: 8000 }); await sleep(600); if (!(await page.locator('.ph a.spot-row[data-top]').count())) throw new Error('VIP was not found as a link') }); await run('search, VIP found')
+  await page.keyboard.press('Escape'); await sleep(300); await page.keyboard.press('Escape'); await sleep(500)
+  // The conversation whose link leads to VIP
+  await at('messages', ['c:drops']); await run('the Drops conversation')
   // A message of the visitor's own, delivered
   await at('messages', ['c:founder'])
-  await must('a sent message', async () => { await top().locator('textarea, input').first().fill('Hello', { timeout: 8000 }); await page.keyboard.press('Enter'); await sleep(1500); if (!(await top().locator('.chat-sent').count())) throw new Error('no Delivered receipt') }); await run('a sent message')
+  await must('a sent message', async () => { await top().locator('input[aria-label="iMessage"]').fill('Hello', { timeout: 8000 }); await page.keyboard.press('Enter'); await sleep(1500); if (!(await top().locator('.chat-sent').count())) throw new Error('no Delivered receipt') }); await run('a sent message')
   await at('notes', ['f:faqs']); await top().locator('button[aria-label="More"]').first().tap(); await sleep(500); await run('notes menu'); await page.keyboard.press('Escape'); await sleep(300)
   await top().locator('input[aria-label*="Search" i]').fill('drop'); await sleep(500); await run('notes search')
   await at('notes', []); await top().locator('button[aria-label="New Note"]').first().tap(); await sleep(900); await page.keyboard.type('Mine'); await run('own note')

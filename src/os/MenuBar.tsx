@@ -1,7 +1,7 @@
 import { AccountItem } from './Account'
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { chat, finishChat, replayChat, toggleChat } from '../apps/chat'
-import { finder, photos, setFinderView, setMediaFilter, setNotesQuery, showNote, notes } from '../apps/state'
+import { finder, setFinderView, setNotesQuery, showNote, notes } from '../apps/state'
 import { FAQS, WHATS_NEW } from '../data/faqs'
 import { SITE } from '../data/site'
 import { Popover } from '../kit/motion/Popover'
@@ -84,7 +84,6 @@ function useMenus(): MenuDef[] {
   const paused = useStore(chat, (s) => s.paused)
   const done = useStore(chat, (s) => s.done)
   const view = useStore(finder, (s) => s.view)
-  const filter = useStore(photos, (s) => s.filter)
   const note = useStore(notes, (s) => s.note)
   const never = useStore(saver, (s) => s.never)
   const auto = useStore(wallpaper, (s) => s.auto)
@@ -98,17 +97,11 @@ function useMenus(): MenuDef[] {
       ? [item(paused ? 'Resume Replies' : 'Pause Replies', toggleChat, { disabled: done }), item('Show Every Reply', finishChat, { disabled: done }), rule, item('Play From the Start', replayChat)]
       : active === 'finder'
         ? [item('as Icons', () => setFinderView('icons'), { checked: view === 'icons' }), item('as List', () => setFinderView('list'), { checked: view === 'list' })]
-        : active === 'photos'
-          ? [
-              item('All', () => setMediaFilter('all'), { checked: filter === 'all' }),
-              item('Photos', () => setMediaFilter('photo'), { checked: filter === 'photo' }),
-              item('Videos', () => setMediaFilter('video'), { checked: filter === 'video' }),
-            ]
-          : active === 'notes'
-            ? [item('Next Question', () => showNote((note + 1) % FAQS.length)), item('Previous Question', () => showNote((note + FAQS.length - 1) % FAQS.length))]
-            : active === 'wallpapers'
-              ? [item('Next Wallpaper', nextWallpaper), rule, item('Change Each Visit', () => setWallpaperAuto(!auto), { checked: auto })]
-              : []
+        : active === 'notes'
+          ? [item('Next Question', () => showNote((note + 1) % FAQS.length)), item('Previous Question', () => showNote((note + FAQS.length - 1) % FAQS.length))]
+          : active === 'wallpapers'
+            ? [item('Next Wallpaper', nextWallpaper), rule, item('Change Each Visit', () => setWallpaperAuto(!auto), { checked: auto })]
+            : []
 
   const menus: MenuDef[] = [
     {
@@ -143,7 +136,8 @@ function useMenus(): MenuDef[] {
       id: 'go',
       label: 'Go menu',
       title: 'Go',
-      items: [...DOCK_APPS.map((id) => item(APPS[id].name, () => launch(id))), rule, { kind: 'item', label: 'One-pager', href: SITE.onePager }],
+      // The Dock's own row: its apps, then VIP, which is the points site and leaves for it as the one-pager leaves
+      items: [...DOCK_APPS.map((id) => item(APPS[id].name, () => launch(id))), { kind: 'item', label: 'VIP', href: SITE.points }, rule, { kind: 'item', label: 'One-pager', href: SITE.onePager }],
     },
   ]
   if (viewItems.length) menus.push({ id: 'view', label: 'View menu', title: 'View', items: viewItems })

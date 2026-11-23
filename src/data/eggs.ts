@@ -57,7 +57,8 @@ export const EGGS: Egg[] = [
     ago: 3 * DAY,
     messages: [
       { from: 'them', text: 'Your drop is out for delivery.' },
-      { from: 'them', link: { label: 'See who got one in VIP', app: 'photos' } },
+      // VIP is the points site, not an app of this one: the link leaves for it, in a tab of its own
+      { from: 'them', link: { label: 'See who got one in VIP', href: SITE.points } },
     ],
   },
 ]

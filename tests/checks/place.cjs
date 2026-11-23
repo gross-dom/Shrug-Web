@@ -77,8 +77,6 @@ const windows = (page) =>
     ['?open=faqs&at=4', 'notes', 'f:faqs,n:3', null],
     ['?open=chat&at=founder', 'messages', 'c:founder', null],
     ['?open=chat', 'messages', 'c:group', null],
-    // (VIP is one grid: what a link names inside it is not a place there, and the grid is what opens)
-    ['?open=vip&at=billboards', 'photos', '', null],
     ['?open=faqs&at=99', 'notes', 'f:faqs', null],
     ['?open=portfolio&at=nobody', 'finder', '', null],
   ]) {

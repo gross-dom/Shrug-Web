@@ -24,7 +24,7 @@ import { useReducedMotion } from '../kit/reduced-motion'
 // The picture keeps its own shape as it grows. The window goes from a square
 // to the shape of the screen, twice as tall as it is wide, and a picture
 // stretched to cover it all the way was drawn tall and thin in mid-flight
-// (VIP's letters, a company's logo). So the picture grows by one amount, the
+// (a terminal's prompt, a company's logo). So the picture grows by one amount, the
 // one that keeps it as wide as the window, and stays in the middle of the
 // window's height while it fades.
 

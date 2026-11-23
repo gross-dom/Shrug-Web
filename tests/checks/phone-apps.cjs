@@ -1,7 +1,8 @@
 // Inside each iPhone app, as a phone in the hand (touch, 393x760). Prints PASS/FAIL per check.
-//   node phone-apps.cjs [base url] [only: contacts|notes|photos|terminal|settings|messages]
+//   node phone-apps.cjs [base url] [only: contacts|notes|vip|terminal|settings|messages]
 const { chromium } = require('playwright')
 const path = require('path')
+const { points } = require('./lib.cjs')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
 const only = process.argv[3]
 const out = path.join(__dirname, '..', 'audit', 'shots')
@@ -23,7 +24,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     const app = page.locator('.sb-slot[data-front]')
     // The screen on top of the app in front
     const top = app.locator('.ios-page[data-pos="top"]')
-    return { ctx, page, sleep: (ms) => page.waitForTimeout(ms), app, top, st: () => page.evaluate(() => history.state?.shrug), title: () => top.evaluate((el) => { const h = el.querySelector('.ios-large, .photos-head__title, .ios-bar__name'); if (!h) return null; const sub = h.querySelector('.ios-bar__sub'); return (sub ? h.textContent.slice(0, h.textContent.length - sub.textContent.length) : h.textContent).trim() }).catch(() => null) }
+    return { ctx, page, sleep: (ms) => page.waitForTimeout(ms), app, top, st: () => page.evaluate(() => history.state?.shrug), title: () => top.evaluate((el) => { const h = el.querySelector('.ios-large, .ios-bar__name'); if (!h) return null; const sub = h.querySelector('.ios-bar__sub'); return (sub ? h.textContent.slice(0, h.textContent.length - sub.textContent.length) : h.textContent).trim() }).catch(() => null) }
   }
   const run = async (name, fn) => {
     if (only && only !== name) return
@@ -169,69 +170,49 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     await ctx.close()
   })
 
-  // ---- Photos (VIP) ----
-  await run('photos', async () => {
-    const { ctx, page, sleep, app, top, st, title } = await open('open=vip')
-    const tiles = await top.locator('.photos-tile').count()
-    say(tiles === 33 && (await title()) === 'VIP', 'VIP is one grid of Shrug’s 33 pictures', `${tiles} tiles, "${await title()}"`)
-    // Laid out as a collection is in Photos: the first picture heads the page, the name over its foot
-    const head = await top.evaluate((el) => { const h = el.querySelector('.photos-head'); const r = h?.getBoundingClientRect(); const g = el.querySelector('.photos-grid')?.getBoundingClientRect(); return h ? { top: Math.round(r.top), tall: Math.round(r.height), line: h.querySelector('.photos-head__line')?.textContent, play: !!h.querySelector('button.photos-head__play'), gridUnder: !!g && g.top >= r.bottom - 0.5, sorter: !!el.querySelector('.ios-foot button[aria-label="Sort and Filter"]') } : null })
-    say(!!head && head.top === 0 && head.tall > 300 && !head.play && head.gridUnder && head.sorter && head.line === '33 Items', 'the first picture heads the page from the very top of the screen, with the name over it and no Play button; the grid is under it, and Sort and Filter floats at the foot', JSON.stringify(head))
-    say((await app.locator('.ios-tabs, .ios-tabs__item').count()) === 0 && (await app.locator('button[aria-label="Search"]').count()) === 0 && (await app.getByText(/Collections|Albums|Media Types/).count()) === 0, 'with nothing to find one’s way round: no tabs, no collections, no search')
-    say((await top.getByText('on their way', { exact: false }).count()) === 0 && (await top.getByText('8 Photos, 4 Videos').count()) === 0, 'and counts nothing that has not arrived, and promises nothing')
-    await page.screenshot({ path: path.join(out, 'apps-photos.png') })
-    // The picture at the head is pressed as its square in the grid is, and is still headed by the page's name
-    const opener = await top.evaluate((el) => { const b = el.querySelector('.photos-head button'); const h = el.querySelector('.photos-head h2'); return b ? { label: b.getAttribute('aria-label'), first: el.querySelector('.photos-tile')?.getAttribute('aria-label'), heading: h?.textContent.trim(), inButton: !!h?.closest('button') } : null })
-    say(!!opener && opener.label === opener.first && opener.heading === 'VIP' && !opener.inButton, 'the picture at the head is a button named as the first square is, and the name over it is still a heading', JSON.stringify(opener))
-    await page.touchscreen.tap(W / 2, 200); await sleep(1000)
-    say((await st()).stacks.photos.join() === 'm:0', 'pressed, it opens the first one', (await st()).stacks.photos.join())
-    await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label="Back"]').first().tap(); await sleep(900)
-    await top.locator('button[aria-haspopup="menu"]').first().tap(); await sleep(450)
-    await top.locator('[role^="menuitem"]', { hasText: 'Videos' }).first().tap(); await sleep(700)
-    const videos = await top.locator('.photos-tile').count()
-    say(videos === 0, 'the filter narrows it to videos, of which there are none yet', `${videos} tiles`)
-    await top.locator('button[aria-haspopup="menu"]').first().tap(); await sleep(450)
-    await top.locator('[role^="menuitem"]', { hasText: 'All Items' }).first().tap(); await sleep(700)
-    await top.locator('.photos-tile').first().tap(); await sleep(1000)
-    say((await st()).stacks.photos.join() === 'm:0', 'a tile opens the viewer', (await st()).stacks.photos.join())
-    await page.screenshot({ path: path.join(out, 'apps-viewer.png') })
-    const capsule = await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] .photos-viewer__title > span').evaluate((el) => { const cs = getComputedStyle(el); return `${cs.fontSize} ${cs.fontWeight} ${cs.color}` })
-    say(capsule === '11px 500 rgb(0, 0, 0)', 'the second line on its capsule is 11 points, in the label\'s ink and not a quieter gray', capsule)
-    // Pulled down by a finger the picture follows; let go early it springs back, let go far enough down the viewer closes
-    const cdp = await ctx.newCDPSession(page)
-    const finger = async (from, to, lift = true) => {
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from[0], y: from[1] }] })
-      for (let i = 1; i <= 10; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from[0] + ((to[0] - from[0]) * i) / 10, y: from[1] + ((to[1] - from[1]) * i) / 10 }] }); await sleep(20) }
-      const moved = await page.evaluate(() => document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"] .photos-page:not([inert])')?.firstElementChild.style.transform ?? '')
-      if (lift) await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
-      return moved
+  // ---- VIP: not an app. It is the points site (a link in the Dock: phone-flow.cjs), and nothing opens an app of that name ----
+  await run('vip', async () => {
+    const fresh = async (tail) => {
+      const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, isMobile: true })
+      await points(ctx)
+      const page = await ctx.newPage()
+      page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+      page.on('pageerror', (e) => errors.push(String(e)))
+      await page.goto(base + tail); await page.waitForTimeout(2200)
+      return { ctx, page, sleep: (ms) => page.waitForTimeout(ms) }
     }
-    const held = await finger([W / 2, 300], [W / 2, 360]); await sleep(700)
-    const sprung = await page.evaluate(() => document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"] .photos-page:not([inert])')?.firstElementChild.style.transform ?? null)
-    say(/^translateY\(60px\)/.test(held) && sprung === '' && (await st()).stacks.photos.join() === 'm:0', 'pulled down 60 points the picture follows the finger, and let go it springs back', `${held} -> "${sprung}"`)
-    await finger([W / 2, 300], [W / 2, 450]); await sleep(900)
-    say((await st()).stacks.photos.length === 0 && (await title()) === 'VIP', 'pulled down 150 and let go, the viewer closes', (await st()).stacks.photos.join())
-    await top.locator('.photos-tile').first().tap(); await sleep(1000)
-    // (a finger going sideways still turns the page, and pulls nothing)
-    await finger([W * 0.8, 380], [W * 0.2, 400]); await sleep(900)
-    say((await st()).stacks.photos.join() === 'm:1', 'a finger that goes sideways turns to the next one, as before', (await st()).stacks.photos.join())
-    await page.keyboard.press('ArrowLeft'); await sleep(900)
-    await page.keyboard.press('ArrowRight'); await sleep(900)
-    say((await st()).stacks.photos.join() === 'm:1', 'the next one is a step away', (await st()).stacks.photos.join())
-    const tools = await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] button').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
-    say(!tools.some((t) => /Album|Library|More/.test(t || '')), 'the viewer leads nowhere else: Back, Favorite and Info', tools.join(', '))
-    await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label*="Favorite" i]').first().tap(); await sleep(400)
-    await page.locator('.sb-slot[data-front] .ios-page[data-pos="top"] button[aria-label="Back"]').first().tap(); await sleep(900)
-    say((await st()).stacks.photos.length === 0 && (await title()) === 'VIP', 'Back is the grid again')
-    await top.locator('button[aria-haspopup="menu"]').first().tap(); await sleep(450)
-    await top.locator('[role^="menuitem"]', { hasText: 'Favorites' }).first().tap(); await sleep(700)
-    say((await top.locator('.photos-tile').count()) === 1, 'and the one that was favorited is what the Favorites filter shows')
-    // The way out: Back, in the corner where a collection in Photos has one
-    const way = top.locator('.ios-bar__side:not(.ios-bar__side--end) button')
-    say((await way.count()) === 1 && (await way.getAttribute('aria-label')) === 'Home Screen', 'the library has Back in its corner, named for where it leads', await way.getAttribute('aria-label').catch(() => 'none'))
-    await way.tap(); await sleep(900)
-    say((await st()).app === null, 'which is the Home Screen')
-    await ctx.close()
+    const where = (page) => page.evaluate(() => ({ locked: !!document.querySelector('.sb-lock:not([data-leaving])'), app: history.state?.shrug?.app ?? null, front: document.querySelector('.sb-slot[data-front]')?.getAttribute('data-app') ?? null, slots: [...document.querySelectorAll('.sb-slot')].map((el) => el.dataset.app).join(), address: location.search + location.hash }))
+    // An address that asks for it (an old link: VIP was an app once, and `photos` was its other name) asks for
+    // nothing the phone has: the visit begins as any visit does, on the Lock Screen, and the word is not kept
+    for (const tail of ['?open=vip', '?open=photos', '?OPEN=VIP&at=billboards', '#vip']) {
+      const { ctx, page } = await fresh(tail)
+      const at = await where(page)
+      say(at.locked && at.app === null && at.front === null && at.slots === '', `${tail} opens no app: the phone is on its Lock Screen, as on any visit`, JSON.stringify(at))
+      await ctx.close()
+    }
+    // Named with an app the phone has, that app is what opens
+    {
+      const { ctx, page } = await fresh('?open=vip,faqs')
+      const at = await where(page)
+      say(!at.locked && at.front === 'notes' && at.slots === 'notes' && at.address === '?open=faqs', '?open=vip,faqs opens Notes, and the address says only that', JSON.stringify(at))
+      await ctx.close()
+    }
+    {
+      const { ctx, page, sleep } = await fresh('?open=vip')
+      await page.keyboard.press('Enter'); await sleep(1100)
+      let at = await where(page)
+      say(!at.locked && at.app === null && at.address === '', 'opened, it is the Home Screen, and the address has let go of the word', JSON.stringify(at))
+      // A step in the browser's history that names the app (one written by the site as it was, in a tab left open)
+      await page.evaluate(() => { const state = { shrug: { app: 'photos', stacks: { photos: ['m:0'] }, sheet: null }, n: (history.state?.n ?? 0) + 1 }; history.pushState(state, ''); window.dispatchEvent(new PopStateEvent('popstate', { state })) })
+      await sleep(900)
+      at = await page.evaluate(() => ({ front: document.querySelector('.sb-slot[data-front]')?.getAttribute('data-app') ?? null, slots: document.querySelectorAll('.sb-slot').length, home: !!document.querySelector('.sb-home:not([inert])'), title: document.title }))
+      say(at.front === null && at.slots === 0 && at.home && at.title === 'Shrug', 'a step in history that names a VIP app is the Home Screen: there is no such app to show', JSON.stringify(at))
+      // The App Switcher has nothing of it, and search offers the apps without it
+      await page.locator('.sb-search').tap(); await sleep(800)
+      const offered = await page.locator('.ph .spot-apps .spot-app__name').allTextContents()
+      say(offered.join(' | ') === 'Messages | Contacts | Notes | Case Studies', 'search suggests the four apps, and VIP is not among them', offered.join(' | '))
+      await ctx.close()
+    }
   })
 
   // ---- Case Studies (the terminal) ----

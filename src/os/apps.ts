@@ -1,7 +1,11 @@
 // The apps on the desktop: what each is called, how big its window opens and
 // how small it can get. The windows themselves are in src/apps.
+//
+// VIP is in the Dock with these and is not one of them: it is the way to the
+// points site, a link that opens in a tab of its own (Dock.tsx). It has no
+// window, so it has no entry here, and an address cannot ask for it by name.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'photos' | 'about' | 'wallpapers' | 'updates'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates'
 
 export interface Size {
   w: number
@@ -87,17 +91,6 @@ export const APPS: Record<AppId, AppSpec> = {
     lightsY: 19,
     dock: 3,
   },
-  photos: {
-    id: 'photos',
-    name: 'VIP',
-    blurb: 'When the drops landed',
-    size: fit({ w: 0.65, h: 0.78 }, { w: 780, h: 540 }, { w: 1100, h: 740 }),
-    min: { w: 420, h: 340 },
-    nudge: { x: 50, y: -16 },
-    resizable: true,
-    lightsY: 26,
-    dock: 4,
-  },
   about: {
     id: 'about',
     name: 'About Shrug',
@@ -154,5 +147,4 @@ export const ALIASES: Record<string, AppId> = {
   faqs: 'notes',
   faq: 'notes',
   'case-studies': 'terminal',
-  vip: 'photos',
 }

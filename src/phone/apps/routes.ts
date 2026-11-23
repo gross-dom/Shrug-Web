@@ -35,6 +35,3 @@ export function contactsFor(key: string | null): string[] {
 /** Notes: the folder the questions are kept in, and one of them as a note inside it (`['f:faqs', 'n:3']`). */
 export const FAQS_FOLDER = 'f:faqs'
 export const noteView = (index: number) => `n:${index}`
-
-/** VIP: one photo or video in the viewer, by its place in the library. With no such screen, the library itself. */
-export const mediaView = (index: number) => `m:${index}`

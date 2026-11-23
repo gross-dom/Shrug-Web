@@ -263,9 +263,9 @@ const touchOf = (t) => ({
     await A.at(p, 'finder', ['co:Varda']); titles.company = await p.title()
     await A.at(p, 'finder', ['me']); titles.mine = await p.title()
     await A.at(p, 'notes', ['f:faqs', 'n:4']); titles.note = await p.title()
-    await A.at(p, 'photos', []); titles.vip = await p.title()
+    await A.at(p, 'terminal', []); titles.terminal = await p.title()
     // No emoticon in the tab: the name alone on the Lock and Home Screens
-    const want = { lock: 'Shrug', home: 'Shrug', chat: 'Testimonials · Messages · Shrug', contacts: 'Portfolio · Contacts · Shrug', company: 'Varda · Contacts · Shrug', mine: 'Shrug Capital · Contacts · Shrug', note: 'How do you do marketing? · Notes · Shrug', vip: 'VIP · Shrug' }
+    const want = { lock: 'Shrug', home: 'Shrug', chat: 'Testimonials · Messages · Shrug', contacts: 'Portfolio · Contacts · Shrug', company: 'Varda · Contacts · Shrug', mine: 'Shrug Capital · Contacts · Shrug', note: 'How do you do marketing? · Notes · Shrug', terminal: 'Case Studies · Shrug' }
     say(Object.keys(want).every((k) => titles[k] === want[k]), 'the page is titled by where the phone is', JSON.stringify(titles))
     say(Object.values(titles).every((title) => !/ツ/.test(title)), 'and no title has the shrug emoticon in it')
     await t.ctx.close()
@@ -276,7 +276,7 @@ const touchOf = (t) => ({
     const t = await fresh('iphone')
     const p = t.page
     await A.unlock(p)
-    for (const [app, stack] of [['notes', ['f:faqs']], ['photos', []], ['finder', ['co:Varda']]]) await A.at(p, app, stack, null, 700)
+    for (const [app, stack] of [['notes', ['f:faqs']], ['terminal', []], ['finder', ['co:Varda']]]) await A.at(p, app, stack, null, 700)
     const key = p.locator('.sb-homebar__key', { hasText: 'App Switcher' })
     await key.focus()
     await p.keyboard.press('Shift'); await p.waitForTimeout(150)
@@ -313,7 +313,7 @@ const touchOf = (t) => ({
     const pan = await p.evaluate(() => { const a = document.querySelector('.sb-apps'); return { at: a.dataset.at, pan: parseFloat(a.dataset.pan), stride: a.offsetWidth * 0.76 } })
     say(pan.at === '1' && Math.abs(pan.pan - pan.stride) < 1, 'panned to the second card and turned, it still rests on that card', JSON.stringify(pan))
     const second = await mine()
-    say(second.closes.join() === 'Close VIP' && second.names.join() === 'VIP', 'and the name and the ✕ showing are that card\'s', JSON.stringify(second))
+    say(second.closes.join() === 'Close Case Studies' && second.names.join() === 'Case Studies', 'and the name and the ✕ showing are that card\'s', JSON.stringify(second))
     await p.setViewportSize({ width: 393, height: 760 }); await p.waitForTimeout(600)
     // Delete closes the card that has the keyboard; the close button closes another
     const before = await p.evaluate(() => document.querySelectorAll('.sb-card__hit').length)
@@ -408,7 +408,7 @@ const touchOf = (t) => ({
       const took = await apart; await q.waitForTimeout(1300); return took
     }
     const landed = () => q.evaluate(() => { const a = document.activeElement; const place = history.state.shrug; return { app: place.app, depth: place.app ? place.stacks[place.app].length : -1, typing: !!a?.matches?.('input, textarea'), on: (a?.className ?? '').toString().slice(0, 24) } })
-    for (const [name, sel, gap, depth] of [['Notes', '.sb-dock .sb-icon[aria-label^="Notes"]', 300, 1], ['Contacts', '.sb-dock .sb-icon[aria-label^="Contacts"]', 480, 0], ['VIP', '.sb-dock .sb-icon[aria-label^="VIP"]', 450, 0], ['Case Studies', '.sb-grid > .sb-icon[aria-label^="Case Studies"]', 300, 0]]) {
+    for (const [name, sel, gap, depth] of [['Notes', '.sb-dock .sb-icon[aria-label^="Notes"]', 300, 1], ['Contacts', '.sb-dock .sb-icon[aria-label^="Contacts"]', 480, 0], ['Case Studies', '.sb-grid > .sb-icon[aria-label^="Case Studies"]', 300, 0]]) {
       await A.at(q, null, [], null, 800)
       const took = await twice(await mid(q, sel), gap)
       const got = await landed()
@@ -502,8 +502,9 @@ const touchOf = (t) => ({
     say(inNote.app === 'notes' && now.app === null && now.sheet === null && now.n === first.n, 'a question picked in the FAQs folder and sent home: the Home Screen with the folder shut, on its own step', JSON.stringify({ inNote: inNote.n, now }))
     say(now.long <= first.long + 2, 'three visits to apps have left the browser nothing to step back through but the Home Screen itself', `history is ${now.long} long, from ${first.long}`)
     // gone into further and then sent home, the same: the nearest Home Screen behind, however many steps back
-    await u.touch.tap(...(await mid(q, '.sb-dock .sb-icon[aria-label^="VIP"]'))); await q.waitForTimeout(1300)
-    await u.touch.tap(...(await mid(q, '.sb-slot[data-front] .photos-tile'))); await q.waitForTimeout(1000)
+    // (Messages, which was left on the conversation: opened from the Dock it is there, and its details are a step further)
+    await u.touch.tap(...(await mid(q, '.sb-dock .sb-icon[aria-label^="Messages"]'))); await q.waitForTimeout(1300)
+    await u.touch.tap(...(await mid(q, '.sb-slot[data-front] button[aria-haspopup="dialog"]'))); await q.waitForTimeout(1000)
     const deep = await step()
     await flickHome()
     now = await step()
@@ -626,6 +627,9 @@ const touchOf = (t) => ({
     await A.unlock(p)
     const one = await p.evaluate(() => { const a = [...document.querySelectorAll('.sb-home a.sb-icon')][0]; return { drag: a.draggable, name: a.textContent.replace(/\s+/g, ' ').trim() } })
     say(one.drag === false && /One-pager, opens in a new tab/.test(one.name), 'the One-pager icon says where it goes and cannot be dragged off', JSON.stringify(one))
+    // (VIP, in the Dock, is the other icon that is a link: the Dock shows no names, so it says so on the link itself)
+    const vip = await p.evaluate(() => { const a = document.querySelector('.sb-dock a.sb-icon'); return a && { drag: a.draggable, name: a.getAttribute('aria-label'), href: a.href, target: a.target, shown: getComputedStyle(a.querySelector('.sb-icon__name')).display } })
+    say(!!vip && vip.drag === false && vip.name === 'VIP, opens in a new tab' && vip.href === A.POINTS && vip.target === '_blank' && vip.shown === 'none', 'the VIP icon says where it goes too (the points site, in a new tab), and cannot be dragged off', JSON.stringify(vip))
     const words = await p.evaluate(() => document.querySelector('.sb-chat__count .sr-only').textContent)
     say(/No one has replied yet|\d+ of 89 ha(s|ve) replied/.test(words) && !/^1 of 89 have/.test(words), 'the widget counts in a sentence', words)
     // the first banner of a visit is not held back
@@ -702,7 +706,7 @@ const touchOf = (t) => ({
     say(clock[0] >= 0 && clock[1] <= 280, 'at 280 wide the clock fits', JSON.stringify(clock))
     await A.unlock(p)
     const names = await p.evaluate(() => { const els = [...document.querySelectorAll('.sb-grid > .sb-icon .sb-icon__name')].map((n) => n.getBoundingClientRect()).sort((a, b) => a.top - b.top || a.left - b.left); const bad = []; for (let i = 1; i < els.length; i++) if (Math.abs(els[i].top - els[i - 1].top) < 4 && els[i].left < els[i - 1].right - 0.5) bad.push(i); return { n: els.length, bad } })
-    // (two names on the grid now that VIP is in the Dock: Case Studies and the one-pager)
+    // (two names on the grid, with VIP in the Dock: Case Studies and the one-pager)
     say(names.n >= 2 && names.bad.length === 0, 'and no icon name runs into the next', JSON.stringify(names))
     await t.ctx.close()
 

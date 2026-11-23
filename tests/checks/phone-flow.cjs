@@ -2,6 +2,7 @@
 //   node phone-flow.cjs [base url]
 const { chromium } = require('playwright')
 const path = require('path')
+const { POINTS, points, tabFrom } = require('./lib.cjs')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
 const out = path.join(__dirname, '..', 'audit', 'shots')
 ;(async () => {
@@ -9,6 +10,8 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   const W = 393, H = 760
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, isMobile: true })
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write'])
+  // (VIP leads off the site, to the points site: this answers in its place, so nothing here asks the network)
+  await points(ctx)
   const page = await ctx.newPage()
   const cdp = await ctx.newCDPSession(page)
   const errors = []
@@ -60,11 +63,11 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   await touch.swipe([note.x + note.width / 2, note.y + note.height / 2], [note.x + note.width / 2, note.y - 260], 150); await sleep(900)
   let s = await at()
   say(!s.locked && s.app === null, 'a swipe up opens it onto the Home Screen, even one that starts on a notification')
-  say((await page.locator('.sb-dock .sb-icon').count()) === 4 && s.replies >= 1 && s.badge === String(s.replies), 'the Dock holds four apps, and the badge on Messages counts the replies that have come in', `badge ${s.badge}, ${s.replies} replies`)
+  say((await page.locator('.sb-dock button.sb-icon').count()) === 3 && (await page.locator('.sb-dock a.sb-icon').count()) === 1 && s.replies >= 1 && s.badge === String(s.replies), 'the Dock holds three apps and VIP, and the badge on Messages counts the replies that have come in', `badge ${s.badge}, ${s.replies} replies`)
   say((await page.locator('.sb-widget--wide').count()) === 1 && (await page.locator('.sb-folder').count()) === 2, 'the newest reply as a widget, and the Portfolio and FAQs folders')
 
   // ---- Every app opens out of its icon and goes home on a flick ----
-  for (const [label, id] of [['Messages', 'messages'], ['Contacts', 'finder'], ['Notes', 'notes'], ['VIP', 'photos'], ['Case Studies', 'terminal']]) {
+  for (const [label, id] of [['Messages', 'messages'], ['Contacts', 'finder'], ['Notes', 'notes'], ['Case Studies', 'terminal']]) {
     await page.locator(`.sb-icon[aria-label^="${label}"]`).first().tap()
     await page.waitForSelector(`${front(id)} .ios-page[data-pos="top"] .ios-screen, ${front(id)} .ios-screen`, { timeout: 8000, state: 'attached' }).catch(() => {})
     await sleep(900)
@@ -73,6 +76,14 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     say(open && (await at()).app === null, `${label} opens out of its icon, and a flick of the home bar sends it back`)
   }
 
+  // ---- VIP is in the Dock with them and is no app: it is a link to the points site, in a tab of its own ----
+  const vip = await page.evaluate(() => { const a = document.querySelector('.sb-dock a.sb-icon'); return a && { last: a === a.parentElement.lastElementChild, name: a.getAttribute('aria-label'), href: a.href, target: a.target, rel: a.rel, drawn: !!a.querySelector('.sb-icon__tile svg'), drag: a.draggable } })
+  say(!!vip && vip.last && vip.name === 'VIP, opens in a new tab' && vip.href === POINTS && vip.target === '_blank' && /\bnoopener\b/.test(vip.rel) && /\bnoreferrer\b/.test(vip.rel) && vip.drawn && vip.drag === false, 'VIP is the last icon in the Dock, under its own tile: a link to the points site that says it opens in a new tab', JSON.stringify(vip))
+  const went = await tabFrom(ctx, () => page.locator('.sb-dock a.sb-icon').tap())
+  await sleep(900)
+  s = await at()
+  say(!!went && went.url === POINTS && went.alone === true && s.app === null && !s.locked && (await page.locator('.sb-slot[data-app="photos"]').count()) === 0, 'a tap on it opens the points site in a tab of its own, and no app on the phone', JSON.stringify({ went, app: s.app, cards: s.cards }))
+
   // ---- The App Switcher ----
   await page.locator('.sb-icon[aria-label^="Notes"]').first().tap(); await sleep(1000)
   await touch.down(W / 2, H - 6)
@@ -80,11 +91,11 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   await sleep(420)
   await touch.up(); await sleep(900)
   s = await at()
-  say(s.switcher && s.cards === 5, 'a swipe up and a pause opens the App Switcher with every app that has been opened', `${s.cards} cards`)
+  say(s.switcher && s.cards === 4 && (await page.locator('.sb-slot[data-app="photos"]').count()) === 0, 'a swipe up and a pause opens the App Switcher with every app that has been opened (four: VIP is not one)', `${s.cards} cards`)
   await page.screenshot({ path: path.join(out, 'flow-switcher.png') })
   await touch.swipe([W * 0.5, H * 0.55], [W * 0.5, H * 0.08], 130); await sleep(900)
   s = await at()
-  say(s.switcher && s.cards === 4, 'flicking a card up closes that app', `${s.cards} cards left`)
+  say(s.switcher && s.cards === 3, 'flicking a card up closes that app', `${s.cards} cards left`)
   await page.touchscreen.tap(W / 2, H / 2); await sleep(900)
   s = await at()
   say(!s.switcher && !!s.app, 'tapping a card goes to that app', s.app)

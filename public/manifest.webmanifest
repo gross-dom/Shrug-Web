@@ -1,7 +1,7 @@
 {
   "name": "Shrug",
   "short_name": "Shrug",
-  "description": "Shrug Capital: what people say, the portfolio, FAQs and drops.",
+  "description": "Shrug Capital: what people say, the portfolio and FAQs.",
   "start_url": "./",
   "display": "browser",
   "background_color": "#040618",

@@ -1,8 +1,11 @@
-// Fixer T's checks: Case Studies (the terminal) and VIP, on both layouts.
+// Fixer T's checks: Case Studies (the terminal) and VIP, on both layouts. VIP was a photo library when these
+// were written; it is the way to the points site now, a link wherever it appears, and its half of these holds
+// to that: the link by every route, no window or app by any, and the two windows still laid out with its
+// classes (Wallpapers, LP Updates) looking as they did.
 //   node terminal-vip.cjs [base] [only: term|vip|axe]
-// (term: terminal-vip.cjs itself; vip: terminal-vip-pictures.cjs; axe: terminal-vip-axe.cjs, axe-core over the same screens on both layouts.)
-// The base is the dev server unless given (the built site: http://127.0.0.1:4173/). Two groups of checks need a
-// module swapped under the page (a contact address, a picture in a slot): those run on the dev server only.
+// (term: terminal-vip.cjs itself; vip: terminal-vip-link.cjs; axe: terminal-vip-axe.cjs, axe-core over the same screens on both layouts.)
+// The base is the dev server unless given (the built site: http://127.0.0.1:4173/). One group of checks needs a
+// module swapped under the page (a contact address): it runs on the dev server only.
 const A = require('./lib.cjs')
 const path = require('path')
 const BASE = process.argv[2] || 'http://127.0.0.1:5173/'
@@ -151,10 +154,11 @@ async function terminal(browser) {
   check('open portfolio: the Portfolio window comes to the front', (await front()) === 'finder', await front())
   await p.click('[data-dock-app="terminal"]')
   await p.waitForTimeout(500)
-  // every app `open` offers opens (asked what, it says which there are)
+  // everything `open` offers leads somewhere (asked what, it says which there are): four are windows, and
+  // VIP, which has none, is handed over as the one-pager is: a line to press, to the points site in a new tab
   await type('open')
   const offered = (await lines()).slice(-1)[0].replace(/^open: what\? /, '').replace(/\.$/, '').split(', ')
-  const windows = { portfolio: 'finder', faqs: 'notes', vip: 'photos', chat: 'messages', about: 'about' }
+  const windows = { portfolio: 'finder', faqs: 'notes', vip: 'terminal', chat: 'messages', about: 'about' }
   const opened = []
   for (const name of offered) {
     await type(`open ${name}`)
@@ -163,7 +167,15 @@ async function terminal(browser) {
     await p.click('[data-dock-app="terminal"]')
     await p.waitForTimeout(500)
   }
-  check('open <app>: each of the five it offers opens its window', offered.length === 5 && opened.join() === offered.map((name) => `${name}:${windows[name]}`).join(), opened.join())
+  check('open <app>: of the five it offers, four open their windows and VIP opens none (the terminal stays in front)', offered.join() === 'portfolio,faqs,vip,chat,about' && opened.join() === offered.map((name) => `${name}:${windows[name]}`).join(), opened.join())
+  await type('open vip')
+  const handed = { said: (await lines()).slice(-2), link: await p.locator('.wf[data-app="terminal"] .term__link').last().evaluate((a) => ({ words: a.childNodes[0].textContent, says: a.textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel })), wins: await p.evaluate(() => [...document.querySelectorAll('.wf[data-app]')].map((w) => w.dataset.app).sort().join()) }
+  check('open vip: says where VIP is, and hands over a link to the points site, in a new tab', handed.said[0] === 'vip is on the points site:' && handed.link.words === 'open vip' && /, in a new tab$/.test(handed.link.says) && handed.link.href === A.POINTS && handed.link.target === '_blank' && handed.link.rel === 'noopener noreferrer', JSON.stringify(handed))
+  const to = await A.tabFrom(t.ctx, () => p.locator('.wf[data-app="terminal"] .term__link').last().click())
+  await p.waitForTimeout(500)
+  check('open vip: the link opens the points site in a tab of its own, and no window on the desk', !!to && to.url === A.POINTS && to.alone === true && !/photos|vip/.test(handed.wins) && (await p.locator('.wf[data-app="photos"]').count()) === 0 && (await front()) === 'terminal', JSON.stringify({ to, wins: handed.wins }))
+  await type('open photos')
+  check('open photos: the name the VIP window had opens nothing, and says so', /^open: nothing called photos\. try portfolio, faqs, vip, chat, about\.$/.test((await lines()).slice(-1)[0]) && (await front()) === 'terminal', (await lines()).slice(-1)[0])
   // the rules the terminal printed are the FAQs' own, word for word
   await p.click('[data-dock-app="notes"]')
   await p.waitForTimeout(500)
@@ -189,8 +201,8 @@ async function terminal(browser) {
     return line()
   }
   const inTerm = () => p.evaluate(() => !!document.activeElement?.closest('.wf[data-app="terminal"]') && document.activeElement.classList.contains('term__input'))
-  const done = [await tab('fo'), await tab('cat va'), await tab('cat varda/'), await tab('open port'), await tab('whois tony h')]
-  check('Tab: finishes a command, a directory, the file in it, an app and a name', done.join('|') === 'fortune |cat varda/|cat varda/README |open portfolio |whois tony hawk ' && (await inTerm()), done.join('|'))
+  const done = [await tab('fo'), await tab('cat va'), await tab('cat varda/'), await tab('open port'), await tab('whois tony h'), await tab('open vi')]
+  check('Tab: finishes a command, a directory, the file in it, an app, a name, and VIP', done.join('|') === 'fortune |cat varda/|cat varda/README |open portfolio |whois tony hawk |open vip ' && (await inTerm()), done.join('|'))
   const before = (await lines()).length
   const several = await tab('cat s')
   check('Tab: several it could be: as far as they agree', several === 'cat super' && (await inTerm()), several)
@@ -292,7 +304,7 @@ async function terminal(browser) {
   await p.waitForTimeout(900)
   const names = () => app.locator('.term-ios-key').evaluateAll((els) => els.map((e) => e.textContent.trim()))
   check('phone: y, n and help at the foot', (await names()).join() === 'y,n,help', (await names()).join())
-  check('phone: the way Home is in the corner, as it is in Contacts and VIP', (await app.locator('.ios-bar button[aria-label="Home Screen"]').count()) === 1)
+  check('phone: the way Home is in the corner, as it is in Contacts', (await app.locator('.ios-bar button[aria-label="Home Screen"]').count()) === 1)
   await app.locator('.term-ios-key', { hasText: /^y$/ }).tap()
   await p.waitForTimeout(700)
   text = await app.locator('.term__log').innerText()
@@ -323,12 +335,16 @@ async function terminal(browser) {
   await p.waitForTimeout(300)
   const still = await A.state(p)
   check('phone: Escape empties the line and stays in the app', (await app.locator('.term__input').inputValue()) === '' && still.place?.app === 'terminal', JSON.stringify(still.place))
+  // VIP is no app on the phone either: open vip stays in the terminal and hands over the link to the points site
   await app.locator('.term__input').fill('open vip')
   await app.locator('.term__input').press('Enter')
   await p.waitForTimeout(1200)
-  check('phone: open vip launches VIP', (await A.state(p)).place?.app === 'photos', JSON.stringify((await A.state(p)).place))
-  await A.at(p, 'terminal', [])
-  // every other app help offers opens something too. The phone has no About Shrug: Shrug's own card in Contacts opens
+  const vipLine = await app.locator('.term__link').last().evaluate((a) => ({ words: a.childNodes[0].textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel, tall: Math.round(a.getBoundingClientRect().height) }))
+  check('phone: open vip launches nothing: the terminal stays, with a link to the points site tall enough for a finger', (await A.state(p)).place?.app === 'terminal' && vipLine.words === 'open vip' && vipLine.href === A.POINTS && vipLine.target === '_blank' && vipLine.rel === 'noopener noreferrer' && vipLine.tall >= 40 && /vip is on the points site:/.test(await app.locator('.term__log').innerText()), JSON.stringify({ place: (await A.state(p)).place, vipLine }))
+  const vipTab = await A.tabFrom(t.ctx, () => app.locator('.term__link').last().tap())
+  await p.waitForTimeout(600)
+  check('phone: tapped, it opens the points site in a tab of its own, and the phone is still in the terminal', !!vipTab && vipTab.url === A.POINTS && vipTab.alone === true && (await A.state(p)).place?.app === 'terminal' && (await p.locator('.sb-slot[data-app="photos"]').count()) === 0, JSON.stringify(vipTab))
+  // every app help offers opens something. The phone has no About Shrug: Shrug's own card in Contacts opens
   const term = p.locator('.sb-slot[data-app="terminal"]')
   const reached = []
   for (const name of ['portfolio', 'faqs', 'chat', 'about']) {
@@ -400,11 +416,11 @@ async function terminal(browser) {
   await t.ctx.close()
 }
 
-// ---------------------------------------------------------------- VIP (filled in below)
+// ---------------------------------------------------------------- VIP (terminal-vip-link.cjs)
 
 async function vip(browser) {
-  const { vipChecks } = require('./terminal-vip-pictures.cjs')
-  await vipChecks({ A, browser, BASE, DEV, check, shot, arrived, swap })
+  const { vipChecks } = require('./terminal-vip-link.cjs')
+  await vipChecks({ A, browser, BASE, check, shot, arrived })
 }
 
 ;(async () => {
@@ -416,7 +432,7 @@ async function vip(browser) {
       const res = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'terminal-vip-axe.cjs'), BASE], { encoding: 'utf8', env: process.env, timeout: 400000 })
       const lines = (res.stdout || '').trim().split('\n')
       for (const line of lines.filter((l) => /^FAIL/.test(l))) console.log(line.slice(0, 500))
-      check('axe: no violations on the terminal and VIP screens, either layout', res.status === 0, lines.slice(-1)[0] + (res.stderr || '').slice(0, 300))
+      check('axe: no violations on the terminal, on where VIP is, or on the windows laid out with its classes, either layout', res.status === 0, lines.slice(-1)[0] + (res.stderr || '').slice(0, 300))
     }
   } catch (e) {
     failed++

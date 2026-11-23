@@ -57,6 +57,24 @@ const NETWORK = {
 
 exports.launch = () => chromium.launch()
 
+/** Where VIP leads: the points site's address, as the site itself has it (`SITE.points` in src/data/site.ts). */
+exports.POINTS = /\bpoints: '([^']+)'/.exec(fs.readFileSync(path.join(S, '..', 'src', 'data', 'site.ts'), 'utf8'))[1]
+
+/** Answers for the points site, so that a check which follows VIP there asks nothing of the network and
+ * finds a page whether or not that site is up: an empty page of that address. */
+exports.points = (ctx) => ctx.route(exports.POINTS + '**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>The points site</title>' }))
+
+/** Presses something that should open a tab of its own, and says where the tab went: its address, whether
+ * it was given no way back to the page that opened it (`alone`), or null if no tab opened. The tab is closed. */
+exports.tabFrom = async (ctx, press) => {
+  const [tab] = await Promise.all([ctx.waitForEvent('page', { timeout: 5000 }).catch(() => null), press()])
+  if (!tab) return null
+  await tab.waitForLoadState('domcontentloaded').catch(() => {})
+  const went = { url: tab.url(), alone: await tab.evaluate(() => window.opener === null).catch(() => null) }
+  await tab.close().catch(() => {})
+  return went
+}
+
 /** Answers for the weather service the desk's widget asks (api.weather.gov), so that nothing a check finds
  * depends on the weather or on the service: 58 degrees and mostly cloudy, by day. `as` changes the hour's
  * forecast; `as: 'down'` has the service fail. */
@@ -91,6 +109,7 @@ exports.open = async (browser, opts = {}) => {
   })
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
   if (opts.weather !== false) await exports.weather(ctx, opts.weather)
+  await exports.points(ctx)
   const page = await ctx.newPage()
   const errors = []
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
@@ -159,9 +178,6 @@ exports.PHONE_SCREENS = [
   ['notes-folders', 'notes', []],
   ['notes-newfolder', 'notes', [], 'new-folder'],
   ['notes-own', 'notes', ['f:notes']],
-  ['vip-library', 'photos', []],
-  ['vip-viewer', 'photos', ['m:0']],
-  ['vip-info', 'photos', ['m:0'], 'info'],
   ['terminal', 'terminal', []],
 ]
 
@@ -193,7 +209,7 @@ exports.overflow = (page) =>
       const r = el.getBoundingClientRect()
       if (!r.width || !r.height) continue
       const text = (el.textContent || '').trim().slice(0, 40)
-      if (r.bottom > 0 && r.top < vh && (r.right > vw + 1.5 || r.left < -1.5) && !el.closest('[data-scroller], .sb-open__pages, .photos-albums, .chat__scroll')) {
+      if (r.bottom > 0 && r.top < vh && (r.right > vw + 1.5 || r.left < -1.5) && !el.closest('[data-scroller], .sb-open__pages, .chat__scroll')) {
         // only the outermost offender of a subtree
         if (!out.some((o) => o.kind === 'offscreen-x' && o.el.contains(el))) out.push({ kind: 'offscreen-x', el, sel: name(el), text, rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] })
       }

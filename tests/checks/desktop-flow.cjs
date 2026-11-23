@@ -3,8 +3,10 @@ const { chromium } = require('playwright')
 ;(async () => {
   const browser = await chromium.launch()
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
-  // (the weather the desk's widget asks for is answered here: lib.cjs)
-  await require('./lib.cjs').weather(ctx)
+  // (the weather the desk's widget asks for is answered here, and so is the points site, where VIP leads: lib.cjs)
+  const { weather, points, tabFrom, POINTS } = require('./lib.cjs')
+  await weather(ctx)
+  await points(ctx)
   const page = await ctx.newPage()
   const errors = []
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
@@ -14,14 +16,32 @@ const { chromium } = require('playwright')
   // ---- what this round changed
   // (Looked at as soon as it is there: the first reply is under three seconds away)
   await page.waitForSelector('.conv', { timeout: 20000 }); await page.waitForTimeout(250)
-  const bar = await page.evaluate(() => ({ menus: [...document.querySelectorAll('.menubar__title')].map((t) => t.textContent.trim()), status: document.querySelector('.menubar__status').textContent.trim(), links: document.querySelectorAll('.menubar__status a, .menubar__status button').length }))
-  ok('the menu bar has no Help, reply count or one-pager', !bar.menus.includes('Help') && bar.links === 0 && !/replied|pager/i.test(bar.status), JSON.stringify(bar))
+  // The right of the bar holds two things, Log In and the clock, and Log In is the one thing there to press
+  // (it lets down the account's sheet: account.cjs). What was taken out of the bar stays out: no Help menu,
+  // no count of replies and no link to the one-pager, so nothing there is a link at all
+  const bar = await page.evaluate(() => {
+    const status = document.querySelector('.menubar__status')
+    return {
+      menus: [...document.querySelectorAll('.menubar__menus .menubar__title')].map((t) => t.textContent.trim()),
+      status: status.textContent.trim(),
+      holds: [...status.children].map((el) => el.className).join(' | '),
+      pressed: [...status.querySelectorAll('button, [role="button"], [tabindex]')].map((el) => `${el.tagName.toLowerCase()} ${el.textContent.trim()}`),
+      links: status.querySelectorAll('a').length,
+    }
+  })
+  ok('the menu bar has no Help, reply count or one-pager: at its right are Log In and the clock, and no link', !bar.menus.includes('Help') && bar.links === 0 && bar.holds === 'menubar__account | menubar__clock' && bar.pressed.join() === 'button Log In' && !/replied|pager|help/i.test(bar.status), JSON.stringify(bar))
+  // The address this visit came on names three windows and VIP, which is no window (it is the Dock's link to the
+  // points site): the three open with the conversation, and nothing opens for VIP
+  await page.waitForTimeout(900)
+  const opened = await page.evaluate(() => [...document.querySelectorAll('.wf')].map((w) => w.dataset.app).sort().join())
+  ok('an address that asks for VIP among other windows opens the others and no window for VIP', opened === 'finder,messages,notes,terminal', opened)
   const list = await page.evaluate(() => ({ rows: document.querySelectorAll('.conv').length, first: document.querySelector('.conv .ss-row__title')?.textContent, replies: document.querySelectorAll('.chat__thread [data-person]').length }))
   ok('the left panel has Testimonials and the three easter-egg conversations, before anyone has replied', list.rows === 4 && list.first === 'Testimonials' && list.replies === 0, JSON.stringify(list))
   // The shrug is drawn in one place on the desktop: the corner of the menu bar. It is the emoticon there, not the logo
   const mark = await page.evaluate(() => { const el = document.querySelector('[data-menu-mark]'); const shrug = '¯\\_(ツ)_/¯'; const rest = document.body.innerText.split(shrug).length - 1; return { text: el?.textContent.trim(), drawn: !!el?.querySelector('svg'), times: rest } })
   ok('the corner of the menu bar is the shrug emoticon, and that is the only place it is', mark.text === '¯\\_(ツ)_/¯' && !mark.drawn && mark.times === 1, JSON.stringify(mark))
   // The Dock: air between its icons, and the one-pager as a sheet of paper as tall as they are
+  // (five tiles before the rule: the four apps, and VIP, which is a link drawn as they are)
   const dock = await page.evaluate(() => {
     const icons = [...document.querySelectorAll('.dock__item .dock__icon')].map((el) => el.getBoundingClientRect())
     const apps = icons.slice(0, 5)
@@ -176,10 +196,32 @@ const { chromium } = require('playwright')
   await page.click('[data-dock-app="terminal"]'); await page.waitForTimeout(500)
   await page.keyboard.type('y'); await page.keyboard.press('Enter'); await page.waitForTimeout(400)
   ok('the terminal answers a yes with what can be read now, and asks for nothing', /two are public/.test(await page.locator('.term__log').innerText()) && (await page.locator('.term__link').count()) === 3 && !/email/i.test(await page.locator('.term__log').innerText()))
-  await page.click('[data-dock-app="photos"]'); await page.waitForTimeout(500)
-  await page.click('.seg [data-target="video"]'); await page.waitForTimeout(400)
-  ok('VIP filters to videos', (await page.locator('.vip-tile').count()) === (await page.locator('.vip-tile[data-kind="video"]').count()))
-  ok('VIP is one grid: no sidebar of drops, no row of them along the top', (await page.locator('.wf[data-app="photos"] .side, .wf[data-app="photos"] .vip__chips, .wf[data-app="photos"] .chip').count()) === 0)
+  // ---- VIP: in the Dock where it was, under its tile and its name, and a link to the points site in a tab of its own
+  const vip = await page.evaluate(() => {
+    const items = [...document.querySelectorAll('.dock [data-dock-item]')]
+    const a = document.querySelector('.dock [data-dock-link="vip"]')
+    const rule = document.querySelector('.dock__rule')
+    return a && { tag: a.tagName, at: items.indexOf(a), of: items.length, beforeRule: a.nextElementSibling === rule, afterApps: a.previousElementSibling?.getAttribute('data-dock-app'), name: a.getAttribute('aria-label'), label: a.querySelector('.dock__label').textContent.trim(), href: a.getAttribute('href'), target: a.target, rel: a.rel, drag: a.draggable, tile: !!a.querySelector('.dock__icon svg.app-icon'), app: a.hasAttribute('data-dock-app') }
+  })
+  ok('VIP is the fifth icon in the Dock, after Case Studies and before the rule, under its own tile and name', !!vip && vip.at === 4 && vip.of === 6 && vip.beforeRule && vip.afterApps === 'terminal' && vip.label === 'VIP' && vip.tile, JSON.stringify(vip))
+  ok('it is a link to the points site that opens in a new tab, with no way back to this one, and says so', !!vip && vip.tag === 'A' && vip.href === POINTS && vip.target === '_blank' && vip.rel === 'noopener noreferrer' && vip.name === 'VIP, opens in a new tab' && vip.drag === false && !vip.app, JSON.stringify(vip))
+  const front = () => page.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, wins: [...document.querySelectorAll('.wf')].map((w) => w.dataset.app).sort().join(), dot: document.querySelector('.dock [data-dock-link="vip"]').hasAttribute('data-open'), title: document.title }))
+  const was = await front()
+  const went = await tabFrom(ctx, () => page.click('.dock [data-dock-link="vip"]'))
+  await page.waitForTimeout(700)
+  const now = await front()
+  ok('clicked, it opens the points site in a tab of its own', !!went && went.url === POINTS && went.alone === true, JSON.stringify(went))
+  ok('and nothing on the desk changes: no window opens for it, the one in front stays in front, and no dot lights under it', JSON.stringify(now) === JSON.stringify(was) && !/photos|vip/.test(now.wins) && !now.dot && (await page.locator('.wf[data-app="photos"], .wf[data-app="vip"]').count()) === 0, JSON.stringify({ was, now }))
+  // From the keyboard it is a stop along the Dock like any other, and Return follows it
+  await page.focus('[data-dock-app="terminal"]'); await page.keyboard.press('ArrowRight')
+  const onIt = await page.evaluate(() => document.activeElement?.getAttribute('data-dock-link'))
+  const byKey = await tabFrom(ctx, () => page.keyboard.press('Enter'))
+  ok('the arrow keys along the Dock stop on it, and Return opens it the same way', onIt === 'vip' && !!byKey && byKey.url === POINTS, JSON.stringify({ onIt, byKey }))
+  // The Go menu lists it with the Dock's apps, as the link it is
+  await page.click('[data-menu-title="go"]'); await page.waitForTimeout(300)
+  const go = await page.evaluate(() => [...document.querySelectorAll('[data-menu="go"] [data-menu-item]')].map((el) => `${el.tagName.toLowerCase()} ${el.getAttribute('aria-label') ?? el.textContent.trim()}${el.tagName === 'A' ? ` ${el.getAttribute('href')} ${el.target}` : ''}`))
+  ok('the Go menu has it after the apps: a link to the points site that says it opens in a new tab', go.join(' | ') === `button Portfolio | button Group Chat | button FAQs | button Case Studies | a VIP, opens in a new tab ${POINTS} _blank | a One-pager, opens in a new tab https://docsend.com/view/4659mp7f5ci9zdxa _blank`, go.join(' | '))
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300)
   // screen saver
   await page.click('[data-menu-title="mark"]'); await page.click('.menu__item:has-text("Start Screen Saver")'); await page.waitForTimeout(1200)
   ok('the screen saver starts', (await page.locator('.saver[data-on]').count()) === 1)

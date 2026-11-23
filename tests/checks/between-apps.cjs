@@ -1,5 +1,5 @@
 // What happens between apps on the iPhone, and what came with it: how an app opens and is put away, what is seen
-// while it loads, the ways out of Messages, Notes, Contacts and VIP, a message to Shrug with files (and what a
+// while it loads, the ways out of Messages, Notes and Contacts, a message to Shrug with files (and what a
 // reload keeps of it), and the widget on the desk.
 //   node between-apps.cjs [base] [sections]     sections: letters to run (all by default). Exits non-zero if anything fails.
 // A opening  B put away by hand  C the ways out  D a message to Shrug  E the desk's widget  F the desktop's icons
@@ -126,10 +126,11 @@ const touchOf = (t) => ({
     frames = await watching
     seen = frames.filter((f) => f[3])
     say(seen.length > 4 && seen.every((f) => f[4]), 'opened again, it is drawn whole from the first frame', JSON.stringify(seen.slice(0, 2)))
-    // the icon's picture keeps its own shape over the window as it grows: VIP's letters are not drawn tall and thin
+    // the icon's picture keeps its own shape over the window as it grows: a terminal's prompt is not drawn tall and thin
+    // (Case Studies: its icon is Shrug's own drawing, as VIP's letters are, and VIP, which this was tried on, opens no app now)
     await A.at(p, null, [], null, 900)
     let pictured = picture(p, 40)
-    await t.touch.tap(...(await mid(p, '.sb-dock .sb-icon[aria-label^="VIP"]')))
+    await t.touch.tap(...(await mid(p, '.sb-grid > .sb-icon[aria-label^="Case Studies"]')))
     let shape = await pictured
     say(shape.length > 3 && shape.every(([w, h, across, off]) => Math.abs(w - h) <= 2 && Math.abs(w - across) <= 2 && Math.abs(off) <= 2), 'the icon\'s picture keeps its shape as the app opens: square, as wide as the window, in the middle of its height', JSON.stringify(shape.filter((_, i) => i % 3 === 0).map((f) => f.slice(0, 4))))
     await p.waitForTimeout(900)
@@ -243,8 +244,8 @@ const touchOf = (t) => ({
     const t = await fresh('iphone')
     const p = t.page
     await A.unlock(p); await p.waitForTimeout(700)
-    const dock = await p.evaluate(() => [...document.querySelectorAll('.sb-dock .sb-icon')].map((el) => el.getAttribute('aria-label').replace(/,.*/, '')))
-    say(JSON.stringify(dock) === '["Messages","Contacts","Notes","VIP"]', 'the Dock holds Messages, Contacts, Notes and VIP', JSON.stringify(dock))
+    const dock = await p.evaluate(() => [...document.querySelectorAll('.sb-dock .sb-icon')].map((el) => `${el.tagName === 'A' ? 'link' : 'app'} ${el.getAttribute('aria-label').replace(/,.*/, '')}`))
+    say(JSON.stringify(dock) === '["app Messages","app Contacts","app Notes","link VIP"]', 'the Dock holds Messages, Contacts and Notes, and VIP, which is a link and no app', JSON.stringify(dock))
     const TOP = '.sb-slot[data-front] .ios-page[data-pos="top"]'
     await A.at(p, 'messages', [], null, 900)
     let exit = p.locator(`${TOP} .ios-bar button`, { hasText: 'Exit' })
@@ -256,21 +257,12 @@ const touchOf = (t) => ({
     say((await exit.count()) === 1 && (await p.locator(`${TOP} .ios-bar button`, { hasText: 'Edit' }).count()) === 0, 'Notes\' folders have Exit where Edit was')
     await exit.tap(); await p.waitForTimeout(900)
     say((await A.state(p)).place?.app === null, 'which goes to the Home Screen too')
-    // Contacts and VIP have the round Back that those apps have in that corner on an iPhone, named for where it leads
+    // Contacts has the round Back that it has in that corner on an iPhone, named for where it leads
     await A.at(p, 'finder', [], null, 900)
     let back = p.locator(`${TOP} .ios-bar__side:not(.ios-bar__side--end) button`)
     say((await back.count()) === 1 && (await back.getAttribute('aria-label')) === 'Home Screen' && (await back.locator('svg').count()) === 1, 'Contacts\' list has Back in its corner, which says Home Screen')
     await back.tap(); await p.waitForTimeout(900)
     say((await A.state(p)).place?.app === null, 'and goes there')
-    await A.at(p, 'photos', [], null, 900)
-    back = p.locator(`${TOP} .ios-bar__side:not(.ios-bar__side--end) button`)
-    const glass = await back.evaluate((b) => { const cs = getComputedStyle(b); const head = document.querySelector('.sb-slot[data-front] .ios-page[data-pos="top"] .photos-head').getBoundingClientRect(); const r = b.getBoundingClientRect(); return { ground: cs.backgroundColor, ink: cs.color, overHead: r.bottom < head.bottom && r.top >= head.top } }).catch(() => null)
-    say((await back.count()) === 1 && (await back.getAttribute('aria-label')) === 'Home Screen' && !!glass && glass.overHead && /^rgba\(255, 255, 255, 0\.[6-9]/.test(glass.ground) && glass.ink === 'rgb(28, 28, 30)', 'VIP\'s library has it too, on pale glass over the picture at its head', JSON.stringify(glass))
-    await back.tap(); await p.waitForTimeout(900)
-    say((await A.state(p)).place?.app === null, 'and it goes there too')
-    await A.at(p, 'photos', [], null, 900)
-    // (the head's picture is itself pressed, as its square in the grid is: that is the one button in it)
-    say((await p.locator(`${TOP} .photos-head`).count()) === 1 && (await p.locator(`${TOP} .photos-head button:not(.photos-head__open)`).count()) === 0 && (await p.locator(`${TOP} .photos-head button.photos-head__open`).count()) === 1, 'VIP\'s library has no Play button: the picture at its head is the one thing there to press')
     // a card's buttons are clear of the strip along the top of a real phone's page
     await A.at(p, 'finder', ['me'], null, 900)
     const card = await p.evaluate((TOP) => { const b = document.querySelector(`${TOP} .ios-bar button`).getBoundingClientRect(); const strip = document.querySelector('.ph-edge--top').getBoundingClientRect(); const screen = document.querySelector(`${TOP} .ios-screen`); return { button: Math.round(b.top), strip: Math.round(strip.bottom), page: getComputedStyle(screen).backgroundColor } }, TOP)
@@ -414,10 +406,11 @@ const touchOf = (t) => ({
     await t.page.waitForTimeout(900)
     const icons = await t.page.evaluate(() => {
       const fills = (el) => [...el.querySelectorAll('stop')].map((s) => s.getAttribute('stop-color').toLowerCase())
-      const of = (id) => document.querySelector(`.dock [data-dock-item="${id}"] svg, .dock [data-app="${id}"] svg`) ?? [...document.querySelectorAll('.dock svg.app-icon')][['finder', 'messages', 'notes', 'terminal', 'photos'].indexOf(id)]
+      const of = (id) => document.querySelector(`.dock [data-dock-item="${id}"] svg, .dock [data-app="${id}"] svg`) ?? [...document.querySelectorAll('.dock svg.app-icon')][['finder', 'messages', 'notes', 'terminal', 'vip'].indexOf(id)]
       const out = {}
       // (rim: an outline stroked round the tile itself, over what is drawn on it: the lit edge the tiles used to wear)
-      for (const id of ['finder', 'messages', 'notes', 'terminal', 'photos']) { const svg = of(id); out[id] = svg ? { stops: fills(svg).slice(0, 2), ellipse: !!svg.querySelector('ellipse'), dots: svg.querySelectorAll('circle').length, rect: svg.querySelectorAll('rect').length, rim: svg.querySelectorAll(':scope > path[stroke]').length } : null }
+      // (the Dock's five tiles in their order: the four apps, and VIP, which is a link drawn on a tile as they are)
+      for (const id of ['finder', 'messages', 'notes', 'terminal', 'vip']) { const svg = of(id); out[id] = svg ? { stops: fills(svg).slice(0, 2), ellipse: !!svg.querySelector('ellipse'), dots: svg.querySelectorAll('circle').length, rect: svg.querySelectorAll('rect').length, rim: svg.querySelectorAll(':scope > path[stroke]').length } : null }
       const box = (el) => { const b = el.getBBox(); return [b.x, b.y, b.width, b.height] }
       const chat = of('messages')
       // the bubble and its tail: drawn as two shapes under one shadow
@@ -438,7 +431,7 @@ const touchOf = (t) => ({
       out.dot = getComputedStyle(dot).backgroundColor
       return out
     })
-    const tiles = ['finder', 'messages', 'notes', 'terminal', 'photos']
+    const tiles = ['finder', 'messages', 'notes', 'terminal', 'vip']
     say(tiles.every((id) => icons[id]?.rim === 0), 'no tile wears a lit rim round its edge', tiles.map((id) => `${id} ${icons[id]?.rim}`).join(', '))
     say(!icons.messages?.ellipse && icons.messages?.stops.join() === '#84ed7d,#63ce54', 'Messages: a pale bubble on the design\'s green', JSON.stringify(icons.messages))
     say(!!icons.bubble && Math.abs(icons.bubble.wide - 72.6) < 1 && Math.abs(icons.bubble.tall - 60.4) < 1 && Math.abs(icons.bubble.tailFoot - icons.bubble.foot) < 0.6, 'its bubble about 72 by 60 of the tile\'s hundred, its tail a nub that ends level with the bubble\'s foot', JSON.stringify(icons.bubble))

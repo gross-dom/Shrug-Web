@@ -7,11 +7,12 @@ import { focusFirst } from '../os/focus'
 import { useStore } from '../os/store'
 import { setWallpaper, setWallpaperAuto, wallpaper } from '../os/wallpaper'
 
-// The Wallpapers folder on the desk, opened: the desk's wallpapers as a photo library, the way VIP shows
-// the drops (it is laid out with VIP's own grid and its dark room for one picture, styles/apps.css). A
-// press on one opens it large, where it can be put on the desk or downloaded at its full size; the arrows
-// step through the rest and Escape goes back to the grid. Each visit shows the next wallpaper
-// (src/os/wallpaper.ts) until one is put on the desk by hand, and the switch in the bar sets it going again.
+// The Wallpapers folder on the desk, opened: the desk's wallpapers as a photo library (it is laid out with
+// the head, the tiles and the dark room for one picture that were drawn for VIP's window, and still go by
+// its name: `vip…` in styles/apps.css). A press on one opens it large, where it can be put on the desk or
+// downloaded at its full size; the arrows step through the rest and Escape goes back to the grid. Each
+// visit shows the next wallpaper (src/os/wallpaper.ts) until one is put on the desk by hand, and the switch
+// in the bar sets it going again.
 
 /** A file's size as a Mac says it. */
 const sizeOf = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`

@@ -37,7 +37,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   // ---- UX-13: what comes first ----
   const firsts = [
     ['portfolio', 'Contacts'], ['Portfolio', 'Contacts'], ['companies', 'Contacts'], ['contacts', 'Contacts'], ['faqs', 'Notes'], ['faq', 'Notes'], ['questions', 'Notes'],
-    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'VIP'], ['vip', 'VIP'], ['terminal', 'Case Studies'],
+    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'VIP'], ['vip', 'VIP'], ['VIP', 'VIP'], ['points', 'VIP'], ['merch', 'VIP'], ['terminal', 'Case Studies'],
     ['one-pager', 'One-pager'], ['one pager', 'One-pager'], ['onepager', 'One-pager'], ['deck', 'One-pager'],
     ['contact', 'Get in Touch'], ['email', 'Get in Touch'], ['reach', 'Get in Touch'], ['pitch', 'Get in Touch'], ['apply', 'Get in Touch'], ['intro', 'Get in Touch'],
     ['varda', 'Varda'], ['kevin', 'Kevin Olusola'], ['akash', 'Akash Nigam'],
@@ -66,7 +66,6 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   check('"portfolio": Apps and Top Hit come before what is in Messages', r.groups[0]?.name === 'Top Hit' && r.groups.findIndex((g) => g.name === 'Messages') > 0, r.groups.map((g) => g.name).join(' > '))
   await type(t, 'shrug')
   r = await read(t.page)
-  check('"shrug": a drop nothing has arrived for is not what comes first', !!r.top && r.top.title !== 'Shrug Calendar 2020' && r.top.title !== 'Shrug Calendar 2021', `${r.top?.title} · ${titles(r).slice(0, 8).join('/')}`)
   check('"shrug": Shrug’s own card, called what Contacts calls it, with the questions about Shrug still listed', r.top?.sub === 'My Card' && r.top?.tag === 'BUTTON' && titles(r).includes('Why is it called Shrug V?'), `${r.top?.sub} · ${titles(r).slice(0, 8).join('/')}`)
   await type(t, 'dom')
   r = await read(t.page)
@@ -90,11 +89,18 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await A.shot(t.page, 'fix-s2-search-shrug')
   await type(t, 'drops')
   r = await read(t.page)
-  check('"drops": VIP first, the drops listed, and the conversation of that name under Messages', r.top?.title === 'VIP' && (r.groups.find((g) => g.name === 'VIP')?.rows.length ?? 0) >= 3 && r.groups.find((g) => g.name === 'Messages')?.rows.some((x) => x.title === 'Drops'), r.groups.map((g) => g.name + ':' + g.rows.length).join(' '))
+  // VIP is the points site: found first by its name and by the site's word for what it is about, as the link it is in
+  // the Dock. The drops themselves were what its app held, and with the app gone there is no list of them to find
+  check('"drops": VIP first, a link to the points site in a new tab, with where it goes under its name', r.top?.title === 'VIP' && r.top.tag === 'A' && r.top.href === A.POINTS && r.top.target === '_blank' && r.top.sub === new URL(A.POINTS).hostname.replace(/^www\./, ''), JSON.stringify(r.top))
+  check('"drops": no drop is listed, and no group of them; the conversation of that name is under Messages', !r.groups.some((g) => g.name === 'VIP') && !titles(r).some((title) => /Billboards|Deep Tech Mat|Shrug Calendar|VC Puzzle/.test(title)) && r.groups.find((g) => g.name === 'Messages')?.rows.some((x) => x.title === 'Drops'), r.groups.map((g) => g.name + ':' + g.rows.map((x) => x.title).join('/')).join(' '))
   await type(t, 'deep')
   r = await read(t.page)
-  check('"deep": the drop of that name is found, now that its picture is in', titles(r).includes('Deep Tech Mat'), `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 120)}`)
-  check('…and a drop with nothing in it does not claim a photo', !r.groups.find((g) => g.name === 'VIP')?.rows.some((x) => /photo|video/.test(x.sub)), JSON.stringify(r.groups.find((g) => g.name === 'VIP')?.rows))
+  check('"deep": the companies of that vertical, and no drop of that name', titles(r).includes('Varda') && !titles(r).includes('Deep Tech Mat') && r.top?.title !== 'Deep Tech Mat', `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 120)}`)
+  for (const q of ['photos', 'videos', 'albums']) {
+    await type(t, q)
+    r = await read(t.page)
+    check(`"${q}": VIP is not found by what its app held`, r.top?.title !== 'VIP' && !titles(r).includes('VIP'), `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 80)}`)
+  }
   await type(t, 'appl')
   r = await read(t.page)
   check('"appl": the way to Shrug is listed', [r.top?.title, ...titles(r)].includes('Get in Touch'))
@@ -154,6 +160,12 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   check('Return on the one-pager opens it in a tab of its own, and search closes', !!popup && /docsend\.com/.test(popup.url() + (await popup.evaluate(() => location.href).catch(() => ''))) || (!!popup && true), popup ? popup.url() : 'no tab')
   check('…search is closed behind it', !(await t.page.$('.spot:not([data-leaving])')))
   if (popup) await popup.close().catch(() => {})
+  // and so on VIP, which leads to the points site: no app is opened for it
+  await openSearch(t)
+  await type(t, 'vip')
+  const toPoints = await A.tabFrom(t.ctx, () => t.page.keyboard.press('Enter'))
+  await t.sleep(700)
+  check('Return on VIP opens the points site in a tab of its own; search closes, and no app opens', !!toPoints && toPoints.url === A.POINTS && toPoints.alone === true && !(await t.page.$('.spot:not([data-leaving])')) && (await A.state(t.page)).place?.app == null, JSON.stringify({ toPoints, place: (await A.state(t.page)).place }))
 
   // ---- AX-11: what the field and the list say ----
   await openSearch(t)
@@ -163,7 +175,8 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
     const items = [...document.querySelectorAll('[data-spot-item]')]
     return { role: input.getAttribute('role'), expanded: input.getAttribute('aria-expanded'), auto: input.getAttribute('aria-autocomplete'), list: list?.getAttribute('role'), label: list?.getAttribute('aria-label'), options: items.length, allOptions: items.every((i) => i.getAttribute('role') === 'option' && list.contains(i)), tabbable: items.filter((i) => i.tabIndex >= 0).length, live: document.querySelectorAll('.spot-scroll [aria-live]').length, groups: [...list.querySelectorAll('[role="group"]')].map((g) => g.getAttribute('aria-label')) }
   })
-  check('AX-11 the field is a combobox with a listbox of options', ax.role === 'combobox' && ax.expanded === 'true' && ax.auto === 'list' && ax.list === 'listbox' && ax.options === 9 && ax.allOptions && ax.tabbable === 0, JSON.stringify(ax))
+  // (eight before anything is typed: the four apps, and four things to try. VIP is a link and not among the apps)
+  check('AX-11 the field is a combobox with a listbox of options', ax.role === 'combobox' && ax.expanded === 'true' && ax.auto === 'list' && ax.list === 'listbox' && ax.options === 8 && ax.allOptions && ax.tabbable === 0, JSON.stringify(ax))
   await type(t, 'drops')
   await t.page.keyboard.press('ArrowDown'); await t.page.keyboard.press('ArrowDown'); await t.sleep(150)
   ax = await t.page.evaluate(() => {
@@ -217,7 +230,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   check('upright: the field sits on the keyboard, lower than half way down the screen, with the keyboard along the foot', kbTop - field >= 6 && kbTop - field <= 14 && field > 760 / 2, `${field} over ${kbTop} (the pill was at ${pill})`)
   await t.ctx.close()
 
-  // ---- A short search finds what a word begins with, among people, questions and drops as among companies ----
+  // ---- A short search finds what a word begins with, among people and questions as among companies ----
   // (With motion turned down the conversation is all there at once: everyone has replied, and can be found)
   t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still', reducedMotion: true })
   await home(t)
