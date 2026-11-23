@@ -1,0 +1,31 @@
+{
+  "name": "shrug-store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shrug VIP: the card and the store. A member signs in, sees their points and spends them.",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && node build.mjs",
+    "build:demo": "tsc --noEmit && SHRUG_DEMO=1 node build.mjs",
+    "test": "node tests/run.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@fontsource/oswald": "^5.2.8",
+    "@fontsource/red-hat-mono": "^5.2.7",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.3",
+    "vite": "^6.4.5"
+  }
+}
