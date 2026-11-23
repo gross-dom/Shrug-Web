@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { asksAddress, complete, dollarsOf, fmtDollars, fmtPoints, has, keptTo, POINTS_PER_DOLLAR, shortBy, soldOut, wayOf, type Address, type Order, type Product } from '../shared/rules.ts'
-import { DEMO, server, type Backend, type Placed, type StoreAnswer } from './backend.ts'
-import { demo, demoAddPoints, demoPick, demoReset, demoSignIn, PEOPLE } from './demo.ts'
-import { AddressForm, NOWHERE, Pay, whyNot } from './Pay.tsx'
+import { asksAddress, complete, dollarsOf, fmtDollars, fmtPoints, has, keptTo, POINTS_PER_DOLLAR, shortBy, soldOut, wayOf, type Address, type Order, type Product } from '../shared/rules'
+import { DEMO, server, type Backend, type Placed, type StoreAnswer } from './backend'
+import { demo, demoAddPoints, demoPick, demoReset, demoSignIn, PEOPLE } from './demo'
+import { AddressForm, NOWHERE, Pay, whyNot } from './Pay'
 
 // The store: what a member can spend their points on. The card (the site's front page) is where they sign
 // in; this page is shown what the server says they may see, and asks it for everything it does.

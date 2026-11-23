@@ -1,8 +1,8 @@
 import { randomInt } from 'node:crypto'
-import { add, all, change, F, num, one, remove, str, T, type Row } from './airtable.ts'
-import { orderOf, productOf } from './catalogue.ts'
-import { intentOf, type Intent } from './stripe.ts'
-import { dollarsOf, numberOf, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.ts'
+import { add, all, change, F, num, one, remove, str, T, type Row } from './airtable.js'
+import { orderOf, productOf } from './catalogue.js'
+import { intentOf, type Intent } from './stripe.js'
+import { dollarsOf, numberOf, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
 
 // Placing an order: the row in Orders, the points off the balance, and one fewer on the shelf.
 

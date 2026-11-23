@@ -1,8 +1,8 @@
-import { F, files } from './_lib/airtable.ts'
-import { ordersFor, shelvesFor } from './_lib/catalogue.ts'
-import { json } from './_lib/http.ts'
-import { memberAsking, trouble } from './_lib/who.ts'
-import { free, has } from '../shared/rules.ts'
+import { F, files } from './_lib/airtable.js'
+import { ordersFor, shelvesFor } from './_lib/catalogue.js'
+import { json } from './_lib/http.js'
+import { memberAsking, trouble } from './_lib/who.js'
+import { free, has } from '../shared/rules.js'
 
 // A document, handed to a member who has it (or who may see it, where it costs nothing). The file is kept in Airtable (Products → File) and is fetched
 // from there for them each time: it has no address of its own that could be passed on to anyone else.

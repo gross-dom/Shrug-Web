@@ -1,6 +1,6 @@
-import { change, F, T } from './_lib/airtable.ts'
-import { json, read } from './_lib/http.ts'
-import { memberAsking, trouble } from './_lib/who.ts'
+import { change, F, T } from './_lib/airtable.js'
+import { json, read } from './_lib/http.js'
+import { memberAsking, trouble } from './_lib/who.js'
 
 // A member turns the points emails on or off for themselves (Members → No emails).
 export async function POST(request: Request) {

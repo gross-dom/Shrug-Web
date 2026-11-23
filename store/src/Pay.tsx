@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { centsOf, complete, dollarsOf, fmtDollars, type Address, type Product } from '../shared/rules.ts'
-import type { Backend, Failed, Placed } from './backend.ts'
+import { centsOf, complete, dollarsOf, fmtDollars, type Address, type Product } from '../shared/rules'
+import type { Backend, Failed, Placed } from './backend'
 
 // Taking the dollars: the floor and the postage. For real this is Stripe's own Apple Pay button (with Google
 // Pay and Link where a device has those and not Apple Pay), which also asks where to send the thing; under

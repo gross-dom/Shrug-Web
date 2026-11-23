@@ -1,7 +1,7 @@
-import { newCode, RESEND_IN } from './_lib/codes.ts'
-import { json, read, text } from './_lib/http.ts'
-import { sendCode } from './_lib/mail.ts'
-import { trouble } from './_lib/who.ts'
+import { newCode, RESEND_IN } from './_lib/codes.js'
+import { json, read, text } from './_lib/http.js'
+import { sendCode } from './_lib/mail.js'
+import { trouble } from './_lib/who.js'
 
 // The first half of signing in: an address is given, and six digits are emailed to it. The answer is the same
 // whether or not the address is a member's, so that nobody can ask the store who is on the list.

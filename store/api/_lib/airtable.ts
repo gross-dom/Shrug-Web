@@ -1,4 +1,4 @@
-import { env } from './env.ts'
+import { env } from './env.js'
 
 // The Shrug base in Airtable, which is where everything is kept: the members and their points, what is in
 // the store and who may see it, and what has been ordered. Tables and columns are named here by their ids,

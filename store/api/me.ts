@@ -1,7 +1,7 @@
-import { json } from './_lib/http.ts'
-import { answerFor, rowOf } from './_lib/members.ts'
-import { noSessionCookie, signedIn } from './_lib/session.ts'
-import { trouble } from './_lib/who.ts'
+import { json } from './_lib/http.js'
+import { answerFor, rowOf } from './_lib/members.js'
+import { noSessionCookie, signedIn } from './_lib/session.js'
+import { trouble } from './_lib/who.js'
 
 // Who is asking: nobody, someone who signed in and is not on the list, or a member, with their card.
 export async function GET(request: Request) {

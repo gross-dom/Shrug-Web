@@ -1,8 +1,8 @@
-import { json } from './http.ts'
-import { memberOf, rowOf } from './members.ts'
-import { noSessionCookie, signedIn } from './session.ts'
-import type { Row } from './airtable.ts'
-import type { Member } from '../../shared/rules.ts'
+import { json } from './http.js'
+import { memberOf, rowOf } from './members.js'
+import { noSessionCookie, signedIn } from './session.js'
+import type { Row } from './airtable.js'
+import type { Member } from '../../shared/rules.js'
 
 /** The member asking, or the answer to give instead: not signed in, or signed in and not on the list. */
 export async function memberAsking(request: Request): Promise<{ row: Row; member: Member; email: string } | { refuse: Response }> {

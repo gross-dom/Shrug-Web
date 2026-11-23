@@ -1,9 +1,9 @@
-import { add, all, F, str, T } from './_lib/airtable.ts'
-import { checkCode } from './_lib/codes.ts'
-import { json, read, text } from './_lib/http.ts'
-import { answerFor, rowOf, sameAddress } from './_lib/members.ts'
-import { sessionCookie } from './_lib/session.ts'
-import { trouble } from './_lib/who.ts'
+import { add, all, F, str, T } from './_lib/airtable.js'
+import { checkCode } from './_lib/codes.js'
+import { json, read, text } from './_lib/http.js'
+import { answerFor, rowOf, sameAddress } from './_lib/members.js'
+import { sessionCookie } from './_lib/session.js'
+import { trouble } from './_lib/who.js'
 
 // The second half: the six digits come back. A right code signs the address in. A member is shown their
 // card; anyone else is noted in Applications, once, and told they are not on the list yet.

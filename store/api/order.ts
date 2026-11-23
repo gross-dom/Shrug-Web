@@ -1,8 +1,8 @@
-import { ordersFor, shelvesFor } from './_lib/catalogue.ts'
-import { json, read, text } from './_lib/http.ts'
-import { request as ask, reserve, settle, withPoints } from './_lib/orders.ts'
-import { memberAsking, trouble } from './_lib/who.ts'
-import { refusalOf, wayOf, type Address } from '../shared/rules.ts'
+import { ordersFor, shelvesFor } from './_lib/catalogue.js'
+import { json, read, text } from './_lib/http.js'
+import { request as ask, reserve, settle, withPoints } from './_lib/orders.js'
+import { memberAsking, trouble } from './_lib/who.js'
+import { refusalOf, wayOf, type Address } from '../shared/rules.js'
 
 const addressOf = (given: unknown): Address | null => {
   if (!given || typeof given !== 'object') return null

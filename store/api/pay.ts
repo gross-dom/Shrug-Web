@@ -1,8 +1,8 @@
-import { ordersFor, shelvesFor } from './_lib/catalogue.ts'
-import { json, read, text } from './_lib/http.ts'
-import { newIntent } from './_lib/stripe.ts'
-import { memberAsking, trouble } from './_lib/who.ts'
-import { centsOf, refusalOf, wayOf } from '../shared/rules.ts'
+import { ordersFor, shelvesFor } from './_lib/catalogue.js'
+import { json, read, text } from './_lib/http.js'
+import { newIntent } from './_lib/stripe.js'
+import { memberAsking, trouble } from './_lib/who.js'
+import { centsOf, refusalOf, wayOf } from '../shared/rules.js'
 
 // The start of a payment: for something with a floor, the store asks Stripe for a payment of exactly the
 // floor and the postage, and hands the page what it needs to take it. The amount is the store's own, read

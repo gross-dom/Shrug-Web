@@ -1,6 +1,6 @@
-import { numberOf, refusalOf, wayOf, canSee, dollarsOf, written, type Member, type Order, type OrderStatus, type Product } from '../shared/rules.ts'
-import { samplePdf } from '../shared/sample.ts'
-import { save, type Asked, type Backend, type Failed, type Placed } from './backend.ts'
+import { numberOf, refusalOf, wayOf, canSee, dollarsOf, written, type Member, type Order, type OrderStatus, type Product } from '../shared/rules'
+import { samplePdf } from '../shared/sample'
+import { save, type Asked, type Backend, type Failed, type Placed } from './backend'
 
 // A stand-in for the server, for the click-through demo only. It lives in the browser, sends no email, takes
 // no money and talks to nothing. It shares the card page's own demo (the same people, the same balance, kept

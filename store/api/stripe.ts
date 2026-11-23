@@ -1,7 +1,7 @@
-import { json } from './_lib/http.ts'
-import { settle } from './_lib/orders.ts'
-import { fromStripe } from './_lib/stripe.ts'
-import { trouble } from './_lib/who.ts'
+import { json } from './_lib/http.js'
+import { settle } from './_lib/orders.js'
+import { fromStripe } from './_lib/stripe.js'
+import { trouble } from './_lib/who.js'
 
 // Stripe's own word that a payment arrived. The page says so too, the moment it happens; this is for the
 // payment whose page was closed before it could. Either way the order is made once (see settle).

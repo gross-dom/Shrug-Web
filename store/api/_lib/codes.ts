@@ -1,7 +1,7 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto'
-import { add, all, change, F, remove, str, T } from './airtable.ts'
-import { env } from './env.ts'
-import { sameAddress } from './members.ts'
+import { add, all, change, F, remove, str, T } from './airtable.js'
+import { env } from './env.js'
+import { sameAddress } from './members.js'
 
 // Sign-in codes. A member gives their address and is emailed six digits, good for ten minutes and five
 // guesses. What is kept (Sign-ins, in Airtable) is never the code itself, only a mark made from it with

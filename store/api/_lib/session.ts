@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { env } from './env.ts'
-import { cookie, cookiesOf } from './http.ts'
+import { env } from './env.js'
+import { cookie, cookiesOf } from './http.js'
 
 // Who is signed in. A session is a cookie that says which address signed in and until when, signed with the
 // server's secret so that it cannot be written by anyone else. It holds nothing more: who that address is,

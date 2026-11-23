@@ -1,5 +1,5 @@
-import { all, change, F, list, num, str, T, type Row } from './airtable.ts'
-import type { Member } from '../../shared/rules.ts'
+import { all, change, F, list, num, str, T, type Row } from './airtable.js'
+import type { Member } from '../../shared/rules.js'
 
 // The members, as Airtable has them, and as the card and the store are told of them.
 

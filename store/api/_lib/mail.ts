@@ -1,4 +1,4 @@
-import { env } from './env.ts'
+import { env } from './env.js'
 
 // The one email the store sends for itself: the sign-in code. It goes through Resend.
 

@@ -1,4 +1,4 @@
-import type { Address, Member, Order, Product } from '../shared/rules.ts'
+import type { Address, Member, Order, Product } from '../shared/rules'
 
 // What the page asks of the server, and the answers it can get. Built as the demo, a stand-in in the browser
 // answers instead (demo.ts), in exactly these shapes.

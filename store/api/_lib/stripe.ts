@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { env } from './env.ts'
+import { env } from './env.js'
 
 // Stripe, for the dollars: the floor and the postage. The store asks it for a payment of an exact amount,
 // the page takes it by Apple Pay (or a card, where there is no Apple Pay), and the store then asks Stripe

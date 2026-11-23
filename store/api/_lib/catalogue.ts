@@ -1,5 +1,5 @@
-import { all, F, files, list, num, str, T, type Row } from './airtable.ts'
-import { canSee, type Kind, type Member, type Order, type OrderStatus, type Product, type Status } from '../../shared/rules.ts'
+import { all, F, files, list, num, str, T, type Row } from './airtable.js'
+import { canSee, type Kind, type Member, type Order, type OrderStatus, type Product, type Status } from '../../shared/rules.js'
 
 // The store's shelves and a member's orders, read from Airtable and put into the shapes the rules work with.
 

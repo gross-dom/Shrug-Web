@@ -1,9 +1,9 @@
-import { ordersFor, shelvesFor } from './_lib/catalogue.ts'
-import { env } from './_lib/env.ts'
-import { json } from './_lib/http.ts'
-import { noSessionCookie, signedIn } from './_lib/session.ts'
-import { cardOf, memberOf, rowOf } from './_lib/members.ts'
-import { trouble } from './_lib/who.ts'
+import { ordersFor, shelvesFor } from './_lib/catalogue.js'
+import { env } from './_lib/env.js'
+import { json } from './_lib/http.js'
+import { noSessionCookie, signedIn } from './_lib/session.js'
+import { cardOf, memberOf, rowOf } from './_lib/members.js'
+import { trouble } from './_lib/who.js'
 
 // The store, for whoever is asking: what they may see, what they have ordered, and their balance.
 export async function GET(request: Request) {
