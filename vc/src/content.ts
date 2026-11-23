@@ -1,62 +1,57 @@
-import { CASE_STUDIES } from '@data/caseStudies'
-import { DROPS, MEDIA } from '@data/drops'
+import { MEDIA } from '@data/drops'
 import { PEOPLE, type Person, type Relation } from '@data/people'
-import { COMPANIES, VERTICALS } from '@data/portfolio'
-import { ABOUT, SITE } from '@data/site'
+import { COMPANIES, type Company } from '@data/portfolio'
+import { SITE } from '@data/site'
 
 // What the pages say that is not a quote, a company or an answer: read from the same data as the desktop
 // site, or written here where it is this site's own. Nothing here claims more than that data does.
 
-export { CASE_STUDIES, COMPANIES, DROPS, MEDIA, PEOPLE, SITE, VERTICALS }
-export type { Person, Relation }
+export { COMPANIES, MEDIA, SITE }
+export type { Company, Person }
 
-/** How each kind of person is named on this site: a founder Shrug backed, someone who invests in Shrug, someone who invests beside it. */
-export const KINDS: { id: Relation; label: string; one: string }[] = [
-  { id: 'F', label: 'Founders', one: 'Founder backed by Shrug' },
-  { id: 'L', label: 'Investors in Shrug', one: 'Investor in Shrug' },
-  { id: 'C', label: 'Co-investors', one: 'Co-investor' },
-]
+/** The line at the top left of every page, in place of a logo: the Story line from the brand strategy. */
+export const LINE = 'Founders and their teams deserve fans.'
+
+/** Where a visitor writes to. */
+export const EMAIL = 'niv@shrug.vc'
 
 /** The people who have something to say: everyone with a quote, in Shrug's own order. */
 export const VOICES = PEOPLE.filter((person): person is Person & { quote: string } => !!person.quote)
 
-/** The facts under the headline, each said in Shrug's own FAQs (src/data/site.ts keeps them). */
-export const FACTS = [
-  ...ABOUT.facts,
-  { label: 'Backs', value: ABOUT.backs },
-]
+/** What someone is to Shrug, as the pill under their name says it. The wording is the live site's, and the
+ * look of each pill (solid, outlined, grey) is the design's: both are fixed. */
+export const TAGS: Record<Relation, { says: string; look: 'solid' | 'outlined' | 'grey' }> = {
+  F: { says: 'Received funding from Shrug', look: 'solid' },
+  C: { says: 'Co-invested with Shrug', look: 'outlined' },
+  L: { says: 'Investor in Shrug', look: 'grey' },
+}
 
-export const SOCIAL = [
+/** The small links at the foot of the menu. */
+export const LINKS = [
   { label: 'X', href: 'https://twitter.com/ShrugCap' },
-  { label: 'Instagram', href: 'https://www.instagram.com/shrugcap/' },
+  { label: 'Instagram', href: 'https://instagram.com/shrugcap' },
+  { label: 'Merch', href: 'https://shrug-capital-shop.fourthwall.com' },
+  { label: 'shrug.vip', href: 'https://shrug.vip' },
+  { label: EMAIL, href: `mailto:${EMAIL}` },
 ]
 
-/** Where the case studies are kept once the PDF is supplied (vc/public). */
+/** Where the VIP page sends a visitor who wants the whole of it. */
+export const VIP_SITE = 'https://shrug.vip'
+
+/** The case studies are one PDF, kept in vc/public once Shrug has supplied it. Until it is there the menu's
+ * link goes to the page the case studies are on today. */
 export const CASE_STUDIES_PDF = '/shrug-case-studies.pdf'
+export const CASE_STUDIES_PAGE = 'https://www.shrug.vc/case-studies'
 declare const __CASE_STUDIES_PDF__: boolean
 export const HAS_CASE_STUDIES_PDF = __CASE_STUDIES_PDF__
 
-/** Shrug's own write-up of each drop, where it has one (the pages its present site links to). */
-export const DROP_STORY: Record<string, string> = {
-  'Atoms x MKBHD': 'https://shrug.notion.site/Atoms-x-MKBHD-069fbc0e6a1844278826ed71041e03f0',
-  'Feastables x Shrug': 'https://shrug.notion.site/Feastables-Drops-f0d490e8c717409198d29bfc632cf6b6',
-  Billboards: 'https://shrug.notion.site/Shrug-Billboards-c463d3623cae4bfda122c0d2695a8658',
-  'Alt x Shrug': 'https://shrug.notion.site/Alt-5c6b0293534f42e386984ee0d1918947',
-  'VC Puzzle': 'https://shrug.notion.site/VC-Puzzle-bfe01898924149f4b0f24575f25e0c0e',
-  'VC Sticker Pack': 'https://apps.apple.com/us/app/vc-sticker-pack/id1476977521',
-}
+/** The year the site was built in: what the copyright line says until the page has looked at the clock
+ * (vc/vite.config.ts), so that the page as written and the page as it starts up agree. */
+declare const __BUILT_IN__: number
+export const BUILT_IN = __BUILT_IN__
 
 /** Where one of the drops' photographs is on this site. The shared data has them at /vip, which here is a page. */
 export const pictureOf = (src: string) => src.replace(/^\/vip\//, '/drops/')
-
-/** A link's host, as it reads: no scheme, no www. */
-export const hostOf = (url: string) => {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return url
-  }
-}
 
 /** Two letters for someone with no photograph. */
 export const initialsOf = (name: string) =>
@@ -67,6 +62,3 @@ export const initialsOf = (name: string) =>
     .slice(0, 2)
     .join('')
     .toUpperCase()
-
-/** The quotes that talk about the drops themselves (the merch, the boxes, the billboards): they stand among the pictures on the VIP wall. */
-export const DROP_VOICES = VOICES.filter((person) => /\b(merch|billboard|boxes|gifts?|swag|calendar|puzzle|socks)\b/i.test(person.quote))

@@ -1,155 +1,193 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useRef, useState } from 'react'
 import SIZES from 'virtual:picture-sizes'
 import { Arrow } from '../Brand'
-import { DROP_STORY, DROP_VOICES, DROPS, initialsOf, MEDIA, pictureOf, type Person } from '../content'
+import { pictureOf, VIP_SITE } from '../content'
+import { WALL, type Card, type Photo, type Post, type Press, type Text, type Video } from '../wall'
 
-// VIP: a wall of the drops. The pictures are the ones people posted when theirs arrived, each filed under
-// the drop it is of; among them stand a few of the quotes that talk about the drops themselves. The wall
-// can be narrowed to one drop, and a picture opens large.
+// VIP: a wall of what people posted and filmed when a Shrug gift arrived. The cards are set in columns in
+// the order they are given in (vc/src/wall.ts), so the wall keeps its order whatever is added to it. The
+// pills at the top do not take anything away: they dim every card that is not of the kind chosen.
 
-type Tile = { kind: 'photo'; at: number } | { kind: 'voice'; person: Person & { quote: string } }
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'video', label: 'Video' },
+  { id: 'post', label: 'Posts' },
+  { id: 'photo', label: 'Photos' },
+] as const
 
-const PHOTOS = MEDIA.map((slot, at) => ({ slot, at })).filter(({ slot }) => slot.kind === 'photo' && slot.src)
+type Filter = (typeof FILTERS)[number]['id']
 
-/** The wall with nothing narrowed: the pictures in their order, a quote set in after every sixth. */
-const EVERYTHING: Tile[] = PHOTOS.flatMap(({ at }, n) => {
-  const voice = (n + 1) % 6 === 0 ? DROP_VOICES[(n + 1) / 6 - 1] : undefined
-  return voice ? [{ kind: 'photo', at } as Tile, { kind: 'voice', person: voice } as Tile] : [{ kind: 'photo', at } as Tile]
-})
+/** A part of a card that has not been supplied, as the design marks it. */
+const awaited = (what: string) => `[${what}]`
 
-function Look({ run, at, onLook }: { run: number[]; at: number; onLook: (at: number | null) => void }) {
-  const slot = MEDIA[at]!
-  const place = run.indexOf(at)
-  const close = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    const was = document.activeElement as HTMLElement | null
-    close.current?.focus()
-    // The page behind keeps its place and does not move under the picture
-    const overflow = document.documentElement.style.overflow
-    document.documentElement.style.overflow = 'hidden'
-    return () => {
-      document.documentElement.style.overflow = overflow
-      was?.focus?.()
-    }
-  }, [])
-  const step = (by: number) => {
-    const next = run[place + by]
-    if (next !== undefined) onLook(next)
-  }
-  // Over the whole window, from outside the page: nothing the page does to itself can hold it in
-  return createPortal(
-    <div
-      className="look"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Photo from ${slot.drop}. ${place + 1} of ${run.length}.`}
-      onClick={(e) => e.target === e.currentTarget && onLook(null)}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') onLook(null)
-        else if (e.key === 'ArrowRight') step(1)
-        else if (e.key === 'ArrowLeft') step(-1)
-        // The keyboard stays with the picture while it is open
-        else if (e.key === 'Tab') {
-          const stops = [...e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')]
-          const first = stops[0]!
-          const last = stops[stops.length - 1]!
-          if (e.shiftKey && document.activeElement === first) (e.preventDefault(), last.focus())
-          else if (!e.shiftKey && document.activeElement === last) (e.preventDefault(), first.focus())
-        }
-      }}
-    >
-      <div className="look__bar">
-        <span className="label">
-          {slot.drop} · {place + 1} / {run.length}
-        </span>
-        <button ref={close} type="button" className="pill pill--dark" onClick={() => onLook(null)}>
-          Close
-        </button>
-      </div>
-      <img key={slot.src} className="look__picture" src={pictureOf(slot.src!)} alt={`Photo from ${slot.drop}`} />
-      <button type="button" className="round round--dark look__step look__step--back" disabled={place === 0} onClick={() => step(-1)} aria-label="The picture before">
-        <Arrow className="arrow arrow--back" />
-      </button>
-      <button type="button" className="round round--dark look__step look__step--on" disabled={place === run.length - 1} onClick={() => step(1)} aria-label="The next picture">
-        <Arrow className="arrow arrow--on" />
-      </button>
-    </div>,
-    document.body,
+function PhotoCard({ card, early }: { card: Photo; early: boolean }) {
+  const size = SIZES[card.src]
+  return (
+    <figure className="card card--photo" data-kind="photo">
+      <img src={pictureOf(card.src)} width={size?.[0]} height={size?.[1]} alt={`Photo from ${card.drop}`} loading={early ? undefined : 'lazy'} decoding="async" />
+      <span className="card__shade" aria-hidden />
+      <figcaption className="card__drop">{card.drop}</figcaption>
+    </figure>
   )
 }
 
-export function Vip() {
-  const [drop, setDrop] = useState<string | null>(null)
-  const [look, setLook] = useState<number | null>(null)
-  const tiles = useMemo<Tile[]>(() => (drop ? PHOTOS.filter(({ slot }) => slot.drop === drop).map(({ at }) => ({ kind: 'photo', at })) : EVERYTHING), [drop])
-  const run = tiles.flatMap((tile) => (tile.kind === 'photo' ? [tile.at] : []))
-  const drops = DROPS.filter((name) => PHOTOS.some(({ slot }) => slot.drop === name))
+function VideoCard({ card }: { card: Video }) {
+  const film = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
   return (
+    <figure className="card card--video" data-kind="video" data-playing={playing || undefined}>
+      {card.src && <video ref={film} src={card.src} poster={card.poster} preload="none" playsInline controls={playing} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} />}
+      <span className="card__shade" aria-hidden />
+      {card.src ? (
+        <button type="button" className="card__play" aria-label={`Play the video from ${card.name ?? card.drop}`} onClick={() => void film.current?.play()}>
+          <Play />
+        </button>
+      ) : (
+        <>
+          <span className="card__play" aria-hidden>
+            <Play />
+          </span>
+          <span className="label card__label">{awaited(`Video: ${card.drop}`)}</span>
+        </>
+      )}
+      <figcaption className="card__who">
+        <span>{card.name ?? awaited('Name')}</span>
+        <span>{card.role ?? awaited('Role, company')}</span>
+      </figcaption>
+    </figure>
+  )
+}
+
+/** The play triangle: with the arrow and the burger, all the icons there are. */
+function Play() {
+  return (
+    <svg viewBox="0 0 48 48" width={52} height={52} aria-hidden>
+      <path fill="#FFFFFF" d="M12 7.5c0-2.3 2.5-3.7 4.5-2.6l28 15.5c2 1.2 2 4 0 5.2l-28 15.5c-2 1.1-4.5-.3-4.5-2.6z" />
+    </svg>
+  )
+}
+
+function PostCard({ card }: { card: Post }) {
+  const inside = (
     <>
-      <section className="hero hero--page">
-        <p className="label">Shrug VIP</p>
-        <h1 className="h1">The drops.</h1>
-        <p className="lead">
-          {PHOTOS.length} photos from {drops.length} drops, as they landed.
-        </p>
-      </section>
-      <section className="vip" aria-label="Photos from the drops">
-        <div className="chips chips--wrap" role="group" aria-label="Drop">
-          <button type="button" className="chip" aria-pressed={drop === null} onClick={() => setDrop(null)}>
-            All <i>{PHOTOS.length}</i>
-          </button>
-          {drops.map((name) => (
-            <button key={name} type="button" className="chip" aria-pressed={drop === name} onClick={() => setDrop(drop === name ? null : name)}>
-              {name} <i>{PHOTOS.filter(({ slot }) => slot.drop === name).length}</i>
-            </button>
-          ))}
+      <div className="post__head">
+        {card.avatar ? <img className="post__face" src={card.avatar} width={44} height={44} alt="" loading="lazy" decoding="async" /> : <span className="post__face" aria-hidden />}
+        <div className="post__by">
+          <span>{card.name ?? awaited('Name')}</span>
+          <span>{card.handle ?? awaited('@handle')}</span>
         </div>
-        {drop && DROP_STORY[drop] && (
-          <p className="vip__story">
-            <a className="textlink" href={DROP_STORY[drop]} target="_blank" rel="noreferrer">
-              The story of {drop}
-              <Arrow className="arrow arrow--out" />
-              <span className="sr">, opens in a new tab</span>
-            </a>
-          </p>
-        )}
-        <ul className="love">
-          {tiles.map((tile) =>
-            tile.kind === 'photo' ? (
-              <li key={`p${tile.at}`}>
-                <button type="button" className="shot" onClick={() => setLook(tile.at)}>
-                  <img src={pictureOf(MEDIA[tile.at]!.src!)} width={SIZES[MEDIA[tile.at]!.src!]?.[0]} height={SIZES[MEDIA[tile.at]!.src!]?.[1]} alt="" loading="lazy" decoding="async" />
-                  <span className="shot__cap label">
-                    {MEDIA[tile.at]!.drop}
-                    <span className="sr">: photo. Open it.</span>
-                  </span>
-                </button>
-              </li>
-            ) : (
-              <li key={`v${tile.person.name}`} className="card card--love">
-                <blockquote>
-                  <p>{tile.person.quote}</p>
-                </blockquote>
-                <div className="who">
-                  {tile.person.photo ? (
-                    <img className="face" src={`/people/${tile.person.photo}`} width={44} height={44} alt="" loading="lazy" decoding="async" />
-                  ) : (
-                    <span className="face face--none" style={{ width: 44, height: 44, fontSize: 16 }} aria-hidden>
-                      {initialsOf(tile.person.name)}
-                    </span>
-                  )}
-                  <span className="who__text">
-                    <b>{tile.person.name}</b>
-                    <span>{tile.person.role}</span>
-                  </span>
-                </div>
-              </li>
-            ),
-          )}
-        </ul>
-      </section>
-      {look !== null && run.includes(look) && <Look run={run} at={look} onLook={setLook} />}
+        {/* The arrow says the card goes to the original post: a post still to come goes nowhere, and says so by having none */}
+        {card.href && <Arrow size={12} />}
+      </div>
+      <p className="post__text">{card.text ?? awaited(card.awaits ?? 'Post')}</p>
+      {card.photo ? (
+        <img className="post__photo" src={card.photo} alt="" loading="lazy" decoding="async" />
+      ) : (
+        card.awaitsPhoto && (
+          <div className="post__photo post__photo--none">
+            <span className="label">{awaited('Attached photo')}</span>
+          </div>
+        )
+      )}
+      <span className="card__small">
+        {card.when ?? awaited('Time · Date')} · {card.drop}
+      </span>
     </>
+  )
+  return card.href ? (
+    <a className="card card--post" data-kind="post" href={card.href}>
+      {inside}
+    </a>
+  ) : (
+    <article className="card card--post" data-kind="post">
+      {inside}
+    </article>
+  )
+}
+
+function TextCard({ card }: { card: Text }) {
+  const inside = (
+    <>
+      <p className="text__words">{card.text}</p>
+      <div className="text__foot">
+        <span>{card.drop}</span>
+        {card.href && <Arrow size={12} />}
+      </div>
+    </>
+  )
+  return card.href ? (
+    <a className="card card--text" data-kind="text" href={card.href}>
+      {inside}
+    </a>
+  ) : (
+    <article className="card card--text" data-kind="text">
+      {inside}
+    </article>
+  )
+}
+
+function PressCard({ card }: { card: Press }) {
+  const inside = (
+    <>
+      <div className="press__head">
+        <span>{card.publication ?? awaited('Publication')}</span>
+        {card.href && <Arrow size={12} />}
+      </div>
+      <p className="press__headline">{card.headline ?? awaited(card.awaits ?? 'Headline')}</p>
+      <span className="card__small">{card.drop}</span>
+    </>
+  )
+  return card.href ? (
+    <a className="card card--press" data-kind="press" href={card.href}>
+      {inside}
+    </a>
+  ) : (
+    <article className="card card--press" data-kind="press">
+      {inside}
+    </article>
+  )
+}
+
+function WallCard({ card, early }: { card: Card; early: boolean }) {
+  switch (card.kind) {
+    case 'photo':
+      return <PhotoCard card={card} early={early} />
+    case 'video':
+      return <VideoCard card={card} />
+    case 'post':
+      return <PostCard card={card} />
+    case 'text':
+      return <TextCard card={card} />
+    case 'press':
+      return <PressCard card={card} />
+  }
+}
+
+export function Vip() {
+  const [filter, setFilter] = useState<Filter>('all')
+  return (
+    <div className="vip">
+      <div className="pills pills--middle" role="group" aria-label="Filter">
+        {FILTERS.map((f) => (
+          <button key={f.id} type="button" className="pill" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
+            <span>{f.label}</span>
+          </button>
+        ))}
+      </div>
+      <ul className="wall" data-show={filter}>
+        {WALL.map((card, n) => (
+          <li key={n}>
+            {/* The first few are in view as the page opens, and are fetched at once; the rest wait until they are near */}
+            <WallCard card={card} early={n < 6} />
+          </li>
+        ))}
+      </ul>
+      <div className="vip__on">
+        <a className="button" href={VIP_SITE}>
+          Go to shrug.vip
+          <Arrow />
+        </a>
+      </div>
+    </div>
   )
 }

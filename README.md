@@ -242,19 +242,54 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
 
 - **Pages.** Quotes (`/`), Portfolio (`/portfolio`), VIP (`/vip`) and FAQ (`/faq`), named in
   `vc/src/router.tsx`. Each is a real address with HTML of its own (`vc/prerender.mjs` draws every page
-  ahead of time, with its title and description), so a link, a reload or a search engine is given the
-  page itself. Once the site is running, a link between its pages swaps the page in place.
+  ahead of time, with its title, description and link-preview picture), so a link, a reload or a search
+  engine is given the page itself, and all of it is there with no script. Once the site is running, a link
+  between its pages swaps the page in place. The pages have no titles to look at (the menu names the
+  page); each has a heading for assistive tech only.
 - **What it says** is read from the same data as the desktop site (`src/data`: the quotes, the portfolio,
-  the FAQs, the drops), so the two never disagree. Their pictures (`public/logos`, `public/people`,
-  `public/vip`) are copied into the build (the drops' photographs as `/drops`, since `/vip` is a page
-  here). What is this site's own is in `vc/src/content.ts`.
-- **The look** follows the brand kit: Stone, black and white and nothing else; headings in Unbounded Bold,
-  text in DM Sans, small labels in DM Mono. The wordmark and its arrow are the kit's own outlines
-  (`vc/src/brand.ts`) and are not to be redrawn. All of the styling is `vc/src/styles.css`.
-- **The case studies** are one PDF to download. Put it at `vc/public/shrug-case-studies.pdf` and build
-  again; until it is there, the links to it say "PDF soon" and go nowhere.
+  the FAQs, the drops' photographs), so the two never disagree, and none of it is reworded here. The
+  pictures it shows (`public/people`, `public/vip`) are copied into the build (the drops' photographs as
+  `/drops`, since `/vip` is a page here). What is this site's own is in `vc/src/content.ts`.
+- **The look** is the approved redesign ("direction F"): strict black and white, in a light and a dark
+  theme. Every colour is a token at the top of `vc/src/styles.css`, and the class `th-dark` on `<html>`
+  swaps them. Text is DM Sans; Unbounded is used for the four page names in the menu and nowhere else;
+  DM Mono only marks placeholders and sets the initials of someone with no photograph. The wordmark and
+  its arrow are the kit's own outlines (`vc/src/brand.ts`) and are not to be redrawn: the wordmark stands
+  at the foot of the menu and in the footer, and the favicon and the link-preview picture
+  (`vc/public/favicon.svg`, `social.png`) are drawn from it.
+- **The theme.** A first visit follows the visitor's system setting. A choice made in the menu is kept
+  (`shrug-theme` in `localStorage`) and holds on every page from then on. The short script in the head of
+  `vc/index.html` sets the class before anything is painted, so that nobody in the dark sees a white page
+  first; `vc/src/theme.ts` takes over from it, and the two must be kept in step.
+- **The menu** (`vc/src/Menu.tsx`). There is no bar and no logo at the top: one line of text top left, and
+  two lines top right that open a panel from the right and, crossed, shut it. The panel is a dialog (the
+  keyboard goes into it and stays in it, Escape shuts it, the page behind does not scroll) and holds the
+  case studies, Light / Dark, the four pages, and the wordmark with the small links.
+- **Quotes** shows everyone with a testimonial, in the data's order, each in full, and can be narrowed to
+  founders (those Shrug funded) or investors (everyone else). The counts are of the data.
+- **Portfolio** is every company in `src/data/portfolio.ts` as an edge-to-edge grid of squares. A tile lit
+  (a pointer over it, the keyboard on it, or the first tap on a touch screen; the second tap follows the
+  link) shows the company's sector, name and write-up. **Still placeholder:** the design wants a
+  single-colour logo and a photograph for each company, and neither has been supplied (the colour app
+  icons in `public/logos` are not used on this site). Until they are, a tile shows the company's name set
+  in type, marked `[Logo]`, and a dark fill marked `[Photo: …]`. To put a real one in, save the logo as a
+  one-colour SVG and the photograph (800px square or more) in `vc/public/portfolio/`, and name the files
+  against the company's key in `ART` at the top of `vc/src/pages/Portfolio.tsx`. Sixteen companies have no
+  write-up in the data; their tiles show the sector and the name.
+- **VIP** is a wall of cards in columns, in the order `vc/src/wall.ts` gives them. The 33 photographs are
+  real (the ones in `src/data/drops.ts`, each under its drop's name), and so is the one text card about the
+  Deep Tech Mat. **Still placeholder:** no videos, posts or press pieces have been supplied, so two video
+  cards, three post cards and one press card stand on the wall with their missing parts in square brackets
+  (`[Name]`, `[@handle]`, `[Time · Date]` …), to show how each kind looks. To replace one, give the card
+  its real fields in `EXTRAS` in `vc/src/wall.ts` (the file says which) and put its files in
+  `vc/public/wall/`; a card with a link gets the arrow and becomes a link.
+- **FAQ** is every question and answer in `src/data/faqs.ts`, all open, and ends with where to write.
+- **The case studies** are one PDF. Put it at `vc/public/shrug-case-studies.pdf` and build again: the
+  menu's "Case studies PDF" then downloads it, and `/case-studies` already redirects to it
+  (`vc/vercel.json`). Until the file is there the link goes to `https://www.shrug.vc/case-studies`, the
+  page the case studies are on today, so this site should not take over that address before the PDF exists.
 - **Deploying.** `vc/dist` is the whole site, and `vc/vercel.json` goes with it (addresses without
-  `.html`, and how long things are kept).
+  `.html`, `/drops` sent on to `/vip`, and how long things are kept).
 
 ## Accessibility
 

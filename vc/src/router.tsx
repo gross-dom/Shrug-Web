@@ -6,8 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useState, type Mouse
 
 export const ROUTES = [
   { path: '/', label: 'Quotes', title: 'Shrug Capital', description: 'Shrug Capital is an early-stage venture fund. What founders, investors and partners say about working with Shrug.' },
-  { path: '/portfolio', label: 'Portfolio', title: 'Portfolio · Shrug Capital', description: 'The companies Shrug Capital has backed, by vertical.' },
-  { path: '/vip', label: 'VIP', title: 'VIP · Shrug Capital', description: 'Shrug VIP: the drops, and the people who got one.' },
+  { path: '/portfolio', label: 'Portfolio', title: 'Portfolio · Shrug Capital', description: 'The companies Shrug Capital has backed.' },
+  { path: '/vip', label: 'VIP', title: 'VIP · Shrug Capital', description: 'Shrug VIP: what people posted and filmed when a Shrug gift arrived.' },
   { path: '/faq', label: 'FAQ', title: 'FAQ · Shrug Capital', description: 'Questions about Shrug Capital and Shrug V, answered.' },
 ] as const
 

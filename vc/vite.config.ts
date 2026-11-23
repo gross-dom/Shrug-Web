@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react'
 // Shrug.VC: the firm's own site. It is one of the sites kept in this repository, in a folder of its own,
 // and is built by itself (`npm run build:vc`) into vc/dist. What it says is read from the same data the
 // desktop site reads (src/data: the quotes, the portfolio, the FAQs, the drops), so the two never disagree,
-// and the pictures that data names (logos, faces, the drops' photographs) are copied in from public/.
+// and the pictures that data names (faces, the drops' photographs) are copied in from public/.
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -19,7 +19,7 @@ function sharedPicturesServed(): Plugin {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const found = /^\/(logos|people|drops)\/([^?]+)/.exec(req.url ?? '')
+        const found = /^\/(people|drops)\/([^?]+)/.exec(req.url ?? '')
         const file = found && resolve(root, 'public', found[1] === 'drops' ? 'vip' : found[1]!, decodeURIComponent(found[2]!))
         if (!file || !file.startsWith(resolve(root, 'public')) || !existsSync(file)) return next()
         res.setHeader('Content-Type', file.endsWith('.webp') ? 'image/webp' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : file.endsWith('.avif') ? 'image/avif' : 'image/jpeg')
@@ -37,7 +37,8 @@ function sharedPictures(): Plugin {
     closeBundle() {
       // Only into the site itself: the copy of the pages that vc/prerender.mjs builds to draw them needs none
       if (this.environment.config.build.ssr) return
-      for (const folder of ['logos', 'people']) cpSync(resolve(root, 'public', folder), resolve(here, 'dist', folder), { recursive: true })
+      // The portfolio's colour app icons (public/logos) are left behind: this site's grid is black and white and does not show them
+      cpSync(resolve(root, 'public/people'), resolve(here, 'dist/people'), { recursive: true })
       // The drops' photographs are kept at /vip on the desktop site. Here /vip is a page, so they go by another name (pictureOf, in src/content.ts)
       cpSync(resolve(root, 'public/vip'), resolve(here, 'dist/drops'), { recursive: true })
     },
@@ -84,8 +85,12 @@ export default defineConfig({
   root: here,
   plugins: [react(), pictureSizes(), sharedPictures(), sharedPicturesServed()],
   resolve: { alias: { '@data': resolve(root, 'src/data') }, dedupe: ['react', 'react-dom'] },
-  // The case studies are one PDF, kept in vc/public. Until it is there the site says it is on its way.
-  define: { __CASE_STUDIES_PDF__: JSON.stringify(existsSync(resolve(here, 'public/shrug-case-studies.pdf'))) },
+  define: {
+    // The case studies are one PDF, kept in vc/public. Until it is there the menu's link goes to the page they are on today.
+    __CASE_STUDIES_PDF__: JSON.stringify(existsSync(resolve(here, 'public/shrug-case-studies.pdf'))),
+    // The year in the copyright line as the pages are written: the page corrects it by the clock once it runs (src/year.ts)
+    __BUILT_IN__: JSON.stringify(new Date().getFullYear()),
+  },
   build: { target: 'es2022', outDir: resolve(here, 'dist'), emptyOutDir: true },
   server: { host: '127.0.0.1', fs: { allow: [root] } },
 })

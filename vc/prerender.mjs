@@ -30,7 +30,12 @@ for (const route of ROUTES) {
     `<meta property="og:title" content="${said(route.title)}" />`,
     `<meta property="og:description" content="${said(route.description)}" />`,
     `<meta property="og:url" content="${address}" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    // The wordmark, white on black (vc/public/social.png)
+    `<meta property="og:image" content="${new URL('/social.png', SITE.url).href}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${said(SITE.legalName)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
   ].join('\n    ')
   const html = page.replace('<!--head-->', head).replace('<!--app-->', render(route.path))
   const file = resolve(dist, route.path === '/' ? 'index.html' : `${route.path.slice(1)}.html`)

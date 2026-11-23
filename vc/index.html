@@ -3,8 +3,31 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#E2DFD2" />
+    <meta name="theme-color" content="#FFFFFF" />
     <meta name="format-detection" content="telephone=no" />
+    <script>
+      // The theme, settled before anything is painted, so that a visitor in the dark never sees a white
+      // page first. Their own choice if they have made one, else what their system is set to. It is kept
+      // in step with vc/src/theme.ts, which takes over once the page is running.
+      ;(function () {
+        var theme = null
+        try {
+          theme = localStorage.getItem('shrug-theme')
+        } catch (e) {}
+        if (theme !== 'light' && theme !== 'dark') theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.classList.add('th-' + theme)
+        if (theme === 'dark') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#000000')
+      })()
+    </script>
+    <noscript>
+      <!-- The menu needs its script. Without one its two lines are not shown, and the pages are linked from the footer. -->
+      <style>
+        .burger,
+        .burger-under {
+          display: none !important;
+        }
+      </style>
+    </noscript>
     <!--head-->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>

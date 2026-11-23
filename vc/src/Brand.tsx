@@ -1,23 +1,23 @@
-import { FULL, G, SHORT } from './brand'
+import { ARROW, FULL } from './brand'
 
 // The wordmark and its arrow, drawn from the kit's outlines. They take the colour of the text round them
-// (black on Stone and on white, white on black): never a colour of their own.
+// (black on white, white on black): never a colour of their own.
 
-/** SHRUG CAPITAL, or SHRUG alone (`short`). It is named for assistive tech; the drawing itself is not read. */
-export function Wordmark({ short, className }: { short?: boolean; className?: string }) {
-  const mark = short ? SHORT : FULL
+/** SHRUG CAPITAL. It is named for assistive tech; the drawing itself is not read. On the pages it stands in
+ * two places only: the foot of the menu and the footer. */
+export function Wordmark({ className, width, height }: { className?: string; width?: number; height?: number }) {
   return (
-    <svg className={className} viewBox={`0 0 ${mark.box[0]} ${mark.box[1]}`} role="img" aria-label={short ? 'Shrug' : 'Shrug Capital'}>
-      <path transform={`scale(${mark.scale})`} fill="currentColor" d={mark.d} />
+    <svg className={className} viewBox={`0 0 ${FULL.box[0]} ${FULL.box[1]}`} width={width} height={height} role="img" aria-label="Shrug Capital">
+      <path transform={`scale(${FULL.scale})`} fill="currentColor" d={FULL.d} />
     </svg>
   )
 }
 
-/** The arrow out of the G, on its own: it marks a point (a link that leaves, a list, a corner). */
-export function Arrow({ className }: { className?: string }) {
+/** The arrow out of the G, on its own: it marks a link that goes somewhere. */
+export function Arrow({ size = 11, className }: { size?: number; className?: string }) {
   return (
-    <svg className={className} viewBox="327.31 261.02 274.84 267.93" aria-hidden>
-      <path fill="currentColor" d={G.arrow} />
+    <svg className={className ? `arrow ${className}` : 'arrow'} viewBox={ARROW.box.join(' ')} width={size} height={size} aria-hidden>
+      <path fill="currentColor" d={ARROW.d} />
     </svg>
   )
 }
