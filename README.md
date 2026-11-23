@@ -245,7 +245,8 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   page itself. Once the site is running, a link between its pages swaps the page in place.
 - **What it says** is read from the same data as the desktop site (`src/data`: the quotes, the portfolio,
   the FAQs, the drops), so the two never disagree. Their pictures (`public/logos`, `public/people`,
-  `public/vip`) are copied into the build. What is this site's own is in `vc/src/content.ts`.
+  `public/vip`) are copied into the build (the drops' photographs as `/drops`, since `/vip` is a page
+  here). What is this site's own is in `vc/src/content.ts`.
 - **The look** follows the brand kit: Stone, black and white and nothing else; headings in Unbounded Bold,
   text in DM Sans, small labels in DM Mono. The wordmark and its arrow are the kit's own outlines
   (`vc/src/brand.ts`) and are not to be redrawn. All of the styling is `vc/src/styles.css`.

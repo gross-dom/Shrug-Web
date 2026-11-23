@@ -12,6 +12,23 @@ import react from '@vitejs/plugin-react'
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 
+/** In development the shared pictures are served from where they are kept, the drops' under the name this site gives them. */
+function sharedPicturesServed(): Plugin {
+  return {
+    name: 'shrug-vc:shared-pictures-served',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const found = /^\/(logos|people|drops)\/([^?]+)/.exec(req.url ?? '')
+        const file = found && resolve(root, 'public', found[1] === 'drops' ? 'vip' : found[1]!, decodeURIComponent(found[2]!))
+        if (!file || !file.startsWith(resolve(root, 'public')) || !existsSync(file)) return next()
+        res.setHeader('Content-Type', file.endsWith('.webp') ? 'image/webp' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : file.endsWith('.avif') ? 'image/avif' : 'image/jpeg')
+        res.end(readFileSync(file))
+      })
+    },
+  }
+}
+
 /** The pictures the shared data names, taken from the repository's public folder into this site's build. */
 function sharedPictures(): Plugin {
   return {
@@ -20,7 +37,9 @@ function sharedPictures(): Plugin {
     closeBundle() {
       // Only into the site itself: the copy of the pages that vc/prerender.mjs builds to draw them needs none
       if (this.environment.config.build.ssr) return
-      for (const folder of ['logos', 'people', 'vip']) cpSync(resolve(root, 'public', folder), resolve(here, 'dist', folder), { recursive: true })
+      for (const folder of ['logos', 'people']) cpSync(resolve(root, 'public', folder), resolve(here, 'dist', folder), { recursive: true })
+      // The drops' photographs are kept at /vip on the desktop site. Here /vip is a page, so they go by another name (pictureOf, in src/content.ts)
+      cpSync(resolve(root, 'public/vip'), resolve(here, 'dist/drops'), { recursive: true })
     },
   }
 }
@@ -63,7 +82,7 @@ function pictureSizes(): Plugin {
 
 export default defineConfig({
   root: here,
-  plugins: [react(), pictureSizes(), sharedPictures()],
+  plugins: [react(), pictureSizes(), sharedPictures(), sharedPicturesServed()],
   resolve: { alias: { '@data': resolve(root, 'src/data') }, dedupe: ['react', 'react-dom'] },
   // The case studies are one PDF, kept in vc/public. Until it is there the site says it is on its way.
   define: { __CASE_STUDIES_PDF__: JSON.stringify(existsSync(resolve(here, 'public/shrug-case-studies.pdf'))) },

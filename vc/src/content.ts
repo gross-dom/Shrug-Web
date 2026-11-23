@@ -46,6 +46,9 @@ export const DROP_STORY: Record<string, string> = {
   'VC Sticker Pack': 'https://apps.apple.com/us/app/vc-sticker-pack/id1476977521',
 }
 
+/** Where one of the drops' photographs is on this site. The shared data has them at /vip, which here is a page. */
+export const pictureOf = (src: string) => src.replace(/^\/vip\//, '/drops/')
+
 /** A link's host, as it reads: no scheme, no www. */
 export const hostOf = (url: string) => {
   try {

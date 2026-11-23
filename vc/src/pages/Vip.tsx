@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import SIZES from 'virtual:picture-sizes'
 import { Arrow } from '../Brand'
-import { DROP_STORY, DROP_VOICES, DROPS, initialsOf, MEDIA, type Person } from '../content'
+import { DROP_STORY, DROP_VOICES, DROPS, initialsOf, MEDIA, pictureOf, type Person } from '../content'
 
 // VIP: a wall of the drops. The pictures are the ones people posted when theirs arrived, each filed under
 // the drop it is of; among them stand a few of the quotes that talk about the drops themselves. The wall
@@ -67,7 +67,7 @@ function Look({ run, at, onLook }: { run: number[]; at: number; onLook: (at: num
           Close
         </button>
       </div>
-      <img key={slot.src} className="look__picture" src={slot.src!} alt={`Photo from ${slot.drop}`} />
+      <img key={slot.src} className="look__picture" src={pictureOf(slot.src!)} alt={`Photo from ${slot.drop}`} />
       <button type="button" className="round round--dark look__step look__step--back" disabled={place === 0} onClick={() => step(-1)} aria-label="The picture before">
         <Arrow className="arrow arrow--back" />
       </button>
@@ -119,7 +119,7 @@ export function Vip() {
             tile.kind === 'photo' ? (
               <li key={`p${tile.at}`}>
                 <button type="button" className="shot" onClick={() => setLook(tile.at)}>
-                  <img src={MEDIA[tile.at]!.src!} width={SIZES[MEDIA[tile.at]!.src!]?.[0]} height={SIZES[MEDIA[tile.at]!.src!]?.[1]} alt="" loading="lazy" decoding="async" />
+                  <img src={pictureOf(MEDIA[tile.at]!.src!)} width={SIZES[MEDIA[tile.at]!.src!]?.[0]} height={SIZES[MEDIA[tile.at]!.src!]?.[1]} alt="" loading="lazy" decoding="async" />
                   <span className="shot__cap label">
                     {MEDIA[tile.at]!.drop}
                     <span className="sr">: photo. Open it.</span>
