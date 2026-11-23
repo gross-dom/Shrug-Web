@@ -167,7 +167,7 @@ export function Vip() {
   const [filter, setFilter] = useState<Filter>('all')
   return (
     <div className="vip">
-      <div className="pills pills--middle" role="group" aria-label="Filter">
+      <div className="pills" role="group" aria-label="Filter">
         {FILTERS.map((f) => (
           <button key={f.id} type="button" className="pill" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
             <span>{f.label}</span>

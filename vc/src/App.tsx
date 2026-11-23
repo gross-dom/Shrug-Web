@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Wordmark } from './Brand'
-import { LINE, SITE } from './content'
+import { SITE } from './content'
 import { Menu } from './Menu'
 import { Faq } from './pages/Faq'
 import { Portfolio } from './pages/Portfolio'
@@ -9,9 +9,10 @@ import { Vip } from './pages/Vip'
 import { PageLink, ROUTES, usePath, type Path } from './router'
 import { useYear } from './year'
 
-// The frame every page sits in. There is no bar and no logo at the top: one line of text top left, which
-// scrolls away with the page, and the menu's two lines top right, which stay. Then the page, and a foot
-// that holds the wordmark and the copyright line and nothing else (the links are in the menu).
+// The frame every page sits in. There is no bar at the top: the wordmark top left, which scrolls away with
+// the page and goes to Quotes, and the menu's two lines top right, which stay. Then the page, and a foot
+// that holds the wordmark and the copyright line and nothing else (the links are in the menu). Everything
+// on a page begins at the one left edge, the wordmark's.
 
 const PAGES: Record<Path, () => JSX.Element> = { '/': Quotes, '/portfolio': Portfolio, '/vip': Vip, '/faq': Faq }
 
@@ -55,7 +56,9 @@ export function App() {
   return (
     <>
       <header className="top">
-        <p className="top__line">{LINE}</p>
+        <PageLink to="/" className="top__mark">
+          <Wordmark width={198.4} height={16} />
+        </PageLink>
         <Menu />
       </header>
       <main id="page" ref={page} key={path} className="page" tabIndex={-1}>

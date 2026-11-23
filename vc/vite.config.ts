@@ -19,7 +19,7 @@ function sharedPicturesServed(): Plugin {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const found = /^\/(people|drops)\/([^?]+)/.exec(req.url ?? '')
+        const found = /^\/(people|logos|drops)\/([^?]+)/.exec(req.url ?? '')
         const file = found && resolve(root, 'public', found[1] === 'drops' ? 'vip' : found[1]!, decodeURIComponent(found[2]!))
         if (!file || !file.startsWith(resolve(root, 'public')) || !existsSync(file)) return next()
         res.setHeader('Content-Type', file.endsWith('.webp') ? 'image/webp' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : file.endsWith('.avif') ? 'image/avif' : 'image/jpeg')
@@ -37,8 +37,7 @@ function sharedPictures(): Plugin {
     closeBundle() {
       // Only into the site itself: the copy of the pages that vc/prerender.mjs builds to draw them needs none
       if (this.environment.config.build.ssr) return
-      // The portfolio's colour app icons (public/logos) are left behind: this site's grid is black and white and does not show them
-      cpSync(resolve(root, 'public/people'), resolve(here, 'dist/people'), { recursive: true })
+      for (const folder of ['people', 'logos']) cpSync(resolve(root, 'public', folder), resolve(here, 'dist', folder), { recursive: true })
       // The drops' photographs are kept at /vip on the desktop site. Here /vip is a page, so they go by another name (pictureOf, in src/content.ts)
       cpSync(resolve(root, 'public/vip'), resolve(here, 'dist/drops'), { recursive: true })
     },

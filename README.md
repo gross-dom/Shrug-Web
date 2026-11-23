@@ -261,18 +261,21 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   (`shrug-theme` in `localStorage`) and holds on every page from then on. The short script in the head of
   `vc/index.html` sets the class before anything is painted, so that nobody in the dark sees a white page
   first; `vc/src/theme.ts` takes over from it, and the two must be kept in step.
-- **The menu** (`vc/src/Menu.tsx`). There is no bar and no logo at the top: one line of text top left, and
-  two lines top right that open a panel from the right and, crossed, shut it. The panel is a dialog (the
+- **The top, and the one left edge.** There is no bar: the SHRUG CAPITAL wordmark is top left, goes to
+  Quotes, and scrolls away with the page. Everything on a page (the filters, each row, the foot) begins
+  at the same left edge as the wordmark, however wide the window.
+- **The menu** (`vc/src/Menu.tsx`). Two lines top right open a panel from the right and, crossed, shut it. The panel is a dialog (the
   keyboard goes into it and stays in it, Escape shuts it, the page behind does not scroll) and holds the
   case studies, Light / Dark, the four pages, and the wordmark with the small links.
 - **Quotes** shows everyone with a testimonial, in the data's order, each in full, and can be narrowed to
   founders (those Shrug funded) or investors (everyone else). The counts are of the data.
 - **Portfolio** is every company in `src/data/portfolio.ts` as an edge-to-edge grid of squares. A tile lit
   (a pointer over it, the keyboard on it, or the first tap on a touch screen; the second tap follows the
-  link) shows the company's sector, name and write-up. **Still placeholder:** the design wants a
-  single-colour logo and a photograph for each company, and neither has been supplied (the colour app
-  icons in `public/logos` are not used on this site). Until they are, a tile shows the company's name set
-  in type, marked `[Logo]`, and a dark fill marked `[Photo: …]`. To put a real one in, save the logo as a
+  link) shows the company's sector, name and write-up. At rest a tile shows the company's logo: the one it already has in
+  `public/logos` (an app icon, in colour), drawn without its colour because the page is black and white.
+  The one company with no logo shows its name in type. **Still placeholder:** the design wants a
+  single-colour logo and a photograph for each company, and neither has been supplied; a lit tile shows a
+  dark fill marked `[Photo: …]` where the photograph will be. To put a real one in, save the logo as a
   one-colour SVG and the photograph (800px square or more) in `vc/public/portfolio/`, and name the files
   against the company's key in `ART` at the top of `vc/src/pages/Portfolio.tsx`. Sixteen companies have no
   write-up in the data; their tiles show the sector and the name.

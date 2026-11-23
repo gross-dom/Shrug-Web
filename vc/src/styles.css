@@ -183,7 +183,7 @@ video {
   text-transform: uppercase;
 }
 
-/* ---- The top of every page: one line of text, and the menu's two lines ---- */
+/* ---- The top of every page: the wordmark, and the menu's two lines ---- */
 
 .top {
   padding: 20px var(--pad) 0;
@@ -193,12 +193,17 @@ video {
 }
 
 /* It leaves the corner to the two lines, which stay there as the page scrolls */
-.top__line {
-  max-width: calc(100% - 64px);
-  font-size: 20px;
-  line-height: 26px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.top__mark {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+}
+
+.top__mark svg {
+  display: block;
+  max-width: calc(100vw - var(--pad) * 2 - 64px);
+  height: auto;
 }
 
 /* Two flat lines, no shape round them. They are drawn in white and blended by difference with whatever is
@@ -537,8 +542,7 @@ video {
 
 .foot {
   width: 100%;
-  max-width: 1320px;
-  margin: 0 auto;
+  max-width: calc(1320px + var(--pad) * 2);
   padding: 0 var(--pad) 36px;
 }
 
@@ -589,10 +593,6 @@ video {
   gap: 8px;
 }
 
-.pills--middle {
-  justify-content: center;
-}
-
 .pill {
   display: flex;
   align-items: center;
@@ -631,8 +631,7 @@ video {
 /* ---- Quotes ---- */
 
 .quotes {
-  max-width: 1320px;
-  margin: 0 auto;
+  max-width: calc(1320px + var(--pad) * 2);
   padding: 48px var(--pad) 72px;
   display: flex;
   flex-direction: column;
@@ -877,6 +876,17 @@ a.tile {
   transition: opacity 0.2s;
 }
 
+/* The company's own logo, as Shrug has supplied it: an app icon, in colour. The page is black and white,
+   so at rest it is shown without its colour */
+.tile__icon {
+  width: 9vw;
+  width: min(36cqw, 132px);
+  aspect-ratio: 1;
+  border-radius: 22%;
+  object-fit: cover;
+  filter: grayscale(1);
+}
+
 /* A real logo: one colour, drawn as a mask so that it takes the colour of the text in either theme */
 .tile__mark {
   /* Half the tile's width (an eighth of the window's, four across, where the tile cannot be measured) */
@@ -1040,8 +1050,7 @@ a.tile {
 /* ---- VIP ---- */
 
 .vip {
-  max-width: 1320px;
-  margin: 0 auto;
+  max-width: calc(1320px + var(--pad) * 2);
   padding: 56px var(--pad) 88px;
   display: flex;
   flex-direction: column;
@@ -1360,8 +1369,7 @@ a.tile {
 /* ---- FAQ ---- */
 
 .faq {
-  max-width: 1320px;
-  margin: 0 auto;
+  max-width: calc(1320px + var(--pad) * 2);
   padding: 40px var(--pad) 88px;
   display: flex;
   flex-direction: column;

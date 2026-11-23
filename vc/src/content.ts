@@ -9,9 +9,6 @@ import { SITE } from '@data/site'
 export { COMPANIES, MEDIA, SITE }
 export type { Company, Person }
 
-/** The line at the top left of every page, in place of a logo: the Story line from the brand strategy. */
-export const LINE = 'Founders and their teams deserve fans.'
-
 /** Where a visitor writes to. */
 export const EMAIL = 'niv@shrug.vc'
 

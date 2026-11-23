@@ -3,15 +3,16 @@ import { Arrow } from '../Brand'
 import { COMPANIES, type Company } from '../content'
 
 // The portfolio: a grid of square tiles from one edge of the window to the other, with nothing between
-// them and nothing else on the page. At rest a tile holds the company's logo and that is all. Highlighted
+// them and nothing else on the page. At rest a tile holds the company's logo and that is all (the logo
+// Shrug supplied for it, which is an app icon in colour, shown here without its colour). Highlighted
 // (a pointer over it, the keyboard on it, or the first tap on a touch screen) the logo gives way to the
 // company's photograph, with its sector, its name and Shrug's line on it laid over the foot. A tile is one
 // link to the company's site; a company with no site still highlights, and goes nowhere.
 
 /** WHERE THE REAL PICTURES GO. The design wants, for each company, a single-colour logo and a photograph.
- * Neither has been supplied, and the colour app icons in public/logos are not to stand in for them: the
- * grid is strictly black and white. Until they arrive a tile shows the company's name set in type, marked
- * [Logo], and a dark fill marked [Photo: …].
+ * Neither has been supplied. Until they are, a tile shows the logo the company already has (its app icon,
+ * from public/logos, with its colour taken out, since the grid is black and white), or its name set in
+ * type where it has none; and a dark fill marked [Photo: …] where the photograph will be.
  *
  * To put one in: save the logo as an SVG in vc/public/portfolio (one colour, any colour: it is drawn as a
  * mask and takes the colour of the text) and the photograph beside it (800px square or more; it is cropped
@@ -31,13 +32,10 @@ function Tile({ company, on, onTap }: { company: Company; on: boolean; onTap: (e
       <span className="tile__logo">
         {art.logo ? (
           <span className="tile__mark" role="img" aria-label={company.name} style={{ maskImage: `url(${fileOf(art.logo)})`, WebkitMaskImage: `url(${fileOf(art.logo)})` }} />
+        ) : company.logo ? (
+          <img className="tile__icon" src={`/logos/${company.logoLarge ? `large/${company.logoLarge}` : company.logo}`} alt={company.name} loading="lazy" decoding="async" />
         ) : (
-          <>
-            <span className="tile__name">{company.name}</span>
-            <span className="label" aria-hidden>
-              [Logo]
-            </span>
-          </>
+          <span className="tile__name">{company.name}</span>
         )}
       </span>
       {/* The photograph says nothing the words do not: it is not read out */}
