@@ -1,4 +1,4 @@
-import { numberOf, refusalOf, wayOf, canSee, dollarsOf, written, type Member, type Order, type OrderStatus, type Product } from '../shared/rules'
+import { canSee, dueCents, numberOf, refusalOf, wayOf, type Member, type Order, type OrderStatus, type Product } from '../shared/rules'
 import { samplePdf } from '../shared/sample'
 import { save, type Asked, type Backend, type Failed, type Placed } from './backend'
 
@@ -19,15 +19,15 @@ export const PEOPLE: Record<string, { label: string; member: { name: string; fir
 }
 
 const item = (id: string, name: string, more: Partial<Product>): Product => ({
-  id, name, kind: 'Other', status: 'Available', visibleTo: ['Everyone'], points: null, price: null, postage: null, description: '', picture: null, hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0, ...more,
+  id, name, kind: 'Other', status: 'Available', visibleTo: ['Everyone'], points: null, floor: null, postage: null, description: '', picture: null, hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0, ...more,
 })
 
 /** The shelves as they are in Airtable to begin with (Products), so the demo shows what the store will. */
 const SHELVES: Product[] = [
   item('chromatic', 'Chromatic', { kind: 'Book', points: 400, needsAddress: true }),
-  item('chair', 'Workspace Chair', { kind: 'Chair', points: 10000, price: 450, postage: 70, options: ['Black', 'Stone', 'White'], limited: true, needsAddress: true }),
-  item('chair-red', 'Workspace Chair, Ferrari Red', { kind: 'Chair', status: 'On request', price: 1500, needsAddress: true }),
-  item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, price: 75, postage: 5, editionOf: 10, left: 10, needsAddress: true }),
+  item('chair', 'Workspace Chair', { kind: 'Chair', points: 10000, floor: 450, postage: 70, options: ['Black', 'Stone', 'White'], limited: true, needsAddress: true }),
+  item('chair-red', 'Workspace Chair, Ferrari Red', { kind: 'Chair', status: 'On request', points: 15000, floor: 1500, needsAddress: true }),
+  item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, floor: 75, postage: 5, editionOf: 10, left: 10, needsAddress: true }),
   item('catalog', 'WS Catalog', { kind: 'Book', points: 1000, needsAddress: true }),
   item('2027', 'Shrug 2027', { kind: 'Book', status: 'Pre-order', needsAddress: true }),
   item('update-4', 'Shrug 4 LP Update', { kind: 'Document', points: 0, hasFile: true }),
@@ -85,19 +85,18 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   const refusal = refusalOf(member, product, mine, asked)
   if (refusal) return { error: refusal }
   const way = wayOf(product)
-  if (way === 'pay' && !paying) return { error: 'pay' }
-  const takes = way === 'points' || way === 'pay'
-  const status: OrderStatus = way === 'request' ? 'Requested' : way === 'reserve' || product.status === 'Pre-order' ? 'Pre-order' : way === 'pay' ? 'Paid' : 'Points'
-  const points = takes ? (product.points ?? 0) : 0
-  const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: takes ? numberOf(product) : '', points, paid: way === 'pay' ? dollarsOf(product) : 0, placed: new Date().toISOString(), who: member.id }
+  const points = way === 'buy' ? (asked.points ?? 0) : 0
+  const due = way === 'buy' ? dueCents(product, points) : 0
+  if (due > 0 && !paying) return { error: 'pay' }
+  const status: OrderStatus = way === 'request' ? 'Requested' : way === 'reserve' || product.status === 'Pre-order' ? 'Pre-order' : due > 0 ? 'Paid' : 'Points'
+  const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: way === 'buy' ? numberOf(product) : '', points, paid: due / 100, placed: new Date().toISOString(), who: member.id }
   store.orders.unshift(order)
-  if (takes && product.left !== null) store.left[product.id] = product.left - 1
+  if (way === 'buy' && product.left !== null) store.left[product.id] = product.left - 1
   write(STORE, store)
   state.session.member.points -= points
   // Spent points are no news to the card: its "since you last looked" is for points that arrive
   state.session.seen = state.session.member.points
   write(CARD, state)
-  void (asked.address && written(asked.address))
   return { ok: true, order, points: state.session.member.points }
 }
 
@@ -114,9 +113,12 @@ export const demo: Backend = {
     await lag(600)
     return place(asked, false)
   },
-  async pay() {
+  async pay(asked) {
     await lag(300)
-    return { ok: true, demo: true }
+    const { member } = now()
+    const product = member && shelves(kept()).find((p) => p.id === asked.product && canSee(member, p))
+    if (!member || !product) return { error: 'hidden' }
+    return { ok: true, demo: true, cents: dueCents(product, asked.points ?? 0) }
   },
   async paid(_payment, asked) {
     await lag(900)

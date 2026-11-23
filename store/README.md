@@ -20,18 +20,34 @@ Vercel from this folder (`vercel deploy`), which builds it and runs `api/`.
 
 ## How buying works
 
-10 points are $1. A product is got in one of four ways, decided by its row in Airtable (`shared/rules.ts`):
+Everything has a price in dollars. It is kept in Airtable as points, at 10 points to the dollar, so
+10,000 points is a price of $1,000. A member pays in dollars and can bring the price down with their
+points: as many or as few as they choose, with a slider at the counter. Some things have a **floor**,
+the least that is paid in dollars however many points are used. **Postage** is added on top and points
+do not pay for it. What is left is paid by Apple Pay or card, which also gives the address.
 
-| It has | It is | The member |
-| --- | --- | --- |
-| Points only | bought with points | spends the points; if it is posted, says where to send it |
-| Points and a Price (and Postage) | bought with points and dollars | spends the points, and pays the Price and Postage by Apple Pay or card, which gives the address |
-| Status "On request" | not sold | presses Request; a row is written to Orders and Shrug writes back |
-| Status "Pre-order" and no Points or Price | not out yet | reserves one; nothing is taken |
+| Product | Points | Floor | Postage | With no points | At its least |
+| --- | --- | --- | --- | --- | --- |
+| Workspace Chair | 10,000 | $450 | $70 | $1,070 | $520, using 5,500 points |
+| Art on Acrylic | 2,800 | $75 | $5 | $285 | $80, using 2,050 points |
+| Chromatic | 400 | none | none | $40 | nothing, using 400 points |
 
-So the Workspace Chair at 10,000 points with a Price of $450 and Postage of $70 costs 10,000 points and
-$520. Someone with too few points is told how many more they need. A Document (a PDF) is a download:
-once got, it is in Yours, and only someone who has it can fetch the file.
+So nobody is told they have too few points: they pay the difference. When points cover the whole price
+and there is no postage, nothing is paid; if the thing is posted, the store asks where to send it.
+All of this is in `shared/rules.ts`, which both the server and the pages go by.
+
+Besides buying:
+
+- Status **On request**: not sold. Its price is shown, the member presses Request, a row is written to
+  Orders and Shrug writes back. (Give it a Floor equal to its whole price: points are not used on it.)
+- Status **Pre-order** with no Points yet: the member reserves one, and nothing is taken.
+- A **Document** (a PDF) is a download. One with no price is there for anyone who may see it; one with
+  a price is bought first, and is then in Yours. Only someone it is for can fetch the file.
+
+The store itself is a wall: each product hangs on a peg as a foil pack, like the pack on the card's
+page, with its price on a shelf label under it. One numbered edition (or, failing that, something in
+short supply) is given the middle of the wall. Until a product has a `Picture` in Airtable it shows a
+line drawing of the sort of thing it is, marked Placeholder (`src/Art.tsx`).
 
 ## Airtable
 
@@ -44,8 +60,8 @@ The base is **Shrug**. The store reads it afresh on every visit, so a change the
     in any group ticked: Founders, LPs and Investors go by `Role`; "Shrug 1 LPs" is anyone with
     Shrug 1 in `Funds`. With nothing ticked, nobody sees it. What a member may not see is never sent
     to their browser.
-  - `Points`, `Price` (the floor, in dollars) and `Postage` are the cost. `Status` is Available,
-    Pre-order, On request or Hidden.
+  - `Points` (the price: 10 to the dollar), `Floor` (the least paid in dollars) and `Postage` are the
+    cost. `Status` is Available, Pre-order, On request or Hidden.
   - `Edition of` and `Left` make a numbered edition ("Edition of 10 · 7 left", and each one sold is
     numbered 4/10). `Left` alone is a plain limit, and reaches Sold out at 0. `Limited supply` is only
     the label.

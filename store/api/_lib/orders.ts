@@ -2,7 +2,7 @@ import { randomInt } from 'node:crypto'
 import { add, all, change, F, num, one, remove, str, T, type Row } from './airtable.js'
 import { orderOf, productOf } from './catalogue.js'
 import { intentOf, type Intent } from './stripe.js'
-import { dollarsOf, numberOf, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
+import { dueCents, fitPoints, numberOf, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
 
 // Placing an order: the row in Orders, the points off the balance, and one fewer on the shelf.
 
@@ -19,12 +19,13 @@ interface Placing {
   /** Dollars taken, and Stripe's reference for them. */
   paid?: number
   payment?: string
-  /** Whether the points come off and the shelf counts down (not for a request, a reservation, or an order to be looked at by hand). */
+  /** Points to take from the balance. */
+  points?: number
+  /** Whether the shelf counts down and an edition is numbered (not for a request, a reservation, or an order to be looked at by hand). */
   takes: boolean
 }
 
-async function place({ member, productRow, product, status, option, shipTo, paid = 0, payment = '', takes }: Placing): Promise<{ order: Order; points: number }> {
-  const points = takes ? (product.points ?? 0) : 0
+async function place({ member, productRow, product, status, option, shipTo, paid = 0, payment = '', points = 0, takes }: Placing): Promise<{ order: Order; points: number }> {
   const balance = num(member.fields[F.member.points]) ?? 0
   const row = await add(T.orders, {
     [F.order.reference]: reference(),
@@ -65,9 +66,9 @@ export const request = (member: Row, productRow: Row, product: Product, option: 
 /** A place kept for a pre-order that has no price yet. */
 export const reserve = (member: Row, productRow: Row, product: Product, option: string) => place({ member, productRow, product, status: 'Pre-order', option, shipTo: '', takes: false })
 
-/** Bought with points alone. */
-export const withPoints = (member: Row, productRow: Row, product: Product, option: string, address: Address | null) =>
-  place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Points', option, shipTo: address ? written(address) : '', takes: true })
+/** Bought with nothing left to pay: the points cover it (or it costs nothing). */
+export const withPoints = (member: Row, productRow: Row, product: Product, option: string, points: number, address: Address | null) =>
+  place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Points', option, shipTo: address ? written(address) : '', points, takes: true })
 
 const shipToOf = (intent: Intent) => {
   const to = intent.shipping
@@ -77,8 +78,9 @@ const shipToOf = (intent: Intent) => {
 }
 
 /** A payment that Stripe says has arrived, made into its order. Asked twice of the same payment, it answers
- * with the same order. If the money is in but the order no longer adds up (the last one went, or the points
- * were spent elsewhere meanwhile), nothing more is taken and the order is marked for Shrug to look at. */
+ * with the same order. If the money is in but the order no longer adds up (the last one went, the points
+ * were spent elsewhere meanwhile, or the price was changed), nothing more is taken and the order is marked
+ * for Shrug to look at. */
 export async function settle(paymentId: string, forMember?: string): Promise<{ order: Order; points: number } | { error: 'unpaid' | 'unknown' }> {
   const intent = await intentOf(paymentId)
   if (intent.status !== 'succeeded') return { error: 'unpaid' }
@@ -90,16 +92,18 @@ export async function settle(paymentId: string, forMember?: string): Promise<{ o
   const product = productOf(productRow)
   const paid = intent.amount_received / 100
   const option = intent.metadata.option ?? ''
-  const sound = !!product && wayOf(product) === 'pay' && !soldOut(product) && balance >= (product.points ?? 0) && Math.round(dollarsOf(product) * 100) === intent.amount_received
+  // The points that were to be used are said on the payment itself, as the store wrote them when it began
+  const points = Number(intent.metadata.points ?? 0)
+  const sound = !!product && wayOf(product) === 'buy' && !soldOut(product) && Number.isInteger(points) && points === fitPoints({ points: balance }, product, points) && dueCents(product, points) === intent.amount_received
   if (!product || !sound) {
     const shown = product ?? ({ ...EMPTY, id: productRow.id, name: str(productRow.fields[F.product.name]) } as Product)
     return place({ member, productRow, product: shown, status: 'Needs review', option, shipTo: shipToOf(intent), paid, payment: paymentId, takes: false })
   }
-  return place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Paid', option, shipTo: shipToOf(intent), paid, payment: paymentId, takes: true })
+  return place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Paid', option, shipTo: shipToOf(intent), paid, payment: paymentId, points, takes: true })
 }
 
 const EMPTY: Omit<Product, 'id' | 'name'> = {
-  kind: 'Other', status: 'Available', visibleTo: [], points: null, price: null, postage: null, description: '', picture: null, hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0,
+  kind: 'Other', status: 'Available', visibleTo: [], points: null, floor: null, postage: null, description: '', picture: null, hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0,
 }
 
 

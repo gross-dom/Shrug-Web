@@ -13,18 +13,21 @@ export type StoreAnswer =
 
 export type Failed = { error: string }
 export type Placed = { ok: true; order: Order; points: number }
-export type PayStart = { ok: true; clientSecret: string; payment: string } | { ok: true; demo: true }
+export type PayStart = { ok: true; clientSecret: string; payment: string; cents: number } | { ok: true; demo: true; cents: number }
 
 export interface Asked {
   product: string
   option?: string
+  /** How many of their points to put towards it. */
+  points?: number
+  /** Where to send it, when nothing is left to pay (a payment gives its own). */
   address?: Address | null
 }
 
 export interface Backend {
   store(): Promise<StoreAnswer | Failed>
   order(asked: Asked): Promise<Placed | Failed>
-  /** The start of a payment, for something with a floor. */
+  /** The start of a payment, for whatever the points asked for leave to pay. */
   pay(asked: Asked): Promise<PayStart | Failed>
   /** A payment made: the order it becomes. In the demo there is no payment, only what was asked for. */
   paid(payment: string, asked: Asked): Promise<Placed | Failed>

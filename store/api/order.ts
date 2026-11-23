@@ -2,7 +2,7 @@ import { ordersFor, shelvesFor } from './_lib/catalogue.js'
 import { json, read, text } from './_lib/http.js'
 import { request as ask, reserve, settle, withPoints } from './_lib/orders.js'
 import { memberAsking, trouble } from './_lib/who.js'
-import { refusalOf, wayOf, type Address } from '../shared/rules.js'
+import { dueCents, refusalOf, wayOf, type Address } from '../shared/rules.js'
 
 const addressOf = (given: unknown): Address | null => {
   if (!given || typeof given !== 'object') return null
@@ -11,7 +11,8 @@ const addressOf = (given: unknown): Address | null => {
 }
 
 // An order. Either the page says a payment has been made, and the store asks Stripe whether it has; or it
-// asks for something that takes no money: a request, a reservation, or a thing bought with points alone.
+// asks for something that takes no money: a request, a reservation, or a thing whose price the member's
+// points cover in full.
 export async function POST(request: Request) {
   try {
     const who = await memberAsking(request)
@@ -32,13 +33,14 @@ export async function POST(request: Request) {
     const { orders } = await ordersFor(who.member.id, rows)
     const option = text(body.option, 60)
     const address = addressOf(body.address)
-    const refusal = refusalOf(who.member, product, orders, { option, address })
+    const points = typeof body.points === 'number' ? body.points : 0
+    const refusal = refusalOf(who.member, product, orders, { option, points, address })
     if (refusal) return json({ error: refusal }, { status: 400 })
 
     const way = wayOf(product)
     // Dollars are owed: that is /api/pay and then a payment, never this
-    if (way === 'pay') return json({ error: 'pay' }, { status: 400 })
-    const placed = way === 'request' ? await ask(who.row, productRow, product, option) : way === 'reserve' ? await reserve(who.row, productRow, product, option) : await withPoints(who.row, productRow, product, option, address)
+    if (way === 'buy' && dueCents(product, points) > 0) return json({ error: 'pay' }, { status: 400 })
+    const placed = way === 'request' ? await ask(who.row, productRow, product, option) : way === 'reserve' ? await reserve(who.row, productRow, product, option) : await withPoints(who.row, productRow, product, option, points, address)
     return json({ ok: true, ...placed })
   } catch (error) {
     return trouble('order', error)

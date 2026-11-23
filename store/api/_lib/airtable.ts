@@ -38,7 +38,7 @@ export const F = {
     status: 'fldL6HHHmeXe985BK',
     visibleTo: 'fldxYyQggka0KGY4W',
     points: 'fldPf6D1VW3qyW2C1',
-    price: 'fldPK7CoF5kHGWZHS',
+    floor: 'fldPK7CoF5kHGWZHS',
     postage: 'flduA26PYHalayx77',
     description: 'fld9tCyCRHJBxoZ8q',
     picture: 'fldsl3HqNKDE3B0tO',

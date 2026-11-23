@@ -1,126 +1,176 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { asksAddress, complete, dollarsOf, fmtDollars, fmtPoints, has, keptTo, POINTS_PER_DOLLAR, shortBy, soldOut, wayOf, type Address, type Order, type Product } from '../shared/rules'
+import {
+  asksAddress, complete, dueCents, fitPoints, floorCents, fmtCents, fmtPoints, has, keptTo, mostPoints, POINTS_PER_DOLLAR, postageCents, priceCents, soldOut, wayOf,
+  type Address, type Kind, type Member, type Order, type Product,
+} from '../shared/rules'
+import { Art } from './Art'
 import { DEMO, server, type Backend, type Placed, type StoreAnswer } from './backend'
 import { demo, demoAddPoints, demoPick, demoReset, demoSignIn, PEOPLE } from './demo'
-import { AddressForm, NOWHERE, Pay, whyNot } from './Pay'
+import { AddressForm, NOWHERE, Pay, Strip, whyNot } from './Pay'
 
-// The store: what a member can spend their points on. The card (the site's front page) is where they sign
-// in; this page is shown what the server says they may see, and asks it for everything it does.
+// The store: a wall of things hung on pegs, as the pack is on the card's page, each with its shelf label.
+// A thing is taken off the wall to be looked at, and bought at the counter: its price in dollars, brought
+// down by as many of the member's points as they choose, with what is left paid by Apple Pay. The card (the
+// site's front page) is where a member signs in; this page shows what the server says they may see, and
+// asks it for everything it does.
 
 const backend: Backend = DEMO ? demo : server
 type Shop = Extract<StoreAnswer, { status: 'member' }>
 
-/** What a thing costs, as a line: "400 pts", "10,000 pts + $450", "$1,500", "Free". */
-function Cost({ product }: { product: Product }) {
-  const way = wayOf(product)
-  if (way === 'reserve') return <span className="cost">Pre-order</span>
-  if (way === 'request') return <span className="cost">{product.price ? fmtDollars(product.price) : 'On request'}</span>
-  if (!product.points && way === 'points') return <span className="cost">Free</span>
+/** The words on the gold strip across a pack: how it is sold, or how many there are. */
+function stripOf(product: Product): string | null {
+  if (soldOut(product) && wayOf(product) !== 'request') return 'Sold out'
+  if (product.status === 'Pre-order') return 'Pre-order'
+  if (product.status === 'On request') return 'By request'
+  if (product.editionOf) return `Edition of ${product.editionOf}${product.left !== null ? ` · ${product.left} left` : ''}`
+  if (product.left !== null) return `Only ${product.left} left`
+  if (product.limited) return 'Limited supply'
+  return null
+}
+
+/** The least a member can pay for it before postage: its price with every point of theirs that it will take. */
+const bestCents = (member: Member, product: Product) => priceCents(product) - fitPoints(member, product, mostPoints(member, product)) * (100 / POINTS_PER_DOLLAR)
+
+/** A product, as a pack on a peg: its crimped ends, the strip across it, its picture in the window, and its name. */
+function Pack({ product, sticker }: { product: Product; sticker?: string }) {
+  const strip = stripOf(product)
   return (
-    <span className="cost">
-      {fmtPoints(product.points ?? 0)} <i>pts</i>
-      {product.price ? <b> + {fmtDollars(product.price)}</b> : null}
-    </span>
-  )
-}
-
-/** The labels on a product: how it is sold, how many there are, and who it is kept to. */
-function tagsOf(product: Product): { text: string; kind?: 'gold' | 'out' }[] {
-  const tags: { text: string; kind?: 'gold' | 'out' }[] = []
-  if (product.status === 'Pre-order') tags.push({ text: 'Pre-order', kind: 'gold' })
-  if (product.status === 'On request') tags.push({ text: 'By request', kind: 'gold' })
-  if (soldOut(product)) tags.push({ text: 'Sold out', kind: 'out' })
-  else if (product.editionOf) tags.push({ text: `Edition of ${product.editionOf}${product.left !== null ? ` · ${product.left} left` : ''}` })
-  else if (product.left !== null) tags.push({ text: `${product.left} left` })
-  else if (product.limited) tags.push({ text: 'Limited supply' })
-  for (const group of keptTo(product)) tags.push({ text: `${group} only` })
-  return tags
-}
-
-/** A product's picture; until Shrug has supplied one, its name set as a poster. */
-function Picture({ product }: { product: Product }) {
-  return product.picture ? (
-    <img className="picture" src={product.picture} alt="" loading="lazy" decoding="async" />
-  ) : (
-    <span className="picture picture--none" aria-hidden>
-      <span>{product.name}</span>
-      <i>{product.kind}</i>
-    </span>
-  )
-}
-
-function Tags({ product }: { product: Product }) {
-  const tags = tagsOf(product)
-  return tags.length ? (
-    <span className="tags">
-      {tags.map((tag) => (
-        <span key={tag.text} className="tag" data-kind={tag.kind}>
-          {tag.text}
+    <span className="pack" data-out={(soldOut(product) && wayOf(product) !== 'request') || undefined} data-long={product.name.length > 16 || undefined}>
+      <span className="pack__crimp pack__crimp--top">
+        <i className="pack__hole" />
+      </span>
+      <span className="pack__face">
+        {strip && <span className="pack__strip">{strip}</span>}
+        <span className="pack__window">{product.picture ? <img src={product.picture} alt="" loading="lazy" decoding="async" /> : <Art kind={product.kind} />}</span>
+        <span className="pack__word">{product.name}</span>
+        <span className="pack__facts">
+          <span>{product.kind}</span>
+          <span>{keptTo(product).length ? `${keptTo(product)[0]} only` : 'Series 01'}</span>
         </span>
-      ))}
+      </span>
+      <span className="pack__crimp pack__crimp--bot" />
+      <span className="pack__sheen" aria-hidden />
+      {sticker && (
+        <span className="burst" aria-hidden>
+          <span>{sticker}</span>
+        </span>
+      )}
     </span>
-  ) : null
-}
-
-const VERB: Record<string, string> = { request: 'Request', reserve: 'Reserve', pay: 'Buy', points: 'Get' }
-
-function Shelf({ shop, onOpen }: { shop: Shop; onOpen: (product: Product) => void }) {
-  return (
-    <ul className="shelf">
-      {shop.products.map((product, n) => {
-        const mine = has(shop.orders, product)
-        const way = wayOf(product)
-        const short = way === 'points' || way === 'pay' ? shortBy(shop.member, product) : 0
-        const note = product.kind === 'Document' && mine ? 'Yours' : (way === 'request' || way === 'reserve') && mine ? (way === 'request' ? 'Requested' : 'Reserved') : soldOut(product) && way !== 'request' ? 'Sold out' : short ? `${fmtPoints(short)} pts short` : VERB[way]
-        return (
-          <li key={product.id} style={{ ['--n' as string]: n }}>
-            <button type="button" className="item" onClick={() => onOpen(product)}>
-              <span className="item__top">
-                <Picture product={product} />
-                <Tags product={product} />
-              </span>
-              <span className="item__name">{product.name}</span>
-              <span className="item__foot">
-                <span className="item__cost">
-                  <Cost product={product} />
-                  {product.postage ? <span className="small">+ {fmtDollars(product.postage)} postage</span> : null}
-                </span>
-                <span className="item__go" data-quiet={note !== VERB[way] || undefined}>
-                  {note}
-                </span>
-              </span>
-            </button>
-          </li>
-        )
-      })}
-    </ul>
   )
 }
 
-/** One product, opened: what it is, what it costs this member, and the way to get it. */
-function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Product; onClose: () => void; onPlaced: (placed: Placed) => void }) {
+/** The shelf label under a pack: its price, and what it comes to for this member. */
+function Tag({ shop, product }: { shop: Shop; product: Product }) {
+  const way = wayOf(product)
+  const mine = has(shop.orders, product)
+  const price = priceCents(product)
+  const best = bestCents(shop.member, product)
+  let left: string
+  let right: string | null = null
+  if (way === 'reserve') [left, right] = ['Pre-order', mine ? 'Reserved' : 'Reserve']
+  else if (way === 'request') [left, right] = [price ? fmtCents(price) : 'On request', mine ? 'Requested' : 'Request']
+  else if (product.kind === 'Document' && mine) [left, right] = ['Yours', 'Download']
+  else if (soldOut(product)) [left, right] = [fmtCents(price), 'Sold out']
+  else if (price === 0) [left, right] = ['Free', 'Get']
+  else [left, right] = [fmtCents(price), best < price ? (best === 0 ? 'Free with points' : `${fmtCents(best)} with points`) : null]
+  return (
+    <span className="tag">
+      <span className="tag__row">
+        <span className="tag__price">{left}</span>
+        {right && <span className="tag__with">{right}</span>}
+      </span>
+      {way === 'buy' && postageCents(product) > 0 && !soldOut(product) && <span className="tag__fine">+ {fmtCents(postageCents(product))} postage</span>}
+    </span>
+  )
+}
+
+function Hang({ shop, product, n, onOpen }: { shop: Shop; product: Product; n: number; onOpen: (product: Product) => void }) {
+  return (
+    <li className="hang" style={{ ['--n' as string]: n }}>
+      <button type="button" className="hang__btn" onClick={() => onOpen(product)} aria-label={`${product.name}. Take it off the wall.`}>
+        <i className="peg" aria-hidden />
+        <span className="swing">
+          <Pack product={product} />
+        </span>
+      </button>
+      <Tag shop={shop} product={product} />
+    </li>
+  )
+}
+
+/** The one thing given the middle of the wall: a numbered edition if there is one, or else whatever is in
+ * short supply. Nothing, where nothing is either. */
+const starOf = (products: Product[]) => products.find((p) => p.editionOf && !soldOut(p)) ?? products.find((p) => (p.limited || p.left !== null) && !soldOut(p) && wayOf(p) === 'buy') ?? null
+
+function Stage({ shop, product, onOpen }: { shop: Shop; product: Product; onOpen: (product: Product) => void }) {
+  const price = priceCents(product)
+  const best = bestCents(shop.member, product)
+  return (
+    <section className="stage" aria-label={`On the wall now: ${product.name}`}>
+      <button type="button" className="hang__btn stage__pack" onClick={() => onOpen(product)} aria-label={`${product.name}. Take it off the wall.`}>
+        <i className="peg" aria-hidden />
+        <span className="swing">
+          <Pack product={product} />
+        </span>
+      </button>
+      <div className="ticket stage__ticket">
+        <div className="ticket__head">
+          <span className="k">On the wall now</span>
+          <span className="v">{stripOf(product) ?? product.kind}</span>
+        </div>
+        <h2 className="counter__name">{product.name}</h2>
+        {product.description && <p className="counter__words">{product.description}</p>}
+        <dl className="rows">
+          <div>
+            <dt>Price</dt>
+            <dd>{fmtCents(price)}</dd>
+          </div>
+          {best < price && (
+            <div>
+              <dt>With your points</dt>
+              <dd className="gold">{best === 0 ? 'Free' : fmtCents(best)}</dd>
+            </div>
+          )}
+        </dl>
+        <Strip onClick={() => onOpen(product)}>Take a look</Strip>
+      </div>
+    </section>
+  )
+}
+
+/** The counter: one product, taken off the wall. What it is, what it costs this member, and the way to get it. */
+function Counter({ shop, product, onClose, onPlaced }: { shop: Shop; product: Product; onClose: () => void; onPlaced: (placed: Placed) => void }) {
+  const way = wayOf(product)
+  const most = mostPoints(shop.member, product)
   const [option, setOption] = useState(product.options.length === 1 ? product.options[0]! : '')
-  const [address, setAddress] = useState<Address>({ ...NOWHERE, name: DEMO ? '' : shop.member.name })
+  // To begin with every point it will take is used: that is the best price, and the member can ease them off
+  const [wanted, setWanted] = useState(most)
+  const [address, setAddress] = useState<Address>(NOWHERE)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState<Placed | null>(null)
   const [paying, setPaying] = useState(false)
+  // What the member had when this was opened: the sums stay theirs while they are looked at, whatever the shop is told since
+  const [balance] = useState(shop.member.points)
   const box = useRef<HTMLDivElement>(null)
-  const way = wayOf(product)
+
   const mine = has(shop.orders, product)
   const out = soldOut(product) && way !== 'request'
-  const short = way === 'points' || way === 'pay' ? shortBy(shop.member, product) : 0
-  const points = product.points ?? 0
+  const points = way === 'buy' ? fitPoints({ points: balance }, product, wanted) : 0
+  const price = priceCents(product)
+  const postage = postageCents(product)
+  const due = way === 'buy' ? dueCents(product, points) : 0
+  const floor = floorCents(product)
   const needsOption = product.options.length > 0 && !option
-  const needsAddress = way === 'points' && asksAddress(product)
+  const needsAddress = way === 'buy' && due === 0 && asksAddress(product)
 
   useEffect(() => {
     const was = document.activeElement as HTMLElement | null
     box.current?.focus()
     const overflow = document.documentElement.style.overflow
     document.documentElement.style.overflow = 'hidden'
-    // Heard from the whole page, not only from inside the sheet: the button that was just pressed may be
-    // gone (it becomes "It's yours"), and the keyboard is then nowhere in particular
+    // Heard from the whole page, not only from inside: the strip that was just pressed may be gone (it
+    // becomes "It's yours"), and the keyboard is then nowhere in particular
     const keys = (e: KeyboardEvent) => {
       const sheet = box.current
       if (!sheet) return
@@ -142,7 +192,6 @@ function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Prod
       was?.focus?.()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  // What was asked for has been done, and the button that asked is gone: the keyboard is put back on the sheet
   useEffect(() => {
     if (done && !box.current?.contains(document.activeElement)) box.current?.focus()
   }, [done])
@@ -154,7 +203,7 @@ function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Prod
   const order = async () => {
     setBusy(true)
     setError('')
-    const placed = await backend.order({ product: product.id, option, address: needsAddress ? address : null })
+    const placed = await backend.order({ product: product.id, option, points, address: needsAddress ? address : null })
     setBusy(false)
     if ('error' in placed) setError(whyNot(placed.error))
     else finish(placed)
@@ -173,10 +222,10 @@ function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Prod
     action = (
       <div className="done" role="status">
         <p className="done__head">{o.status === 'Requested' ? 'Requested.' : o.status === 'Pre-order' ? 'Reserved.' : 'It’s yours.'}</p>
-        <p className="small">
-          {o.status === 'Requested' ? 'We’ll write to you about it.' : o.status === 'Pre-order' && !o.points ? 'We’ll write when it is ready.' : product.kind === 'Document' ? 'Download it here, or from Yours, whenever you like.' : 'We’ll email you when it is on its way.'}
+        <p className="fine">
+          {o.status === 'Requested' ? 'We’ll write to you about it.' : o.status === 'Pre-order' && !o.points && !o.paid ? 'We’ll write when it is ready.' : product.kind === 'Document' ? 'Download it here, or from Yours, whenever you like.' : 'We’ll email you when it is on its way.'}
         </p>
-        <dl className="sums">
+        <dl className="rows">
           <div>
             <dt>Reference</dt>
             <dd>{o.reference}</dd>
@@ -187,6 +236,18 @@ function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Prod
               <dd>No. {o.number}</dd>
             </div>
           )}
+          {o.paid > 0 && (
+            <div>
+              <dt>Paid</dt>
+              <dd>{fmtCents(Math.round(o.paid * 100))}</dd>
+            </div>
+          )}
+          {o.points > 0 && (
+            <div>
+              <dt>Points used</dt>
+              <dd>{fmtPoints(o.points)}</dd>
+            </div>
+          )}
           {o.points > 0 && (
             <div>
               <dt>Balance now</dt>
@@ -195,67 +256,70 @@ function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Prod
           )}
         </dl>
         {product.kind === 'Document' && (
-          <button type="button" className="buy" disabled={busy} onClick={download}>
-            {busy ? 'Fetching…' : 'Download'}
-          </button>
+          <Strip busy={busy} onClick={download}>
+            {busy ? 'Fetching' : 'Download'}
+          </Strip>
         )}
       </div>
     )
   } else if (product.kind === 'Document' && mine) {
     action = (
-      <button type="button" className="buy" disabled={busy} onClick={download}>
-        {busy ? 'Fetching…' : 'Download'}
-      </button>
+      <Strip busy={busy} onClick={download}>
+        {busy ? 'Fetching' : 'Download'}
+      </Strip>
     )
-  } else if ((way === 'request' || way === 'reserve') && mine) {
-    action = <p className="buy buy--said">{way === 'request' ? 'Requested. We’ll write to you about it.' : 'Reserved. We’ll write when it is ready.'}</p>
+  } else if (way !== 'buy' && mine) {
+    action = <p className="said">{way === 'request' ? 'Requested. We’ll write to you about it.' : 'Reserved. We’ll write when it is ready.'}</p>
   } else if (out) {
-    action = <p className="buy buy--said">Sold out</p>
-  } else if (short) {
-    action = (
-      <p className="buy buy--said">
-        {fmtPoints(short)} more points and it’s yours
-      </p>
-    )
-  } else if (way === 'pay' && paying) {
-    action = <Pay backend={backend} product={product} option={option} stripeKey={shop.stripeKey} onDone={finish} />
+    action = <p className="said">Sold out</p>
+  } else if (way === 'buy' && due > 0 && paying) {
+    action = <Pay backend={backend} product={product} option={option} points={points} cents={due} stripeKey={shop.stripeKey} onDone={finish} />
   } else {
-    const label = way === 'request' ? 'Request it' : way === 'reserve' ? 'Reserve a copy' : way === 'pay' ? `Continue to pay ${fmtDollars(dollarsOf(product))}` : points ? `Spend ${fmtPoints(points)} points` : 'Get it'
+    const label = way === 'request' ? 'Request it' : way === 'reserve' ? 'Reserve a copy' : due > 0 ? `Pay ${fmtCents(due)}` : points ? `Take it · ${fmtPoints(points)} pts` : 'Take it'
     action = (
       <>
         {needsAddress && <AddressForm value={address} onChange={setAddress} />}
-        <button type="button" className="buy" disabled={busy || needsOption || (needsAddress && !complete(address))} onClick={way === 'pay' ? () => setPaying(true) : order}>
-          {busy ? 'One moment…' : needsOption ? 'Choose one above' : label}
-        </button>
+        <Strip busy={busy} disabled={needsOption || (needsAddress && !complete(address))} onClick={way === 'buy' && due > 0 ? () => setPaying(true) : order}>
+          {busy ? 'One moment' : needsOption ? 'Choose one above' : label}
+        </Strip>
       </>
     )
   }
 
+  const sticker = done ? (done.order.status === 'Requested' ? 'Asked' : done.order.status === 'Pre-order' ? 'Held' : 'Yours') : undefined
+  const step = most % 10 === 0 ? 10 : 1
+
   return (
     <div className="veil" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div
-        ref={box}
-        className="sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label={product.name}
-        tabIndex={-1}
-      >
-        <button type="button" className="sheet__close" onClick={onClose}>
-          Close
+      <div ref={box} className="counter" role="dialog" aria-modal="true" aria-label={product.name} tabIndex={-1}>
+        <button type="button" className="counter__close label" onClick={onClose}>
+          Back to the wall
         </button>
-        <div className="sheet__picture">
-          <Picture product={product} />
+        <div className="counter__pack" data-done={done ? '' : undefined}>
+          <i className="peg" aria-hidden />
+          <span className="swing">
+            <Pack product={product} sticker={sticker} />
+          </span>
+          {done && (
+            <span className="sparks" aria-hidden>
+              {Array.from({ length: 14 }, (_, n) => (
+                <i key={n} style={{ ['--a' as string]: `${n * 25.7}deg`, ['--d' as string]: `${70 + ((n * 37) % 60)}px` }} />
+              ))}
+            </span>
+          )}
         </div>
-        <div className="sheet__body">
-          <p className="label">{product.kind}</p>
-          <h2 className="sheet__name">{product.name}</h2>
-          <Tags product={product} />
-          {product.description && <p className="sheet__words">{product.description}</p>}
+        <section className="ticket counter__ticket">
+          <div className="ticket__head">
+            <span className="k">{product.kind}</span>
+            <span className="v">{stripOf(product) ?? 'Series 01'}</span>
+          </div>
+          <h2 className="counter__name">{product.name}</h2>
+          {product.description && <p className="counter__words">{product.description}</p>}
+          {keptTo(product).length > 0 && <p className="fine">For {keptTo(product).join(', ')} only.</p>}
 
           {product.options.length > 0 && !done && (
             <fieldset className="options">
-              <legend className="label">Choose one</legend>
+              <legend className="k">Choose one</legend>
               {product.options.map((choice) => (
                 <label key={choice} className="option">
                   <input type="radio" name="option" value={choice} checked={option === choice} disabled={paying} onChange={() => setOption(choice)} />
@@ -265,52 +329,69 @@ function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Prod
             </fieldset>
           )}
 
-          {!done && way !== 'reserve' && (
-            <dl className="sums">
-              {way === 'request' ? (
+          {!done && way === 'request' && (
+            <>
+              <dl className="rows">
+                <div className="rows__total">
+                  <dt>Price</dt>
+                  <dd>{price ? fmtCents(price) : 'On request'}</dd>
+                </div>
+              </dl>
+              {!mine && <p className="fine">Made to order, at its price: points are not used on this one. Ask, and we’ll write to you about it.</p>}
+            </>
+          )}
+          {!done && way === 'reserve' && !mine && <p className="fine">Not out yet. Reserve a copy and we’ll write when it is ready: nothing is taken now.</p>}
+          {!done && way === 'buy' && !out && !(product.kind === 'Document' && mine) && price + postage > 0 && (
+            <>
+              <dl className="rows">
                 <div>
                   <dt>Price</dt>
-                  <dd>{product.price ? fmtDollars(product.price) : 'On request'}</dd>
+                  <dd>{fmtCents(price)}</dd>
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <dt>Points</dt>
-                    <dd>{points ? fmtPoints(points) : 'None'}</dd>
+                {most > 0 && (
+                  <div className="rows__points">
+                    <dt>
+                      <label htmlFor="points">Your points</label>
+                    </dt>
+                    <dd>{points ? `− ${fmtCents(points * (100 / POINTS_PER_DOLLAR))}` : 'None used'}</dd>
+                    <div className="slide">
+                      <input
+                        id="points"
+                        type="range"
+                        min={0}
+                        max={most}
+                        step={step}
+                        value={points}
+                        disabled={paying}
+                        style={{ ['--at' as string]: `${most ? (points / most) * 100 : 0}%` }}
+                        aria-valuetext={`${fmtPoints(points)} points, ${fmtCents(due)} to pay`}
+                        onChange={(e) => setWanted(Number(e.target.value))}
+                      />
+                      <p className="fine">
+                        Using <b>{fmtPoints(points)}</b> of your {fmtPoints(balance)} pts
+                        {floor > 0 && points === most && balance >= most ? `. It can’t go under ${fmtCents(floor)}.` : '.'}
+                      </p>
+                    </div>
                   </div>
-                  {product.price ? (
-                    <div>
-                      <dt>Price</dt>
-                      <dd>{fmtDollars(product.price)}</dd>
-                    </div>
-                  ) : null}
-                  {product.postage ? (
-                    <div>
-                      <dt>Postage</dt>
-                      <dd>{fmtDollars(product.postage)}</dd>
-                    </div>
-                  ) : null}
-                  {way === 'pay' && (
-                    <div className="sums__total">
-                      <dt>To pay</dt>
-                      <dd>{fmtDollars(dollarsOf(product))}</dd>
-                    </div>
-                  )}
-                  {points > 0 && !short && (
-                    <div className="sums__after">
-                      <dt>Your balance after</dt>
-                      <dd>{fmtPoints(shop.member.points - points)} pts</dd>
-                    </div>
-                  )}
-                </>
-              )}
-            </dl>
+                )}
+                {postage > 0 && (
+                  <div>
+                    <dt>Postage</dt>
+                    <dd>{fmtCents(postage)}</dd>
+                  </div>
+                )}
+                <div className="rows__total">
+                  <dt>To pay</dt>
+                  <dd>{due > 0 ? fmtCents(due) : 'Nothing'}</dd>
+                </div>
+              </dl>
+              {most === 0 && floor >= price && price > 0 && <p className="fine">Points are not used on this one.</p>}
+              {most === 0 && floor < price && <p className="fine">You have no points to use yet: it is {fmtCents(due)} today.</p>}
+            </>
           )}
-          {way === 'request' && !done && !mine && <p className="small">This one is made to order and takes no points. Ask, and we’ll write to you about it.</p>}
-          {way === 'reserve' && !done && !mine && <p className="small">Not out yet. Reserve a copy and we’ll write when it is ready: nothing is taken now.</p>}
           {action}
           {error && <p className="oops" role="alert">{error}</p>}
-        </div>
+        </section>
       </div>
     </div>
   )
@@ -319,37 +400,34 @@ function Sheet({ shop, product, onClose, onPlaced }: { shop: Shop; product: Prod
 const WHEN = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const SAID: Record<string, string> = { Paid: 'Bought', Points: 'Bought', 'Pre-order': 'Reserved', Requested: 'Requested', 'Needs review': 'Being checked', Sent: 'Sent', Refunded: 'Refunded' }
 
+/** What a member has: each order as its receipt. */
 function Yours({ shop, onOpen }: { shop: Shop; onOpen: (product: Product) => void }) {
   if (!shop.orders.length) return null
   return (
     <section className="yours" aria-labelledby="yours-h">
-      <h2 id="yours-h" className="h2">
+      <h2 id="yours-h" className="label">
         Yours
       </h2>
-      <ul className="orders">
+      <ul className="receipts">
         {shop.orders.map((order: Order) => {
           const product = shop.products.find((p) => p.id === order.productId)
           const when = Date.parse(order.placed)
+          const cost = [order.paid ? fmtCents(Math.round(order.paid * 100)) : '', order.points ? `${fmtPoints(order.points)} pts` : ''].filter(Boolean).join(' + ')
           return (
-            <li key={order.id} className="order">
-              <span className="order__what">
-                <b>
-                  {order.productName}
-                  {order.option ? `, ${order.option}` : ''}
-                </b>
-                <span className="small">
-                  {SAID[order.status] ?? order.status}
-                  {order.number ? ` · No. ${order.number}` : ''}
-                  {Number.isFinite(when) ? ` · ${WHEN.format(when)}` : ''} · {order.reference}
-                </span>
-              </span>
-              <span className="order__cost small">
-                {order.points ? `${fmtPoints(order.points)} pts` : ''}
-                {order.points && order.paid ? ' + ' : ''}
-                {order.paid ? fmtDollars(order.paid) : ''}
-              </span>
+            <li key={order.id} className="ticket receipt">
+              <div className="ticket__head">
+                <span className="k">{order.reference}</span>
+                <span className="v">{SAID[order.status] ?? order.status}</span>
+              </div>
+              <p className="receipt__name">
+                {order.productName}
+                {order.option ? `, ${order.option}` : ''}
+              </p>
+              <p className="fine">
+                {[order.number ? `No. ${order.number}` : '', Number.isFinite(when) ? WHEN.format(when) : '', cost].filter(Boolean).join(' · ')}
+              </p>
               {product?.kind === 'Document' && order.status !== 'Refunded' && (
-                <button type="button" className="pill" onClick={() => onOpen(product)}>
+                <button type="button" className="linkbtn" onClick={() => onOpen(product)}>
                   Download
                 </button>
               )}
@@ -361,7 +439,7 @@ function Yours({ shop, onOpen }: { shop: Shop; onOpen: (product: Product) => voi
   )
 }
 
-/** The demo's own bar: who is looking, a way to more points, and the shelves put back. Never in the real store. */
+/** The demo's own bar: who is looking, a way to more points, and the wall put back. Never in the real store. */
 function DemoBar({ signedIn, onChange }: { signedIn: boolean; onChange: () => void }) {
   const [pick, setPick] = useState(demoPick())
   return (
@@ -397,9 +475,18 @@ function DemoBar({ signedIn, onChange }: { signedIn: boolean; onChange: () => vo
   )
 }
 
+const KINDS: { kind: Kind; label: string }[] = [
+  { kind: 'Book', label: 'Books' },
+  { kind: 'Chair', label: 'Chairs' },
+  { kind: 'Art', label: 'Art' },
+  { kind: 'Document', label: 'Documents' },
+  { kind: 'Other', label: 'Other' },
+]
+
 export function App() {
   const [answer, setAnswer] = useState<StoreAnswer | { status: 'loading' } | { status: 'down' }>({ status: 'loading' })
   const [open, setOpen] = useState<string | null>(null)
+  const [kind, setKind] = useState<Kind | null>(null)
   const load = useCallback(async () => {
     const got = await backend.store()
     setAnswer('error' in got ? (got.error === 'anon' ? { status: 'anon' } : got.error === 'member' ? { status: 'applied' } : { status: 'down' }) : got)
@@ -418,6 +505,10 @@ export function App() {
 
   const shop = answer.status === 'member' ? answer : null
   const opened = useMemo(() => shop?.products.find((p) => p.id === open) ?? null, [shop, open])
+  const kinds = useMemo(() => KINDS.filter(({ kind: k }) => shop?.products.some((p) => p.kind === k)), [shop])
+  // With the whole wall showing, one thing has the middle of it, and is not hung again among the rest
+  const star = shop && !kind ? starOf(shop.products) : null
+  const shown = shop ? shop.products.filter((p) => (!kind || p.kind === kind) && p !== star) : []
   const signout = async () => {
     await backend.signout()
     window.location.assign('/')
@@ -427,88 +518,133 @@ export function App() {
     <>
       {DEMO && <DemoBar signedIn={!!shop} onChange={load} />}
       <header className="top">
-        <a className="top__mark" href="/">
+        <a className="wordmark" href="/">
           Shrug VIP
         </a>
-        {shop && (
-          <div className="top__who">
-            <span className="balance" aria-label={`${fmtPoints(shop.member.points)} points`}>
-              <b>{fmtPoints(shop.member.points)}</b> pts
-            </span>
-            <a className="pill" href="/">
-              Your card
-            </a>
-            <button type="button" className="pill pill--quiet" onClick={signout}>
-              Sign out
-            </button>
-          </div>
-        )}
+        <div className="top__r">
+          The store
+          <br />
+          Series 01
+        </div>
       </header>
 
-      <main className="page">
-        {answer.status === 'loading' && <p className="wait label">Opening the store…</p>}
+      <main className="main">
+        <h1 className="sr">Shrug VIP: the store</h1>
+        {answer.status === 'loading' && <p className="label wait">Opening the store</p>}
         {answer.status === 'down' && (
           <div className="gate">
-            <h1 className="h1">The store didn’t answer.</h1>
-            <button type="button" className="buy" onClick={load}>
-              Try again
-            </button>
+            <p className="label">The store didn’t answer</p>
+            <Strip onClick={load}>Try again</Strip>
           </div>
         )}
         {answer.status === 'anon' && (
           <div className="gate">
-            <p className="label">Members only</p>
-            <h1 className="h1">Open your pack to come in.</h1>
-            <p className="lead">The store is for Shrug VIP members. Sign in with your card and it opens.</p>
-            <a className="buy" href="/">
-              Go to your card
+            <p className="label">Members only. Open your pack to come in.</p>
+            <a className="strip" href="/">
+              <span className="strip__chevs" aria-hidden>
+                ›››
+              </span>
+              <span className="strip__word">Your card</span>
+              <span className="strip__chevs" aria-hidden>
+                ›››
+              </span>
             </a>
           </div>
         )}
         {answer.status === 'applied' && (
           <div className="gate">
-            <p className="label">Not yet</p>
-            <h1 className="h1">You’re not on the list yet.</h1>
-            <p className="lead">We’ll write when it’s your time.</p>
-            <a className="buy" href="/">
+            <p className="label">You’re not on the list yet. We’ll write when it’s your time.</p>
+            <a className="linkbtn" href="/">
               Back to the card
             </a>
           </div>
         )}
         {shop && (
           <>
-            <section className="hero">
-              <p className="label">The store</p>
-              <h1 className="h1">Spend your points.</h1>
-              <p className="lead">
-                {POINTS_PER_DOLLAR} points are $1. Some pieces also have a price in dollars, paid with Apple Pay.
-              </p>
+            <div className="bar">
+              {kinds.length > 1 && (
+                <div className="filters" role="group" aria-label="Show">
+                  <button type="button" className="label" aria-pressed={kind === null} onClick={() => setKind(null)}>
+                    All
+                  </button>
+                  {kinds.map((k) => (
+                    <button key={k.kind} type="button" className="label" aria-pressed={kind === k.kind} onClick={() => setKind(kind === k.kind ? null : k.kind)}>
+                      {k.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="sticker" key={shop.member.points} aria-label={`Your balance: ${fmtPoints(shop.member.points)} points, worth ${fmtCents(shop.member.points * (100 / POINTS_PER_DOLLAR))} here`}>
+                <span className="sticker__k">Your balance</span>
+                <span className="sticker__v">
+                  {fmtPoints(shop.member.points)} <i>pts</i>
+                </span>
+                <span className="sticker__k">Worth {fmtCents(shop.member.points * (100 / POINTS_PER_DOLLAR))} here</span>
+              </div>
+            </div>
+
+            {star && <Stage shop={shop} product={star} onOpen={(p) => setOpen(p.id)} />}
+            {shown.length ? (
+              <ul className="rack">
+                {shown.map((product, n) => (
+                  <Hang key={product.id} shop={shop} product={product} n={n} onOpen={(p) => setOpen(p.id)} />
+                ))}
+              </ul>
+            ) : (
+              <p className="label wait">Nothing on the wall just now</p>
+            )}
+
+            <section className="how" aria-label="How it works">
+              <div className="ticket">
+                <div className="ticket__head">
+                  <span className="k">01</span>
+                  <span className="v">A price</span>
+                </div>
+                <p>Everything on the wall has a price in dollars.</p>
+              </div>
+              <div className="ticket">
+                <div className="ticket__head">
+                  <span className="k">02</span>
+                  <span className="v">Your points</span>
+                </div>
+                <p>{POINTS_PER_DOLLAR} points take $1 off. Use as many or as few as you like.</p>
+              </div>
+              <div className="ticket">
+                <div className="ticket__head">
+                  <span className="k">03</span>
+                  <span className="v">The rest</span>
+                </div>
+                <p>Some pieces have a floor they can’t go under, and postage is extra. Pay what’s left with Apple Pay.</p>
+              </div>
             </section>
-            {shop.products.length ? <Shelf shop={shop} onOpen={(p) => setOpen(p.id)} /> : <p className="lead">Nothing on the shelves just now.</p>}
+
             <Yours shop={shop} onOpen={(p) => setOpen(p.id)} />
           </>
         )}
       </main>
 
-      <footer className="foot">
-        <span>One card per member. Points are not money and can’t be swapped for it.</span>
-        <a href="https://www.shrug.vc" rel="noopener">
-          shrug.vc
-        </a>
+      <footer className="bot">
+        <span>{shop ? `Signed in as ${shop.member.first || 'you'}` : 'One card per member. No swaps.'}</span>
+        <span className="bot__r">
+          {shop && (
+            <>
+              <a className="linkbtn" href="/">
+                Your card
+              </a>
+              <button type="button" className="linkbtn" onClick={signout}>
+                Sign out
+              </button>
+            </>
+          )}
+          {!shop && (
+            <a className="linkbtn" href="https://www.shrug.vc" rel="noopener">
+              shrug.vc
+            </a>
+          )}
+        </span>
       </footer>
 
-      {shop && opened && (
-        <Sheet
-          key={opened.id}
-          shop={shop}
-          product={opened}
-          onClose={() => setOpen(null)}
-          onPlaced={() => {
-            // The shelves, the balance and Yours are the server's to say: asked for afresh
-            load()
-          }}
-        />
-      )}
+      {shop && opened && <Counter key={opened.id} shop={shop} product={opened} onClose={() => setOpen(null)} onPlaced={() => load()} />}
     </>
   )
 }

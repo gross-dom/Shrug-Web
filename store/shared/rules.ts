@@ -1,6 +1,12 @@
 // The store's rules, in one place: who sees what, what a thing costs, and how it is got. The server decides
 // by these, and the page draws by them, so the two can never tell a member different things. Nothing here
 // reads or writes anything: each is a plain answer to a plain question.
+//
+// How a price works. Everything has a price in dollars, kept in Airtable as points (10 points are $1, so
+// 10,000 points is $1,000). A member pays in dollars, and may bring the price down with their points, as
+// many or as few as they like. Some things have a floor: however many points are used, at least that much
+// is paid in dollars. Postage is added on top. A chair at 10,000 points with a floor of $450 and $70
+// postage is $1,070 with no points, and $520 with 5,500 of them, which is the least it can cost.
 
 /** 10 points are $1. */
 export const POINTS_PER_DOLLAR = 10
@@ -28,10 +34,10 @@ export interface Product {
   status: Status
   /** The groups that see it; "Everyone" among them means every member. */
   visibleTo: string[]
-  /** What it costs in points, or null where it takes none. */
+  /** Its price, in points (10 to the dollar), or null where it has none yet. */
   points: number | null
-  /** The floor: dollars still paid on top of the points. */
-  price: number | null
+  /** The least that is paid in dollars, however many points are used. */
+  floor: number | null
   postage: number | null
   description: string
   /** Where its picture is, if it has one. */
@@ -96,38 +102,52 @@ export function canSee(member: Pick<Member, 'roles' | 'funds'>, product: Pick<Pr
 /** The groups a product is kept to, for the label on it: nothing where everyone sees it. */
 export const keptTo = (product: Pick<Product, 'visibleTo'>): string[] => (product.visibleTo.includes('Everyone') ? [] : product.visibleTo)
 
-/** Dollars to pay: the floor and the postage together. */
-export const dollarsOf = (product: Pick<Product, 'price' | 'postage'>): number => round2((product.price ?? 0) + (product.postage ?? 0))
+type Priced = Pick<Product, 'points' | 'floor' | 'postage'>
 
-/** The same in cents, which is how a payment is counted. */
-export const centsOf = (product: Pick<Product, 'price' | 'postage'>): number => Math.round(dollarsOf(product) * 100)
+/** The price, in cents, before any points and without postage. */
+export const priceCents = (product: Pick<Product, 'points'>): number => Math.max(0, Math.round(product.points ?? 0)) * (100 / POINTS_PER_DOLLAR)
+/** The floor, in cents: never more than the price. */
+export const floorCents = (product: Priced): number => Math.min(priceCents(product), Math.max(0, Math.round((product.floor ?? 0) * 100)))
+export const postageCents = (product: Priced): number => Math.max(0, Math.round((product.postage ?? 0) * 100))
 
-const round2 = (n: number) => Math.round(n * 100) / 100
+/** The most points a member can put towards it: what they have, or what takes the price down to its floor. */
+export const mostPoints = (member: Pick<Member, 'points'>, product: Priced): number =>
+  Math.max(0, Math.min(Math.floor(member.points), Math.floor((priceCents(product) - floorCents(product)) / (100 / POINTS_PER_DOLLAR))))
+
+/** What is left to pay, in cents, with so many points used: the price less the points, and the postage. */
+export const dueCents = (product: Priced, points: number): number => priceCents(product) - points * (100 / POINTS_PER_DOLLAR) + postageCents(product)
+
+/** The least a card payment can be. Under it, the points are eased off until the payment is this much or nothing. */
+export const LEAST_PAYMENT = 50
+
+/** The nearest number of points to the one wanted that can really be used: whole, no more than the most,
+ * and never leaving a payment too small to take. */
+export function fitPoints(member: Pick<Member, 'points'>, product: Priced, wanted: number): number {
+  let points = Math.max(0, Math.min(mostPoints(member, product), Math.round(wanted)))
+  const due = dueCents(product, points)
+  if (due > 0 && due < LEAST_PAYMENT) points = Math.max(0, points - Math.ceil((LEAST_PAYMENT - due) / (100 / POINTS_PER_DOLLAR)))
+  return points
+}
 
 /** How a product is got.
  *   request  no buying: the member asks, and Shrug writes back
  *   reserve  a pre-order with no price yet: a place is kept, and nothing is taken
- *   pay      points, and dollars by Apple Pay or card
- *   points   points alone (or nothing at all, for something that costs none) */
-export type Way = 'request' | 'reserve' | 'pay' | 'points'
+ *   buy      dollars, less whatever points are used; with enough points, and no floor or postage, nothing to pay */
+export type Way = 'request' | 'reserve' | 'buy'
 
-export function wayOf(product: Pick<Product, 'status' | 'points' | 'price' | 'postage'>): Way {
+export function wayOf(product: Pick<Product, 'status' | 'points'>): Way {
   if (product.status === 'On request') return 'request'
-  if (product.status === 'Pre-order' && !product.points && dollarsOf(product) === 0) return 'reserve'
-  return dollarsOf(product) > 0 ? 'pay' : 'points'
+  if (product.status === 'Pre-order' && !product.points) return 'reserve'
+  return 'buy'
 }
 
-/** Whether the store has to be told where to send it. A document is a download, and a request is only a question. */
-export function asksAddress(product: Pick<Product, 'kind' | 'status' | 'points' | 'price' | 'postage' | 'needsAddress'>): boolean {
-  const way = wayOf(product)
-  if (product.kind === 'Document' || way === 'request' || way === 'reserve') return false
-  return product.needsAddress || way === 'pay'
+/** Whether it is posted, so that somewhere to send it is needed. A document is a download, and a request is only a question. */
+export function asksAddress(product: Pick<Product, 'kind' | 'status' | 'points' | 'floor' | 'postage' | 'needsAddress'>): boolean {
+  if (product.kind === 'Document' || wayOf(product) !== 'buy') return false
+  return product.needsAddress || postageCents(product) > 0
 }
 
 export const soldOut = (product: Pick<Product, 'left'>): boolean => product.left !== null && product.left <= 0
-
-/** How many points short of it a member is: 0 when they have enough. */
-export const shortBy = (member: Pick<Member, 'points'>, product: Pick<Product, 'points'>): number => Math.max(0, (product.points ?? 0) - member.points)
 
 /** Which of an edition the next one sold is: the 3rd of 10 when 8 remain. Empty for anything not numbered. */
 export function numberOf(product: Pick<Product, 'editionOf' | 'left'>): string {
@@ -141,23 +161,32 @@ export const has = (orders: Pick<Order, 'productId' | 'status'>[], product: Pick
   orders.some((order) => order.productId === product.id && order.status !== 'Refunded')
 
 /** A document that costs nothing is anyone's who may see it: there is nothing to buy first. */
-export const free = (product: Pick<Product, 'kind' | 'status' | 'points' | 'price' | 'postage'>): boolean => product.kind === 'Document' && wayOf(product) === 'points' && !product.points
+export const free = (product: Pick<Product, 'kind' | 'status' | 'points' | 'floor' | 'postage'>): boolean => product.kind === 'Document' && wayOf(product) === 'buy' && priceCents(product) + postageCents(product) === 0
 
 /** Why an order cannot be placed, or null when it can. The page shows these; the server refuses by them. */
-export type Refusal = 'hidden' | 'sold-out' | 'short' | 'option' | 'address' | 'already'
+export type Refusal = 'hidden' | 'sold-out' | 'points' | 'option' | 'address' | 'already'
 
-export function refusalOf(member: Member, product: Product, orders: Order[], asked: { option?: string; address?: Address | null }): Refusal | null {
+/** What is asked for: the points to use, the choice made, and (where nothing is left to pay, so no payment
+ * will give one) where to send it. */
+export interface Asking {
+  option?: string
+  points?: number
+  address?: Address | null
+}
+
+export function refusalOf(member: Member, product: Product, orders: Order[], asked: Asking): Refusal | null {
   if (!canSee(member, product)) return 'hidden'
   const way = wayOf(product)
   // One request, one reservation and one copy of a document each
-  if ((way === 'request' || way === 'reserve' || product.kind === 'Document') && has(orders, product)) return 'already'
+  if ((way !== 'buy' || product.kind === 'Document') && has(orders, product)) return 'already'
   if (way === 'request') return null
   if (soldOut(product)) return 'sold-out'
   if (product.options.length && !product.options.includes(asked.option ?? '')) return 'option'
   if (way === 'reserve') return null
-  if (shortBy(member, product) > 0) return 'short'
-  // A paid order is given its address by Apple Pay or the card form, at the payment
-  if (way === 'points' && asksAddress(product) && !complete(asked.address)) return 'address'
+  const points = asked.points ?? 0
+  if (!Number.isInteger(points) || points !== fitPoints(member, product, points)) return 'points'
+  // Something to pay: Apple Pay or the card form gives the address, at the payment
+  if (dueCents(product, points) === 0 && asksAddress(product) && !complete(asked.address)) return 'address'
   return null
 }
 
@@ -171,5 +200,7 @@ export const written = (address: Address): string =>
     .filter(Boolean)
     .join('\n')
 
+/** Cents as dollars, for showing: $520, or $39.50. */
+export const fmtCents = (cents: number) => fmtDollars(cents / 100)
 export const fmtPoints = (points: number) => points.toLocaleString('en-US')
 export const fmtDollars = (dollars: number) => (Number.isInteger(dollars) ? `$${dollars.toLocaleString('en-US')}` : `$${dollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)

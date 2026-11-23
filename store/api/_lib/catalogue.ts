@@ -20,7 +20,7 @@ export function productOf(row: Row): Product | null {
     status: status as Status,
     visibleTo: list(f[F.product.visibleTo]),
     points: num(f[F.product.points]),
-    price: num(f[F.product.price]),
+    floor: num(f[F.product.floor]),
     postage: num(f[F.product.postage]),
     description: str(f[F.product.description]).trim(),
     // Airtable's links to a picture last a couple of hours, which is longer than a page is looked at
