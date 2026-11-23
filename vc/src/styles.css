@@ -1,0 +1,1514 @@
+/* Shrug.VC. The kit's three colours and no others: Stone for the ground, black for what is said, white
+   for what is set on the ground (a card, a field). Greys are black let through, never a colour of their
+   own. Headings are Unbounded Bold and kept to short lines; text is DM Sans; small labels are DM Mono in
+   capitals. */
+
+:root {
+  --stone: #e2dfd2;
+  --black: #000;
+  --white: #fff;
+  /* Black, let through: for text that stands back, and for lines */
+  --soft: rgb(0 0 0 / 0.64);
+  --line: rgb(0 0 0 / 0.16);
+  --wash: rgb(0 0 0 / 0.06);
+
+  --display: 'Unbounded', ui-sans-serif, system-ui, sans-serif;
+  --text: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --wide: 1240px;
+  --pad: clamp(20px, 4.4vw, 56px);
+  --bar: 68px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color-scheme: only light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--stone);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: calc(var(--bar) + 16px);
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--stone);
+  color: var(--black);
+  font: 400 17px/1.5 var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+::selection {
+  background: var(--black);
+  color: var(--stone);
+}
+
+img,
+svg {
+  display: block;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+}
+
+p,
+h1,
+h2,
+blockquote,
+figure,
+ul,
+dl,
+dd {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 3px;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--white);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
+}
+
+/* ---- Words ---- */
+
+.label {
+  font: 400 12px/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+
+.h1 {
+  font: 700 clamp(30px, 8.2vw, 84px) / 1.04 var(--display);
+  letter-spacing: -0.03em;
+}
+
+.h2 {
+  font: 700 clamp(22px, 3vw, 34px) / 1.12 var(--display);
+  letter-spacing: -0.025em;
+}
+
+.lead {
+  max-width: 44ch;
+  font-size: clamp(18px, 1.7vw, 21px);
+  line-height: 1.4;
+  color: var(--soft);
+  text-wrap: pretty;
+}
+
+/* The kit's arrow. As it is drawn it points up and to the right: a link that leaves the site. Turned, it
+   points on, back, or down. */
+.arrow {
+  width: 0.62em;
+  height: 0.62em;
+  flex: none;
+  transition: transform 0.3s var(--ease);
+}
+
+.arrow--on {
+  transform: rotate(45deg);
+}
+
+.arrow--back {
+  transform: rotate(-135deg);
+}
+
+.textlink {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.38em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--black);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.textlink:hover {
+  text-decoration-thickness: 2px;
+}
+
+.textlink:hover .arrow--out {
+  transform: translate(2px, -2px);
+}
+
+.textlink:hover .arrow--on {
+  transform: translateX(3px) rotate(45deg);
+}
+
+/* ---- Things to press ---- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 1 auto;
+  min-height: 54px;
+  padding: 10px 26px;
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--white);
+  font-weight: 500;
+  text-decoration: none;
+  transition: transform 0.25s var(--ease);
+}
+
+.button--light {
+  background: var(--stone);
+  color: var(--black);
+}
+
+a.button:hover {
+  transform: translateY(-2px);
+}
+
+a.button:active {
+  transform: scale(0.98);
+}
+
+.soon {
+  padding: 3px 7px 2px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font: 400 10px/1.3 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: none;
+  opacity: 0.6;
+}
+
+.pill,
+.round {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  height: 44px;
+  border: 1px solid var(--black);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--black);
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.2s var(--ease);
+}
+
+.pill {
+  padding: 0 18px;
+}
+
+.round {
+  width: 44px;
+  padding: 0;
+  font-size: 18px;
+}
+
+.pill:hover,
+.round:hover:not(:disabled) {
+  background: var(--black);
+  color: var(--white);
+}
+
+.pill:active,
+.round:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.pill--dark,
+.round--dark {
+  border-color: rgb(255 255 255 / 0.5);
+  color: var(--white);
+}
+
+.pill--dark:hover,
+.round--dark:hover:not(:disabled) {
+  background: var(--white);
+  color: var(--black);
+}
+
+.round:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgb(0 0 0 / 0.28);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    transform 0.2s var(--ease);
+}
+
+.chip i {
+  font: 400 11px/1 var(--mono);
+  opacity: 0.6;
+}
+
+.chip:hover {
+  border-color: var(--black);
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--black);
+  background: var(--black);
+  color: var(--white);
+}
+
+.find {
+  flex: 0 1 290px;
+}
+
+.find input {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgb(0 0 0 / 0.28);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 15px;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.find input::placeholder {
+  color: var(--soft);
+  opacity: 1;
+}
+
+.find input:hover {
+  border-color: var(--black);
+}
+
+.find input:focus {
+  border-color: var(--black);
+  background: var(--white);
+  outline: none;
+}
+
+/* ---- The bar across the top ---- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+/* Flat on the page at its top; a ground of its own once the page has moved under it */
+.nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgb(226 223 210 / 0.86);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.nav[data-lifted]::before,
+.nav[data-open]::before {
+  opacity: 1;
+}
+
+.nav__in {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  max-width: var(--wide);
+  height: var(--bar);
+  margin: 0 auto;
+  padding: 0 var(--pad);
+}
+
+.nav__mark {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin-right: auto;
+}
+
+.nav__full {
+  height: 15px;
+  aspect-ratio: 1500 / 120.97;
+}
+
+.nav__short {
+  display: none;
+  height: 17px;
+  aspect-ratio: 900 / 160.72;
+}
+
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 2.4vw, 32px);
+}
+
+.nav__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* The line under a page's name is drawn in from the left as the pointer comes to it, and stays under the page that is showing */
+a.nav__link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9px;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease);
+}
+
+a.nav__link:hover::after,
+a.nav__link[aria-current='page']::after {
+  transform: scaleX(1);
+}
+
+.nav__link[aria-disabled='true'] {
+  color: var(--soft);
+  cursor: default;
+}
+
+.nav__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.25s var(--ease);
+}
+
+.nav__cta:hover {
+  transform: translateY(-1px);
+}
+
+.nav__cta:hover .arrow {
+  transform: translate(2px, -2px);
+}
+
+.nav__menu {
+  display: none;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.nav__menu i {
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--black);
+  transition: transform 0.3s var(--ease);
+}
+
+.nav__menu i:nth-of-type(1) {
+  transform: translateY(-4px);
+}
+
+.nav__menu i:nth-of-type(2) {
+  transform: translateY(4px);
+}
+
+.nav[data-open] .nav__menu i:nth-of-type(1) {
+  transform: rotate(45deg);
+}
+
+.nav[data-open] .nav__menu i:nth-of-type(2) {
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 900px) {
+  .nav__menu {
+    display: block;
+  }
+
+  /* The pages, as a sheet let down from the bar */
+  .nav__links {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 6px var(--pad) 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--stone);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition:
+      opacity 0.25s,
+      transform 0.3s var(--ease),
+      visibility 0s 0.3s;
+  }
+
+  .nav[data-open] .nav__links {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.25s,
+      transform 0.3s var(--ease);
+  }
+
+  .nav__link {
+    height: 56px;
+    border-bottom: 1px solid var(--line);
+    font-size: 22px;
+    letter-spacing: -0.01em;
+  }
+
+  a.nav__link::after {
+    display: none;
+  }
+
+  .nav__link[aria-current='page']::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--black);
+  }
+
+  .nav__cta {
+    justify-content: center;
+    height: 54px;
+    margin-top: 20px;
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 420px) {
+  .nav__full {
+    display: none;
+  }
+
+  .nav__short {
+    display: block;
+  }
+}
+
+/* ---- A page ---- */
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 var(--pad);
+  outline: none;
+  animation: arrive 0.45s var(--ease) backwards;
+}
+
+/* The entrances only say where a thing comes from, and are filled backwards alone: once one has run, the
+   thing is left exactly as it is written, with no transform of its own. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.hero {
+  display: grid;
+  gap: 22px;
+  padding: clamp(40px, 8vw, 104px) 0 clamp(32px, 5vw, 56px);
+}
+
+.hero--page {
+  padding-bottom: clamp(28px, 4vw, 44px);
+}
+
+/* ---- Quotes: the stage ---- */
+
+.stage {
+  padding: clamp(24px, 4.4vw, 60px);
+  border-radius: clamp(22px, 2.6vw, 32px);
+  background: var(--white);
+}
+
+/* Every staged quote lies in the one place, so the stage is as tall as its tallest and nothing under it moves */
+.stage__stack {
+  display: grid;
+}
+
+.stage__stack blockquote {
+  grid-area: 1 / 1;
+  align-self: start;
+  max-width: 26em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-wrap: pretty;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.45s,
+    transform 0.6s var(--ease),
+    visibility 0s 0.45s;
+}
+
+.stage__stack blockquote[data-on] {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.6s 0.15s,
+    transform 0.7s var(--ease) 0.15s;
+}
+
+.stage__stack blockquote[data-size='xl'] {
+  max-width: 17em;
+  font-size: clamp(30px, 4.6vw, 62px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.stage__stack blockquote[data-size='l'] {
+  font-size: clamp(24px, 3.2vw, 42px);
+}
+
+.stage__stack blockquote[data-size='m'] {
+  font-size: clamp(20px, 2.5vw, 32px);
+  max-width: 30em;
+}
+
+.stage__stack blockquote[data-size='s'] {
+  font-size: clamp(17px, 1.95vw, 25px);
+  line-height: 1.28;
+  letter-spacing: -0.012em;
+  max-width: 36em;
+}
+
+.stage__who {
+  margin-top: clamp(24px, 3vw, 40px);
+  animation: arrive 0.6s var(--ease) 0.2s backwards;
+}
+
+.stage__who .tags {
+  margin: 0 0 0 auto;
+}
+
+.stage__bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: clamp(22px, 2.6vw, 34px);
+}
+
+.stage__count {
+  min-width: 7ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage__line {
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.stage__line i {
+  display: block;
+  height: 100%;
+  background: var(--black);
+  transform-origin: left;
+  animation: fill linear both;
+}
+
+.stage[data-held] .stage__line i {
+  animation-play-state: paused;
+}
+
+@keyframes fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.stage__keys {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---- Who said it ---- */
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.face {
+  flex: none;
+  border-radius: 50%;
+  background: var(--wash);
+  object-fit: cover;
+}
+
+.face--none {
+  display: grid;
+  place-items: center;
+  background: var(--stone);
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+
+.who__text {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 12em;
+  line-height: 1.3;
+}
+
+.who__text b {
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.who__text span {
+  font-size: 14px;
+  color: var(--soft);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.tag {
+  padding: 4px 8px 3px;
+  border-radius: 999px;
+  background: var(--wash);
+  font: 400 10px/1.3 var(--mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--soft);
+  white-space: nowrap;
+}
+
+/* ---- Quotes: the facts, the wall ---- */
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0 24px;
+  margin: clamp(36px, 5vw, 64px) 0 0;
+}
+
+.fact {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px 0 22px;
+  border-top: 1px solid var(--black);
+}
+
+.fact dd {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.wall {
+  margin-top: clamp(56px, 8vw, 104px);
+}
+
+.wall__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+  margin-bottom: 22px;
+}
+
+.wall__head .h2 {
+  margin-right: 6px;
+}
+
+.wall__head .find {
+  margin-left: auto;
+}
+
+.more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 14px;
+  margin-top: 18px;
+}
+
+.more .label {
+  flex-basis: 100%;
+  text-align: center;
+}
+
+.none {
+  padding: 56px 0;
+  color: var(--soft);
+}
+
+.cards {
+  columns: 3;
+  column-gap: 14px;
+}
+
+.card {
+  break-inside: avoid;
+  margin-bottom: 14px;
+  padding: 22px 22px 20px;
+  border-radius: 20px;
+  background: var(--white);
+  animation: rise 0.55s var(--ease) backwards;
+  animation-delay: calc(var(--n, 0) * 45ms);
+  transition:
+    transform 0.35s var(--ease),
+    box-shadow 0.35s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 32px -22px rgb(0 0 0 / 0.45);
+  }
+}
+
+.card blockquote {
+  font-size: 16px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.card[data-loud] blockquote {
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+}
+
+.card .who {
+  margin-top: 18px;
+}
+
+/* ---- Quotes: the case studies ---- */
+
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px 40px;
+  margin-top: clamp(56px, 8vw, 104px);
+  padding: clamp(28px, 4.6vw, 60px);
+  border-radius: clamp(22px, 2.6vw, 32px);
+  background: var(--black);
+  color: var(--white);
+}
+
+.band > div {
+  display: grid;
+  gap: 14px;
+  max-width: 34em;
+}
+
+.band .label {
+  color: rgb(255 255 255 / 0.62);
+}
+
+.band__list {
+  font: 400 12.5px/1.6 var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.band :focus-visible {
+  outline-color: var(--white);
+}
+
+/* ---- Portfolio ---- */
+
+.portfolio .chips,
+.vip .chips {
+  margin-bottom: 22px;
+}
+
+.companies {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr));
+  gap: 14px;
+}
+
+.companies > li {
+  animation: rise 0.5s var(--ease) backwards;
+}
+
+.company {
+  display: flex;
+  gap: 16px;
+  height: 100%;
+  padding: 20px;
+  border-radius: 20px;
+  background: var(--white);
+  text-decoration: none;
+  transition:
+    transform 0.35s var(--ease),
+    box-shadow 0.35s;
+}
+
+@media (hover: hover) {
+  a.company:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 32px -22px rgb(0 0 0 / 0.45);
+  }
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--stone);
+  font: 700 22px/1 var(--display);
+}
+
+.logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.company__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 5px;
+  min-width: 0;
+}
+
+.company__text b {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.company__blurb {
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--soft);
+  text-wrap: pretty;
+}
+
+.company__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.company__foot .label {
+  font-size: 10.5px;
+}
+
+.company__host {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--soft);
+  transition: color 0.2s;
+}
+
+a.company:hover .company__host {
+  color: var(--black);
+}
+
+a.company:hover .arrow {
+  transform: translate(2px, -2px);
+}
+
+/* ---- FAQ ---- */
+
+.faq {
+  /* The size a question is set at: its answer is set in under its words, past the number */
+  --q: clamp(18px, 2vw, 23px);
+  max-width: 880px;
+  border-bottom: 1px solid var(--black);
+}
+
+.qa {
+  border-top: 1px solid var(--black);
+}
+
+.qa__q {
+  font: inherit;
+}
+
+.qa__q button {
+  display: grid;
+  grid-template-columns: 2.6em 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 22px 4px 22px 0;
+  border: 0;
+  background: none;
+  font-size: var(--q);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-align: left;
+}
+
+.qa__n {
+  color: var(--soft);
+}
+
+/* Down while the answer is shut, up once it is open */
+.qa__arrow {
+  width: 0.5em;
+  height: 0.5em;
+  transform: rotate(135deg);
+  transition: transform 0.4s var(--ease);
+}
+
+.qa__q button:hover .qa__arrow {
+  transform: translateY(3px) rotate(135deg);
+}
+
+.qa[data-open] .qa__arrow,
+.qa[data-open] .qa__q button:hover .qa__arrow {
+  transform: rotate(-45deg);
+}
+
+.qa__a {
+  display: grid;
+  gap: 0.9em;
+  max-width: 44em;
+  padding: 0 0 28px calc(var(--q) * 2.6 + 8px);
+  line-height: 1.6;
+  animation: rise 0.4s var(--ease) backwards;
+}
+
+.qa__a[hidden] {
+  display: none;
+}
+
+.qa__a ul {
+  display: grid;
+  gap: 0.4em;
+  padding-left: 1.1em;
+  list-style: disc;
+}
+
+/* ---- VIP: the wall ---- */
+
+.vip__story {
+  margin: -6px 0 22px;
+}
+
+.love {
+  columns: 4;
+  column-gap: 12px;
+}
+
+.love > li {
+  break-inside: avoid;
+  margin-bottom: 12px;
+}
+
+.shot {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--wash);
+  cursor: zoom-in;
+  animation: rise 0.5s var(--ease) backwards;
+}
+
+.shot img {
+  width: 100%;
+  height: auto;
+  transition: transform 0.7s var(--ease);
+}
+
+.shot__cap {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 5px 9px 4px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.66);
+  color: var(--white);
+  font-size: 10.5px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+@media (hover: hover) {
+  .shot__cap {
+    opacity: 0;
+    transform: translateY(4px);
+    transition:
+      opacity 0.25s,
+      transform 0.3s var(--ease);
+  }
+
+  .shot:hover img {
+    transform: scale(1.04);
+  }
+
+  .shot:hover .shot__cap,
+  .shot:focus-visible .shot__cap {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card--love {
+  animation-delay: 0s;
+}
+
+/* A picture, opened */
+.look {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: rgb(0 0 0 / 0.95);
+  color: var(--white);
+  animation: fade 0.25s backwards;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.look :focus-visible {
+  outline-color: var(--white);
+}
+
+.look__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px max(16px, env(safe-area-inset-right)) 10px max(20px, env(safe-area-inset-left));
+}
+
+.look__bar .label {
+  color: rgb(255 255 255 / 0.72);
+}
+
+.look__picture {
+  place-self: center;
+  max-width: min(100% - 32px, 1280px);
+  max-height: calc(100% - 28px);
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  object-fit: contain;
+  animation: open 0.4s var(--ease) backwards;
+}
+
+@keyframes open {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.look__step {
+  position: absolute;
+  top: 50%;
+  margin-top: -22px;
+  background: rgb(0 0 0 / 0.45);
+}
+
+.look__step--back {
+  left: 16px;
+}
+
+.look__step--on {
+  right: 16px;
+}
+
+/* ---- The foot ---- */
+
+.foot {
+  margin-top: clamp(72px, 10vw, 128px);
+  background: var(--black);
+  color: var(--white);
+}
+
+.foot :focus-visible {
+  outline-color: var(--white);
+}
+
+.foot__in {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 72px) var(--pad) max(32px, env(safe-area-inset-bottom));
+}
+
+.foot__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.foot__mark {
+  width: min(100%, 420px);
+  aspect-ratio: 1500 / 120.97;
+}
+
+.foot__shrug {
+  padding: 11px 18px 10px;
+  border: 1px solid rgb(255 255 255 / 0.32);
+  border-radius: 999px;
+  background: none;
+  color: var(--white);
+  font: 400 16px/1 var(--mono);
+  white-space: nowrap;
+  transition: border-color 0.2s;
+}
+
+.foot__shrug span {
+  display: block;
+}
+
+.foot__shrug:hover {
+  border-color: var(--white);
+}
+
+/* It shrugs: when pressed, and once as the pointer comes to it */
+.foot__shrug[data-again] span,
+.foot__shrug:hover span {
+  animation: shrug 0.55s var(--ease);
+}
+
+@keyframes shrug {
+  35% {
+    transform: translateY(-5px) scaleY(1.06);
+  }
+
+  70% {
+    transform: translateY(1px);
+  }
+}
+
+.foot__rows {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 24px clamp(40px, 8vw, 112px);
+  margin-top: clamp(32px, 5vw, 56px);
+  padding-top: 26px;
+  border-top: 1px solid rgb(255 255 255 / 0.2);
+}
+
+.foot__col {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.foot__link {
+  display: inline-flex;
+  white-space: nowrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: rgb(255 255 255 / 0.8);
+  font-size: 15.5px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a.foot__link:hover {
+  color: var(--white);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.foot__link[aria-disabled='true'] {
+  color: rgb(255 255 255 / 0.55);
+}
+
+.foot__small {
+  align-self: end;
+  justify-self: end;
+  font: 400 11.5px/1.4 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.6);
+}
+
+/* ---- Narrower ---- */
+
+@media (max-width: 1020px) {
+  .cards {
+    columns: 2;
+  }
+
+  .love {
+    columns: 3;
+  }
+}
+
+@media (max-width: 760px) {
+  .facts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .find {
+    flex-basis: 100%;
+  }
+
+  .stage__who .tags {
+    flex-basis: 100%;
+    margin: 0;
+  }
+
+  .stage__count {
+    display: none;
+  }
+
+  .find input {
+    height: 46px;
+    font-size: 16px;
+  }
+
+  .love {
+    columns: 2;
+    column-gap: 10px;
+  }
+
+  .love > li {
+    margin-bottom: 10px;
+  }
+
+  .foot__rows {
+    grid-template-columns: max-content 1fr;
+  }
+
+  /* On a narrow wall a quote is given the whole width, and the pictures gather again under it */
+  .card--love {
+    column-span: all;
+    margin-top: 2px;
+  }
+
+  .foot__small {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .cards {
+    columns: 1;
+  }
+
+  /* The chips run off the side in a row of their own, to be pushed along */
+  .chips {
+    flex-wrap: nowrap;
+    margin-inline: calc(var(--pad) * -1);
+    padding-inline: var(--pad);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wall__head .chips {
+    order: 3;
+    flex-basis: calc(100% + var(--pad) * 2);
+  }
+
+  .qa__q button {
+    grid-template-columns: 2.2em 1fr auto;
+  }
+
+  .qa__a {
+    padding-left: 0;
+  }
+
+  .look__step {
+    top: auto;
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+/* ---- Less motion, for someone who has asked for it ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+
+  .stage__line i {
+    animation: none;
+    transform: scaleX(0);
+  }
+}
+
+@media print {
+  .nav,
+  .foot,
+  .stage__bar,
+  .chips,
+  .find {
+    display: none;
+  }
+}

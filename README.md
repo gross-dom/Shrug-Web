@@ -229,6 +229,31 @@ src/
 - **Dates and times** are written in English whatever the browser's language, with the visitor's own clock, 12 hours or 24 (`os/dates.ts`: every formatter comes from there). The date in the menu bar and on the Lock Screen is the short one, weekday first: Wed 18 Nov.
 - **The focus ring** is one rule in `base.css`: the accent, solid. A surface it would not show against (the wallpaper, the Dock, a dark window) sets `--ring: #fff`. The ring is for a keyboard: what the site itself gives the keyboard to after a touch or a press of the mouse, or before anything has been pressed at all (a reload), wears none, and the next key pressed brings it back (`os/focus.ts`).
 
+## Shrug.VC (`vc/`)
+
+The firm's own site is kept here too, in a folder of its own: an ordinary website, not a desktop. It is
+built and deployed by itself, and shares nothing with the desktop site but what it says.
+
+```
+npm run dev:vc      # work on it, at http://127.0.0.1:5173
+npm run build:vc    # type-check, build into vc/dist, and write each page as HTML
+```
+
+- **Pages.** Quotes (`/`), Portfolio (`/portfolio`), VIP (`/vip`) and FAQ (`/faq`), named in
+  `vc/src/router.tsx`. Each is a real address with HTML of its own (`vc/prerender.mjs` draws every page
+  ahead of time, with its title and description), so a link, a reload or a search engine is given the
+  page itself. Once the site is running, a link between its pages swaps the page in place.
+- **What it says** is read from the same data as the desktop site (`src/data`: the quotes, the portfolio,
+  the FAQs, the drops), so the two never disagree. Their pictures (`public/logos`, `public/people`,
+  `public/vip`) are copied into the build. What is this site's own is in `vc/src/content.ts`.
+- **The look** follows the brand kit: Stone, black and white and nothing else; headings in Unbounded Bold,
+  text in DM Sans, small labels in DM Mono. The wordmark and its arrow are the kit's own outlines
+  (`vc/src/brand.ts`) and are not to be redrawn. All of the styling is `vc/src/styles.css`.
+- **The case studies** are one PDF to download. Put it at `vc/public/shrug-case-studies.pdf` and build
+  again; until it is there, the links to it say "PDF soon" and go nowhere.
+- **Deploying.** `vc/dist` is the whole site, and `vc/vercel.json` goes with it (addresses without
+  `.html`, and how long things are kept).
+
 ## Accessibility
 
 - **Keyboard.** Both layouts work without a pointer. Menus and lists answer the arrow keys; sheets, folders, menus and the screen saver hold the keyboard while they are up and give it back to what opened them. A page that is only read (an FAQ's answer, in the window and on the phone) takes the keyboard itself, so that the arrows and Page Down scroll a long one. The iPhone has two buttons only a keyboard or a screen reader meets, Home Screen and App Switcher, which show when they have focus.
