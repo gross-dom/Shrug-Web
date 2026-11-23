@@ -136,7 +136,10 @@ check('a free document is got with no address', got.body.ok && got.body.points =
 check('and only once', (await call('lee', 'order', 'POST', { product: update4.id })).body.error === 'already')
 const file = await call('lee', 'file', 'GET', null, `?product=${update4.id}`)
 check('its file comes down', file.status === 200 && file.body.startsWith('%PDF') && file.headers.get('content-disposition').includes('Shrug 4.pdf'))
-check('not to someone who has not got it', (await call('ada', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'not-yours')
+check('a free document needs no order first', (await call('ada', 'file', 'GET', null, `?product=${update4.id}`)).status === 200)
+update4.fields[P.points] = 50
+check('one with a price is not handed to someone who has not got it', (await call('ada', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'not-yours' && (await call('lee', 'file', 'GET', null, `?product=${update4.id}`)).status === 200)
+update4.fields[P.points] = 0
 check('nor a document they may not see', (await call('ada', 'file', 'GET', null, `?product=${update1.id}`)).status === 404)
 
 // On request, and a pre-order

@@ -1,7 +1,7 @@
 // The apps on the desktop: what each is called, how big its window opens and
 // how small it can get. The windows themselves are in src/apps.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'photos' | 'about' | 'wallpapers'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'photos' | 'about' | 'wallpapers' | 'updates'
 
 export interface Size {
   w: number
@@ -118,6 +118,19 @@ export const APPS: Record<AppId, AppSpec> = {
     size: fit({ w: 0.56, h: 0.68 }, { w: 720, h: 480 }, { w: 980, h: 660 }),
     min: { w: 420, h: 340 },
     nudge: { x: 30, y: 10 },
+    resizable: true,
+    lightsY: 26,
+    dock: null,
+  },
+  // The LP Updates folder: documents for Shrug's LPs. It is on the desk only for someone who has logged in
+  // (the menu bar's Log In), and what is in it is theirs alone (os/account.ts)
+  updates: {
+    id: 'updates',
+    name: 'LP Updates',
+    blurb: 'For Shrug’s LPs',
+    size: fit({ w: 0.44, h: 0.56 }, { w: 560, h: 420 }, { w: 720, h: 560 }),
+    min: { w: 380, h: 300 },
+    nudge: { x: 60, y: 24 },
     resizable: true,
     lightsY: 26,
     dock: null,

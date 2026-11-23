@@ -26,6 +26,7 @@ Run against a build (`all.sh` does), not only the dev server: the dev server kee
 | `addresses` | What a phone fetches, the order of the stylesheets in a build, forgiving addresses |
 | `place` | The address follows the visitor on both layouts, a link opens where it says, Share passes that link on, and a reload brings the desktop back |
 | `portfolio-faqs`, `terminal-vip`, `messages`, `folders-search`, `ios-parts`, `phone-shell`, `desktop-shell` | Each of the audit's fixes, and of the review's after it, by area (`terminal-vip` also holds to Tab, `whois`, `fortune` and a founder's company; `phone-shell` to the glass, the Lock Screen and a second tap) |
+| `account` | Log In at the right of the menu bar (the sheet, an address, six digits, a wrong code), the LP Updates folder it puts on the desk and what is in it, a download, a reload, Log Out, and that a visitor and a phone have neither. It runs against the demo's stand-in (`src/os/account.ts`) |
 | `between-apps` | What happens between apps on the iPhone (an app opening out of its icon frame by frame, its launch screen, being carried off by hand), the Exit buttons of Notes and Messages, a message to Shrug with files, Back leading back out to a folder, and on the desktop the widget and the redrawn icons |
 | `forced-colours` | Windows High Contrast (Chromium's emulation), and the kit's parts under reduced motion |
 | `*-webkit` | The same in Safari's engine |

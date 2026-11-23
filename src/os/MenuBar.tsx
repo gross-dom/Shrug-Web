@@ -1,3 +1,4 @@
+import { AccountItem } from './Account'
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { chat, finishChat, replayChat, toggleChat } from '../apps/chat'
 import { finder, photos, setFinderView, setMediaFilter, setNotesQuery, showNote, notes } from '../apps/state'
@@ -77,7 +78,7 @@ function Mark() {
 
 function useMenus(): MenuDef[] {
   const active = useStore(wm, activeApp)
-  const open = useStore(wm, (s) => DOCK_APPS.concat('about', 'wallpapers').filter((id) => s.wins[id].open).join(' '))
+  const open = useStore(wm, (s) => DOCK_APPS.concat('about', 'wallpapers', 'updates').filter((id) => s.wins[id].open).join(' '))
   const tile = useStore(wm, (s) => (active ? s.wins[active].tile : null))
   const compact = useStore(wm, (s) => s.compact)
   const paused = useStore(chat, (s) => s.paused)
@@ -449,6 +450,7 @@ export function MenuBar() {
         })}
       </div>
       <div className="menubar__status">
+        <AccountItem />
         <time className="menubar__clock" dateTime={now.toISOString()}>
           <span>{shortDay(now)}</span>
           <span>{TIME.format(now)}</span>

@@ -2,9 +2,9 @@ import { F, files } from './_lib/airtable.ts'
 import { ordersFor, shelvesFor } from './_lib/catalogue.ts'
 import { json } from './_lib/http.ts'
 import { memberAsking, trouble } from './_lib/who.ts'
-import { has } from '../shared/rules.ts'
+import { free, has } from '../shared/rules.ts'
 
-// A document, handed to a member who has it. The file is kept in Airtable (Products → File) and is fetched
+// A document, handed to a member who has it (or who may see it, where it costs nothing). The file is kept in Airtable (Products → File) and is fetched
 // from there for them each time: it has no address of its own that could be passed on to anyone else.
 export async function GET(request: Request) {
   try {
@@ -15,8 +15,8 @@ export async function GET(request: Request) {
     const product = products.find((p) => p.id === id)
     const row = rows.find((r) => r.id === id)
     if (!product || !row || product.kind !== 'Document') return json({ error: 'hidden' }, { status: 404 })
-    const { orders } = await ordersFor(who.member.id, rows)
-    if (!has(orders, product)) return json({ error: 'not-yours' }, { status: 403 })
+    // One that costs nothing is theirs for the seeing; anything else has to have been got first
+    if (!free(product) && !has((await ordersFor(who.member.id, rows)).orders, product)) return json({ error: 'not-yours' }, { status: 403 })
     const file = files(row.fields[F.product.file])[0]
     if (!file?.url) return json({ error: 'no-file' }, { status: 404 })
     const got = await fetch(file.url)

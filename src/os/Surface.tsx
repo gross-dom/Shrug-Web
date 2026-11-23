@@ -5,8 +5,10 @@ import { MessagesApp } from '../apps/Messages'
 import { NotesApp } from '../apps/Notes'
 import { PhotosApp } from '../apps/Photos'
 import { TerminalApp } from '../apps/Terminal'
+import { UpdatesApp } from '../apps/Updates'
 import { WallpapersApp } from '../apps/Wallpapers'
 import { SITE } from '../data/site'
+import { account } from './account'
 import { APPS, APP_IDS, type AppId } from './apps'
 import { Boundary } from './Boundary'
 import { Dock } from './Dock'
@@ -35,6 +37,7 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   photos: PhotosApp,
   about: AboutApp,
   wallpapers: WallpapersApp,
+  updates: UpdatesApp,
 }
 
 interface DeskItem {
@@ -72,8 +75,23 @@ const DESK: DeskItem[] = [
   { id: 'one-pager', name: 'One-pager', says: 'desktop icon, opens in a new tab', icon: <DocumentIcon />, open: () => window.open(SITE.onePager, '_blank', 'noopener,noreferrer') },
 ]
 
+/** The LP Updates folder. It is not left out on the desk for everyone: logging in is what puts it there. */
+const UPDATES: DeskItem = {
+  id: 'updates',
+  name: 'LP Updates',
+  says: 'desktop icon',
+  icon: <FolderIcon />,
+  open: () => {
+    openApp('updates', dockPoint('updates'))
+    focusWindow('updates')
+  },
+}
+
 function DeskIcons() {
   const [picked, setPicked] = useState<string | null>(null)
+  // Someone logged in who has documents to read has their folder, above the one-pager
+  const unlocked = useStore(account, (s) => s.status === 'member' && s.docs.length > 0)
+  const items = unlocked ? [...DESK.slice(0, -1), UPDATES, ...DESK.slice(-1)] : DESK
   /** What last pressed an icon, and whether that icon was already picked when it did. */
   const press = useRef({ pointer: '', again: false })
   useEffect(() => {
@@ -86,7 +104,7 @@ function DeskIcons() {
   }, [picked])
   return (
     <ul className="desk" aria-label="On the desktop">
-      {DESK.map((item) => (
+      {items.map((item) => (
         <li key={item.id} className="desk__cell">
           <button
             type="button"

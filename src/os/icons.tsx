@@ -244,6 +244,7 @@ const ICONS: Record<AppId, () => ReactNode> = {
   photos: VipIcon,
   about: ShrugIcon,
   wallpapers: FolderIcon,
+  updates: FolderIcon,
 }
 
 export function AppIcon({ id }: { id: AppId }) {

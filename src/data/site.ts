@@ -12,6 +12,10 @@ export const SITE = {
   /** Where the site lives. The link preview's addresses are written from this (vite.config.ts). */
   url: 'https://www.shrug.vc/',
   onePager: 'https://docsend.com/view/4659mp7f5ci9zdxa',
+  /** The points site: a member's card, and the store their points are spent in. (Its testing address,
+   * until it has a domain of its own.) */
+  points: 'https://shrug-store.vercel.app/',
+  store: 'https://shrug-store.vercel.app/store/',
   /** How a visitor gets hold of Shrug for real: a number to text
    * (international form, '+1...') or an address to email. Neither is known
    * yet, so both are null and `reach` falls back on the one-pager. The day

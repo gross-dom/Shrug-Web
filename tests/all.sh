@@ -39,6 +39,7 @@ run "the address follows; reload"    node place.cjs $BASE
 run "portfolio and FAQs"             node portfolio-faqs.cjs $BASE
 run "terminal and VIP"               node terminal-vip.cjs $BASE
 run "wallpapers"                     node wallpapers.cjs $BASE
+run "log in and LP Updates"          node account.cjs $BASE
 run "desktop shell"                  node desktop-shell.cjs $BASE
 run "forced colours, reduced motion" node forced-colours.cjs $BASE
 run "messages"                       node messages.cjs $BASE

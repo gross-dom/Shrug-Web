@@ -140,6 +140,9 @@ export function numberOf(product: Pick<Product, 'editionOf' | 'left'>): string {
 export const has = (orders: Pick<Order, 'productId' | 'status'>[], product: Pick<Product, 'id'>): boolean =>
   orders.some((order) => order.productId === product.id && order.status !== 'Refunded')
 
+/** A document that costs nothing is anyone's who may see it: there is nothing to buy first. */
+export const free = (product: Pick<Product, 'kind' | 'status' | 'points' | 'price' | 'postage'>): boolean => product.kind === 'Document' && wayOf(product) === 'points' && !product.points
+
 /** Why an order cannot be placed, or null when it can. The page shows these; the server refuses by them. */
 export type Refusal = 'hidden' | 'sold-out' | 'short' | 'option' | 'address' | 'already'
 
