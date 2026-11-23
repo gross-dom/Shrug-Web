@@ -1,0 +1,225 @@
+/* Shrug VIP: the store. One stylesheet for every screen but the card page.
+   A plain dark interface: one sans, sentence case, rounded surfaces, one white button.
+   Gold is only points. The member's card (small, in the bar) is the one piece of the card page that comes in. */
+
+body{margin:0}
+a{color:inherit}
+
+.ui,.up{
+  --bg:#0c0c0d; --surface:#17171a; --surface-2:#222226; --surface-3:#2e2e33; --line:rgba(255,255,255,.09);
+  --text:#f5f5f7; --text-2:#a1a1a8; --text-3:#85858d; --gold:#d9b862; --red:#ff7a72;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --edge:40px; --bar:72px; --foot:104px;
+  position:relative; box-sizing:border-box; overflow:hidden;
+  background:var(--bg); color:var(--text); font:400 15px/1.47 var(--font); letter-spacing:-.006em;
+  -webkit-font-smoothing:antialiased;
+}
+.ui{width:100%; height:100vh; min-height:760px}
+.ui.ui-sheet{height:auto; min-height:0}
+.up{width:390px; height:844px; --edge:20px}
+.ui *,.up *{box-sizing:border-box}
+:where(.ui,.up) :where(p,h1,h2,h3,dl,dd,ol,ul,figure){margin:0; padding:0}
+:where(.ui,.up) :where(ol,ul){list-style:none}
+:where(.ui,.up) :where(button){font:inherit; color:inherit; cursor:pointer}
+
+/* ---- Type ---- */
+.t-title{font:600 34px/1.12 var(--font); letter-spacing:-.022em}
+.t-h2{font:600 22px/1.2 var(--font); letter-spacing:-.015em}
+.t-h3{font:600 15px/1.3 var(--font)}
+.t-sm{font-size:13px; line-height:1.4}
+.t-2{color:var(--text-2)}
+.t-3{color:var(--text-3)}
+.t-gold{color:var(--gold)}
+.t-words{color:var(--text-2); max-width:48ch; text-wrap:pretty}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---- The bar: the name, the three sections, the balance ---- */
+.ui-top{position:absolute; top:0; left:0; right:0; height:var(--bar); padding:0 var(--edge);
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:24px}
+.ui-mark{justify-self:start; display:inline-flex; align-items:center; min-height:44px; font:600 18px/1 var(--font); letter-spacing:-.02em; color:var(--text); text-decoration:none}
+.ui-seg{display:inline-flex; gap:2px; padding:2px; border-radius:999px; background:var(--surface)}
+.ui-seg a{display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 18px; border-radius:999px;
+  font:500 14px/1 var(--font); color:var(--text-2); text-decoration:none}
+.ui-seg a[aria-current]{background:var(--surface-3); color:var(--text)}
+.ui-wallet{justify-self:end; display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:0 16px 0 10px; border-radius:999px;
+  background:var(--surface); color:var(--text); text-decoration:none; white-space:nowrap; font:600 15px/1 var(--font); font-variant-numeric:tabular-nums}
+.ui-wallet small{font:400 15px/1 var(--font); color:var(--text-2)}
+.ui-chip{flex:none; width:20px; height:28px; border-radius:4px; box-shadow:inset 0 0 0 .5px rgba(255,255,255,.45)}
+.m-gold{background:linear-gradient(135deg,#b8944a,#fff3cf 20%,#c9a961 38%,#f6e7b8 56%,#9c7a30 74%,#c9a961)}
+.m-silver{background:linear-gradient(135deg,#8f98a2,#f4f7fa 20%,#b5bdc6 38%,#eef1f4 56%,#858e98 74%,#c3cad2)}
+.m-black{background:linear-gradient(135deg,#17181b,#3d4047 20%,#1c1d21 40%,#34373d 58%,#111214 76%,#27292e)}
+.ui-delta{display:inline-flex; align-items:center; min-height:24px; padding:0 8px; margin-left:2px; border-radius:999px;
+  background:rgba(217,184,98,.16); color:#e8cf8c; font:600 12px/1 var(--font)}
+
+/* ---- Buttons and links ---- */
+.ui-btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:52px; padding:0 24px; border:0; border-radius:999px;
+  background:var(--text); color:#0c0c0d; font:600 16px/1 var(--font); letter-spacing:-.01em; text-decoration:none; white-space:nowrap}
+.ui-btn.sec{background:var(--surface-2); color:var(--text)}
+.ui-btn.off{background:var(--surface); color:var(--text-3)}
+.ui-btn.sm{width:auto; min-height:36px; padding:0 16px; font-size:14px}
+.ui-btn.fit{width:auto; align-self:flex-start}
+.ui-link{display:inline-flex; align-items:center; gap:4px; min-height:44px; color:var(--text); font:500 14px/1 var(--font); text-decoration:none; white-space:nowrap}
+.ui-link.quiet{color:var(--text-2)}
+.ui-round{display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%;
+  background:rgba(255,255,255,.08); color:var(--text); text-decoration:none}
+.ui-badge{display:inline-flex; align-items:center; min-height:24px; padding:0 10px; border-radius:999px; background:var(--surface-2);
+  font:500 12px/1 var(--font); color:var(--text-2); white-space:nowrap}
+.ui-badge.gold{background:rgba(217,184,98,.16); color:#e8cf8c}
+.ui-badge.on{background:var(--text); color:#0c0c0d}
+.ui-toggle{position:relative; flex:none; width:50px; height:30px; border:0; border-radius:999px; background:var(--surface-3)}
+.ui-toggle::before{content:''; position:absolute; inset:-7px 0}
+.ui-toggle::after{content:''; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff}
+.ui-toggle[aria-checked="true"]{background:var(--text)}
+.ui-toggle[aria-checked="true"]::after{left:23px; background:#0c0c0d}
+
+/* ---- Product view: the picture, then what it is and what it costs ---- */
+.ui-main{position:absolute; top:var(--bar); bottom:var(--foot); left:var(--edge); right:var(--edge);
+  display:grid; grid-template-columns:minmax(0,1.25fr) minmax(380px,440px); gap:56px; align-items:center}
+.ui-media{position:relative; align-self:stretch; margin:4px 0 20px; border-radius:24px; background:var(--surface); overflow:hidden;
+  display:flex; align-items:center; justify-content:center}
+.ui-media .ui-round{position:absolute; top:50%; margin-top:-22px}
+.ui-media .prev{left:16px} .ui-media .next{right:16px}
+.ui-count{position:absolute; top:18px; left:22px; font:500 13px/1 var(--font); color:var(--text-2); font-variant-numeric:tabular-nums}
+.ui-media .ui-badge{position:absolute; left:18px; bottom:18px}
+.ui-ph{display:flex; flex-direction:column; align-items:center; gap:8px; max-width:34ch; padding:24px; text-align:center; color:var(--text-3); font-size:13px; line-height:1.45}
+.ui-ph b{font:500 13px/1.3 var(--font); color:var(--text-2)}
+.ui-col{display:flex; flex-direction:column; gap:20px; min-width:0}
+.ui-meta{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font:500 13px/1 var(--font); color:var(--text-2)}
+.ui-field{display:flex; flex-direction:column; gap:6px}
+.ui-field b{font-weight:500; color:var(--text)}
+.ui-swatches{display:flex; gap:6px; margin-left:-6px}
+.ui-sw{width:44px; height:44px; padding:6px; border:0; border-radius:50%; background:none}
+.ui-sw span{display:block; width:100%; height:100%; border-radius:50%; box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.ui-sw[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--text)}
+
+/* A card of rows: the sums, a receipt, an address */
+.ui-card{border-radius:16px; background:var(--surface); padding:16px 18px}
+.ui-card.rows{padding:4px 18px}
+.ui-card.rows > div{display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:12px 0; border-bottom:1px solid var(--line)}
+.ui-card.rows > div:last-child{border-bottom:0}
+.ui-card.rows dt{color:var(--text-2)}
+.ui-card.rows dd{font-variant-numeric:tabular-nums; text-align:right}
+.ui-card.rows dd small{font-size:13px; color:var(--text-3); margin-right:10px}
+.ui-card.rows .pts dd{color:var(--gold)}
+.ui-card.rows .total dt{color:var(--text); font-weight:600}
+.ui-card.rows .total dd{font:600 20px/1.2 var(--font); letter-spacing:-.015em}
+/* How many points to use: a plain range under the Your points row, full by default */
+.ui-card.rows > .range{display:block; padding:0 0 12px; margin-top:-4px}
+.ui-card.rows > .pts:has(+ .range){border-bottom:0}
+.ui-range{display:block; width:100%; height:28px; margin:0; background:none; -webkit-appearance:none; appearance:none; accent-color:var(--gold)}
+.ui-range::-webkit-slider-runnable-track{height:4px; border-radius:999px; background:linear-gradient(to right, var(--gold) 0 var(--at,100%), var(--surface-3) var(--at,100%) 100%)}
+.ui-range::-moz-range-track{height:4px; border-radius:999px; background:var(--surface-3)}
+.ui-range::-moz-range-progress{height:4px; border-radius:999px; background:var(--gold)}
+.ui-range::-webkit-slider-thumb{-webkit-appearance:none; width:22px; height:22px; margin-top:-9px; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.ui-range::-moz-range-thumb{width:22px; height:22px; border:0; border-radius:50%; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.ui-split{display:flex; justify-content:space-between; align-items:flex-start; gap:16px}
+.ui-item{display:flex; align-items:center; gap:14px}
+.ui-item > div{display:flex; flex-direction:column; gap:2px; min-width:0}
+.ui-item b{font-weight:600}
+.ui-thumb{flex:none; display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:12px; background:var(--surface-2); color:var(--text-3)}
+.ui-thumb.lg{width:56px; height:56px; border-radius:14px}
+.ui-check{display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:50%; background:var(--text); color:#0c0c0d}
+.ui-note{padding:12px 14px; border-radius:12px; background:rgba(255,122,114,.12); color:#ffb0aa; font-size:14px}
+
+/* ---- Along the foot: everything in the store ---- */
+.ui-rail{position:absolute; left:var(--edge); right:var(--edge); bottom:0; height:var(--foot);
+  display:flex; align-items:center; justify-content:space-between; gap:24px; border-top:1px solid var(--line)}
+.ui-rail ol{display:flex; gap:6px; min-width:0; overflow:hidden; margin-left:-8px}
+.ui-rail ol a{display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 16px 8px 8px; border-radius:16px; text-decoration:none; white-space:nowrap}
+.ui-rail ol a[aria-current]{background:var(--surface)}
+.ui-rail ol a > span:last-child{display:flex; flex-direction:column; gap:3px; font:500 14px/1.2 var(--font)}
+.ui-rail ol a small{font:400 13px/1.2 var(--font); color:var(--text-2)}
+
+/* ---- The store's front: everything in it, pictures first ---- */
+.ui-display{position:absolute; top:var(--bar); bottom:0; left:var(--edge); right:var(--edge); display:flex; flex-direction:column; padding:20px 0 28px}
+.ui-shop{flex:1; min-height:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:minmax(0,1fr); gap:28px 24px}
+.ui-shop li{display:flex; min-width:0; min-height:0}
+.ui-prod{flex:1; display:flex; flex-direction:column; gap:12px; min-width:0; min-height:0; color:var(--text); text-decoration:none}
+.ui-prod-pic{position:relative; flex:1; min-height:0; display:flex; align-items:center; justify-content:center; border-radius:20px; background:var(--surface); color:var(--text-3); overflow:hidden}
+.ui-prod.on .ui-prod-pic{background:var(--surface-2)}
+.ui-prod-pic .ui-badge{position:absolute; top:14px; left:14px; background:var(--surface-3)}
+.ui-prod-pic .ui-badge.gold{background:rgba(217,184,98,.16)}
+.ui-prod-pic .ui-badge.on{background:var(--text)}
+.ui-prod-cap{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:0 4px}
+.ui-prod-cap b{display:block; font:600 16px/1.25 var(--font); letter-spacing:-.01em}
+.ui-prod-cap small{display:block; margin-top:2px; font:400 13px/1.3 var(--font); color:var(--text-2)}
+.ui-prod-cap .r{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ---- Lists: updates, yours ---- */
+.ui-page{position:absolute; top:var(--bar); bottom:0; left:var(--edge); right:var(--edge);
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,360px); gap:56px; align-items:start; padding-top:20px}
+.ui-head{display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:16px}
+.ui-list{display:flex; flex-direction:column; gap:2px; margin:0 -12px}
+.ui-row{display:grid; align-items:center; gap:16px; min-height:76px; padding:10px 12px; border-radius:16px; color:var(--text); text-decoration:none}
+.ui-row.on{background:var(--surface)}
+.ui-row .who{display:flex; flex-direction:column; gap:3px; min-width:0}
+.ui-row .who b{font:600 16px/1.25 var(--font); letter-spacing:-.01em}
+.ui-row .who span{font-size:13px; line-height:1.3; color:var(--text-2)}
+.ui-row .r{justify-self:end; text-align:right; font-variant-numeric:tabular-nums}
+.ui-upd{grid-template-columns:56px minmax(0,1fr) auto}
+.ui-ord{grid-template-columns:56px minmax(0,1fr) auto 150px}
+.ui-pts{grid-template-columns:minmax(0,1fr) auto; min-height:60px}
+.ui-sect{font:600 13px/1 var(--font); color:var(--text-2); padding:18px 0 8px}
+.ui-side{display:flex; flex-direction:column; gap:16px; padding-top:66px}
+.ui-tile{display:flex; align-items:center; justify-content:center; aspect-ratio:1/1; border-radius:20px; background:var(--surface); color:var(--text-3)}
+.ui-paper{align-self:center; width:240px; aspect-ratio:8.5/11; padding:22px; border-radius:6px; display:flex; flex-direction:column; justify-content:space-between;
+  background:#f5f5f7; color:#0c0c0d; box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.ui-paper b{font:600 13px/1 var(--font)}
+.ui-paper h3{font:600 24px/1.1 var(--font); letter-spacing:-.02em}
+.ui-paper small{font:400 10.5px/1.4 var(--font); color:#55555c}
+
+/* ---- The member's card, as the card page draws it. Only in Yours. ---- */
+.mc{position:relative; width:272px; height:432px; border-radius:14px; overflow:hidden; color:#0b0c10; font-family:'Oswald','Arial Narrow',Impact,sans-serif;
+  transform:scale(.82); transform-origin:top left; margin:0 -49px -78px 0; box-shadow:0 24px 60px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.4)}
+.mc b{font-weight:700; text-transform:uppercase}
+.mc small,.mc i{font:700 8.5px/1 ui-monospace,Menlo,Consolas,monospace; letter-spacing:.2em; text-transform:uppercase; font-style:normal}
+.mc-top{display:flex; justify-content:space-between; align-items:baseline; padding:16px 14px 0}
+.mc-top b{font-size:22px; line-height:1}
+.mc-win{margin:10px 14px 0; height:218px; border:1.5px solid rgba(11,12,16,.75); border-radius:8px; display:flex; align-items:flex-end; padding:0 12px 6px;
+  background:repeating-conic-gradient(from 0deg at 50% 64%, rgba(255,255,255,.62) 0 7.5deg, rgba(255,255,255,0) 7.5deg 15deg)}
+.mc-win b{font-size:60px; line-height:.9}
+.mc-band{display:flex; justify-content:space-between; align-items:center; height:36px; margin-top:12px; padding:0 14px; background:#0b0c10; color:#fff}
+.mc-band b{font-size:20px; line-height:1}
+.mc-pts{display:flex; justify-content:space-between; align-items:flex-end; padding:16px 14px 0}
+.mc-pts small{display:block; margin-bottom:6px}
+.mc-pts b{font-size:64px; line-height:.9}
+.mc-pts i{line-height:1.9; text-align:right; padding-bottom:10px}
+
+/* ---- Sheets of states and parts (not screens) ---- */
+.ui-grid{display:grid; gap:40px; padding:40px}
+.ui-cell{display:flex; flex-direction:column; gap:16px; min-width:0}
+.ui-cap{font:500 13px/1.4 var(--font); color:var(--text-3); padding-bottom:12px; border-bottom:1px solid var(--line)}
+.ui-gate{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:12px; min-height:320px; padding:32px; border-radius:20px; background:var(--surface)}
+.ui-swatch{display:flex; flex-direction:column; gap:6px; font-size:13px; line-height:1.3}
+.ui-swatch i{display:block; height:56px; border-radius:12px; box-shadow:inset 0 0 0 1px var(--line)}
+
+/* ---- Phone ---- */
+.up-top{display:flex; align-items:center; justify-content:space-between; height:60px; padding:0 var(--edge)}
+.up-top .ui-mark{font-size:17px}
+.up-tabs{padding:0 var(--edge)}
+.up-tabs .ui-seg{display:flex}
+.up-tabs .ui-seg a{flex:1; min-height:40px}
+.up-body{display:flex; flex-direction:column; gap:14px; padding:16px var(--edge) 0}
+.up .t-title{font-size:26px}
+.up-media{position:relative; height:236px; border-radius:20px; background:var(--surface); display:flex; align-items:center; justify-content:center; overflow:hidden}
+.up-media .ui-badge{position:absolute; left:14px; bottom:14px}
+.up-dock{position:absolute; left:0; right:0; bottom:0; padding:12px var(--edge) 22px; display:flex; flex-direction:column; gap:8px; background:var(--bg)}
+.up-pager{display:flex; align-items:center; justify-content:space-between}
+.up-pager ol{display:flex; align-items:center; gap:8px}
+.up-pager ol span{display:block; width:7px; height:7px; border-radius:50%; background:var(--surface-3)}
+.up-pager ol span.at{background:var(--text)}
+.up-veil{position:absolute; inset:0; background:rgba(0,0,0,.6)}
+.up-sheet{position:absolute; left:0; right:0; bottom:0; padding:10px var(--edge) 26px; display:flex; flex-direction:column; gap:14px;
+  border-radius:24px 24px 0 0; background:var(--surface)}
+.up-sheet::before{content:''; align-self:center; width:36px; height:5px; border-radius:999px; background:var(--surface-3); margin-bottom:4px}
+.up-sheet .ui-card{background:var(--surface-2)}
+.up-sheet .ui-btn.sec{background:var(--surface-3)}
+.up .ui-shop{flex:none; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:auto; gap:16px 12px}
+.up .ui-prod{gap:8px}
+.up .ui-prod-pic{flex:none; height:150px; border-radius:16px}
+.up .ui-prod-pic .ui-badge{top:10px; left:10px}
+.up .ui-prod-cap b{font-size:15px}
+.up .ui-upd{grid-template-columns:minmax(0,1fr) auto; min-height:68px}
+.up .ui-ord{grid-template-columns:minmax(0,1fr) auto; min-height:68px}
+.up .ui-pts{min-height:52px}
+.up .ui-row{padding:8px 12px}

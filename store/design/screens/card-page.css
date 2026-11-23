@@ -1,0 +1,269 @@
+/* Shrug VIP: the store. One stylesheet for every screen.
+   It continues the card page (store/card/index.html): the same wall, light, type and gold.
+   Rules: square corners; one object lit at a time; gold is only the strip (the thing to press)
+   and the member's balance; everything else is white, steel or dim. */
+
+body{margin:0}
+a{color:inherit}
+
+.sv,.sp{
+  --wall:#060607; --ink:#0b0c10; --panel:#111114; --line:#2a2b30; --line-hi:#3b3c41;
+  --soft:#b9bcc4; --dim:#8b8e97; --gold:#d7b65f; --gold-hi:#e9cd82;
+  --display:'Oswald','Arial Narrow',Impact,sans-serif;
+  --mono:'Red Hat Mono',ui-monospace,Menlo,Consolas,monospace;
+  --edge:40px; --bar:104px;
+  position:relative; box-sizing:border-box; overflow:hidden;
+  background:var(--wall); color:#fff; font:500 13px/1.5 var(--mono);
+  -webkit-font-smoothing:antialiased;
+}
+.sv{width:100%; height:100vh; min-height:780px}
+.sv.sv-sheet{height:auto; min-height:0}
+.sp{width:390px; height:844px; --edge:20px}
+.sv *,.sp *{box-sizing:border-box}
+:where(.sv,.sp) :where(p,h1,h2,h3,dl,dd,ol,ul,figure){margin:0; padding:0}
+:where(.sv,.sp) :where(ol,ul){list-style:none}
+:where(.sv,.sp) :where(button){font:inherit; color:inherit; cursor:pointer}
+
+/* The wall's one light, from above. --lx is where it falls: over the piece. */
+.sv-light{position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(46% 74% at var(--lx,34%) -6%, rgba(138,121,86,.50), rgba(78,68,48,.26) 40%, rgba(20,18,14,0) 74%)}
+
+/* ---- Type ---- */
+.sv-label{font:600 11.5px/1.4 var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--soft)}
+.sv-dim{color:var(--dim)}
+.sv-soft{color:var(--soft)}
+.sv-small{font-size:12px; color:var(--soft)}
+.sv-name{font:700 54px/.95 var(--display); text-transform:uppercase; letter-spacing:-.005em}
+.sv-h1{font:700 72px/.92 var(--display); text-transform:uppercase}
+.sv-h2{font:700 30px/1 var(--display); text-transform:uppercase}
+.sv-words{color:var(--soft); max-width:46ch; text-wrap:pretty}
+.sv-link{display:inline-flex; align-items:center; min-height:44px; color:#fff; text-decoration:none;
+  font:600 11.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; white-space:nowrap}
+.sv-link span{border-bottom:2px solid currentColor; padding-bottom:4px}
+.sv-link.quiet{color:var(--soft)}
+
+/* ---- The bar across the top: the mark, the three rooms, the card as a wallet ---- */
+.sv-top{position:absolute; top:0; left:0; right:0; height:var(--bar); padding:0 var(--edge);
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:24px}
+.sv-mark{justify-self:start; font:700 32px/1 var(--display); letter-spacing:.01em; text-transform:uppercase; color:#fff; text-decoration:none}
+.sv-nav{display:flex; gap:40px}
+.sv-nav a{display:inline-flex; align-items:center; min-height:44px; border-bottom:2px solid transparent;
+  font:600 12px/1 var(--mono); letter-spacing:.18em; text-transform:uppercase; color:var(--dim); text-decoration:none}
+.sv-nav a[aria-current]{color:#fff; border-color:var(--gold)}
+.sv-wallet{justify-self:end; position:relative; display:flex; align-items:center; gap:14px; min-height:60px; color:#fff; text-decoration:none}
+.sv-wtxt{display:flex; flex-direction:column; align-items:flex-end; gap:5px}
+.sv-wtxt b{font:700 30px/1 var(--display); color:var(--gold)}
+.sv-wtxt b i{font:600 11px/1 var(--mono); letter-spacing:.14em; font-style:normal; margin-left:6px}
+.sv-wtxt small{font:600 10.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim)}
+
+/* The card, small: the wallet. Its metal is the member's tier. */
+.sv-chip{flex:none; position:relative; width:38px; height:60px; border-radius:5px;
+  box-shadow:0 8px 20px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.28)}
+.sv-chip::before{content:''; position:absolute; left:4px; right:4px; top:9px; height:22px; border:1px solid rgba(11,12,16,.7); border-radius:2px}
+.sv-chip::after{content:''; position:absolute; left:0; right:0; top:60%; height:5px; background:rgba(11,12,16,.92)}
+.m-gold{background:linear-gradient(135deg,#b8944a,#fff3cf 20%,#c9a961 38%,#f6e7b8 56%,#9c7a30 74%,#c9a961)}
+.m-silver{background:linear-gradient(135deg,#8f98a2,#f4f7fa 20%,#b5bdc6 38%,#eef1f4 56%,#858e98 74%,#c3cad2)}
+.m-black{background:linear-gradient(135deg,#17181b,#3d4047 20%,#1c1d21 40%,#34373d 58%,#111214 76%,#27292e)}
+/* A price-gun label, as the card page puts over a balance that has moved */
+.sv-gun{display:inline-block; padding:3px 8px; background:var(--gold); color:var(--ink);
+  font:700 12px/1.3 var(--mono); letter-spacing:.04em; transform:rotate(-5deg); box-shadow:0 3px 8px rgba(0,0,0,.5)}
+.sv-wallet .sv-gun{position:absolute; right:100%; top:12px; margin-right:12px; white-space:nowrap}
+
+/* ---- The room: a stage for the piece, a placard beside it ---- */
+.sv-main{position:absolute; top:var(--bar); bottom:var(--bar); left:var(--edge); right:var(--edge);
+  display:grid; grid-template-columns:minmax(0,1.2fr) minmax(380px,460px); gap:72px; align-items:center}
+.sv-stage{position:relative; height:100%; display:flex; align-items:center; justify-content:center}
+.sv-count{position:absolute; top:4px; left:0; font:600 11.5px/1 var(--mono); letter-spacing:.16em; color:var(--soft)}
+.sv-count b{font:700 44px/1 var(--display); letter-spacing:0; color:#fff; margin-right:8px}
+.sv-arrow{position:absolute; top:50%; margin-top:-24px; width:48px; height:48px; display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--line-hi); background:rgba(6,6,7,.55); color:#fff; text-decoration:none}
+.sv-arrow.prev{left:0} .sv-arrow.next{right:0}
+
+/* Where the photograph goes, with what to shoot */
+.sv-slot{position:relative; width:min(470px,64%); aspect-ratio:4/5; max-height:88%; padding:32px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center;
+  border:1px dashed #5d6068; background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,0) 62%)}
+.sv-slot p{max-width:30ch; color:var(--soft)}
+/* No photograph yet: the piece's own plate, in the black card's metal */
+.sv-plate{position:relative; width:min(380px,56%); aspect-ratio:4/5; max-height:88%; padding:26px; border-radius:12px; overflow:hidden;
+  display:flex; flex-direction:column; justify-content:space-between; color:#e3e6eb;
+  background:linear-gradient(135deg,#17181b,#3d4047 20%,#1c1d21 40%,#34373d 58%,#111214 76%,#27292e);
+  box-shadow:0 34px 90px rgba(0,0,0,.75), inset 0 0 0 1px rgba(255,255,255,.14), inset 0 1px 0 rgba(255,255,255,.32)}
+.sv-plate::before{content:''; position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(255,255,255,.045) 0 1px, rgba(255,255,255,0) 1px 3px)}
+.sv-plate > *{position:relative}
+.sv-plate-top{display:flex; justify-content:space-between; align-items:baseline}
+.sv-plate-top b{font:700 22px/1 var(--display); letter-spacing:.02em; text-transform:uppercase}
+.sv-plate-name{font:700 58px/.92 var(--display); text-transform:uppercase; text-shadow:0 1px 0 rgba(0,0,0,.7); margin-top:8px}
+.sv-plate.sm{width:100%; max-height:none; padding:18px; border-radius:9px}
+.sv-plate.sm .sv-plate-name{font-size:36px}
+.sv-plate.sm .sv-plate-top b{font-size:16px}
+/* Sold to this member: a gallery's dot */
+.sv-dot{display:inline-flex; align-items:center; gap:8px; font:600 11px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:#fff}
+.sv-dot::before{content:''; width:10px; height:10px; border-radius:50%; background:var(--gold)}
+.sv-slot .sv-dot,.sv-plate .sv-dot{position:absolute; left:16px; bottom:16px}
+
+/* ---- The placard ---- */
+.sv-plac{display:flex; flex-direction:column; gap:18px; min-width:0}
+.sv-kind{display:flex; flex-wrap:wrap; align-items:center; gap:10px}
+.sv-tag{display:inline-flex; align-items:center; min-height:24px; padding:0 8px; border:1px solid var(--line-hi);
+  font:600 10.5px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--soft); white-space:nowrap}
+.sv-tag.gold{border-color:var(--gold); color:var(--gold-hi)}
+.sv-opts{display:flex; flex-wrap:wrap; gap:8px}
+.sv-opt{display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:0 16px; border:1px solid var(--line-hi); background:none;
+  font:600 12px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:#fff}
+.sv-opt[aria-pressed="true"]{border-color:#fff; background:#fff; color:var(--ink)}
+.sv-sw{width:12px; height:12px; border-radius:50%; box-shadow:0 0 0 1px rgba(128,128,128,.7)}
+.sv-sums{border-top:1px solid var(--line)}
+.sv-sums > div{display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:10px 0; border-bottom:1px dashed var(--line)}
+.sv-sums dt{color:var(--soft)}
+.sv-sums dd{font-weight:600; white-space:nowrap}
+.sv-sums dd small{font:500 12px/1 var(--mono); color:var(--dim); margin-right:12px}
+.sv-sums .pts dd{color:var(--gold)}
+.sv-sums .due{align-items:center; border-bottom:0; padding-bottom:0}
+.sv-sums .due dt{font:600 11.5px/1 var(--mono); letter-spacing:.16em; text-transform:uppercase; color:#fff}
+.sv-sums .due dd{font:700 38px/1 var(--display)}
+
+/* The strip: the pack's tear strip, kept as the one thing to press. A perforation, then the tab. */
+.sv-strip{display:flex; align-items:stretch; justify-content:space-between; width:100%; min-height:60px; padding:0; border:0;
+  background:linear-gradient(180deg,#ecd28b,#d7b65f 46%,#c3a14b); color:var(--ink); text-decoration:none;
+  box-shadow:0 12px 32px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.5)}
+.sv-strip > span{display:flex; align-items:center; justify-content:space-between; gap:16px; flex:1; padding:0 20px 0 22px}
+.sv-strip b{font:700 25px/1 var(--display); letter-spacing:.03em; text-transform:uppercase}
+.sv-strip i{font:700 13px/1 var(--mono); letter-spacing:.08em; font-style:normal}
+.sv-strip em{display:flex; align-items:center; justify-content:center; width:60px; border-left:2px dashed rgba(11,12,16,.5); font-style:normal}
+.sv-strip.off{background:#1b1c20; color:var(--dim); box-shadow:inset 0 0 0 1px var(--line-hi)}
+.sv-strip.off em{border-left-color:var(--line-hi)}
+/* Apple Pay stands where Stripe's own button will be drawn */
+.sv-pay{text-decoration:none; display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:56px; border:0; background:#fff; color:#000;
+  font:600 16px/1 -apple-system,'Helvetica Neue',Arial,sans-serif}
+
+/* A ticket: the card page's own, for a balance or a receipt */
+.sv-ticket{padding:16px 18px; border:1px solid rgba(215,182,95,.38); border-radius:3px; background:var(--panel)}
+.sv-ticket > div{display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:9px 0; border-bottom:1px dashed var(--line-hi)}
+.sv-ticket > div:first-child{padding-top:0}
+.sv-ticket > div:last-of-type{border-bottom:0}
+.sv-ticket dt{font:600 11px/1.4 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--soft)}
+.sv-ticket dd{font-weight:600; text-align:right}
+.sv-ticket p{padding-top:12px; border-top:1px dashed var(--line-hi); color:var(--soft)}
+.sv-addr{color:#fff; line-height:1.6}
+.sv-oops{padding:10px 12px; border:1px solid #8a4a4a; color:#ffc9c9; font-size:12.5px}
+
+/* ---- The shelf along the foot: every piece by number ---- */
+.sv-rail{position:absolute; left:var(--edge); right:var(--edge); bottom:0; height:var(--bar);
+  display:flex; align-items:center; justify-content:space-between; gap:32px; border-top:1px solid var(--line)}
+.sv-rail ol{display:flex; gap:34px; min-width:0; overflow:hidden}
+.sv-rail ol a{position:relative; display:flex; flex-direction:column; justify-content:center; gap:6px; min-height:60px; white-space:nowrap;
+  font:600 11px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); text-decoration:none}
+.sv-rail ol a b{font:700 18px/1 var(--display); letter-spacing:.02em}
+.sv-rail ol a[aria-current]{color:#fff}
+.sv-rail ol a[aria-current]::before{content:''; position:absolute; top:-22px; left:0; right:0; height:2px; background:var(--gold)}
+.sv-rail ol a .sv-dot{position:absolute; top:6px; right:-14px}
+.sv-rail ol a .sv-dot::before{width:7px; height:7px}
+.sv-foot{position:absolute; left:var(--edge); right:var(--edge); bottom:0; height:var(--bar); display:flex; align-items:center; justify-content:space-between;
+  font:600 11.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:#fff}
+
+/* ---- Lists: the index, updates, yours ---- */
+.sv-page{position:absolute; top:var(--bar); bottom:0; left:var(--edge); right:var(--edge);
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,380px); gap:72px; align-items:start; padding-top:12px}
+.sv-head{display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:18px}
+.sv-rows{border-top:1px solid var(--line)}
+.sv-row{display:grid; align-items:center; gap:18px; min-height:62px; padding:6px 0; border-bottom:1px solid var(--line); color:#fff; text-decoration:none}
+.sv-row.hd{min-height:36px; border-bottom:1px solid var(--line)}
+.sv-row.on{background:linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,0))}
+.sv-row b.n{font:700 26px/1 var(--display); text-transform:uppercase; letter-spacing:.005em}
+.sv-row .num{font:600 12px/1 var(--mono); letter-spacing:.12em; color:var(--dim)}
+.sv-row .r{justify-self:end; text-align:right}
+.sv-row .price{font-weight:600}
+.sv-idx{grid-template-columns:44px minmax(0,1.5fr) 70px minmax(0,1.25fr) 84px 118px; min-height:74px}
+.sv-idx b.n{font-size:30px}
+.sv-row.hd.sv-idx{min-height:36px}
+.sv-upd{grid-template-columns:24px minmax(0,1.4fr) minmax(0,1fr) 150px}
+.sv-ord{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 130px}
+.sv-pts{grid-template-columns:120px minmax(0,1fr) 110px; min-height:48px}
+.sv-go{display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:0 14px; border:1px solid #fff;
+  font:600 11px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:#fff; white-space:nowrap}
+.sv-go.fill{background:var(--gold); border-color:var(--gold); color:var(--ink)}
+.sv-go.said{border-color:transparent; padding:0; color:var(--dim)}
+.sv-side{display:flex; flex-direction:column; align-items:center; gap:22px; padding-top:54px}
+.sv-paper{width:270px; aspect-ratio:8.5/11; padding:26px; display:flex; flex-direction:column; justify-content:space-between;
+  background:#f1efe9; color:var(--ink); transform:rotate(-1.5deg); box-shadow:0 34px 90px rgba(0,0,0,.75)}
+.sv-paper b{font:700 20px/1 var(--display); letter-spacing:.02em; text-transform:uppercase}
+.sv-paper h3{font:700 36px/.95 var(--display); text-transform:uppercase}
+.sv-paper small{font:600 9.5px/1.5 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:#55575e}
+.sv-track{display:flex; align-items:center; gap:8px; font:600 10.5px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--dim)}
+.sv-track i{width:22px; height:1px; background:var(--line-hi)}
+.sv-track .at{color:#fff}
+
+/* ---- The member's card, as on the card page ---- */
+.sv-card{position:relative; width:272px; height:432px; border-radius:14px; overflow:hidden; color:var(--ink);
+  box-shadow:0 34px 90px rgba(0,0,0,.75), inset 0 0 0 1px rgba(255,255,255,.4)}
+.sv-card.sm{transform:scale(.82); transform-origin:top center; margin-bottom:-78px}
+.sv-card-top{display:flex; justify-content:space-between; align-items:baseline; padding:16px 14px 0}
+.sv-card-top b{font:700 22px/1 var(--display); text-transform:uppercase}
+.sv-card-top span{font:700 8.5px/1 var(--mono); letter-spacing:.2em; text-transform:uppercase}
+.sv-card-win{position:relative; margin:10px 14px 0; height:218px; border:1.5px solid rgba(11,12,16,.75); border-radius:8px; overflow:hidden; display:flex; align-items:flex-end; padding:0 12px 6px;
+  background:repeating-conic-gradient(from 0deg at 50% 64%, rgba(255,255,255,.62) 0 7.5deg, rgba(255,255,255,0) 7.5deg 15deg)}
+.sv-card-win b{font:700 60px/.9 var(--display); text-transform:uppercase}
+.sv-card-band{display:flex; justify-content:space-between; align-items:center; height:36px; margin-top:12px; padding:0 14px; background:#0b0c10; color:#fff}
+.sv-card-band b{font:700 20px/1 var(--display); text-transform:uppercase}
+.sv-card-band span{font:700 8.5px/1 var(--mono); letter-spacing:.2em; text-transform:uppercase}
+.sv-card-pts{display:flex; justify-content:space-between; align-items:flex-end; padding:16px 14px 0}
+.sv-card-pts small{display:block; font:700 8.5px/1 var(--mono); letter-spacing:.2em; text-transform:uppercase; margin-bottom:6px}
+.sv-card-pts b{font:700 64px/.9 var(--display)}
+.sv-card-pts span{font:700 8.5px/1.9 var(--mono); letter-spacing:.2em; text-transform:uppercase; text-align:right; padding-bottom:10px}
+.sv-card.blank{background:#0d0e11; color:#aab0b9; box-shadow:0 34px 90px rgba(0,0,0,.75), inset 0 0 0 1px #6b7079}
+.sv-card.blank .sv-card-win{background:none; border-color:#6b7079}
+.sv-card.blank .sv-card-win b{color:transparent; -webkit-text-stroke:1px #aab0b9}
+.sv-card.blank .sv-card-band{background:none; box-shadow:inset 0 1px 0 #6b7079, inset 0 -1px 0 #6b7079; color:#aab0b9}
+/* The pack, sealed: only for the door a stranger meets */
+.sv-pack{position:relative; width:150px; height:230px; margin-bottom:6px; background:linear-gradient(100deg,#15130e,#3a3220 46%,#17150f); box-shadow:inset 0 0 0 1px rgba(233,205,130,.18)}
+.sv-pack::after{content:''; position:absolute; left:38px; right:38px; top:136px; height:64px; border:1px solid rgba(233,205,130,.6); border-radius:6px}
+.sv-pack::before{content:''; position:absolute; left:0; right:-8px; top:26px; height:30px; background:linear-gradient(180deg,#ecd28b,#c3a14b)}
+.sv-pack b{position:absolute; left:0; right:0; top:74px; text-align:center; font:700 46px/1 var(--display); color:#e9cd82; letter-spacing:.01em}
+
+/* ---- Sheets of states and parts (not screens) ---- */
+.sv-grid{position:relative; display:grid; gap:40px; padding:40px}
+.sv-cell{display:flex; flex-direction:column; gap:16px; min-width:0}
+.sv-cap{font:600 10.5px/1.5 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); padding-bottom:10px; border-bottom:1px solid var(--line)}
+.sv-gate{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:16px; min-height:380px; padding:32px; border:1px solid var(--line)}
+.sv-gate .sv-h2{font-size:40px}
+.sv-swatch{display:flex; flex-direction:column; gap:8px; font:600 10.5px/1.4 var(--mono); letter-spacing:.08em; color:var(--soft)}
+.sv-swatch i{display:block; height:64px; box-shadow:inset 0 0 0 1px var(--line-hi)}
+
+/* ---- Phone ---- */
+.sp .sv-light{background:radial-gradient(90% 46% at 50% -4%, rgba(138,121,86,.50), rgba(78,68,48,.24) 46%, rgba(20,18,14,0) 78%)}
+.sp-top{position:relative; display:flex; align-items:center; justify-content:space-between; height:68px; padding:0 var(--edge)}
+.sp-top .sv-mark{font-size:24px}
+.sp-top .sv-wtxt b{font-size:24px}
+.sp-top .sv-chip{width:30px; height:47px; border-radius:4px}
+.sp-top .sv-gun{right:auto; left:-18px; top:9px; margin:0}
+.sp-top .sv-chip::before{top:7px; height:17px; left:3px; right:3px}
+.sp-top .sv-chip::after{height:4px}
+.sp-nav{position:relative; display:flex; gap:26px; padding:0 var(--edge); border-bottom:1px solid var(--line)}
+.sp-nav a{display:inline-flex; align-items:center; min-height:44px; margin-bottom:-1px; border-bottom:2px solid transparent;
+  font:600 11.5px/1 var(--mono); letter-spacing:.18em; text-transform:uppercase; color:var(--dim); text-decoration:none}
+.sp-nav a[aria-current]{color:#fff; border-color:var(--gold)}
+.sp-body{position:relative; display:flex; flex-direction:column; gap:14px; padding:16px var(--edge) 0}
+.sp-stage{position:relative; height:268px; display:flex; align-items:center; justify-content:center}
+.sp-stage .sv-slot{width:196px; padding:16px; max-height:none; margin-left:72px}
+.sp-stage .sv-slot p{font-size:11.5px}
+.sp-stage .sv-count b{font-size:34px}
+.sp .sv-name{font-size:40px}
+.sp .sv-h1{font-size:56px}
+.sp-dock{position:absolute; left:0; right:0; bottom:0; padding:14px var(--edge) 26px; display:flex; flex-direction:column; gap:12px;
+  background:linear-gradient(180deg, rgba(6,6,7,0), #060607 26%)}
+.sp-pager{display:flex; align-items:center; justify-content:space-between; font:600 11px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim)}
+.sp-pager ol{display:flex; gap:4px}
+.sp-pager ol a{display:inline-flex; align-items:center; justify-content:center; width:34px; height:44px; color:var(--dim); text-decoration:none; font:700 15px/1 var(--display)}
+.sp-pager ol a[aria-current]{color:#fff; box-shadow:inset 0 2px 0 var(--gold)}
+.sp-veil{position:absolute; inset:0; background:rgba(0,0,0,.7)}
+.sp-sheet{position:absolute; left:0; right:0; bottom:0; padding:22px var(--edge) 26px; display:flex; flex-direction:column; gap:14px;
+  background:var(--panel); border-top:1px solid var(--line-hi)}
+.sp-sheet::before{content:''; align-self:center; width:44px; height:3px; background:var(--line-hi); margin-bottom:2px}
+.sp .sv-row b.n{font-size:22px}
+.sp .sv-idx{grid-template-columns:30px minmax(0,1fr) auto; min-height:66px}
+.sp .sv-idx b.n{font-size:22px}
+.sp .sv-upd{grid-template-columns:minmax(0,1fr) auto; min-height:66px}
+.sp .sv-ord{grid-template-columns:minmax(0,1fr) auto; min-height:66px}
+.sp .sv-pts{grid-template-columns:76px minmax(0,1fr); min-height:44px}
+.sp .sv-sums .due dd{font-size:32px}
