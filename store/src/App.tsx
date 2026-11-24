@@ -64,13 +64,12 @@ function useCount(to: number) {
   return shown
 }
 
-/** The balance at the right of the bar: the points mark, and their points. It goes to their card. */
-function Wallet({ shop, spent }: { shop: Shop; spent: number }) {
+/** The balance at the right of the bar: the points mark, and their points. It goes to My VIP (where their card is, and the way to it). */
+function Wallet({ shop, spent, onOpen }: { shop: Shop; spent: number; onOpen: () => void }) {
   const me = shop.member
-  const metal = me.tier === 'gold' || me.tier === 'black' ? me.tier : 'silver'
   const points = useCount(me.points)
   return (
-    <a className="ui-wallet" href="/" aria-label={`Your card: ${metal}${me.number ? `, number ${me.number}` : ''}, ${fmtPoints(me.points)} points`}>
+    <a className="ui-wallet" href="?s=yours" aria-label={`Your balance: ${fmtPoints(me.points)} points. My VIP`} onClick={(e) => (e.preventDefault(), onOpen())}>
       <span className="pts-n">
         <PointsMark size={16} />
         {fmtPoints(points)}
@@ -114,7 +113,7 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
           <li key={product.id}>
             <a className="ui-prod" href={`?p=${encodeURIComponent(product.id)}`} aria-label={[product.name, product.kind, priceOf(product), badge?.text].filter(Boolean).join(', ')} onClick={(e) => (e.preventDefault(), open(product.id))}>
               <span className="ui-prod-pic">
-                <Picture product={product} size={phone ? 26 : 44} />
+                <Picture product={product} size={phone ? 26 : 44} tile />
                 {badge && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
               </span>
               <span className="ui-prod-cap">
@@ -328,7 +327,7 @@ export function App() {
         <div className={`up${oneScreen ? ' fix' : ''}`}>
           <header className="up-top">
             {mark}
-            {shop && <Wallet shop={shop} spent={spent} />}
+            {shop && <Wallet shop={shop} spent={spent} onOpen={() => move({ section: 'yours', product: null })} />}
           </header>
           {shop && (
             <div className="up-tabs">
@@ -342,7 +341,7 @@ export function App() {
           <header className="ui-top">
             {mark}
             {shop ? <Sections at={place.section} go={(section) => move({ section, product: null })} /> : <span />}
-            {shop ? <Wallet shop={shop} spent={spent} /> : <span />}
+            {shop ? <Wallet shop={shop} spent={spent} onOpen={() => move({ section: 'yours', product: null })} /> : <span />}
           </header>
           {body}
         </div>

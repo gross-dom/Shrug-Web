@@ -220,8 +220,20 @@ body {
 
 /* Glass under the pointer catches a little more light, and gives a little when it is pressed */
 .ui-btn,
-.ui-round {
+.ui-round,
+.mc {
   transition: filter 0.15s, transform 0.15s, background-color 0.12s;
+}
+
+/* The card, which goes to the card page, lifts a little under the pointer */
+@media (hover: hover) {
+  .mc-link:hover .mc {
+    filter: brightness(1.06);
+  }
+}
+
+.mc-link:focus-visible {
+  outline-offset: 4px;
 }
 
 @media (hover: hover) {

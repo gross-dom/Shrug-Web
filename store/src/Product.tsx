@@ -4,14 +4,16 @@ import type { Backend, Placed, Shop } from './backend'
 import { Points } from './brand'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
-import { shotsOf } from './pictures'
+import { shotsOf, tileSizes, wholeSizes } from './pictures'
 import { badgeOf, captionOf, editionOf, keptOf, owned, pointsOf, shortOf } from './words'
 
 // One product to a screen: its pictures, then what it is and what it costs this member. The arrows on the
 // picture (and the arrow keys, and a finger drawn across it) page through that product's own pictures; the
 // foot is the way to another product. Checkout and the receipt take the panel's place; the picture stays.
 // Everything that is bought goes through the same checkout, whether points cover it or not: what it is,
-// where it is going, the sums, and one thing to press. The sums are the store's rules (shared/rules.ts).
+// the sums, and the ways to finish. The address is asked for only once a way is chosen that needs one (a
+// card, or points alone: Apple Pay brings its own), and only if there is none on file. The sums are the
+// store's rules (shared/rules.ts).
 
 export type Go = (to: { view: 'store' } | { view: 'product'; id: string } | { view: 'yours' }) => void
 
@@ -24,11 +26,12 @@ function swatchOf(option: string): { name: string; color: string | null } {
   return { name, color: hex?.[1] ?? known ?? (typeof CSS !== 'undefined' && CSS.supports('color', name.toLowerCase()) ? name.toLowerCase() : null) }
 }
 
-/** A product's first photograph, small, filling whatever it is put in; until it has one, a drawing of the sort of thing it is. */
-export function Picture({ product, size }: { product: Product; size: number }) {
+/** A product's first photograph, filling whatever it is put in: small for a thumbnail, and for a tile in the
+ * display (`tile`) whichever of its sizes is sharp there. Until it has one, a drawing of the sort of thing it is. */
+export function Picture({ product, size, tile }: { product: Product; size: number; tile?: boolean }) {
   const shot = shotsOf(product)[0]
   return shot ? (
-    <img src={shot.small} alt="" decoding="async" loading="lazy" style={shot.at ? { objectPosition: shot.at } : undefined} />
+    <img src={tile ? shot.full : shot.small} srcSet={tile ? shot.set : undefined} sizes={tile ? tileSizes(shot) : undefined} alt="" decoding="async" loading="lazy" style={shot.at ? { objectPosition: shot.at } : undefined} />
   ) : (
     <span className="t-3">
       <KindIcon kind={product.kind} size={size} width={size > 40 ? 1.1 : size > 22 ? 1.2 : 1.6} />
@@ -66,9 +69,9 @@ export const Lines = ({ text }: { text: string }) => (
   </>
 )
 
-/** Where it is going: the address on file, with the way to change it; or, with none, somewhere to type one, which is kept. */
-function ShipTo({ shop, typed, onType, go }: { shop: Shop; typed: string; onType: (text: string) => void; go: Go }) {
-  return onFile(shop.member.shipTo) ? (
+/** Where it is going, when there is an address on file: the address, with the way to change it. */
+function OnFile({ shop, go }: { shop: Shop; go: Go }) {
+  return (
     <div className="ui-card">
       <div className="ui-split">
         <div>
@@ -82,11 +85,16 @@ function ShipTo({ shop, typed, onType, go }: { shop: Shop; typed: string; onType
         </a>
       </div>
     </div>
-  ) : (
+  )
+}
+
+/** Somewhere to type an address, when there is none on file: it is kept for next time. It is as tall as what is typed in it. */
+function AddressField({ typed, onType }: { typed: string; onType: (text: string) => void }) {
+  return (
     <div className="ui-card">
       <label className="ui-field">
         <span className="t-sm t-2">Ship to</span>
-        <textarea className="ui-area" rows={3} value={typed} placeholder={'Name\nStreet address\nCity, State ZIP'} autoComplete="street-address" onChange={(e) => onType(e.target.value)} />
+        <textarea className="ui-area" rows={Math.min(7, Math.max(3, typed.split('\n').length))} autoFocus value={typed} placeholder={'Name\nStreet address\nCity, State ZIP'} autoComplete="street-address" onChange={(e) => onType(e.target.value)} />
       </label>
     </div>
   )
@@ -106,6 +114,8 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
   const [mode, setMode] = useState<'product' | 'checkout'>('product')
   const [done, setDone] = useState<Placed | null>(null)
   const [typed, setTyped] = useState('')
+  /** At checkout: a way to finish that needs an address has been chosen (a card, or points alone), so the address is asked for now, if there is none on file. */
+  const [finishing, setFinishing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   /** Which of its pictures is on show. */
@@ -120,7 +130,8 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
   const bought = owned(shop.orders, product)
   const out = soldOut(product) && way !== 'request'
   const ships = asksAddress(product)
-  const here = onFile(shop.member.shipTo) || onFile(typed)
+  // It is posted, and there is nowhere on file to post it: an address is wanted before a card is taken or points alone are used
+  const needsAddress = ships && !onFile(shop.member.shipTo)
   const number = way === 'buy' && !out ? numberOf(product) : ''
   const needsOption = product.options.length > 0 && !option
   // Wherever points can be used the member says how many, on the product and again at checkout: all of
@@ -255,7 +266,7 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
   )
 
   /** The one white button, and what it does. Anything bought goes on to checkout; asking and reserving are one press. */
-  const checkOut = () => (setError(''), setMode('checkout'))
+  const checkOut = () => (setError(''), setFinishing(false), setMode('checkout'))
   const button = (() => {
     if (way !== 'buy' && asked) return { text: way === 'request' ? 'Requested' : 'Reserved', off: true }
     if (out) return { text: 'Sold out', off: true }
@@ -287,7 +298,7 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
         <>
           {/* The same picture, out of focus, fills the tile behind it: a tall one and a wide one sit alike */}
           <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />
-          <img className="ui-media-pic" key={shot.full} src={shot.full} alt={shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
+          <img className="ui-media-pic" key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
         </>
       ) : (
         <span className="t-3">
@@ -369,7 +380,10 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
   )
 
   // Checkout: the same whether points cover it or not, with the slider again in case they would sooner not
-  // use them all. With something left to pay, Apple Pay and the card; with nothing, one button that places the order
+  // use them all. First the ways to finish: with something left to pay, Apple Pay and the card; with nothing,
+  // one button that places the order. Then, for a way that needs one, the address
+  const addressField = <AddressField typed={typed} onType={(text) => (setTyped(text), setError(''))} />
+  const waiting = finishing && needsAddress && !onFile(typed)
   const checkout = (
     <>
       <div className="ui-item">
@@ -381,7 +395,7 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
           <span className="t-sm t-2">{[option ? swatchOf(option).name : '', editionOf(number)].filter(Boolean).join(' · ') || product.kind}</span>
         </div>
       </div>
-      {ships && <ShipTo shop={shop} typed={typed} onType={setTyped} go={go} />}
+      {ships && onFile(shop.member.shipTo) && <OnFile shop={shop} go={go} />}
       {sums(true, true)}
       {said}
       {due > 0 ? (
@@ -394,9 +408,12 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
               points={settled}
               cents={settledDue}
               stripeKey={shop.stripeKey}
-              shipTo={onFile(typed) && !onFile(shop.member.shipTo) ? typed : ''}
-              wantsAddress={ships && !here}
-              askShipping={ships && !onFile(shop.member.shipTo)}
+              shipTo={needsAddress && onFile(typed) ? typed : ''}
+              needsAddress={needsAddress}
+              byCard={finishing}
+              onCard={() => setFinishing(true)}
+              onOptions={() => (setError(''), setFinishing(false))}
+              address={addressField}
               onDone={finish}
               onError={setError}
             />
@@ -407,13 +424,16 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
           </button>
         )
       ) : (
-        <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy || (ships && !here)} onClick={order}>
-          {ships && !here ? 'Add where to send it' : 'Confirm order'}
-        </button>
+        <>
+          {finishing && needsAddress && addressField}
+          {/* Points alone give no address: pressed with none on file, this asks for one, and then places the order */}
+          <button type="button" className={`ui-btn${waiting ? ' off' : ''}`} data-busy={busy || undefined} disabled={busy || waiting} onClick={() => (needsAddress && !onFile(typed) ? setFinishing(true) : order())}>
+            {waiting ? 'Add where to send it' : 'Confirm order'}
+          </button>
+        </>
       )}
     </>
   )
-  const taken = points > 0 && <p className="t-sm t-3">{due > 0 ? `Your ${fmtPoints(points)} points are taken with the payment.` : `${fmtPoints(points)} points are taken when you confirm.`}</p>
 
   if (phone)
     return (
@@ -489,7 +509,6 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
             <section className="up-sheet" aria-label="Checkout">
               <h1 className="t-h2">Checkout</h1>
               {checkout}
-              {taken}
             </section>
           </>
         )}
@@ -517,7 +536,6 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
               Checkout
             </h1>
             {checkout}
-            {taken}
           </section>
         ) : (
           <section className="ui-col" aria-label={product.name} key="product">

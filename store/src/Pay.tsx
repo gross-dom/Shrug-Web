@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { fmtCents, postageCents, type Product } from '../shared/rules'
 import type { Backend, Failed, Placed } from './backend'
 
-// Taking the dollars: what is left of the price once the points have come off, and the shipping. For real
-// this is Stripe's own Apple Pay button where the design draws the white one (with Google Pay and Link where
-// a device has those and not Apple Pay), and "Pay with card" opening Stripe's card form under it. In the
-// demo there is no Stripe: the two buttons as drawn, and either one stands for a payment that goes through.
+// Taking the dollars: what is left of the price once the points have come off, and the shipping. First the
+// ways to pay are offered, and one is chosen. Apple Pay (with Google Pay and Link where a device has those
+// and not Apple Pay) brings an address with it, so it asks for nothing more. A card does not: once it is
+// chosen, the address is asked for if there is none on file, and then the card. For real this is Stripe's
+// own Apple Pay button and Stripe's card form; in the demo there is no Stripe, and each button stands for a
+// payment that goes through.
 
 interface Props {
   backend: Backend
@@ -15,12 +17,17 @@ interface Props {
   /** What is to be paid, in cents. The server works it out again for itself; this is only what is shown. */
   cents: number
   stripeKey: string
-  /** An address typed at checkout, to be kept on file with the order; '' where there is one on file or none is needed. */
+  /** An address typed at checkout, to be kept on file with the order; '' where there is one on file or none has been typed. */
   shipTo: string
-  /** Nothing can be paid for yet: it is posted, and there is nowhere to post it. */
-  wantsAddress: boolean
-  /** For a payment by Apple Pay to give the address, where there is none: the first one given is kept. */
-  askShipping: boolean
+  /** It is posted and there is no address on file: a card cannot be taken until one is typed. (Apple Pay gives its own, and the first one given is kept.) */
+  needsAddress: boolean
+  /** Paying by card has been chosen. */
+  byCard: boolean
+  onCard: () => void
+  /** Back to the ways to pay. */
+  onOptions: () => void
+  /** Somewhere to type the address: shown once the card is chosen, where one is needed. */
+  address: ReactNode
   onDone: (placed: Placed) => void
   onError: (said: string) => void
 }
@@ -35,10 +42,16 @@ const WHY: Record<string, string> = {
 }
 export const whyNot = (error: string) => WHY[error] ?? 'That did not work. Nothing was taken.'
 
-function DemoPay({ backend, product, option, points, shipTo, wantsAddress, onDone, onError }: Props) {
+/** The way back from the card to the ways to pay. */
+const Others = ({ onOptions, off }: { onOptions: () => void; off: boolean }) => (
+  <button type="button" className="ui-link quiet ui-other" disabled={off} onClick={onOptions}>
+    Other ways to pay
+  </button>
+)
+
+function DemoPay({ backend, product, option, points, cents, shipTo, needsAddress, byCard, onCard, onOptions, address, onDone, onError }: Props) {
   const [busy, setBusy] = useState(false)
   const pay = async () => {
-    if (wantsAddress) return onError(whyNot('address'))
     setBusy(true)
     onError('')
     const placed = await backend.paid('demo', { product: product.id, option, points, shipTo: shipTo || undefined })
@@ -46,14 +59,25 @@ function DemoPay({ backend, product, option, points, shipTo, wantsAddress, onDon
     if ('error' in placed) onError(whyNot(placed.error))
     else onDone(placed)
   }
+  if (!byCard)
+    return (
+      <>
+        <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy} onClick={pay}>
+          Pay with Apple Pay
+        </button>
+        <button type="button" className="ui-btn sec" disabled={busy} onClick={() => (onError(''), onCard())}>
+          Pay with card
+        </button>
+      </>
+    )
+  const waiting = needsAddress && !shipTo
   return (
     <>
-      <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy} onClick={pay}>
-        Pay with Apple Pay
+      {needsAddress && address}
+      <button type="button" className={`ui-btn${waiting ? ' off' : ''}`} data-busy={busy || undefined} disabled={busy || waiting} onClick={pay}>
+        {waiting ? 'Add where to send it' : `Pay ${fmtCents(cents)}`}
       </button>
-      <button type="button" className="ui-btn sec" disabled={busy} onClick={pay}>
-        Pay with card
-      </button>
+      <Others onOptions={onOptions} off={busy} />
     </>
   )
 }
@@ -72,7 +96,7 @@ const stripeJs = () =>
     document.head.append(script)
   }))
 
-function StripePay({ backend, product, option, points, cents, stripeKey, shipTo, wantsAddress, askShipping, onDone, onError }: Props) {
+function StripePay({ backend, product, option, points, cents, stripeKey, shipTo, needsAddress, byCard, onCard, onOptions, address, onDone, onError }: Props) {
   const express = useRef<HTMLDivElement>(null)
   const cardBox = useRef<HTMLDivElement>(null)
   const kit = useRef<{ stripe: any; elements: any } | null>(null)
@@ -81,8 +105,9 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
   typed.current = shipTo
   const [ready, setReady] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [wallet, setWallet] = useState(true)
-  const [card, setCard] = useState(false)
   const [busy, setBusy] = useState(false)
+  // With no wallet on this device the card is the only way, and is open from the start
+  const card = byCard || !wallet
 
   /** The payment itself: the store says how much (never the page), Stripe takes it, and the store checks with Stripe that it came. */
   const take = async (shipping?: unknown): Promise<Failed | null> => {
@@ -131,9 +156,10 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
           buttonType: { applePay: 'plain', googlePay: 'plain' },
           buttonTheme: { applePay: 'white', googlePay: 'white' },
           buttonHeight: 52,
-          shippingAddressRequired: askShipping,
+          // With no address on file the wallet is asked for one, and it is kept
+          shippingAddressRequired: needsAddress,
           // Shipping is already in the amount: it is the same wherever the thing goes
-          ...(askShipping ? { shippingRates: [{ id: 'post', displayName: 'Shipping', amount: 0 }] } : {}),
+          ...(needsAddress ? { shippingRates: [{ id: 'post', displayName: 'Shipping', amount: 0 }] } : {}),
           lineItems: [{ name: product.name + (option ? `, ${option}` : ''), amount: cents - postage }, ...(postage ? [{ name: 'Shipping', amount: postage }] : [])],
         })
         button.on('ready', (event: any) => !gone && setWallet(!!event.availablePaymentMethods))
@@ -153,11 +179,12 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
       gone = true
       for (const element of made) element.destroy()
     }
-  }, [product.id, option, cents, stripeKey, askShipping]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [product.id, option, cents, stripeKey, needsAddress]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const byCard = async () => {
+  const waiting = needsAddress && !shipTo
+  const payByCard = async () => {
     // A card gives no address: one has to be on file, or typed above
-    if (wantsAddress) return onError(whyNot('address'))
+    if (waiting) return onError(whyNot('address'))
     setBusy(true)
     onError('')
     const failed = await take()
@@ -172,17 +199,19 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
           The payment form did not load. Check your connection and open this again.
         </p>
       )}
-      <div ref={express} className="pay-express" hidden={!wallet} />
-      {!card && wallet && (
-        <button type="button" className="ui-btn sec" onClick={() => setCard(true)}>
+      <div ref={express} className="pay-express" hidden={!wallet || card} />
+      {!card && (
+        <button type="button" className="ui-btn sec" onClick={() => (onError(''), onCard())}>
           Pay with card
         </button>
       )}
-      <div className="pay-card" hidden={!card && wallet}>
+      <div className="pay-card" hidden={!card}>
+        {card && needsAddress && address}
         <div ref={cardBox} />
-        <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy || ready !== 'ready'} onClick={byCard}>
-          Pay {fmtCents(cents)}
+        <button type="button" className={`ui-btn${waiting ? ' off' : ''}`} data-busy={busy || undefined} disabled={busy || waiting || ready !== 'ready'} onClick={payByCard}>
+          {waiting ? 'Add where to send it' : `Pay ${fmtCents(cents)}`}
         </button>
+        {wallet && <Others onOptions={onOptions} off={busy} />}
       </div>
     </>
   )

@@ -24,15 +24,17 @@ has been dropped: the store is now a plain dark interface, and only the card pag
 >   Each picture is shown whole over an out-of-focus copy of itself. There is a line under the name for
 >   the product's write-up.
 > - **Everything bought goes through checkout**, points or not ("Claim for 400 points", then checkout, then
->   "Confirm order"). The address is asked for there, never on the product.
+>   "Confirm order"). The ways to finish come first; the address is asked for after one is chosen, and only
+>   where it is needed (a card or points alone, with none on file). Apple Pay brings its own.
 > - **Updates are not in these pages any more** (they are being given a place elsewhere): the bar has two
 >   sections, Store and My VIP. The server still serves them, and an update can be locked ("Unlock" for
 >   10 points).
 > - **Yours is My VIP**, and opens with the account at a glance: account type, card, balance, member since,
->   purchases, investments.
+>   purchases, investments. The balance in the bar goes there, and the card there goes to the card page.
+>   What was bought is listed apart from what was only requested or reserved.
 > - **The card page** has Sign in at its foot (no tear for someone who has had their pack), and under the
 >   card, in place of the balance ticket, the way to the store as plain white words with an arrow (Go to
->   the store). Its labels are rounded glass.
+>   the store). Its labels are as they always were.
 
 In this folder:
 

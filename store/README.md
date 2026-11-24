@@ -49,8 +49,13 @@ which both the server and the pages go by.
 
 Whatever is bought goes through the same checkout. The button on a product says what it will come to
 ("Claim for 400 points", "Claim for 8,400 points + $680", "Buy for $285") and opens checkout: what it is,
-where it is going, the sums, and one thing to press. With something to pay that is Apple Pay or the card;
-with nothing to pay it is **Confirm order**. The address is asked for there, not before.
+the sums, and the ways to finish. With something to pay those are Apple Pay and the card; with nothing to
+pay there is one, **Confirm order**.
+
+**The address comes last, and only where it is needed.** Apple Pay brings an address with it, so it asks
+for nothing. A card and points alone do not: once "Pay with card" or "Confirm order" is pressed, and only
+if there is no address on file, the page asks where to send it, and then takes the card or places the
+order. With an address on file it is shown at checkout, with the way to change it, and nothing is asked.
 
 The **Use points** slider is on a product and again at checkout wherever points can be used, also where
 they would cover the whole price: every point is used to begin with, and a member who would sooner keep
@@ -82,10 +87,14 @@ things move.
   points. Dollars appear only as what is left to pay by card, and as postage.
 - **Buttons are glass**: a pane that what is behind shows through, lit along its top edge. The thing to do
   next is the brightest one on the screen (`.ui-btn`), anything else that can be pressed a dimmer one
-  (`.sec`). Each has a hairline round its rim. The card page's labels are the same glass; its "Go to the
-  store" is plain white words with an arrow, and the links in its footer are the footer's own small capitals.
-- **Photographs.** The ones Shrug has supplied are in `public/pictures/`, each whole, as WebP at two sizes,
-  and are found by the product's name (`src/pictures.ts`). A product with none there shows what its row in
+  (`.sec`). Each has a hairline round its rim. The card page has none: its labels are the dark ruled
+  boxes in small capitals that the pack has always had, its "Go to the store" is plain white words with an
+  arrow, and the links in its footer are the footer's own small capitals.
+- **Photographs.** The ones Shrug has supplied are in `public/pictures/`, each whole, as WebP at three
+  sizes (760, 1,800 and, where the original has the pixels, 2,400 on the long side), and are found by the
+  product's name (`src/pictures.ts`). The browser is told how wide each file is and how large it will be
+  drawn, and fetches the smallest that is sharp on that screen: a desktop's tile gets the 1,800 one, a
+  phone's the 760 one, a large dense screen the 2,400 one. A product with none there shows what its row in
   Airtable has (`Picture`, which can hold several), and one with nothing shows a drawing of the sort of
   thing it is. Most of the photographs are upright and some are wide, so: in the display a product's tile
   is 4 by 5 and its first picture fills it (cropped to the tile, about its middle unless `pictures.ts`
@@ -95,6 +104,9 @@ things move.
   a finger drawn across it. Another product is reached from the foot (on a phone, the two arrows by
   "2 of 6").
 - **A product's one line** is its `Description` in Airtable, shown under its name.
+- **The balance** in the bar goes to My VIP. The card at the head of My VIP goes to the card page.
+- **My VIP lists what was bought apart from what was only asked for:** "Purchase history" is orders that
+  something was taken for; "Requests and reservations" is requests, and places kept with nothing taken.
 - A phone's layout is used under 740px across. There a product's button stays at the foot and what is
   above it scrolls.
 - A product is in the address (`/store/?p=<id>`), so a link from an email lands on it; `?s=yours` is

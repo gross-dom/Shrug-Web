@@ -27,7 +27,7 @@
   --display: 'Oswald', Impact, 'Arial Narrow', sans-serif; /* the fallback is whatever narrow black face this device has */
   --mono: 'Red Hat Mono', ui-monospace, Menlo, Consolas, monospace;
   /* What is pressed and what is said to the visitor: the device's own plain face, as the store uses */
-  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* only the way to the store, under a card */
 
   /* Set by app.js to fit the stage to the window. */
   --s: 1; /* stage scale */
@@ -782,29 +782,22 @@ html.is-scroll .page { touch-action: pan-y pinch-zoom; }
 .shelf > .after { animation: rise 0.7s ease-out 0.9s both; } /* after the card has arrived */
 /* Dark, and quiet: the wall's black a shade up, ruled in dark grey, with grey type. A label says what to do
    next and is not the thing to look at; the note under a card, which is, keeps its gold rule and white type. */
-/* Glass. What the page says to the visitor is a pane of it: the wall shows through, out of focus; the top
-   edge catches the light; a hairline runs round the rim. (The footer's links are not, and nor is the way to
-   the store under a card: those are plain words.) */
-.label, .label2, .ticket {
-  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
-}
-.label, .label2 { box-sizing: border-box; margin: 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06)); color: #d5d7dc; font-family: var(--sans); }
-/* Rounded, plain and in sentence case: a label is the system talking, not part of the pack's print */
+.label, .label2 { box-sizing: border-box; margin: 0; background: #131316; color: #b9bcc4; }
 .label {
-  max-width: var(--shelf-w); padding: 9px 18px; border-radius: calc(19px * var(--tf)); text-align: center; text-wrap: balance;
-  font-size: calc(13.5px * var(--tf)); font-weight: 500; letter-spacing: -0.005em; line-height: 1.3;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px rgba(0, 0, 0, 0.4);
+  max-width: var(--shelf-w); padding: 7px 14px 6px; border-radius: 3px; text-align: center; text-wrap: balance;
+  font-size: calc(11.5px * var(--tf)); font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1.3;
+  box-shadow: inset 0 0 0 1px #3b3c41, 0 8px 12px rgba(0, 0, 0, 0.5);
 }
 .label2 {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  max-width: var(--shelf-w); padding: 13px 20px 14px; border-radius: 20px; text-align: center;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px rgba(0, 0, 0, 0.4);
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  max-width: var(--shelf-w); padding: 11px 16px 12px; border-radius: 3px; text-align: center;
+  box-shadow: inset 0 0 0 1px #3b3c41, 0 8px 12px rgba(0, 0, 0, 0.5);
 }
-.label2-head { margin: 0; color: #f5f5f7; font-size: calc(14.5px * var(--tf)); font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; text-wrap: balance; }
-.label2-sub { margin: 0; font-size: calc(13px * var(--tf)); line-height: 1.45; text-wrap: balance; }
+.label2-head { margin: 0; font-size: calc(11.5px * var(--tf)); font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1.25; text-wrap: balance; }
+.label2-sub { margin: 0; font-size: calc(12.5px * var(--tf)); line-height: 1.45; text-wrap: balance; }
 .label2-note {
-  margin: 0; padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); color: inherit; /* a shade up again from the label it is in */
-  font-size: calc(12px * var(--tf)); line-height: 1.4;
+  margin: 0; padding: 3px 7px 2px; border-radius: 2px; background: #2b2c31; color: inherit; /* a shade up again from the label it is in */
+  font-size: calc(11px * var(--tf)); line-height: 1.4; letter-spacing: 0.04em;
 }
 .label2 .linkbtn { text-underline-offset: 3px; }
 /* A link in a sentence is a line of type tall: too small for a thumb. Its box stays where it is;
@@ -819,16 +812,16 @@ html.is-scroll .page { touch-action: pan-y pinch-zoom; }
    is the wall's own black, a shade up, ruled in the strip's gold, with nothing on it brighter than
    its text. It is solid: the wall's light stops at its edge and does not run behind the words. */
 .ticket {
-  box-sizing: border-box; margin: 0; width: var(--shelf-w); padding: 14px 18px 15px; border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06)); color: var(--paper); font-family: var(--sans);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box; margin: 0; width: var(--shelf-w); padding: 12px 16px 13px; border-radius: 4px;
+  background: #131316; color: var(--paper);
+  box-shadow: inset 0 0 0 1px rgba(215, 182, 95, 0.4), 0 8px 14px rgba(0, 0, 0, 0.4);
 }
-.ticket-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
-.ticket-k { font-size: calc(13px * var(--tf)); font-weight: 500; color: rgba(255, 255, 255, 0.7); }
-.ticket-v { font-size: calc(14px * var(--tf)); font-weight: 600; white-space: nowrap; }
+.ticket-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 10px; border-bottom: 1.5px dashed rgba(255, 255, 255, 0.36); }
+.ticket-k { font-size: calc(10.5px * var(--tf)); font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, 0.82); }
+.ticket-v { font-size: calc(13px * var(--tf)); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
 .ticket-moved { display: flex; align-items: center; gap: 10px; margin-top: 11px; font-size: calc(12px * var(--tf)); line-height: 1.4; }
 .chip { flex: none; display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 3px; background: var(--tear); color: var(--ink); font-size: calc(13px * var(--tf)); font-weight: 500; letter-spacing: 0.06em; }
-.ticket-p { margin: 10px 0 0; font-size: calc(13px * var(--tf)); line-height: 1.5; color: rgba(255, 255, 255, 0.86); text-wrap: pretty; }
+.ticket-p { margin: 10px 0 0; font-size: calc(12px * var(--tf)); line-height: 1.55; color: rgba(255, 255, 255, 0.86); text-wrap: pretty; }
 .ticket-moved + .ticket-p { margin-top: 9px; }
 .ticket .linkbtn { color: var(--paper); }
 .ticket-next { display: block; margin-top: 7px; }
@@ -992,13 +985,13 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   background: var(--ink); color: var(--paper);
   font-family: var(--mono); font-size: 11.5px; line-height: 1.3; letter-spacing: 0.04em;
 }
-.demo-tag { flex: none; padding: 4px 10px 3px; border-radius: 999px; background: var(--tear); color: var(--ink); font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; }
+.demo-tag { flex: none; padding: 3px 7px 2px; border-radius: 2px; background: var(--tear); color: var(--ink); font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; }
 .demo-hint { flex: 1 1 auto; min-width: 0; color: #c9cad3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .demo-controls { flex: none; display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .demo-label { color: #c9cad3; }
 .demo-select, .demo-btn {
-  height: 30px; margin: 0; padding: 0 12px; border: 1px solid #3d3e48; border-radius: 999px; background: #1b1c24; color: var(--paper);
-  font-family: var(--sans); font-size: 12.5px; cursor: pointer;
+  height: 30px; margin: 0; padding: 0 9px; border: 1px solid #5a5c6b; border-radius: 3px; background: #1b1c24; color: var(--paper);
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.04em; cursor: pointer;
 }
 .demo-select { max-width: 190px; }
 .demo-btn:hover, .demo-select:hover { border-color: var(--paper); }
@@ -1021,7 +1014,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   .demo-more::after { content: ''; display: inline-block; margin: 0 0 2px 6px; border: 4px solid rgba(0, 0, 0, 0); border-bottom: 0; border-top-color: currentColor; vertical-align: middle; }
   .demo-bar.is-open .demo-more::after { transform: rotate(180deg); }
   .demo-more:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
-  .demo-controls { flex-direction: column; align-items: stretch; gap: 6px; margin: 0; padding: 8px; border-radius: 18px; background: var(--ink); }
+  .demo-controls { flex-direction: column; align-items: stretch; gap: 6px; margin: 0; padding: 6px; border-radius: 4px; background: var(--ink); }
   .demo-bar:not(.is-open) .demo-controls { display: none; }
   .demo-select { max-width: none; }
   .demo-select, .demo-btn { height: 36px; }
@@ -1181,6 +1174,11 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       const person = PEOPLE[state.pick];
       state.session = person.member ? { member: Object.assign({}, person.member), seen: null, emails: true } : { member: null };
       save();
+      // Their balance is as it began: so is what the store's demo keeps of them (orders, what is left, an address). Its scene is kept.
+      try {
+        const kept = JSON.parse(window.localStorage.getItem('shrugdemo.store.v2') || 'null');
+        window.localStorage.setItem('shrugdemo.store.v2', JSON.stringify({ orders: [], left: {}, shipTo: '', scene: (kept && kept.scene) || 'normal' }));
+      } catch (e) { /* storage is a nicety here */ }
       sync();
       return answer();
     },

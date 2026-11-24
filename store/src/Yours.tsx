@@ -6,11 +6,12 @@ import { DocIcon } from './icons'
 import { Lines, Paid, Picture } from './Product'
 import { editionOf } from './words'
 
-// My VIP (the section the address still calls "yours"): the member's card as the card page draws it, their
-// account at a glance (what kind of member they are, their balance, how long they have been one, what they
-// have bought and which funds they are in), then the history behind each: purchases and where each stands,
-// investments, the points that have come and gone; and three cards: where things are sent, emails, and the
-// account. Everything here is what the server says of them: nothing is worked out that it does not know.
+// My VIP (the section the address still calls "yours"): the member's card as the card page draws it (pressed,
+// it goes to the card page), their account at a glance (what kind of member they are, their balance, how
+// long they have been one, what they have bought and which funds they are in), then the history behind
+// each: purchases and where each stands; apart from those, what they have only asked for or had kept for
+// them; investments; the points that have come and gone; and three cards: where things are sent, emails,
+// and the account. Everything here is what the server says of them: nothing is worked out that it does not know.
 
 const WHEN = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const when = (iso: string) => (Number.isFinite(Date.parse(iso)) ? WHEN.format(Date.parse(iso)) : '')
@@ -26,8 +27,11 @@ function standOf(order: Order, shop: Shop): string {
 
 const nothingOf = (order: Order) => (order.status === 'Pre-order' ? 'Nothing taken' : order.status === 'Requested' ? '' : 'Free')
 const nameOf = (order: Order) => `${order.productName}${order.option ? `, ${order.option.replace(/\s#[0-9a-f]{3,8}$/i, '')}` : ''}`
-/** What was bought, and not since given back: an update unlocked counts, a request or a reservation does not. */
-const boughtOf = (orders: Order[]) => orders.filter((order) => ['Paid', 'Points', 'Sent', 'Ready'].includes(order.status))
+/** A purchase: something was taken for it, points or dollars, or it was claimed for nothing. A request, and a
+ * place kept with nothing taken, are not: they are listed apart, so that neither is read as something bought. */
+const purchased = (order: Order) => order.status !== 'Requested' && order.status !== 'Ready' && !(order.status === 'Pre-order' && !order.points && !order.paid)
+/** What was bought, and not since given back. */
+const boughtOf = (orders: Order[]) => orders.filter((order) => purchased(order) && order.status !== 'Refunded')
 const WORDS: Record<string, string> = { Founder: 'Founder', LP: 'Limited partner', Investor: 'Investor' }
 /** How long a member has been one, from the year on their card. */
 const yearsOf = (since: number) => {
@@ -111,7 +115,8 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
       <div>
         <dt>Account type</dt>
         <dd>{me.roles.length ? me.roles.join(' · ') : 'Member'}</dd>
-        <dd className="sub">{me.roles.map((role) => WORDS[role] ?? role).join(', ') || 'On the list'}</dd>
+        {/* The role in full, where that says more than the role itself does */}
+        <dd className="sub">{me.roles.some((role) => WORDS[role] && WORDS[role] !== role) ? me.roles.map((role) => WORDS[role] ?? role).join(', ') : 'Shrug VIP member'}</dd>
       </div>
       <div>
         <dt>Card</dt>
@@ -143,12 +148,9 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
     </dl>
   )
 
-  const orders = (
-    <>
-      <h2 className="ui-sect">Purchase history</h2>
-      {shop.orders.length > 0 ? (
+  const rows = (list: Order[]) => (
         <ol className="ui-list">
-          {shop.orders.map((order) => {
+          {list.map((order) => {
             const product = shop.products.find((p) => p.id === order.productId)
             const facts = [editionOf(order.number), order.reference, when(order.placed)].filter(Boolean).join(' · ')
             const taken = order.points || order.paid ? <Paid order={order} size={13} /> : nothingOf(order)
@@ -165,8 +167,19 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
             )
           })}
         </ol>
-      ) : (
-        <p className="ui-none">Nothing yet. What you claim in the store is kept here.</p>
+  )
+  const purchases = shop.orders.filter(purchased)
+  const asks = shop.orders.filter((order) => !purchased(order))
+  // What has been bought, and then, under a heading of its own, what has only been asked for or kept
+  const orders = (
+    <>
+      <h2 className="ui-sect">Purchase history</h2>
+      {purchases.length > 0 ? rows(purchases) : <p className="ui-none">Nothing yet. What you claim in the store is kept here.</p>}
+      {asks.length > 0 && (
+        <>
+          <h2 className="ui-sect">Requests and reservations</h2>
+          {rows(asks)}
+        </>
       )}
     </>
   )
@@ -245,10 +258,44 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
     </div>
   )
 
+  // Their card, as the card page draws it. Pressed, it goes there
+  const card = (
+    <a className="mc-link" href="/" aria-label="Your card. Open it">
+      <div className={`mc m-${metal}`}>
+        <div className="mc-top">
+          <Wordmark lockup="shrug" height={15} />
+          <small>
+            {Metal}
+            {me.number ? ` · No. ${me.number}` : ''}
+          </small>
+        </div>
+        <div className="mc-win">
+          {/* A long name is set smaller, so that its longest word still fits the window */}
+          <b style={{ fontSize: Math.min(60, Math.round(430 / Math.max(...me.name.split(/\s+/).map((word) => word.length), 1))) }}>{me.name}</b>
+        </div>
+        <div className="mc-band">
+          <b>{me.roles[0] ?? 'Member'}</b>
+          <small>{me.since ? `Member since ${me.since}` : ''}</small>
+        </div>
+        <div className="mc-pts">
+          <div>
+            <small>Points</small>
+            <b>{fmtPoints(me.points)}</b>
+          </div>
+          <i>
+            Series 01
+            <br />1 of 1
+          </i>
+        </div>
+      </div>
+    </a>
+  )
+
   if (phone)
     return (
       <main className="up-body" style={{ gap: 0, paddingBottom: 28 }}>
         <h1 className="t-title">My VIP</h1>
+        <div className="mc-row">{card}</div>
         {stats}
         {orders}
         {funds}
@@ -261,35 +308,7 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
 
   return (
     <main className="ui-page" style={{ gridTemplateColumns: '223px minmax(0, 1fr) minmax(260px, 320px)' }}>
-      <div style={{ paddingTop: 6 }}>
-        <div className={`mc m-${metal}`} aria-label="Your card">
-          <div className="mc-top">
-            <Wordmark lockup="shrug" height={15} />
-            <small>
-              {Metal}
-              {me.number ? ` · No. ${me.number}` : ''}
-            </small>
-          </div>
-          <div className="mc-win">
-            {/* A long name is set smaller, so that its longest word still fits the window */}
-            <b style={{ fontSize: Math.min(60, Math.round(430 / Math.max(...me.name.split(/\s+/).map((word) => word.length), 1))) }}>{me.name}</b>
-          </div>
-          <div className="mc-band">
-            <b>{me.roles[0] ?? 'Member'}</b>
-            <small>{me.since ? `Member since ${me.since}` : ''}</small>
-          </div>
-          <div className="mc-pts">
-            <div>
-              <small>Points</small>
-              <b>{fmtPoints(me.points)}</b>
-            </div>
-            <i>
-              Series 01
-              <br />1 of 1
-            </i>
-          </div>
-        </div>
-      </div>
+      <div style={{ paddingTop: 6 }}>{card}</div>
       <div>
         <div className="ui-head" style={{ paddingBottom: 14 }}>
           <h1 className="t-title">My VIP</h1>
