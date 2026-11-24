@@ -271,11 +271,10 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   founders (those Shrug funded) or investors (everyone else). The counts are of the data.
 - **Portfolio** is every company in `src/data/portfolio.ts` as an edge-to-edge grid of squares. A tile lit
   (a pointer over it, the keyboard on it, or the first tap on a touch screen; the second tap follows the
-  link) shows the company's sector, name and write-up. At rest a tile shows the company's logo: the one it already has in
-  `public/logos` (an app icon, in colour), drawn without its colour because the page is black and white.
-  The one company with no logo shows its name in type. **Still placeholder:** the design wants a
-  single-colour logo and a photograph for each company, and neither has been supplied; a lit tile shows a
-  dark fill marked `[Photo: …]` where the photograph will be. To put a real one in, save the logo as a
+  link) shows the company's sector, name and write-up. At rest a tile shows the company's wordmark, as Founders Fund's
+  portfolio does, and not its app icon. **Still placeholder:** no company's own wordmark has been supplied
+  (the repository has only their app icons), so each name is set in type, all in the one face; and a lit
+  tile shows a dark fill marked `[Photo: …]` where the photograph will be. To put a real one in, save the logo as a
   one-colour SVG and the photograph (800px square or more) in `vc/public/portfolio/`, and name the files
   against the company's key in `ART` at the top of `vc/src/pages/Portfolio.tsx`. Sixteen companies have no
   write-up in the data; their tiles show the sector and the name.

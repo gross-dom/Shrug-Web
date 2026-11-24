@@ -876,18 +876,7 @@ a.tile {
   transition: opacity 0.2s;
 }
 
-/* The company's own logo, as Shrug has supplied it: an app icon, in colour. The page is black and white,
-   so at rest it is shown without its colour */
-.tile__icon {
-  width: 9vw;
-  width: min(36cqw, 132px);
-  aspect-ratio: 1;
-  border-radius: 22%;
-  object-fit: cover;
-  filter: grayscale(1);
-}
-
-/* A real logo: one colour, drawn as a mask so that it takes the colour of the text in either theme */
+/* A company's own wordmark, once supplied: one colour, drawn as a mask so that it takes the colour of the text in either theme */
 .tile__mark {
   /* Half the tile's width (an eighth of the window's, four across, where the tile cannot be measured) */
   width: 12.5vw;
@@ -898,7 +887,7 @@ a.tile {
   mask: center / contain no-repeat;
 }
 
-/* Until there is one: the company's name, set in type */
+/* Until there is one: the company's name, set in type as its wordmark */
 .tile__name {
   font-size: clamp(18px, 2vw, 27px);
   line-height: 1.15;
