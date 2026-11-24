@@ -838,7 +838,7 @@ html.is-scroll .page { touch-action: pan-y pinch-zoom; }
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
   min-width: min(260px, var(--shelf-w)); height: calc(50px * var(--tf)); padding: 0 calc(28px * var(--tf)); border-radius: 999px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.17)); color: #fff; font: 600 calc(16px * var(--tf)) / 1 var(--sans); letter-spacing: -0.01em; text-decoration: none; white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62), inset 0 -1px 0 rgba(255, 255, 255, 0.12), inset 0 -12px 16px -12px rgba(255, 255, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.15), 0 12px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 12px 16px -12px rgba(255, 255, 255, 0.4), inset 0 -12px 16px -12px rgba(255, 255, 255, 0.18), 0 12px 30px rgba(0, 0, 0, 0.5); /* no line round it: the light is soft, inside the pane */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); cursor: pointer; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
   transition: filter 0.15s, transform 0.15s;
 }
@@ -1594,8 +1594,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       if (footY + footH + padB > hgt + 0.5) docH = Math.ceil(footY + footH + padB);
     } else {
       st.setProperty('--stage-x', '0px');
-      const base = card ? 480 : 540; // where the shelf starts, in the stage's pixels
-      const tuck = card ? 12 : 28; // how far it can come up before it touches what hangs above it
+      const base = card ? 496 : 540; // where the shelf starts, in the stage's pixels: under a card, a clear step below it
+      const tuck = card ? 28 : 28; // how far it can come up before it touches what hangs above it
       const least = typing && kind === 'compact' ? STAGE_H : 0; // room for three lines before a keyboard arrives
       let lift = 0;
       const measure = () => Math.max(least, base - lift + Math.max(card ? 108 : 30, shelf.offsetHeight) + (card ? 10 : 6));
