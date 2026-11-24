@@ -266,8 +266,12 @@ video {
   }
 }
 
-/* The page a visitor is on is said at full strength, the others quietly */
+/* The page a visitor is on is said at full strength and stands in square brackets, as the chosen filter
+   does; the others are said quietly. The brackets are drawn outside the name, in the gap between names, so
+   that no name moves when the page changes. They are not for reading out (the second `content` says so to
+   a browser that understands it; the page is already marked as the current one for assistive tech). */
 .bar__page {
+  position: relative;
   display: flex;
   align-items: center;
   min-height: 44px;
@@ -278,6 +282,28 @@ video {
 
 .bar__page[aria-current='page'] {
   color: var(--fg);
+}
+
+.bar__page[aria-current='page']::before,
+.bar__page[aria-current='page']::after {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.bar__page[aria-current='page']::before {
+  content: '[';
+  content: '[' / '';
+  right: 100%;
+  margin-right: 5px;
+}
+
+/* The name ends with the space its last letter is tracked by: the bracket after it sits that much closer */
+.bar__page[aria-current='page']::after {
+  content: ']';
+  content: ']' / '';
+  left: 100%;
+  margin-left: 3.5px;
 }
 
 @media (hover: hover) {

@@ -14,18 +14,20 @@ import { MARKS, type Mark } from '../marks'
 // which companies have none yet: those show their name set in type.
 
 /** WHERE THE PHOTOGRAPHS GO. A lit tile shows the company's photograph; a company with none here shows a
- * dark fill marked [Photo: …]. The six here are files Shrug sent, brought down to the size a tile can use.
+ * dark fill marked [Photo: …]. The eight here are files Shrug sent, brought down to the size a tile can use.
  * To put one in, save it in vc/public/companies (900px or more on its shorter side; it is cropped to cover
  * the square tile) and name the file here against the company's `key` from src/data/portfolio.ts. The
  * crop keeps the middle of the picture; `at` moves it, where what matters is off to one side (it is CSS's
- * object-position: across, then down).
- *
- * Antares has none yet: two different pictures came for it, and Shrug is to say which. */
+ * object-position: across, then down). */
 const PHOTOS: Record<string, { file: string; at?: string }> = {
   Varda: { file: 'varda-photo.webp' },
   Hadrian: { file: 'hadrian-photo.webp' },
   // The file came with no company's name on it. It is a picture of wire harnesses, which is what Senra makes.
   Senra: { file: 'senra-photo.webp' },
+  // Its file is smaller than the others (739px wide): it is the one Shrug chose of the two that came under Antares' name
+  Antares: { file: 'antares-photo.webp' },
+  // The other of those two, which Shrug says is Anduril's
+  Anduril: { file: 'anduril-photo.webp' },
   AMCA: { file: 'amca-photo.webp' },
   // The machine being measured is at the left of the picture
   'Avalanche Energy': { file: 'avalanche-energy-photo.webp', at: '22% 50%' },

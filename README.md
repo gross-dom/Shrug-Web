@@ -264,8 +264,8 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   first; `vc/src/theme.ts` takes over from it, and the two must be kept in step.
 - **The way round** (`vc/src/Menu.tsx`) is one bar, at every width (the "header bar" layout, which
   replaced a rail down the left). It stays at the top of the window, 70px tall, in the page's own colour
-  with a hairline under it: the wordmark on the left (to Quotes); on the right the four pages by name and
-  two lines. Under 900px the names are not there and the two lines are the way round. The two lines open
+  with a hairline under it: the wordmark on the left (to Quotes); on the right the four pages by name (the
+  current one at full strength and in square brackets) and two lines. Under 900px the names are not there and the two lines are the way round. The two lines open
   a panel from the right at any width; the panel has a cross of its own, which stands where the two lines
   are. It is a dialog (the keyboard goes into it and stays in it, Escape shuts it, the page behind does
   not scroll) and holds the case studies and the cross, Light / Dark on the row under, the four pages,
@@ -294,8 +294,9 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   its app icon: 69 taken from the head of the company's own website and six from files Shrug sent (Cameo,
   Cloud23, Enigma, Alt, Poparazzi, HQ Trivia), all kept in `vc/public/companies/` as a picture of the
   mark's shape alone, which the page draws in the colour of its text in either theme (`vc/src/marks.ts`
-  lists them and says how to replace one). A lit tile shows the company's photograph: six
-  are in (Varda, Hadrian, Senra, AMCA, Avalanche Energy, Eight Sleep), from files Shrug sent. **Still
+  lists them and says how to replace one). A lit tile shows the company's photograph: eight
+  are in (Varda, Hadrian, Senra, Antares, Anduril, AMCA, Avalanche Energy, Eight Sleep), from files Shrug
+  sent. **Still
   placeholder:** every other lit tile shows a dark fill marked `[Photo: …]`; to put a photograph in, save
   it (900px or more on its shorter side) in `vc/public/companies/` and name it against the company's key
   in `PHOTOS` at the top of `vc/src/pages/Portfolio.tsx`. Fifteen companies have no
