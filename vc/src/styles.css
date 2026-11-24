@@ -1,6 +1,6 @@
 /* Shrug.VC, direction F. Strict black and white, in a light and a dark theme. Every colour on the site is
    one of the tokens below; the class th-dark on <html> swaps them (the script in the head of index.html
-   puts it there before the first paint, and src/theme.ts changes it from the menu). The greys are neutral:
+   puts it there before the first paint, and src/theme.ts changes it from the rail or the menu). The greys are neutral:
    no warm or cool tint. Sizes are the design's own, in pixels, as its handoff gives them. */
 
 /* ---- Tokens ---- */
@@ -21,12 +21,15 @@
   --av-bg: #ededed; /* a face with no photograph */
   --av-fg: #5e5e5e;
   --pava: #e2e2e2; /* the face of a post still to come */
+  --bar: rgba(255, 255, 255, 0.82); /* the bar at the top of a narrower window: the page, a little see-through */
   /* What stands where a picture will be. It goes once the real pictures are in. */
   --media: radial-gradient(120% 70% at 18% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), linear-gradient(165deg, #303030 0%, #0a0a0a 58%, #1e1e1e 100%);
   --btnsh: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
 
   /* The gap between the page and the window's edge, the same on every page */
   --pad: clamp(20px, 4vw, 40px);
+  /* How wide the rail is, on a window wide enough to have one (1280px and more: the rules for it are with the rail) */
+  --rail: 300px;
   /* How long a change of theme takes, and what changes with it */
   --themed: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -50,6 +53,7 @@
   --av-bg: #1f1f1f;
   --av-fg: #a3a3a3;
   --pava: #1f1f1f;
+  --bar: rgba(0, 0, 0, 0.74);
   --media: radial-gradient(120% 70% at 18% 0%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 60%), linear-gradient(165deg, #404040 0%, #171717 58%, #2b2b2b 100%);
   --btnsh: inset 0 1px 0 rgba(255, 255, 255, 1), 0 8px 28px rgba(255, 255, 255, 0.14);
   color-scheme: dark;
@@ -73,6 +77,7 @@
     --av-bg: #1f1f1f;
     --av-fg: #a3a3a3;
     --pava: #1f1f1f;
+    --bar: rgba(0, 0, 0, 0.74);
     --media: radial-gradient(120% 70% at 18% 0%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 60%), linear-gradient(165deg, #404040 0%, #171717 58%, #2b2b2b 100%);
     --btnsh: inset 0 1px 0 rgba(255, 255, 255, 1), 0 8px 28px rgba(255, 255, 255, 0.14);
     color-scheme: dark;
@@ -183,97 +188,224 @@ video {
   text-transform: uppercase;
 }
 
-/* ---- The top of every page: the wordmark, and the menu's two lines ---- */
+/* ---- The way round: a rail down the left on a wide window, a bar across the top on a narrower one ---- */
 
-.top {
-  padding: 20px var(--pad) 0;
-  display: flex;
-  align-items: center;
-  min-height: 68px;
+/* The rail. It keeps to the left edge while the page scrolls beside it, in the page's own colours with a
+   hairline down its right side. Three groups, spread top, middle and foot. Not shown under 1280px. */
+.rail {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 10;
+  width: var(--rail);
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  /* A window too short for all of it lets it scroll, so that nothing at its foot is out of reach */
+  overflow-y: auto;
+  transition: var(--themed);
 }
 
-/* It leaves the corner to the two lines, which stay there as the page scrolls */
-.top__mark {
+.rail__in {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 26px 32px 26px 40px;
+}
+
+.rail__mark {
   display: flex;
   align-items: center;
   min-height: 44px;
-  color: inherit;
 }
 
-.top__mark svg {
-  display: block;
-  max-width: calc(100vw - var(--pad) * 2 - 64px);
+.rail__mark svg {
+  flex-shrink: 0;
+}
+
+.rail__pages {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The four pages. The one a visitor is on is said at full strength with the arrow before it; the others quietly. */
+.rail__page {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  color: var(--sub);
+  transition:
+    color 0.2s,
+    transform 0.3s var(--ease);
+}
+
+.rail__page[aria-current='page'] {
+  color: var(--fg);
+}
+
+.rail__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rail__util {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.rail__quiet {
+  color: var(--sub);
+  transition: color 0.35s ease;
+}
+
+.rail__theme {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+/* Light / Dark: the one the page is in is said at full strength, the other quietly */
+.rail__mode {
+  min-height: 44px;
+  padding: 0 2px;
+  font-weight: 500;
+  color: var(--sub);
+  transition: color 0.35s ease;
+}
+
+.th-light .rail__mode--light,
+.th-dark .rail__mode--dark {
+  color: var(--fg);
+}
+
+/* The small links, two to a row under a hairline. They are 32px tall: enough for a pointer, which is all a
+   window this wide is used with. The panel's, which a finger presses, are taller. */
+.rail__links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  transition: border-color 0.35s ease;
+}
+
+.rail__link {
+  font-size: 14px;
+  line-height: 32px;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--sub);
+  transition:
+    color 0.2s,
+    transform 0.3s var(--ease);
+}
+
+@media (hover: hover) {
+  .rail__page:hover,
+  .rail__link:hover {
+    color: var(--fg);
+    transform: translateX(6px);
+  }
+
+  .rail__mode:hover {
+    color: var(--fg);
+  }
+
+  .rail__util:hover {
+    opacity: 0.6;
+  }
+}
+
+/* The bar. It stays at the top of the window as the page goes under it: the page's colour, a little
+   see-through, with what is behind it blurred. The wordmark on the left, the menu's two lines on the right. */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bar);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  transition: var(--themed);
+}
+
+.bar__in {
+  min-height: 68px;
+  padding: 0 var(--pad);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.bar__mark {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 0;
+}
+
+.bar__mark svg {
+  max-width: 100%;
   height: auto;
 }
 
-/* Two flat lines, no shape round them. They are drawn in white and blended by difference with whatever is
-   under them, so they read black on the white page, white on the black page, and stay in sight over a
-   picture and over the open panel with no rule for each. */
-.burger,
-.burger-under {
-  position: fixed;
-  top: 20px;
-  right: var(--pad);
-  z-index: 30;
+/* Two flat lines, no shape round them, in the colour of the text. They open the panel and that is all:
+   the panel has a cross of its own to shut it. */
+.burger {
+  flex-shrink: 0;
   width: 44px;
-  height: 48px;
+  height: 44px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
   gap: 6px;
-  color: #ffffff;
-  mix-blend-mode: difference;
 }
 
 .burger span,
-.burger-under span {
+.menu__close span {
   display: block;
   width: 24px;
   height: 1.5px;
   background: currentColor;
-  transition: transform 0.4s var(--ease);
 }
 
-/* Difference goes flat over mid-grey: white on a grey photograph is the same grey. So a second pair of
-   lines lies exactly under the first, drawing nothing of its own and turning what is behind it to pure
-   black or pure white, whichever is nearer. Blended with that, the lines above are always one or the other. */
-.burger-under {
-  z-index: 29;
-  mix-blend-mode: normal;
-  pointer-events: none;
-}
-
-.burger-under span {
-  background: none;
-  -webkit-backdrop-filter: grayscale(1) contrast(1000);
-  backdrop-filter: grayscale(1) contrast(1000);
-}
-
-/* Its ring is blended as the lines are, so it too is seen on anything */
-.burger:focus-visible {
-  outline-color: #ffffff;
-}
-
-/* Open, the two lines cross */
-.menu[data-open] .burger span:first-child,
-.menu[data-open] .burger-under span:first-child {
-  transform: translateY(3.75px) rotate(45deg);
-}
-
-.menu[data-open] .burger span:last-child,
-.menu[data-open] .burger-under span:last-child {
-  transform: translateY(-3.75px) rotate(-45deg);
-}
-
-/* A browser that cannot blend is given the colour outright: the text's on the page, the panel's over the panel */
-@supports not (mix-blend-mode: difference) {
-  .burger {
-    color: var(--fg);
+/* From 1280px there is room for the rail: it does the navigating, and the bar, the panel and the dimmed
+   page behind the panel are gone altogether, so that nothing out of sight can take the keyboard.
+   Everything else on the page starts where the rail ends. */
+@media (min-width: 1280px) {
+  .rail {
+    display: block;
   }
 
-  .menu[data-open] .burger {
-    color: var(--on-fg);
+  .bar,
+  .menu {
+    display: none;
+  }
+
+  .shell {
+    margin-left: var(--rail);
   }
 }
 
@@ -331,23 +463,47 @@ video {
   outline-color: var(--on-fg);
 }
 
+/* Its margins are the bar's, so that the cross stands exactly where the two lines were */
 .menu__in {
   min-height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 24px;
-  padding: 20px 40px 28px;
+  padding: 10px var(--pad) 28px;
 }
 
-/* The top row keeps the corner clear for the cross. On a phone the theme drops under the PDF. */
+.menu__head {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The top row: the case studies on the left and the cross on the right. The theme has the row under it. */
 .menu__top {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0 24px;
-  padding-right: 64px;
+  gap: 24px;
+  min-height: 48px;
+}
+
+/* The cross that shuts the panel: the menu's two lines, crossed */
+.menu__close {
+  flex-shrink: 0;
+  width: 44px;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.menu__close span:first-child {
+  transform: translateY(0.75px) rotate(45deg);
+}
+
+.menu__close span:last-child {
+  transform: translateY(-0.75px) rotate(-45deg);
 }
 
 .menu__util {
@@ -368,6 +524,7 @@ video {
 }
 
 .menu__theme {
+  align-self: flex-start;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -501,20 +658,22 @@ video {
   }
 
   .menu__util:hover,
-  .menu__link:hover {
+  .menu__link:hover,
+  .menu__close:hover {
     opacity: 0.6;
   }
 }
 
-/* On the narrowest phones the panel gives up some of its margin, so the longest page name still fits */
-@media (max-width: 359px) {
-  .menu__in {
-    padding-left: 26px;
-    padding-right: 26px;
-  }
-}
-
 /* ---- The page, and its foot ---- */
+
+/* Everything that is not the way round: the page and its foot, one under the other, the foot at the bottom
+   of the window when the page is short. From 1280px it begins where the rail ends (the rule is with the rail). */
+.shell {
+  flex: 1 0 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 .page {
   flex: 1 0 auto;
@@ -525,31 +684,32 @@ video {
   outline: none;
 }
 
+/* The column Quotes, VIP and FAQ sit in, and the foot under them: up to 1200px of content with the page's
+   margin either side, centred in the space the rail leaves (or in the window, where there is no rail).
+   The first thing in it starts level with the top of the wordmark's row in the rail. */
+.quotes,
+.vip,
+.faq,
 .foot {
   width: 100%;
-  max-width: calc(1320px + var(--pad) * 2);
-  padding: 0 var(--pad) 36px;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.foot {
+  padding: 0 var(--pad) 32px;
+}
+
+/* Under Portfolio the foot is as wide as the grid above it */
+.foot--wide {
+  max-width: none;
 }
 
 .foot__in {
   border-top: 1px solid var(--line);
-  padding-top: 20px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 40px;
+  padding-top: 18px;
   transition: var(--themed);
-}
-
-.foot__mark {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-}
-
-.foot__mark svg {
-  flex-shrink: 0;
 }
 
 .foot__small {
@@ -616,8 +776,7 @@ video {
 /* ---- Quotes ---- */
 
 .quotes {
-  max-width: calc(1320px + var(--pad) * 2);
-  padding: 48px var(--pad) 72px;
+  padding: 26px var(--pad) 72px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -651,18 +810,29 @@ video {
   }
 }
 
+/* Beside the rail the line starts where the rail ends */
+@media (min-width: 1280px) {
+  .progress {
+    left: var(--rail);
+    width: calc(100% - var(--rail));
+  }
+}
+
 .rows {
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid var(--line);
   transition: var(--themed);
+  /* So that a row can ask how wide the list is (the pinned name, below) */
+  container-type: inline-size;
 }
 
-/* One person: who they are, then what they said. On a narrow window the two stack. */
+/* One person: who they are, then what they said, side by side wherever the list is wide enough for the
+   name (340px), the gap (72px) and a quote of at least 380px: 792px in all. Narrower, the quote goes under. */
 .row {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 20px 72px;
   padding: 48px 0;
   border-top: 1px solid var(--line);
   transition:
@@ -671,9 +841,13 @@ video {
 }
 
 .who {
+  flex: 0 1 340px;
+  align-self: flex-start;
   display: flex;
   align-items: flex-start;
   gap: 18px;
+  /* Where it is pinned (below): clear of the bar, which is 68px tall */
+  top: 92px;
 }
 
 .who__face {
@@ -761,6 +935,7 @@ video {
 }
 
 .row__quote {
+  flex: 1 1 380px;
   min-width: 0;
   max-width: 760px;
   font-size: 23px;
@@ -769,22 +944,19 @@ video {
   text-wrap: pretty;
 }
 
-/* Side by side once there is room for both: the name stays in view while a long quote goes past it */
-@media (min-width: 960px) {
-  .row {
-    flex-direction: row;
-    gap: 72px;
-  }
-
+/* Side by side, the name stays in view while a long quote goes past it. Only then: a name with its quote
+   under it is never pinned, or the quote would slide up behind it. It goes by the width of the list, the
+   same measure that decides whether the two are side by side. */
+@container (min-width: 792px) {
   .who {
-    flex: 0 0 340px;
-    align-self: flex-start;
     position: sticky;
-    top: 32px;
   }
+}
 
-  .row__quote {
-    flex: 1 1 0;
+/* Beside the rail there is no bar to clear */
+@media (min-width: 1280px) {
+  .who {
+    top: 32px;
   }
 }
 
@@ -805,9 +977,10 @@ video {
 
 /* ---- Portfolio ---- */
 
-/* From one edge of the window to the other: no gaps, no borders, no corners. Four across on a wide window, two on a phone. */
+/* From the rail (or the window's left edge, where there is none) to the window's right edge, from the very
+   top of the page: no gaps, no borders, no corners. As many across as fit at 300px or more, two on a phone. */
 .tiles {
-  padding: 28px 0 72px;
+  padding: 0 0 72px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(300px, 50%), 1fr));
 }
@@ -1026,17 +1199,17 @@ a.tile {
 /* ---- VIP ---- */
 
 .vip {
-  max-width: calc(1320px + var(--pad) * 2);
-  padding: 56px var(--pad) 88px;
+  padding: 26px var(--pad) 88px;
   display: flex;
   flex-direction: column;
   gap: 40px;
 }
 
-/* Columns, filled in the order the cards are given in: four on a wide window, two on a tablet, one on a phone */
+/* Columns, filled in the order the cards are given in, as many as fit at 280px or more: three beside the
+   rail on a laptop, four on a wide screen, one on a phone */
 .wall {
-  column-count: 4;
-  column-width: 270px;
+  column-width: 280px;
+  column-count: auto;
   column-gap: 20px;
 }
 
@@ -1345,8 +1518,7 @@ a.tile {
 /* ---- FAQ ---- */
 
 .faq {
-  max-width: calc(1320px + var(--pad) * 2);
-  padding: 40px var(--pad) 88px;
+  padding: 26px var(--pad) 88px;
   display: flex;
   flex-direction: column;
 }
@@ -1375,7 +1547,7 @@ a.tile {
 }
 
 .qa__a {
-  flex: 1 1 480px;
+  flex: 1 1 380px;
   min-width: 0;
   max-width: 680px;
   display: flex;
@@ -1426,6 +1598,8 @@ a.tile {
   .card:hover .card__play,
   .button:hover,
   .row:hover .who__face,
+  .rail__page:hover,
+  .rail__link:hover,
   .menu[data-open] .menu__page:hover {
     transform: none;
   }

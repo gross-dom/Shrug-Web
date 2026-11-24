@@ -33,30 +33,39 @@ function show(theme: Theme) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', GROUND[theme])
 }
 
+/** What tells every part of the page that shows the theme that it has changed. */
+const CHANGED = 'shrug-theme-changed'
+
 /** The theme the page is in, and the way to choose one. It is null until the page has started up: only
- * then is it known which of the two the script in the head settled on. */
+ * then is it known which of the two the script in the head settled on. The switch is shown in two places
+ * (the rail, and the panel on a narrower window): a choice made at one is heard by the other. */
 export function useTheme(): [Theme | null, (theme: Theme) => void] {
   const [theme, setTheme] = useState<Theme | null>(null)
   useEffect(() => {
-    setTheme(document.documentElement.classList.contains('th-dark') ? 'dark' : 'light')
+    const read = () => setTheme(document.documentElement.classList.contains('th-dark') ? 'dark' : 'light')
+    read()
     // Someone who has not chosen follows their system, also when it changes while the page is open
     const query = window.matchMedia?.('(prefers-color-scheme: dark)')
     const follow = () => {
       if (kept()) return
       show(system())
-      setTheme(system())
+      window.dispatchEvent(new Event(CHANGED))
     }
     query?.addEventListener('change', follow)
-    return () => query?.removeEventListener('change', follow)
+    window.addEventListener(CHANGED, read)
+    return () => {
+      query?.removeEventListener('change', follow)
+      window.removeEventListener(CHANGED, read)
+    }
   }, [])
   const choose = useCallback((next: Theme) => {
     show(next)
-    setTheme(next)
     try {
       localStorage.setItem(KEY, next)
     } catch {
       // Not kept: the choice still holds for this page
     }
+    window.dispatchEvent(new Event(CHANGED))
   }, [])
   return [theme, choose]
 }
