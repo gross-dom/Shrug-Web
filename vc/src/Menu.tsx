@@ -3,11 +3,11 @@ import { Arrow, Wordmark } from './Brand'
 import { CASE_STUDIES_PAGE, CASE_STUDIES_PDF, HAS_CASE_STUDIES_PDF, LINKS } from './content'
 import { PageLink, ROUTES, usePath } from './router'
 import { useTheme } from './theme'
-import { useYear } from './year'
 
 // The way round the site. There is no bar across the top: two lines in the top right corner open a panel
 // from the right, over the page, and the same two lines (crossed) shut it. The panel holds the case studies,
-// the choice of light or dark, the four pages, and at its foot the wordmark and the small links.
+// the choice of light or dark, the four pages, and at its foot the wordmark and two small links (X and
+// Instagram). The copyright line is at the foot of the page, not here.
 
 /** What can take the keyboard inside the panel. */
 const STOPS = 'a[href], button:not([disabled])'
@@ -16,7 +16,6 @@ export function Menu() {
   const path = usePath()
   const [open, setOpen] = useState(false)
   const [theme, choose] = useTheme()
-  const year = useYear()
   const burger = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
 
@@ -111,15 +110,12 @@ export function Menu() {
             <PageLink to="/" className="menu__mark" onGo={shut}>
               <Wordmark />
             </PageLink>
-            <div className="menu__small">
-              <div className="menu__links">
-                {LINKS.map((link) => (
-                  <a key={link.label} className="menu__link" href={link.href}>
-                    {link.label}
-                  </a>
-                ))}
-              </div>
-              <p className="menu__year">© {year}</p>
+            <div className="menu__links">
+              {LINKS.map((link) => (
+                <a key={link.label} className="menu__link" href={link.href}>
+                  {link.label}
+                </a>
+              ))}
             </div>
           </div>
         </div>

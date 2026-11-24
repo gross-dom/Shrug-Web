@@ -5,20 +5,18 @@
 // as masks). `w` and `h` are the picture's size, which gives the page the mark's proportions before the
 // picture has arrived.
 //
-// A company is named here by its `key` in src/data/portfolio.ts. Ten are not here, and show their name in
-// type until Shrug sends a file for them:
-//
-//   Cameo (its site turns away anything that is not a person at a browser) and Cloud23 (its site was down);
-//   Enigma, whose address no longer answers; Layer2, whose address now goes to the company that bought it;
-//   The Network, whose site is a letter with no mark on it; Lula and Alt, which have no site in the data;
-//   and HQ Trivia, Poparazzi and YOLO, which have shut.
+// Six were not to be had from a site (down, shut, or closed to anything but a person at a browser) and are
+// from files Shrug sent, brought into the same form: Cameo, Cloud23, Enigma, Alt, Poparazzi and HQ Trivia
+// (its "HQ"). Every company on the page has one; a company added to the list without one shows its name
+// in type until it has.
 //
 // Five sites show a symbol and no lettering, and that symbol is what is here: AMCA, OnCyber, RTFKT, Sprinter
 // (whose site is now its drink's, k2o) and W Labs. Light Phone's reads "light", as its site has it. Popshop
 // Live's is its own lettering without the line beneath it that credits another company.
 //
-// To replace one, or add one of the ten: save the company's wordmark in vc/public/companies as an SVG, PNG or
-// WebP with a clear background (any one colour), and give its file and its size here.
+// A company is named here by its `key` in src/data/portfolio.ts. To replace one, or add one: save the
+// company's wordmark in vc/public/companies as an SVG, PNG or WebP with a clear background (any one colour),
+// and give its file and its size here.
 
 export interface Mark {
   /** A file in vc/public/companies. */
@@ -97,4 +95,10 @@ export const MARKS: Record<string, Mark> = {
   'Popshop Live': { file: 'popshop-live.webp', w: 640, h: 75 },
   '818 Tequila': { file: '818-tequila.webp', w: 416, h: 246 },
   Sprinter: { file: 'sprinter.webp', w: 414, h: 144 },
+  Cameo: { file: 'cameo.webp', w: 640, h: 132 },
+  Cloud23: { file: 'cloud23.webp', w: 640, h: 84 },
+  Enigma: { file: 'enigma.webp', w: 640, h: 86 },
+  Alt: { file: 'alt.webp', w: 640, h: 263 },
+  Poparazzi: { file: 'poparazzi.webp', w: 640, h: 43 },
+  'HQ Trivia': { file: 'hq-trivia.webp', w: 551, h: 300 },
 }

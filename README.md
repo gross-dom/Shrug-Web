@@ -266,20 +266,21 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   at the same left edge as the wordmark, however wide the window.
 - **The menu** (`vc/src/Menu.tsx`). Two lines top right open a panel from the right and, crossed, shut it. The panel is a dialog (the
   keyboard goes into it and stays in it, Escape shuts it, the page behind does not scroll) and holds the
-  case studies, Light / Dark, the four pages, and the wordmark with the small links.
+  case studies, Light / Dark, the four pages, and the wordmark with two small links (X and Instagram).
 - **Quotes** shows everyone with a testimonial, in the data's order, each in full, and can be narrowed to
   founders (those Shrug funded) or investors (everyone else). The counts are of the data.
-- **Portfolio** is every company in `src/data/portfolio.ts` as an edge-to-edge grid of squares. A tile lit
-  (a pointer over it, the keyboard on it, or the first tap on a touch screen; the second tap follows the
-  link) shows the company's sector, name and write-up. At rest a tile shows the company's own wordmark, as
-  Founders Fund's portfolio does, and not its app icon: 69 of the 79, each taken from the head of the
-  company's own website and kept in `vc/public/companies/` as a picture of its shape alone, which the page
-  draws in the colour of its text in either theme (`vc/src/marks.ts` lists them and says how to replace
-  one). Ten have none and show their name in type: Cameo, Cloud23, Enigma, Layer2, The Network, Lula, Alt,
-  HQ Trivia, Poparazzi and YOLO (`marks.ts` says why for each). **Still placeholder:** a lit tile shows a
+- **Portfolio** is the companies in `src/data/portfolio.ts`, less four Shrug asked to be left off this site
+  (Layer2, The Network, Lula and YOLO: `LEFT_OFF` in `vc/src/content.ts`; the desktop site still lists
+  them), as an edge-to-edge grid of squares: 75 tiles. A tile lit (a pointer over it, the keyboard on it,
+  or the first tap on a touch screen; the second tap follows the link) shows the company's sector, name
+  and write-up. At rest a tile shows the company's own wordmark, as Founders Fund's portfolio does, and not
+  its app icon: 69 taken from the head of the company's own website and six from files Shrug sent (Cameo,
+  Cloud23, Enigma, Alt, Poparazzi, HQ Trivia), all kept in `vc/public/companies/` as a picture of the
+  mark's shape alone, which the page draws in the colour of its text in either theme (`vc/src/marks.ts`
+  lists them and says how to replace one). **Still placeholder:** a lit tile shows a
   dark fill marked `[Photo: …]` where the photograph will be; to put one in, save it (800px square or
   more) in `vc/public/companies/` and name it against the company's key in `PHOTOS` at the top of
-  `vc/src/pages/Portfolio.tsx`. Sixteen companies have no
+  `vc/src/pages/Portfolio.tsx`. Fifteen companies have no
   write-up in the data; their tiles show the sector and the name.
 - **VIP** is a wall of cards in columns, in the order `vc/src/wall.ts` gives them. The 33 photographs are
   real (the ones in `src/data/drops.ts`, each under its drop's name), and so is the one text card about the

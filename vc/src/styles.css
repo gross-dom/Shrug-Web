@@ -470,14 +470,6 @@ video {
   height: auto;
 }
 
-.menu__small {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0 22px;
-}
-
 .menu__links {
   display: flex;
   flex-wrap: wrap;
@@ -500,13 +492,6 @@ video {
 .menu__link:first-child {
   margin-left: -25px;
   padding-left: 25px;
-}
-
-.menu__year {
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--on-sub);
-  transition: color 0.35s ease;
 }
 
 @media (hover: hover) {

@@ -1,13 +1,18 @@
 import { MEDIA } from '@data/drops'
 import { PEOPLE, type Person, type Relation } from '@data/people'
-import { COMPANIES, type Company } from '@data/portfolio'
+import { COMPANIES as EVERY_COMPANY, type Company } from '@data/portfolio'
 import { SITE } from '@data/site'
 
 // What the pages say that is not a quote, a company or an answer: read from the same data as the desktop
 // site, or written here where it is this site's own. Nothing here claims more than that data does.
 
-export { COMPANIES, MEDIA, SITE }
+export { MEDIA, SITE }
 export type { Company, Person }
+
+/** The portfolio this site shows: Shrug's list, less four companies Shrug has asked to be left off this site.
+ * They are still in the list itself (src/data/portfolio.ts), which the desktop site reads too. */
+const LEFT_OFF = new Set(['Layer2', 'The Network', 'Lula', 'YOLO'])
+export const COMPANIES = EVERY_COMPANY.filter((company) => !LEFT_OFF.has(company.key))
 
 /** Where a visitor writes to. */
 export const EMAIL = 'niv@shrug.vc'
@@ -23,13 +28,10 @@ export const TAGS: Record<Relation, { says: string; look: 'solid' | 'outlined' |
   L: { says: 'Investor in Shrug', look: 'grey' },
 }
 
-/** The small links at the foot of the menu. */
+/** The small links at the foot of the menu: the two places Shrug posts, and nothing else. */
 export const LINKS = [
   { label: 'X', href: 'https://twitter.com/ShrugCap' },
   { label: 'Instagram', href: 'https://instagram.com/shrugcap' },
-  { label: 'Merch', href: 'https://shrug-capital-shop.fourthwall.com' },
-  { label: 'shrug.vip', href: 'https://shrug.vip' },
-  { label: EMAIL, href: `mailto:${EMAIL}` },
 ]
 
 /** Where the VIP page sends a visitor who wants the whole of it. */
