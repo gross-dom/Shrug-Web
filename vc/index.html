@@ -20,11 +20,10 @@
       })()
     </script>
     <noscript>
-      <!-- The menu's panel and the choice of light or dark need their script. Without one neither is shown:
-           the rail's links still work, and on a narrower window the pages are linked from the footer. -->
+      <!-- The menu's panel needs its script. Without one its two lines are not shown: the bar names the
+           pages on a window wide enough, and on a narrower one they are linked from the footer. -->
       <style>
-        .burger,
-        .rail__theme {
+        .burger {
           display: none !important;
         }
       </style>
@@ -34,6 +33,49 @@
   </head>
   <body>
     <div id="root"><!--app--></div>
+    <script>
+      // Coming in. A hairline draws and words rise the first time they are seen (vc/src/styles.css,
+      // "Coming in"). This says when: what is in view as the page opens plays at once, each thing in its
+      // turn from the top; what is further down waits, and plays as it is scrolled to. It is here and not
+      // in the site's own script so that it runs on the page as written, without waiting for that script
+      // to arrive; the site calls it again when a visitor goes to another page (vc/src/App.tsx).
+      // With no script at all, or for a visitor who has asked for less motion, the class js is never set:
+      // nothing waits, and everything is there from the start.
+      ;(function () {
+        if (!('IntersectionObserver' in window)) return
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+        document.documentElement.classList.add('js')
+        /** Whether the next things seen are the first of their page: those keep their turn, later ones play at once. */
+        var first = true
+        /** What is already being watched for. */
+        var watched = new WeakSet()
+        var seen = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (!entry.isIntersecting) return
+              if (!first) entry.target.style.setProperty('--i', '0')
+              entry.target.setAttribute('data-in', '')
+              seen.unobserve(entry.target)
+            })
+            first = false
+          },
+          { rootMargin: '0px 0px -8% 0px' },
+        )
+        window.__shrugIn = function () {
+          var fresh = 0
+          Array.prototype.forEach.call(document.querySelectorAll('.rise:not([data-in]), .draw:not([data-in]), .row:not([data-in]), .card:not([data-in]), .tile:not([data-in])'), function (thing) {
+            if (watched.has(thing)) return
+            watched.add(thing)
+            seen.observe(thing)
+            fresh++
+          })
+          // Only a page newly arrived has things that take turns. With nothing new to watch for there is
+          // nothing to say so about, and what is scrolled to next plays at once as before.
+          if (fresh) first = true
+        }
+        window.__shrugIn()
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

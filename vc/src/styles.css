@@ -1,6 +1,6 @@
 /* Shrug.VC, direction F. Strict black and white, in a light and a dark theme. Every colour on the site is
    one of the tokens below; the class th-dark on <html> swaps them (the script in the head of index.html
-   puts it there before the first paint, and src/theme.ts changes it from the rail or the menu). The greys are neutral:
+   puts it there before the first paint, and src/theme.ts changes it from the menu). The greys are neutral:
    no warm or cool tint. Sizes are the design's own, in pixels, as its handoff gives them. */
 
 /* ---- Tokens ---- */
@@ -9,10 +9,10 @@
   --bg: #ffffff; /* the page */
   --fg: #000000; /* text */
   --sub: #5e5e5e; /* secondary text */
-  --card: #f4f4f4; /* cards, pills at rest */
-  --cardb: transparent; /* the edge of a card or a pill: only the dark theme needs one */
+  --card: #f4f4f4; /* cards */
+  --cardb: transparent; /* the edge of a card: only the dark theme needs one */
   --line: #e4e4e4; /* hairlines */
-  --on-bg: #000000; /* the pill that is chosen, buttons, the menu's panel */
+  --on-bg: #000000; /* buttons, the menu's panel */
   --on-fg: #ffffff;
   --on-sub: #a3a3a3; /* secondary text on the panel */
   --inv-bg: #000000; /* the one inverted card on VIP */
@@ -21,15 +21,13 @@
   --av-bg: #ededed; /* a face with no photograph */
   --av-fg: #5e5e5e;
   --pava: #e2e2e2; /* the face of a post still to come */
-  --bar: rgba(255, 255, 255, 0.82); /* the bar at the top of a narrower window: the page, a little see-through */
+  --rule: rgba(0, 0, 0, 0.2); /* the hairline under the bar, over each FAQ section and over the foot. The rows on Quotes keep --line. */
   /* What stands where a picture will be. It goes once the real pictures are in. */
   --media: radial-gradient(120% 70% at 18% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 60%), linear-gradient(165deg, #303030 0%, #0a0a0a 58%, #1e1e1e 100%);
   --btnsh: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
 
   /* The gap between the page and the window's edge, the same on every page */
   --pad: clamp(20px, 4vw, 40px);
-  /* How wide the rail is, on a window wide enough to have one (1280px and more: the rules for it are with the rail) */
-  --rail: 300px;
   /* How long a change of theme takes, and what changes with it */
   --themed: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -53,7 +51,7 @@
   --av-bg: #1f1f1f;
   --av-fg: #a3a3a3;
   --pava: #1f1f1f;
-  --bar: rgba(0, 0, 0, 0.74);
+  --rule: rgba(255, 255, 255, 0.28);
   --media: radial-gradient(120% 70% at 18% 0%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 60%), linear-gradient(165deg, #404040 0%, #171717 58%, #2b2b2b 100%);
   --btnsh: inset 0 1px 0 rgba(255, 255, 255, 1), 0 8px 28px rgba(255, 255, 255, 0.14);
   color-scheme: dark;
@@ -77,7 +75,7 @@
     --av-bg: #1f1f1f;
     --av-fg: #a3a3a3;
     --pava: #1f1f1f;
-    --bar: rgba(0, 0, 0, 0.74);
+    --rule: rgba(255, 255, 255, 0.28);
     --media: radial-gradient(120% 70% at 18% 0%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 60%), linear-gradient(165deg, #404040 0%, #171717 58%, #2b2b2b 100%);
     --btnsh: inset 0 1px 0 rgba(255, 255, 255, 1), 0 8px 28px rgba(255, 255, 255, 0.14);
     color-scheme: dark;
@@ -154,13 +152,13 @@ video {
 }
 
 /* Where the keyboard is: a ring in the colour of the page's text, whatever colour the thing itself is
-   (a chosen pill is white on black, and a white ring round it would not be seen on a white page) */
+   (the menu's panel is white on black or black on white, and has a rule of its own) */
 :focus-visible {
   outline: 2px solid var(--fg);
   outline-offset: 2px;
 }
 
-/* A row or a card that a pill has filtered away is off the page, whatever else says how it is laid out */
+/* A row that a filter has taken away is off the page, whatever else says how it is laid out */
 [hidden] {
   display: none !important;
 }
@@ -188,174 +186,51 @@ video {
   text-transform: uppercase;
 }
 
-/* ---- The way round: a rail down the left on a wide window, a bar across the top on a narrower one ---- */
-
-/* The rail. It keeps to the left edge while the page scrolls beside it, in the page's own colours with a
-   hairline down its right side. Three groups, spread top, middle and foot. Not shown under 1280px. */
-.rail {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 10;
-  width: var(--rail);
-  background: var(--bg);
-  border-right: 1px solid var(--line);
-  /* A window too short for all of it lets it scroll, so that nothing at its foot is out of reach */
-  overflow-y: auto;
-  transition: var(--themed);
+/* The small type: the page names in the bar, the filters, the labels on FAQ and the foot. It is 12px in the
+   quieter grey at its faintest, which is still 4.5:1 on either ground: if a grey changes, keep it there. */
+.mono {
+  font-family: 'DM Mono', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.rail__in {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 26px 32px 26px 40px;
+/* A hairline from one side of the container to the other */
+.rule {
+  display: block;
+  height: 1px;
+  background: var(--rule);
+  transition: background-color 0.35s ease;
 }
 
-.rail__mark {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-}
+/* ---- The way round: one bar across the top, at every width ---- */
 
-.rail__mark svg {
-  flex-shrink: 0;
-}
-
-.rail__pages {
-  display: flex;
-  flex-direction: column;
-}
-
-/* The four pages. The one a visitor is on is said at full strength with the arrow before it; the others quietly. */
-.rail__page {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 46px;
-  font-size: 26px;
-  line-height: 32px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  text-decoration: none;
-  color: var(--sub);
-  transition:
-    color 0.2s,
-    transform 0.3s var(--ease);
-}
-
-.rail__page[aria-current='page'] {
-  color: var(--fg);
-}
-
-.rail__foot {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rail__util {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  font-size: 15px;
-  line-height: 22px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-
-.rail__quiet {
-  color: var(--sub);
-  transition: color 0.35s ease;
-}
-
-.rail__theme {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  line-height: 22px;
-}
-
-/* Light / Dark: the one the page is in is said at full strength, the other quietly */
-.rail__mode {
-  min-height: 44px;
-  padding: 0 2px;
-  font-weight: 500;
-  color: var(--sub);
-  transition: color 0.35s ease;
-}
-
-.th-light .rail__mode--light,
-.th-dark .rail__mode--dark {
-  color: var(--fg);
-}
-
-/* The small links, two to a row under a hairline. They are 32px tall: enough for a pointer, which is all a
-   window this wide is used with. The panel's, which a finger presses, are taller. */
-.rail__links {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 16px;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-  transition: border-color 0.35s ease;
-}
-
-.rail__link {
-  font-size: 14px;
-  line-height: 32px;
-  font-weight: 500;
-  text-decoration: none;
-  color: var(--sub);
-  transition:
-    color 0.2s,
-    transform 0.3s var(--ease);
-}
-
-@media (hover: hover) {
-  .rail__page:hover,
-  .rail__link:hover {
-    color: var(--fg);
-    transform: translateX(6px);
-  }
-
-  .rail__mode:hover {
-    color: var(--fg);
-  }
-
-  .rail__util:hover {
-    opacity: 0.6;
-  }
-}
-
-/* The bar. It stays at the top of the window as the page goes under it: the page's colour, a little
-   see-through, with what is behind it blurred. The wordmark on the left, the menu's two lines on the right. */
+/* The bar. It stays at the top of the window as the page goes under it, in the page's own colour: the
+   wordmark on the left; on the right the four pages by name and the menu's two lines. A hairline runs
+   under it between the page's margins, not from edge to edge. */
 .bar {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--bar);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  backdrop-filter: blur(18px) saturate(1.4);
+  background: var(--bg);
   transition: var(--themed);
 }
 
 .bar__in {
-  min-height: 68px;
+  max-width: 1760px;
+  margin: 0 auto;
   padding: 0 var(--pad);
+}
+
+.bar__row {
+  /* With the hairline under it the bar is 70px */
+  min-height: 69px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
 }
 
 .bar__mark {
@@ -368,6 +243,47 @@ video {
 .bar__mark svg {
   max-width: 100%;
   height: auto;
+}
+
+.bar__right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+/* The four pages by name: only where there is room for them. Under 900px they are not there at all, so the
+   keyboard does not stop at them, and the two lines are the way round. */
+.bar__pages {
+  display: none;
+  align-items: center;
+  gap: 32px;
+}
+
+@media (min-width: 900px) {
+  .bar__pages {
+    display: flex;
+  }
+}
+
+/* The page a visitor is on is said at full strength, the others quietly */
+.bar__page {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+  color: var(--sub);
+  transition: color 0.2s;
+}
+
+.bar__page[aria-current='page'] {
+  color: var(--fg);
+}
+
+@media (hover: hover) {
+  .bar__page:hover {
+    color: var(--fg);
+  }
 }
 
 /* Two flat lines, no shape round them, in the colour of the text. They open the panel and that is all:
@@ -389,24 +305,6 @@ video {
   width: 24px;
   height: 1.5px;
   background: currentColor;
-}
-
-/* From 1280px there is room for the rail: it does the navigating, and the bar, the panel and the dimmed
-   page behind the panel are gone altogether, so that nothing out of sight can take the keyboard.
-   Everything else on the page starts where the rail ends. */
-@media (min-width: 1280px) {
-  .rail {
-    display: block;
-  }
-
-  .bar,
-  .menu {
-    display: none;
-  }
-
-  .shell {
-    margin-left: var(--rail);
-  }
 }
 
 .menu__dim {
@@ -487,9 +385,12 @@ video {
   min-height: 48px;
 }
 
-/* The cross that shuts the panel: the menu's two lines, crossed */
+/* The cross that shuts the panel: the menu's two lines, crossed. It stands where the two lines are, so that
+   the pointer that opened the panel is already on what shuts it: at the page's right margin, which on a
+   window wider than the container (1760px) is further in than the panel's own. */
 .menu__close {
   flex-shrink: 0;
+  margin-right: max(0px, (100vw - 1760px) / 2);
   width: 44px;
   height: 48px;
   display: flex;
@@ -666,8 +567,8 @@ video {
 
 /* ---- The page, and its foot ---- */
 
-/* Everything that is not the way round: the page and its foot, one under the other, the foot at the bottom
-   of the window when the page is short. From 1280px it begins where the rail ends (the rule is with the rail). */
+/* Everything under the bar: the page and its foot, one under the other, the foot at the bottom of the
+   window when the page is short */
 .shell {
   flex: 1 0 auto;
   min-width: 0;
@@ -684,42 +585,61 @@ video {
   outline: none;
 }
 
-/* The column Quotes, VIP and FAQ sit in, and the foot under them: up to 1200px of content with the page's
-   margin either side, centred in the space the rail leaves (or in the window, where there is no rail).
-   The first thing in it starts level with the top of the wordmark's row in the rail. */
+/* The container Quotes, VIP and FAQ sit in, and the foot under every page: the width of the window less
+   the page's margins, up to 1760px, and centred in anything wider. From 900px what is in it is laid on
+   twelve equal columns with 24px between them: the left of any row takes the first four, the right takes
+   the next seven, and the twelfth is left empty. Narrower, there are no columns and things stack. */
 .quotes,
 .vip,
 .faq,
 .foot {
   width: 100%;
-  max-width: 1280px;
+  max-width: 1760px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .foot {
-  padding: 0 var(--pad) 32px;
+  padding: 0 var(--pad) 28px;
 }
 
-/* Under Portfolio the foot is as wide as the grid above it */
-.foot--wide {
-  max-width: none;
-}
-
+/* One row under a hairline: the copyright line on the left, the small links on the right */
 .foot__in {
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
-  transition: var(--themed);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 32px;
+  padding-top: 12px;
 }
 
 .foot__small {
-  font-size: 13px;
-  line-height: 20px;
   color: var(--sub);
   transition: var(--themed);
 }
 
-/* Only where there is no script, and so no menu: the pages, plainly */
+.foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+}
+
+.foot__link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+  color: var(--sub);
+  transition: color 0.2s;
+}
+
+@media (hover: hover) {
+  .foot__link:hover {
+    color: var(--fg);
+  }
+}
+
+/* Only where there is no script, and so no panel: the pages, plainly */
 .foot__plain {
   flex-basis: 100%;
   display: flex;
@@ -730,53 +650,70 @@ video {
   font-weight: 500;
 }
 
-/* ---- Pills: the filters at the top of Quotes and VIP ---- */
+/* ---- The filters at the top of Quotes and VIP ---- */
 
-.pills {
+/* Words in the small type, in a row. The one chosen is at full strength and stands in square brackets; the
+   brackets are there on every one and only seen on that one, so that nothing moves when the choice
+   changes. They are drawn here and not written in the page: they are not for reading out. */
+.filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0 28px;
 }
 
-.pill {
+.filter {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-height: 44px;
-  padding: 11px 18px;
-  border: 1px solid var(--cardb);
-  border-radius: 999px;
-  background: var(--card);
+  color: var(--sub);
+  transition: color 0.2s;
+}
+
+.filter::before,
+.filter::after {
+  opacity: 0;
+}
+
+.filter::before {
+  content: '[';
+  margin-right: 4px;
+}
+
+.filter::after {
+  content: ']';
+  margin-left: 4px;
+}
+
+.filter[aria-pressed='true'] {
   color: var(--fg);
-  font-size: 15px;
-  line-height: 20px;
-  font-weight: 500;
-  transition:
-    background-color 0.18s,
-    color 0.18s,
-    border-color 0.35s ease,
-    transform 0.18s;
 }
 
-.pill[aria-pressed='true'] {
-  background: var(--on-bg);
-  color: var(--on-fg);
+.filter[aria-pressed='true']::before,
+.filter[aria-pressed='true']::after {
+  opacity: 1;
 }
 
-.pill__count {
-  opacity: 0.55;
+/* The count follows the label. On the chosen filter it is a little fainter than the label; on the others
+   it is not, because their grey is already as faint as 12px type can be and still be read (4.5:1). */
+.filter__count {
+  margin-left: 8px;
+}
+
+.filter[aria-pressed='true'] .filter__count {
+  opacity: 0.6;
 }
 
 @media (hover: hover) {
-  .pill:hover {
-    transform: translateY(-1px);
+  .filter:hover {
+    color: var(--fg);
   }
 }
 
 /* ---- Quotes ---- */
 
+/* The filters come straight under the bar's hairline */
 .quotes {
-  padding: 26px var(--pad) 72px;
+  padding: 4px var(--pad) 72px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -810,44 +747,41 @@ video {
   }
 }
 
-/* Beside the rail the line starts where the rail ends */
-@media (min-width: 1280px) {
-  .progress {
-    left: var(--rail);
-    width: calc(100% - var(--rail));
-  }
-}
-
 .rows {
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid var(--line);
   transition: var(--themed);
-  /* So that a row can ask how wide the list is (the pinned name, below) */
-  container-type: inline-size;
 }
 
-/* One person: who they are, then what they said, side by side wherever the list is wide enough for the
-   name (340px), the gap (72px) and a quote of at least 380px: 792px in all. Narrower, the quote goes under. */
+/* One person: who they are, then what they said. Stacked on a narrow window; from 900px on the twelve
+   columns, the name in the first four and the quote in the next seven. The hairline over a row is drawn
+   apart from the row (::before), so that it can come in by itself. */
 .row {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px 72px;
+  flex-direction: column;
+  gap: 20px;
   padding: 48px 0;
-  border-top: 1px solid var(--line);
-  transition:
-    opacity 0.25s,
-    border-color 0.35s ease;
+  transition: opacity 0.25s;
+}
+
+.row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+  transition: background-color 0.35s ease;
 }
 
 .who {
-  flex: 0 1 340px;
   align-self: flex-start;
   display: flex;
   align-items: flex-start;
   gap: 18px;
-  /* Where it is pinned (below): clear of the bar, which is 68px tall */
-  top: 92px;
 }
 
 .who__face {
@@ -935,28 +869,33 @@ video {
 }
 
 .row__quote {
-  flex: 1 1 380px;
   min-width: 0;
-  max-width: 760px;
   font-size: 23px;
   line-height: 35px;
   letter-spacing: -0.008em;
   text-wrap: pretty;
 }
 
-/* Side by side, the name stays in view while a long quote goes past it. Only then: a name with its quote
-   under it is never pinned, or the quote would slide up behind it. It goes by the width of the list, the
-   same measure that decides whether the two are side by side. */
-@container (min-width: 792px) {
-  .who {
-    position: sticky;
+/* Side by side, the name stays in view while a long quote goes past it, clear of the bar (which is 70px
+   tall); a name with its quote under it is never pinned. The quote grows with the window: 23px at the
+   least, 25px on a 1440px one, 34px at the most. */
+@media (min-width: 900px) {
+  .row {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 24px;
   }
-}
 
-/* Beside the rail there is no bar to clear */
-@media (min-width: 1280px) {
   .who {
-    top: 32px;
+    grid-column: 1 / span 4;
+    position: sticky;
+    top: 96px;
+  }
+
+  .row__quote {
+    grid-column: 5 / span 7;
+    font-size: clamp(23px, 1.75vw, 34px);
+    line-height: 1.5;
   }
 }
 
@@ -977,8 +916,9 @@ video {
 
 /* ---- Portfolio ---- */
 
-/* From the rail (or the window's left edge, where there is none) to the window's right edge, from the very
-   top of the page: no gaps, no borders, no corners. As many across as fit at 300px or more, two on a phone. */
+/* From one edge of the window to the other, straight under the bar: no gaps and no corners, a hairline
+   down the right and along the foot of each tile. As many across as fit at 300px or more: four on a
+   laptop, two on a phone. */
 .tiles {
   padding: 0 0 72px;
   display: grid;
@@ -1003,6 +943,8 @@ video {
   text-decoration: none;
   cursor: default;
   -webkit-tap-highlight-color: transparent;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   /* So that a logo can be sized against its tile */
   container-type: inline-size;
 }
@@ -1199,14 +1141,14 @@ a.tile {
 /* ---- VIP ---- */
 
 .vip {
-  padding: 26px var(--pad) 88px;
+  padding: 4px var(--pad) 88px;
   display: flex;
   flex-direction: column;
   gap: 40px;
 }
 
-/* Columns, filled in the order the cards are given in, as many as fit at 280px or more: three beside the
-   rail on a laptop, four on a wide screen, one on a phone */
+/* Columns, filled in the order the cards are given in, as many as fit at 280px or more: four on a laptop,
+   one on a phone */
 .wall {
   column-width: 280px;
   column-count: auto;
@@ -1231,7 +1173,7 @@ a.tile {
     var(--themed);
 }
 
-/* A pill chosen: the cards of other kinds stay where they are, and stand back */
+/* A filter chosen: the cards of other kinds stay where they are, and stand back */
 .wall[data-show='video'] .card:not([data-kind='video']),
 .wall[data-show='post'] .card:not([data-kind='post']),
 .wall[data-show='photo'] .card:not([data-kind='photo']) {
@@ -1517,44 +1459,92 @@ a.tile {
 
 /* ---- FAQ ---- */
 
+/* A stack of sections, every one the same row: a label in the small type on the left (the first four
+   columns) and what it labels on the right (the next seven). This page is set lighter than the others:
+   the questions are in the regular weight, not bold. */
 .faq {
-  padding: 26px var(--pad) 88px;
-  display: flex;
-  flex-direction: column;
+  padding: 0 var(--pad);
 }
 
-/* A question and its answer beside it; under it once there is no room for both */
+/* A question: a hairline, then its number, the question and its answer */
 .qa {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 72px;
-  padding: 44px 0;
-  border-top: 1px solid var(--line);
-  transition: border-color 0.35s ease;
+  padding-bottom: clamp(56px, 6vw, 104px);
+}
+
+/* The first section has no hairline of its own: the bar's is over it */
+.qa--open {
+  padding: 20px 0 clamp(72px, 9vw, 160px);
 }
 
 .qa--last {
-  border-bottom: 1px solid var(--line);
+  padding-bottom: clamp(72px, 8vw, 136px);
+}
+
+.qa--open,
+.qa__in {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.qa__in {
+  padding-top: 20px;
+}
+
+/* The statement the page opens with, and the address it closes with: the largest type on the site */
+.qa__lead {
+  padding-top: clamp(24px, 6vw, 112px);
+  font-size: clamp(30px, 3.1vw, 56px);
+  line-height: 1.16;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+/* The opening statement stands clear of what is round it by two thirds of its own size, above and below,
+   over and above the spacing every section has: that is how the approved page sets it. */
+.qa--open .qa__lead {
+  margin: 0.67em 0;
+}
+
+/* Its first sentence is said at full strength and the rest quietly */
+.qa__lead span {
+  color: var(--sub);
+  transition: color 0.35s ease;
+}
+
+.qa__lead--write {
+  padding-top: clamp(8px, 2.6vw, 44px);
+}
+
+.qa__lead a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.14em;
+}
+
+/* What a question's label labels starts a little lower than the label */
+.qa__body {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 1.6vw, 28px);
+  padding-top: clamp(8px, 2.6vw, 44px);
 }
 
 .qa__q {
-  flex: 0 1 400px;
-  font-size: 27px;
-  line-height: 35px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-size: clamp(25px, 2.2vw, 40px);
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 
 .qa__a {
-  flex: 1 1 380px;
-  min-width: 0;
-  max-width: 680px;
+  max-width: 62ch;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  font-size: 21px;
-  line-height: 33px;
+  gap: 0.9em;
+  font-size: clamp(18px, 1.3vw, 23px);
+  line-height: 1.55;
   color: var(--sub);
   text-wrap: pretty;
   transition: color 0.35s ease;
@@ -1571,17 +1561,86 @@ a.tile {
   transition: color 0.35s ease;
 }
 
-/* The address to write to: said at full strength, and with room round it to press that takes none of the row's */
-.qa__a--write {
-  display: block;
-  max-width: none;
-  color: var(--fg);
+@media (min-width: 900px) {
+  .qa--open,
+  .qa__in {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 24px;
+    row-gap: 0;
+  }
+
+  .qa__label {
+    grid-column: 1 / span 4;
+  }
+
+  .qa__lead,
+  .qa__body {
+    grid-column: 5 / span 7;
+  }
 }
 
-.qa__a--write a {
-  display: inline-block;
-  margin: -5.5px 0;
-  padding: 5.5px 0;
+/* ---- Coming in: a hairline draws from its left end, and words rise into place ---- */
+
+/* Two movements, used everywhere, each played once, the first time a thing is seen. What is in view as the
+   page opens goes in turn from the top: a thing's turn is --i, and it waits 70ms for each turn before it
+   (the words of a row start 120ms after the row's hairline). What is further down waits, held at its first
+   frame, until it is scrolled to: the script at the foot of vc/index.html puts the class js on the page
+   and marks each thing data-in as it arrives, and then it plays with no wait.
+   The animation fills backwards only. Filled forwards, a row or a card that had come in would be held at
+   its last frame for good, and could no longer be dimmed by the pointer or by a filter. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.rise,
+.row .who,
+.row .row__quote,
+.card,
+.tile__logo {
+  animation: rise 0.8s var(--ease-soft) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms + 120ms);
+}
+
+.draw,
+.row::before {
+  transform-origin: 0 50%;
+  animation: draw 1.1s var(--ease-soft) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+/* The logos of a row of tiles come in one after another, left to right */
+.tiles li:nth-child(4n + 2) {
+  --i: 1;
+}
+
+.tiles li:nth-child(4n + 3) {
+  --i: 2;
+}
+
+.tiles li:nth-child(4n) {
+  --i: 3;
+}
+
+/* Waiting to be seen. Only where the script is running (js): without it nothing waits, and everything on
+   the page plays as the page opens and is there. */
+.js .rise:not([data-in]),
+.js .draw:not([data-in]),
+.js .card:not([data-in]),
+.js .tile:not([data-in]) .tile__logo,
+.js .row:not([data-in])::before,
+.js .row:not([data-in]) .who,
+.js .row:not([data-in]) .row__quote {
+  animation-play-state: paused;
 }
 
 /* ---- For someone who has asked for less motion: nothing slides, lifts or comes in by turns. Things change, and that is all. ---- */
@@ -1593,15 +1652,23 @@ a.tile {
     transition: none !important;
   }
 
-  .pill:hover,
   .card:hover,
   .card:hover .card__play,
   .button:hover,
   .row:hover .who__face,
-  .rail__page:hover,
-  .rail__link:hover,
   .menu[data-open] .menu__page:hover {
     transform: none;
+  }
+
+  /* Nothing comes in: it is all there from the start (and the script does not make anything wait) */
+  .rise,
+  .draw,
+  .row::before,
+  .row .who,
+  .row .row__quote,
+  .card,
+  .tile__logo {
+    animation: none;
   }
 
   .tile__photo,

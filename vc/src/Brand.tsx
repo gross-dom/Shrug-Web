@@ -4,7 +4,7 @@ import { ARROW, FULL } from './brand'
 // (black on white, white on black): never a colour of their own.
 
 /** SHRUG CAPITAL. It is named for assistive tech; the drawing itself is not read. On the pages it stands at
- * the head of the rail, in the bar, and at the foot of the menu's panel. */
+ * the left of the bar and at the foot of the menu's panel. */
 export function Wordmark({ className, width, height }: { className?: string; width?: number; height?: number }) {
   return (
     <svg className={className} viewBox={`0 0 ${FULL.box[0]} ${FULL.box[1]}`} width={width} height={height} role="img" aria-label="Shrug Capital">

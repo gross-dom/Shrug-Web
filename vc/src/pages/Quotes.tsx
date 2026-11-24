@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { initialsOf, TAGS, VOICES, type Person } from '../content'
 
 // The landing page is what people say: every testimonial, in Shrug's order, each in full, down one long
-// page. Nothing is cut short and nothing turns by itself. The pills at the top narrow the page to the
+// page. Nothing is cut short and nothing turns by itself. The filters at the top narrow the page to the
 // founders Shrug has backed or to the investors (everyone else); the counts are of the data.
 
 const isFounder = (person: Person) => person.relations.includes('F')
@@ -42,11 +42,11 @@ export function Quotes() {
   return (
     <div className="quotes">
       <Progress />
-      <div className="pills" role="group" aria-label="Filter">
+      <div className="filters rise" role="group" aria-label="Filter">
         {FILTERS.map((f) => (
-          <button key={f.id} type="button" className="pill" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
+          <button key={f.id} type="button" className="filter mono" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
             <span>{f.label}</span>
-            <span className="pill__count">{VOICES.filter(f.has).length}</span>
+            <span className="filter__count">{VOICES.filter(f.has).length}</span>
           </button>
         ))}
       </div>
@@ -54,9 +54,10 @@ export function Quotes() {
         {VOICES.filter(has).length} quotes showing
       </p>
       <div className="rows">
-        {/* Every row is always on the page, so that it is all there before the script is; the pills only hide */}
-        {VOICES.map((person) => (
-          <article key={person.name} className="row" hidden={!has(person)}>
+        {/* Every row is always on the page, so that it is all there before the script is; the filters only hide.
+            The rows in view when the page opens come in one after another from the top (--i, in styles.css). */}
+        {VOICES.map((person, n) => (
+          <article key={person.name} className="row" hidden={!has(person)} style={{ '--i': Math.min(n + 2, 10) } as CSSProperties}>
             <div className="who">
               {person.photo ? (
                 <img className="who__face" src={`/people/${person.photo}`} width={64} height={64} alt={person.name} loading="lazy" decoding="async" />

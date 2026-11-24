@@ -1,20 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Arrow, Wordmark } from './Brand'
 import { CASE_STUDIES_PAGE, CASE_STUDIES_PDF, HAS_CASE_STUDIES_PDF, LINKS } from './content'
 import { PageLink, ROUTES, usePath } from './router'
 import { useTheme } from './theme'
 
-// The way round the site on a window narrower than 1280px, where there is no room for the rail (Rail.tsx).
-// A slim bar stays at the top of the window with the wordmark and two lines; the two lines open a panel
-// from the right, over the page. The panel holds the case studies and the cross that shuts it, the choice
-// of light or dark, the four pages, and at its foot the wordmark and two small links (X and Instagram).
-// The copyright line is at the foot of the page, not here.
+// The way round the site. One bar stays at the top of the window at every width: the wordmark on the left
+// and, on the right, the four pages by name and two lines. Under 900px there is no room for the names and
+// the two lines are the only way round. The two lines open a panel from the right, over the page, at any
+// width. The panel holds the case studies and the cross that shuts it, the choice of light or dark, the
+// four pages, and at its foot the wordmark and two small links (X and Instagram).
 
 /** What can take the keyboard inside the panel. */
 const STOPS = 'a[href], button:not([disabled])'
-
-/** From this width the rail does the navigating, and the bar and the panel are not shown (styles.css). */
-const RAIL_FROM = '(min-width: 1280px)'
 
 export function Menu() {
   const path = usePath()
@@ -61,14 +58,9 @@ export function Menu() {
         stops[next]?.focus()
       }
     }
-    // A window widened until the rail appears has no panel to show: it is shut, so the page is not left locked behind nothing
-    const wide = window.matchMedia?.(RAIL_FROM)
-    const widened = () => wide?.matches && setOpen(false)
     document.addEventListener('keydown', key)
-    wide?.addEventListener('change', widened)
     return () => {
       document.removeEventListener('keydown', key)
-      wide?.removeEventListener('change', widened)
       for (const part of behind) part.inert = false
       html.style.overflow = ''
       document.body.style.paddingRight = ''
@@ -87,13 +79,25 @@ export function Menu() {
     <>
       <header id="bar" className="bar">
         <div className="bar__in">
-          <PageLink to="/" className="bar__mark">
-            <Wordmark width={186} height={15} />
-          </PageLink>
-          <button ref={burger} type="button" className="burger" aria-label="Menu" aria-expanded={open} aria-controls="menu" onClick={() => setOpen(true)}>
-            <span />
-            <span />
-          </button>
+          <div className="bar__row">
+            <PageLink to="/" className="bar__mark rise">
+              <Wordmark width={198.4} height={16} />
+            </PageLink>
+            <div className="bar__right rise" style={{ '--i': 1 } as CSSProperties}>
+              <nav className="bar__pages" aria-label="Pages">
+                {ROUTES.map((route) => (
+                  <PageLink key={route.path} to={route.path} className="bar__page mono" aria-current={route.path === path ? 'page' : undefined}>
+                    {route.label}
+                  </PageLink>
+                ))}
+              </nav>
+              <button ref={burger} type="button" className="burger" aria-label="Menu" aria-expanded={open} aria-controls="menu" onClick={() => setOpen(true)}>
+                <span />
+                <span />
+              </button>
+            </div>
+          </div>
+          <span className="rule draw" aria-hidden />
         </div>
       </header>
       <div className="menu" data-open={open || undefined}>
@@ -124,7 +128,7 @@ export function Menu() {
                 </button>
               </div>
             </div>
-            <nav className="menu__pages" aria-label="Pages">
+            <nav className="menu__pages" aria-label="Menu pages">
               {ROUTES.map((route) => (
                 <PageLink key={route.path} to={route.path} className="menu__page" aria-current={route.path === path ? 'page' : undefined} onGo={shut}>
                   {route.path === path && <Arrow size={22} className="arrow--here" />}

@@ -244,42 +244,48 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   `vc/src/router.tsx`. Each is a real address with HTML of its own (`vc/prerender.mjs` draws every page
   ahead of time, with its title, description and link-preview picture), so a link, a reload or a search
   engine is given the page itself, and all of it is there with no script. Once the site is running, a link
-  between its pages swaps the page in place. The pages have no titles to look at (the rail or the menu
-  names the page); each has a heading for assistive tech only.
+  between its pages swaps the page in place. Quotes, Portfolio and VIP have no title to look at (the bar
+  names the page) and a heading for assistive tech only; FAQ's opening statement is its heading.
 - **What it says** is read from the same data as the desktop site (`src/data`: the quotes, the portfolio,
   the FAQs, the drops' photographs), so the two never disagree, and none of it is reworded here. The
   pictures it shows (`public/people`, `public/vip`) are copied into the build (the drops' photographs as
   `/drops`, since `/vip` is a page here). What is this site's own is in `vc/src/content.ts`.
 - **The look** is the approved redesign ("direction F"): strict black and white, in a light and a dark
   theme. Every colour is a token at the top of `vc/src/styles.css`, and the class `th-dark` on `<html>`
-  swaps them. Text is DM Sans; Unbounded is used for the four page names in the menu and nowhere else;
-  DM Mono only marks placeholders and sets the initials of someone with no photograph. The wordmark and
+  swaps them. Text is DM Sans; Unbounded is used for the four page names in the menu's panel and nowhere else;
+  DM Mono sets the small type (the page names in the bar, the filters, the labels on FAQ, the foot),
+  marks placeholders and sets the initials of someone with no photograph. The wordmark and
   its arrow are the kit's own outlines (`vc/src/brand.ts`) and are not to be redrawn: the wordmark stands
-  at the head of the rail, in the bar and at the foot of the menu's panel, and the favicon and the link-preview picture
+  at the left of the bar and at the foot of the menu's panel, and the favicon and the link-preview picture
   (`vc/public/favicon.svg`, `social.png`) are drawn from it.
-- **The theme.** A first visit follows the visitor's system setting. A choice made in the rail or the menu is kept
+- **The theme.** A first visit follows the visitor's system setting. A choice made in the menu's panel is kept
   (`shrug-theme` in `localStorage`) and holds on every page from then on. The short script in the head of
   `vc/index.html` sets the class before anything is painted, so that nobody in the dark sees a white page
   first; `vc/src/theme.ts` takes over from it, and the two must be kept in step.
-- **The way round** is one of two things, by the width of the window (the "left rail" layout; the rules
-  for which is shown are in `vc/src/styles.css`).
-  - **1280px and wider: the rail** (`vc/src/Rail.tsx`). A 300px column fixed to the left edge, in the
-    page's own colours with a hairline down its right: the wordmark (to Quotes), the four pages (the
-    current one with the arrow before it), and at the foot the case studies, Light / Dark, and X and
-    Instagram. There is no burger and no panel at these widths.
-  - **Narrower: the bar and the panel** (`vc/src/Menu.tsx`). A 68px bar stays at the top of the window
-    with the wordmark and two lines. The two lines open a panel from the right; the panel has a cross of
-    its own to shut it. It is a dialog (the keyboard goes into it and stays in it, Escape shuts it, the
-    page behind does not scroll) and holds the case studies and the cross, Light / Dark on the row under,
-    the four pages, and the wordmark with X and Instagram.
-  The two theme switches stay in step. Merch, shrug.vip, the email address and a copyright line are in
-  neither: Shrug had them taken out.
-- **The column.** Quotes, VIP and FAQ sit in one column of up to 1200px, centred in the space to the right
-  of the rail (or in the window, where there is no rail), with the page's margin either side. Portfolio's
-  grid runs from the rail to the window's right edge, from the very top of the page. The foot is a
-  hairline and the copyright line, as wide as the column (as wide as the grid, under Portfolio).
+- **The way round** (`vc/src/Menu.tsx`) is one bar, at every width (the "header bar" layout, which
+  replaced a rail down the left). It stays at the top of the window, 70px tall, in the page's own colour
+  with a hairline under it: the wordmark on the left (to Quotes); on the right the four pages by name and
+  two lines. Under 900px the names are not there and the two lines are the way round. The two lines open
+  a panel from the right at any width; the panel has a cross of its own, which stands where the two lines
+  are. It is a dialog (the keyboard goes into it and stays in it, Escape shuts it, the page behind does
+  not scroll) and holds the case studies and the cross, Light / Dark on the row under, the four pages,
+  and the wordmark with X and Instagram. Merch, shrug.vip and the email address are in neither the panel
+  nor the foot: Shrug had them taken out.
+- **The container and its columns.** Quotes, VIP and FAQ sit in a container as wide as the window less
+  the page's margins, up to 1760px, and centred in anything wider. From 900px what is in it is laid on
+  twelve equal columns 24px apart: the left of any row (a name, a label) takes the first four and the
+  right (a quote, an answer) the next seven. Narrower, things stack. Portfolio's grid runs from edge to
+  edge of the window, straight under the bar. The foot is a hairline, the copyright line, and X and
+  Instagram.
+- **Coming in.** The first time a thing is seen, hairlines draw from their left end and words rise into
+  place (`styles.css`, "Coming in"). What is in view as a page opens goes in turn from the top; what is
+  further down waits and plays as it is scrolled to. The short script at the foot of `vc/index.html`
+  says when each thing is in view, so that it works on the page as written, before the site's own script
+  has arrived. With no script, or for a visitor who has asked for less motion, nothing waits and
+  everything is there from the start.
 - **Quotes** shows everyone with a testimonial, in the data's order, each in full, and can be narrowed to
-  founders (those Shrug funded) or investors (everyone else). The counts are of the data.
+  founders (those Shrug funded) or investors (everyone else) with the filters at its head: words in the
+  small type, the chosen one in square brackets. The counts are of the data.
 - **Portfolio** is the companies in `src/data/portfolio.ts`, less four Shrug asked to be left off this site
   (Layer2, The Network, Lula and YOLO: `LEFT_OFF` in `vc/src/content.ts`; the desktop site still lists
   them), as an edge-to-edge grid of squares: 75 tiles. A tile lit (a pointer over it, the keyboard on it,
@@ -300,7 +306,9 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   (`[Name]`, `[@handle]`, `[Time · Date]` …), to show how each kind looks. To replace one, give the card
   its real fields in `EXTRAS` in `vc/src/wall.ts` (the file says which) and put its files in
   `vc/public/wall/`; a card with a link gets the arrow and becomes a link.
-- **FAQ** is every question and answer in `src/data/faqs.ts`, all open, and ends with where to write.
+- **FAQ** is a stack of sections, each a label in the small type beside what it labels: an opening
+  statement in large type (the page's heading), then every question and answer in `src/data/faqs.ts`,
+  numbered, under a hairline and all open, and last where to write.
 - **The case studies** are one PDF. Put it at `vc/public/shrug-case-studies.pdf` and build again: the
   menu's "Case studies PDF" then downloads it, and `/case-studies` already redirects to it
   (`vc/vercel.json`). Until the file is there the link goes to `https://www.shrug.vc/case-studies`, the

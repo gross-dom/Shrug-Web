@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import SIZES from 'virtual:picture-sizes'
 import { Arrow } from '../Brand'
 import { pictureOf, VIP_SITE } from '../content'
@@ -6,7 +6,7 @@ import { WALL, type Card, type Photo, type Post, type Press, type Text, type Vid
 
 // VIP: a wall of what people posted and filmed when a Shrug gift arrived. The cards are set in columns in
 // the order they are given in (vc/src/wall.ts), so the wall keeps its order whatever is added to it. The
-// pills at the top do not take anything away: they dim every card that is not of the kind chosen.
+// filters at the top do not take anything away: they dim every card that is not of the kind chosen.
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -167,16 +167,16 @@ export function Vip() {
   const [filter, setFilter] = useState<Filter>('all')
   return (
     <div className="vip">
-      <div className="pills" role="group" aria-label="Filter">
+      <div className="filters rise" role="group" aria-label="Filter">
         {FILTERS.map((f) => (
-          <button key={f.id} type="button" className="pill" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
+          <button key={f.id} type="button" className="filter mono" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
             <span>{f.label}</span>
           </button>
         ))}
       </div>
       <ul className="wall" data-show={filter}>
         {WALL.map((card, n) => (
-          <li key={n}>
+          <li key={n} style={{ '--i': Math.min(n + 2, 10) } as CSSProperties}>
             {/* The first few are in view as the page opens, and are fetched at once; the rest wait until they are near */}
             <WallCard card={card} early={n < 6} />
           </li>
