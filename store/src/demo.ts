@@ -1,6 +1,6 @@
-import { canSee, dueCents, numberOf, refusalOf, wayOf, type Member, type Order, type OrderStatus, type Product } from '../shared/rules'
+import { canSee, dueCents, numberOf, onFile, refusalOf, updateOf, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
 import { samplePdf } from '../shared/sample'
-import { save, type Asked, type Backend, type Failed, type Placed } from './backend'
+import { save, type Asked, type Backend, type Failed, type Placed, type Who } from './backend'
 
 // A stand-in for the server, for the click-through demo only. It lives in the browser, sends no email, takes
 // no money and talks to nothing. It shares the card page's own demo (the same people, the same balance, kept
@@ -9,40 +9,60 @@ import { save, type Asked, type Backend, type Failed, type Placed } from './back
 
 /** The card page's demo keeps who is signed in here (see the stand-in at the foot of card/index.html). */
 const CARD = 'shrugdemo.v1'
-const STORE = 'shrugdemo.store.v1'
+const STORE = 'shrugdemo.store.v2'
 
 export const PEOPLE: Record<string, { label: string; member: { name: string; first: string; roles: string[]; tier: string; points: number; number: string; since: number } | null; funds: string[] }> = {
-  founder: { label: 'Founder, silver', member: { name: 'Sample Member', first: 'Sample', roles: ['Founder'], tier: 'silver', points: 1250, number: '014', since: 2026 }, funds: [] },
-  lp: { label: 'LP in Shrug 1, gold', member: { name: 'Sample Member', first: 'Sample', roles: ['LP'], tier: 'gold', points: 8400, number: '003', since: 2021 }, funds: ['Shrug 1'] },
-  investor: { label: 'Investor, silver', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 }, funds: [] },
-  black: { label: 'Investor, black', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'black', points: 400, number: '027', since: 2024 }, funds: [] },
+  founder: { label: 'Founder, silver, 1,250 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['Founder'], tier: 'silver', points: 1250, number: '014', since: 2026 }, funds: [] },
+  lp: { label: 'LP in Shrug 1, gold, 8,400 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['LP'], tier: 'gold', points: 8400, number: '003', since: 2021 }, funds: ['Shrug 1'] },
+  investor: { label: 'Investor, silver, 400 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 }, funds: [] },
+  black: { label: 'Investor, black, 20,000 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'black', points: 20000, number: '027', since: 2024 }, funds: [] },
+}
+
+/** Things the demo can be made to do, so that every state the store has can be seen. */
+export const SCENES: Record<string, string> = {
+  normal: 'As it is',
+  soldout: 'The acrylic sold out',
+  kept: 'The acrylic kept to Shrug 1 LPs',
+  empty: 'Nothing in the store, no updates',
+  down: 'The store does not answer',
+  declined: 'A payment that fails',
+  lastgone: 'The last one goes as you buy',
+  offline: 'No connection as you buy',
 }
 
 const item = (id: string, name: string, more: Partial<Product>): Product => ({
   id, name, kind: 'Other', status: 'Available', visibleTo: ['Everyone'], points: null, floor: null, postage: null, description: '', picture: null, hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0, ...more,
 })
 
-/** The shelves as they are in Airtable to begin with (Products), so the demo shows what the store will. */
+/** The store as the design draws it. (In Airtable, Chromatic is 400 points until Shrug says it is free.) */
 const SHELVES: Product[] = [
-  item('chromatic', 'Chromatic', { kind: 'Book', points: 400, needsAddress: true }),
-  item('chair', 'Workspace Chair', { kind: 'Chair', points: 10000, floor: 450, postage: 70, options: ['Black', 'Stone', 'White'], limited: true, needsAddress: true }),
+  item('chromatic', 'Chromatic', { kind: 'Book', points: 0, needsAddress: true }),
+  item('chair', 'Workspace Chair', { kind: 'Chair', points: 14500, floor: 500, postage: 70, options: ['Black', 'Stone', 'White'], editionOf: 5, left: 3, needsAddress: true }),
   item('chair-red', 'Workspace Chair, Ferrari Red', { kind: 'Chair', status: 'On request', points: 15000, floor: 1500, needsAddress: true }),
-  item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, floor: 75, postage: 5, editionOf: 10, left: 10, needsAddress: true }),
+  item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, floor: 75, postage: 5, editionOf: 10, left: 7, needsAddress: true }),
   item('catalog', 'WS Catalog', { kind: 'Book', points: 1000, needsAddress: true }),
   item('2027', 'Shrug 2027', { kind: 'Book', status: 'Pre-order', needsAddress: true }),
-  item('update-4', 'Shrug 4 LP Update', { kind: 'Document', points: 0, hasFile: true }),
-  item('update-1', 'Shrug 1 LP Update', { kind: 'Document', points: 0, hasFile: true, visibleTo: ['Shrug 1 LPs'] }),
 ].map((product, place) => ({ ...product, place }))
+
+const paper = (id: string, name: string, more: Partial<Product>): Product => item(id, name, { kind: 'Document', points: 0, hasFile: true, group: 'Funds', ...more })
+const PAPERS: Product[] = [
+  paper('update-4', 'Shrug 4 LP Update', {}),
+  paper('update-capital', 'Shrug Capital Update', {}),
+  paper('update-1', 'Shrug 1 LP Update', { visibleTo: ['Shrug 1 LPs'], listed: true }),
+  paper('update-2', 'Shrug 2 LP Update', { visibleTo: ['Shrug 2 LPs'], listed: true }),
+  paper('update-3', 'Shrug 3 LP Update', { visibleTo: ['Shrug 3 LPs'], listed: true }),
+  paper('update-spv', 'SPV updates', { group: 'SPVs', hasFile: false }),
+].map((product, place) => ({ ...product, place: 100 + place }))
 
 interface CardState {
   pick: string
   session: { member: NonNullable<(typeof PEOPLE)[string]['member']> | null; seen: number | null; emails?: boolean; reason?: string } | null
-  wrong?: number
-  bumps?: number
 }
 interface StoreState {
   orders: (Order & { who: string })[]
   left: Record<string, number>
+  shipTo: string
+  scene: string
 }
 
 const read = <T,>(key: string, otherwise: T): T => {
@@ -61,7 +81,7 @@ const write = (key: string, value: unknown) => {
 }
 
 const card = () => read<CardState>(CARD, { pick: 'founder', session: null })
-const kept = () => read<StoreState>(STORE, { orders: [], left: {} })
+const kept = (): StoreState => ({ orders: [], left: {}, shipTo: '', scene: 'normal', ...read<Partial<StoreState>>(STORE, {}) })
 const lag = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
 function now(): { state: CardState; member: Member | null } {
@@ -71,7 +91,15 @@ function now(): { state: CardState; member: Member | null } {
   return { state, member }
 }
 
-const shelves = (store: StoreState) => SHELVES.map((product) => ({ ...product, left: product.left === null ? null : (store.left[product.id] ?? product.left) }))
+function shelves(store: StoreState): Product[] {
+  if (store.scene === 'empty') return []
+  return SHELVES.map((product) => ({
+    ...product,
+    left: product.left === null ? null : product.id === 'acrylic' && store.scene === 'soldout' ? 0 : (store.left[product.id] ?? product.left),
+    visibleTo: product.id === 'acrylic' && store.scene === 'kept' ? ['Shrug 1 LPs'] : product.visibleTo,
+  }))
+}
+const papers = (store: StoreState) => (store.scene === 'empty' ? [] : PAPERS)
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const reference = () => 'SV-' + Array.from({ length: 6 }, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('')
 
@@ -79,35 +107,56 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   const { state, member } = now()
   if (!member || !state.session?.member) return { error: 'anon' }
   const store = kept()
+  if (store.scene === 'offline') return { error: 'offline' }
+  const mine = store.orders.filter((order) => order.who === member.id)
+  const typed = (asked.shipTo ?? '').trim()
+  const ask = (product: Product, status: OrderStatus, points: number, cents: number, takes: boolean): Placed => {
+    const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: takes ? numberOf(product) : '', points, paid: cents / 100, placed: new Date().toISOString(), who: member.id }
+    store.orders.unshift(order)
+    if (takes && product.left !== null) store.left[product.id] = product.left - 1
+    if (onFile(typed)) store.shipTo = typed
+    write(STORE, store)
+    state.session!.member!.points -= points
+    // Spent points are no news to the card: its "since you last looked" is for points that arrive
+    state.session!.seen = state.session!.member!.points
+    write(CARD, state)
+    return { ok: true, order, points: state.session!.member!.points }
+  }
+  // An update that is listed to them and written for others: asked for
+  const doc = papers(store).find((p) => p.id === asked.product)
+  if (doc) return updateOf(member, doc, mine)?.state === 'request' ? ask(doc, 'Requested', 0, 0, false) : { error: 'already' }
   const product = shelves(store).find((p) => p.id === asked.product && canSee(member, p))
   if (!product) return { error: 'hidden' }
-  const mine = store.orders.filter((order) => order.who === member.id)
-  const refusal = refusalOf(member, product, mine, asked)
+  if (store.scene === 'lastgone') return { error: 'sold-out' }
+  const refusal = refusalOf(member, product, mine, { ...asked, shipTo: onFile(typed) ? typed : store.shipTo })
   if (refusal) return { error: refusal }
   const way = wayOf(product)
   const points = way === 'buy' ? (asked.points ?? 0) : 0
   const due = way === 'buy' ? dueCents(product, points) : 0
   if (due > 0 && !paying) return { error: 'pay' }
+  if (due > 0 && store.scene === 'declined') return { error: 'unpaid' }
   const status: OrderStatus = way === 'request' ? 'Requested' : way === 'reserve' || product.status === 'Pre-order' ? 'Pre-order' : due > 0 ? 'Paid' : 'Points'
-  const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: way === 'buy' ? numberOf(product) : '', points, paid: due / 100, placed: new Date().toISOString(), who: member.id }
-  store.orders.unshift(order)
-  if (way === 'buy' && product.left !== null) store.left[product.id] = product.left - 1
-  write(STORE, store)
-  state.session.member.points -= points
-  // Spent points are no news to the card: its "since you last looked" is for points that arrive
-  state.session.seen = state.session.member.points
-  write(CARD, state)
-  return { ok: true, order, points: state.session.member.points }
+  return ask(product, status, points, due, way === 'buy')
 }
 
 export const demo: Backend = {
   async store() {
     await lag(350)
     const { state, member } = now()
+    const store = kept()
+    if (store.scene === 'down') return { error: 'server' }
     if (!state.session) return { status: 'anon' }
     if (!member) return { status: 'applied' }
-    const store = kept()
-    return { status: 'member', member: { ...member, number: state.session.member?.number }, products: shelves(store).filter((p) => canSee(member, p)), orders: store.orders.filter((order) => order.who === member.id), stripeKey: '' }
+    const orders = store.orders.filter((order) => order.who === member.id)
+    const who: Who = { ...member, number: state.session.member?.number ?? '', since: state.session.member?.since ?? null, reason: state.session.reason ?? null, emails: state.session.emails !== false, email: 'sample@example.com', shipTo: store.shipTo }
+    return {
+      status: 'member',
+      member: who,
+      products: shelves(store).filter((p) => canSee(member, p)),
+      updates: papers(store).map((p) => updateOf(member, p, orders)).filter((u): u is Update => !!u),
+      orders,
+      stripeKey: '',
+    }
   },
   async order(asked) {
     await lag(600)
@@ -124,9 +173,26 @@ export const demo: Backend = {
     await lag(900)
     return place(asked, true)
   },
-  async download(product) {
+  async address(shipTo) {
     await lag(300)
-    save(new Blob([samplePdf(product.name)], { type: 'application/pdf' }), `${product.name}.pdf`)
+    if (!onFile(shipTo)) return { error: 'address' }
+    const tidy = shipTo.split('\n').map((line) => line.trim()).filter(Boolean).join('\n')
+    write(STORE, { ...kept(), shipTo: tidy })
+    return { ok: true, shipTo: tidy }
+  },
+  async emails(on) {
+    await lag(250)
+    const state = card()
+    if (state.session) write(CARD, { ...state, session: { ...state.session, emails: on } })
+    return { ok: true, emails: on }
+  },
+  async view(update) {
+    await lag(300)
+    return URL.createObjectURL(new Blob([samplePdf(update.name)], { type: 'application/pdf' }))
+  },
+  async download(update) {
+    await lag(300)
+    save(new Blob([samplePdf(update.name)], { type: 'application/pdf' }), `${update.name}.pdf`)
     return true
   },
   async signout() {
@@ -136,9 +202,11 @@ export const demo: Backend = {
   },
 }
 
-// ---- What the demo's own bar does
+// ---- What the demo's own controls do
 
 export const demoPick = () => card().pick
+export const demoScene = () => kept().scene
+export const demoSetScene = (scene: string) => write(STORE, { ...kept(), scene })
 /** Puts one of the sample people in the pack, already opened: the store is theirs at once. */
 export function demoSignIn(pick: string) {
   const person = PEOPLE[pick]
@@ -150,7 +218,8 @@ export function demoAddPoints(points: number) {
   if (!state.session?.member) return
   state.session.member.points += points
   state.session.seen = state.session.member.points
+  state.session.reason = 'the demo'
   write(CARD, state)
 }
-/** The shelves full again and nothing ordered. */
-export const demoReset = () => write(STORE, { orders: [], left: {} })
+/** Everything as it began: the shelves full, nothing ordered, no address. */
+export const demoReset = () => write(STORE, { orders: [], left: {}, shipTo: '', scene: 'normal' })

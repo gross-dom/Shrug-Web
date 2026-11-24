@@ -39,8 +39,8 @@ function Row({ doc }: { doc: Doc }) {
           {busy ? 'Fetching…' : 'Download'}
         </button>
       ) : (
-        <a className="updates__get" href={SITE.store} target="_blank" rel="noreferrer">
-          In the store
+        <a className="updates__get" href={`${SITE.store}?s=updates`} target="_blank" rel="noreferrer">
+          On the points site
           <span className="sr-only">, opens in a new tab</span>
         </a>
       )}

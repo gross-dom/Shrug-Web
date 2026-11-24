@@ -1,0 +1,372 @@
+/* What the design's stylesheet (styles.css, which is store/design/screens/store.css untouched) cannot say,
+   because it was drawn as still pages of a fixed size: the size of a real window and a real phone, where a
+   long page scrolls, a photograph's fit, somewhere to type an address, what is under the pointer or has the
+   keyboard, and how things move (DESIGN.md, section 5). Nothing here changes how a screen looks at rest. */
+
+html,
+body {
+  margin: 0;
+  background: #0c0c0d;
+  color-scheme: only dark;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ---- A real window ---- */
+
+/* A phone's screen is the frame, whatever its size; a list is as long as it is, and a product is one screen */
+.up {
+  width: 100%;
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.up.fix {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.up.fix .up-body {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 132px;
+  overflow-y: auto;
+}
+
+/* The picture gives up its height first, so that the name, the sums and the button all stay on the screen */
+.up.fix .up-media {
+  flex: 0 1 236px;
+  min-height: 96px;
+  height: auto;
+}
+
+.up-dock {
+  padding-bottom: max(22px, env(safe-area-inset-bottom));
+}
+
+.up-veil {
+  position: fixed;
+  z-index: 2;
+}
+
+.up-sheet {
+  position: fixed;
+  z-index: 3;
+  max-height: 92vh;
+  max-height: 92dvh;
+  overflow-y: auto;
+  padding-bottom: max(26px, env(safe-area-inset-bottom));
+}
+
+/* A product never scrolls the page. Where its panel is taller than the room the window leaves it (checkout
+   in a short window, with an address to type and something gone wrong to say), the panel scrolls in its
+   place, so that the button is never under the foot */
+.ui-col {
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.ui-col::-webkit-scrollbar {
+  display: none;
+}
+
+/* A list longer than the window scrolls in its place, under the bar */
+.ui-page {
+  padding-bottom: 28px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.ui-page::-webkit-scrollbar,
+.ui-display::-webkit-scrollbar {
+  display: none;
+}
+
+/* Past six, the display's rows keep the height they have at six, and the page scrolls */
+.ui-display.more {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.ui-display.more .ui-shop {
+  flex: none;
+  grid-auto-rows: calc((100vh - var(--bar) - 20px - 28px - 62px - 28px) / 2);
+}
+
+/* ---- A photograph, where there is one: whole, on its tile ---- */
+
+.ui-media img,
+.up-media img {
+  max-width: 78%;
+  max-height: 84%;
+  object-fit: contain;
+}
+
+.ui-prod-pic img {
+  max-width: 72%;
+  max-height: 78%;
+  object-fit: contain;
+}
+
+.ui-thumb img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+/* ---- Somewhere to type: an address ---- */
+
+.ui-area {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  resize: none;
+}
+
+.ui-area::placeholder {
+  color: var(--text-3);
+}
+
+.ui-area:focus {
+  border-color: var(--text-2);
+  outline: none;
+}
+
+/* A phone zooms in on a field set smaller than 16px */
+.up .ui-area {
+  font-size: 16px;
+}
+
+/* ---- An update, opened in the page ---- */
+
+.ui-view {
+  align-self: stretch;
+  width: 100%;
+  height: min(58vh, 520px);
+  border: 0;
+  border-radius: 12px;
+  background: #f5f5f7;
+}
+
+/* ---- Stripe's own button and form, in the places the design draws them ---- */
+
+.pay-express:empty,
+.pay-express[hidden],
+.pay-card[hidden] {
+  display: none;
+}
+
+.pay-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---- Under the pointer, and with the keyboard ---- */
+
+.ui-prod-pic,
+.ui-row,
+.ui-rail ol a {
+  transition: background-color 0.12s;
+}
+
+@media (hover: hover) {
+  .ui-prod:hover .ui-prod-pic {
+    background: var(--surface-2);
+  }
+
+  a.ui-row:hover,
+  .ui-rail ol a:hover {
+    background: var(--surface);
+  }
+}
+
+:where(.ui, .up) :where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.ui-prod:focus-visible {
+  border-radius: 20px;
+  outline-offset: 6px;
+}
+
+:where(.ui, .up) button:disabled {
+  cursor: default;
+}
+
+/* A button that has been pressed dims while the answer comes */
+.ui-btn[data-busy] {
+  opacity: 0.85;
+}
+
+/* ---- How it moves: short, quiet, one easing ---- */
+
+.ui-col,
+.ui-media > img,
+.ui-media > span.t-3,
+.up-body {
+  animation: fade 0.2s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.ui-check {
+  animation: tick 0.24s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.up-sheet {
+  animation: rise 0.28s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.up-veil {
+  animation: fade 0.2s backwards;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes tick {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* On a phone the sums sit on a lighter card in the checkout sheet, where the smallest grey is too faint to read */
+.up-sheet .ui-card.rows dd small {
+  color: var(--text-2);
+}
+
+/* The slider's own row in the sums */
+.ui-card.rows > .range dd {
+  text-align: left;
+}
+
+/* ---- For assistive tech only ---- */
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- The demo's own controls: a small tab at the foot, never in the real store ---- */
+
+/* It sits beside the name in the bar, where no screen puts anything */
+.demo {
+  position: fixed;
+  top: 20px;
+  left: 148px;
+  z-index: 20;
+  font: 500 12px/1.3 'Inter', system-ui, sans-serif;
+  color: #f5f5f7;
+}
+
+.demo summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #2e2e33;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  list-style: none;
+}
+
+.demo summary::-webkit-details-marker {
+  display: none;
+}
+
+.demo[open] summary {
+  display: none;
+}
+
+@media (max-width: 739px) {
+  .demo {
+    top: 14px;
+    left: 108px;
+  }
+
+  .demo[open] {
+    left: 12px;
+  }
+}
+
+.demo__box {
+  display: grid;
+  gap: 10px;
+  width: 268px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #222226;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.demo__box label {
+  display: grid;
+  gap: 4px;
+  color: #a1a1a8;
+}
+
+.demo__box select,
+.demo__box button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #2e2e33;
+  color: #f5f5f7;
+  font: inherit;
+}
+
+.demo__box > div {
+  display: flex;
+  gap: 6px;
+}
+
+.demo__box > div button {
+  flex: 1;
+}
+
+.demo__box button:disabled {
+  opacity: 0.5;
+}
+
+.demo :focus-visible {
+  outline: 2px solid #f5f5f7;
+  outline-offset: 2px;
+}

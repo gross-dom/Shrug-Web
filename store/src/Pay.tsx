@@ -1,94 +1,60 @@
 import { useEffect, useRef, useState } from 'react'
-import { asksAddress, complete, fmtCents, postageCents, priceCents, type Address, type Product } from '../shared/rules'
+import { fmtCents, postageCents, type Product } from '../shared/rules'
 import type { Backend, Failed, Placed } from './backend'
 
-// Taking the dollars: what is left of the price once the points have come off, and the postage. For real
-// this is Stripe's own Apple Pay button (with Google Pay and Link where a device has those and not Apple
-// Pay), which also asks where to send the thing; under it, for a device with none of them, a card form and
-// an address. In the demo there is no Stripe: a button that says what it stands for, and the store's own
-// address form.
+// Taking the dollars: what is left of the price once the points have come off, and the shipping. For real
+// this is Stripe's own Apple Pay button where the design draws the white one (with Google Pay and Link where
+// a device has those and not Apple Pay), and "Pay with card" opening Stripe's card form under it. In the
+// demo there is no Stripe: the two buttons as drawn, and either one stands for a payment that goes through.
 
 interface Props {
   backend: Backend
   product: Product
   option: string
-  /** The points being used. */
   points: number
   /** What is to be paid, in cents. The server works it out again for itself; this is only what is shown. */
   cents: number
   stripeKey: string
+  /** An address typed at checkout, to be kept on file with the order; '' where there is one on file or none is needed. */
+  shipTo: string
+  /** Nothing can be paid for yet: it is posted, and there is nowhere to post it. */
+  wantsAddress: boolean
+  /** For a payment by Apple Pay to give the address, where there is none: the first one given is kept. */
+  askShipping: boolean
   onDone: (placed: Placed) => void
+  onError: (said: string) => void
 }
 
 const WHY: Record<string, string> = {
   offline: 'No connection. Nothing was taken.',
-  points: 'Your points have changed since this was opened. Close it and open it again.',
-  'sold-out': 'The last one has just gone. Nothing was taken.',
+  points: 'Your points have changed since this was opened. Go back and open it again.',
+  'sold-out': 'The last one has just gone.',
   unpaid: 'The payment did not go through. Nothing was taken.',
   already: 'You already have this.',
+  address: 'Add where to send it first.',
 }
 export const whyNot = (error: string) => WHY[error] ?? 'That did not work. Nothing was taken.'
 
-export function AddressForm({ value, onChange }: { value: Address; onChange: (address: Address) => void }) {
-  const field = (key: keyof Address, label: string, auto: string, wide = true) => (
-    <label className={wide ? 'field' : 'field field--half'}>
-      <span>{label}</span>
-      <input value={value[key]} autoComplete={auto} onChange={(e) => onChange({ ...value, [key]: e.target.value })} />
-    </label>
-  )
-  return (
-    <fieldset className="address">
-      <legend className="k">Send it to</legend>
-      {field('name', 'Name', 'name')}
-      {field('line1', 'Address', 'address-line1')}
-      {field('line2', 'Flat, suite (optional)', 'address-line2')}
-      {field('city', 'City', 'address-level2', false)}
-      {field('region', 'State', 'address-level1', false)}
-      {field('postcode', 'ZIP', 'postal-code', false)}
-      {field('country', 'Country', 'country-name', false)}
-    </fieldset>
-  )
-}
-
-export const NOWHERE: Address = { name: '', line1: '', line2: '', city: '', region: '', postcode: '', country: 'United States' }
-
-/** The gold strip that is pressed to pay or to take: the pack's tear strip again. */
-export function Strip({ children, disabled, busy, onClick, white }: { children: React.ReactNode; disabled?: boolean; busy?: boolean; onClick?: () => void; white?: boolean }) {
-  return (
-    <button type="button" className="strip" data-white={white || undefined} data-busy={busy || undefined} disabled={disabled || busy} onClick={onClick}>
-      <span className="strip__chevs" aria-hidden>
-        ›››
-      </span>
-      <span className="strip__word">{children}</span>
-      <span className="strip__chevs" aria-hidden>
-        ›››
-      </span>
-    </button>
-  )
-}
-
-function DemoPay({ backend, product, option, points, cents, onDone }: Props) {
-  const ships = asksAddress(product)
-  const [address, setAddress] = useState<Address>(NOWHERE)
+function DemoPay({ backend, product, option, points, shipTo, wantsAddress, onDone, onError }: Props) {
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
   const pay = async () => {
+    if (wantsAddress) return onError(whyNot('address'))
     setBusy(true)
-    setError('')
-    const placed = await backend.paid('demo', { product: product.id, option, points, address: ships ? address : null })
+    onError('')
+    const placed = await backend.paid('demo', { product: product.id, option, points, shipTo: shipTo || undefined })
     setBusy(false)
-    if ('error' in placed) setError(whyNot(placed.error))
+    if ('error' in placed) onError(whyNot(placed.error))
     else onDone(placed)
   }
   return (
-    <div className="pay">
-      {ships && <AddressForm value={address} onChange={setAddress} />}
-      <Strip white busy={busy} disabled={ships && !complete(address)} onClick={pay}>
-        {busy ? 'Paying' : `Apple Pay ${fmtCents(cents)}`}
-      </Strip>
-      <p className="fine">Demo: this stands in for Apple Pay, which gives the address too. No money moves.</p>
-      {error && <p className="oops" role="alert">{error}</p>}
-    </div>
+    <>
+      <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy} onClick={pay}>
+        Pay with Apple Pay
+      </button>
+      <button type="button" className="ui-btn sec" disabled={busy} onClick={pay}>
+        Pay with card
+      </button>
+    </>
   )
 }
 
@@ -106,22 +72,28 @@ const stripeJs = () =>
     document.head.append(script)
   }))
 
-function StripePay({ backend, product, option, points, cents, stripeKey, onDone }: Props) {
-  const ships = asksAddress(product)
+function StripePay({ backend, product, option, points, cents, stripeKey, shipTo, wantsAddress, askShipping, onDone, onError }: Props) {
   const express = useRef<HTMLDivElement>(null)
   const cardBox = useRef<HTMLDivElement>(null)
-  const addressBox = useRef<HTMLDivElement>(null)
   const kit = useRef<{ stripe: any; elements: any } | null>(null)
+  // What is typed changes while the form stands: the payment reads it as it is when it is made
+  const typed = useRef(shipTo)
+  typed.current = shipTo
   const [ready, setReady] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [wallet, setWallet] = useState(true)
+  const [card, setCard] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
 
   /** The payment itself: the store says how much (never the page), Stripe takes it, and the store checks with Stripe that it came. */
   const take = async (shipping?: unknown): Promise<Failed | null> => {
     const { stripe, elements } = kit.current!
     const { error: unfinished } = await elements.submit()
     if (unfinished) return { error: unfinished.message ?? 'card' }
+    // An address typed here is kept on file first, so that the order is sent to it
+    if (typed.current) {
+      const kept = await backend.address(typed.current)
+      if ('error' in kept) return kept
+    }
     const started = await backend.pay({ product: product.id, option, points })
     if ('error' in started) return started
     if (!('clientSecret' in started)) return { error: 'server' }
@@ -130,7 +102,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, onDone 
     const { error: refused, paymentIntent } = await stripe.confirmPayment({
       elements,
       clientSecret: started.clientSecret,
-      confirmParams: { return_url: `${window.location.origin}${window.location.pathname}`, ...(shipping ? { shipping } : {}) },
+      confirmParams: { return_url: window.location.href, ...(shipping ? { shipping } : {}) },
       redirect: 'if_required',
     })
     if (refused) return { error: refused.message ?? 'unpaid' }
@@ -151,35 +123,29 @@ function StripePay({ backend, product, option, points, cents, stripeKey, onDone 
           mode: 'payment',
           amount: cents,
           currency: 'usd',
-          appearance: { theme: 'night', variables: { colorPrimary: '#d7b65f', colorBackground: '#131316', colorText: '#ffffff', borderRadius: '4px', fontFamily: 'ui-monospace, Menlo, Consolas, monospace' } },
+          appearance: { theme: 'night', variables: { colorPrimary: '#f5f5f7', colorBackground: '#17171a', colorText: '#f5f5f7', borderRadius: '12px', fontFamily: 'Inter, -apple-system, system-ui, sans-serif' } },
         })
         kit.current = { stripe, elements }
         const postage = postageCents(product)
         const button = elements.create('expressCheckout', {
-          buttonType: { applePay: 'buy', googlePay: 'buy' },
-          buttonTheme: { applePay: 'white-outline' },
-          buttonHeight: 50,
-          shippingAddressRequired: ships,
-          // The postage is already in the amount: it is the same wherever the thing goes
-          ...(ships ? { shippingRates: [{ id: 'post', displayName: 'Postage', amount: 0 }] } : {}),
-          lineItems: [{ name: product.name + (option ? `, ${option}` : ''), amount: cents - postage }, ...(postage ? [{ name: 'Postage', amount: postage }] : [])],
+          buttonType: { applePay: 'plain', googlePay: 'plain' },
+          buttonTheme: { applePay: 'white', googlePay: 'white' },
+          buttonHeight: 52,
+          shippingAddressRequired: askShipping,
+          // Shipping is already in the amount: it is the same wherever the thing goes
+          ...(askShipping ? { shippingRates: [{ id: 'post', displayName: 'Shipping', amount: 0 }] } : {}),
+          lineItems: [{ name: product.name + (option ? `, ${option}` : ''), amount: cents - postage }, ...(postage ? [{ name: 'Shipping', amount: postage }] : [])],
         })
         button.on('ready', (event: any) => !gone && setWallet(!!event.availablePaymentMethods))
         button.on('confirm', async (event: any) => {
           const to = event.shippingAddress
           const failed = await take(to ? { name: to.name, address: to.address } : undefined)
-          if (failed && !gone) setError(whyNot(failed.error))
+          if (failed && !gone) onError(whyNot(failed.error))
         })
         button.mount(express.current!)
-        made.push(button)
-        if (ships) {
-          const address = elements.create('address', { mode: 'shipping' })
-          address.mount(addressBox.current!)
-          made.push(address)
-        }
-        const card = elements.create('payment', { wallets: { applePay: 'never', googlePay: 'never' } })
-        card.mount(cardBox.current!)
-        made.push(card)
+        const form = elements.create('payment', { wallets: { applePay: 'never', googlePay: 'never' } })
+        form.mount(cardBox.current!)
+        made.push(button, form)
         setReady('ready')
       })
       .catch(() => !gone && setReady('failed'))
@@ -187,36 +153,41 @@ function StripePay({ backend, product, option, points, cents, stripeKey, onDone 
       gone = true
       for (const element of made) element.destroy()
     }
-  }, [product.id, option, cents, stripeKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [product.id, option, cents, stripeKey, askShipping]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const byCard = async () => {
+    // A card gives no address: one has to be on file, or typed above
+    if (wantsAddress) return onError(whyNot('address'))
     setBusy(true)
-    setError('')
+    onError('')
     const failed = await take()
     setBusy(false)
-    if (failed) setError(whyNot(failed.error))
+    if (failed) onError(whyNot(failed.error))
   }
 
   return (
-    <div className="pay" aria-busy={ready === 'loading'}>
-      {ready === 'failed' && <p className="oops" role="alert">The payment form did not load. Check your connection and open this again.</p>}
-      <div ref={express} className="pay__express" hidden={!wallet} />
-      <details className="pay__card" open={!wallet}>
-        <summary>{wallet ? 'Or pay by card' : 'Pay by card'}</summary>
-        <div ref={addressBox} />
+    <>
+      {ready === 'failed' && (
+        <p className="ui-note" role="alert">
+          The payment form did not load. Check your connection and open this again.
+        </p>
+      )}
+      <div ref={express} className="pay-express" hidden={!wallet} />
+      {!card && wallet && (
+        <button type="button" className="ui-btn sec" onClick={() => setCard(true)}>
+          Pay with card
+        </button>
+      )}
+      <div className="pay-card" hidden={!card && wallet}>
         <div ref={cardBox} />
-        <Strip busy={busy} disabled={ready !== 'ready'} onClick={byCard}>
-          {busy ? 'Paying' : `Pay ${fmtCents(cents)}`}
-        </Strip>
-      </details>
-      {error && <p className="oops" role="alert">{error}</p>}
-    </div>
+        <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy || ready !== 'ready'} onClick={byCard}>
+          Pay {fmtCents(cents)}
+        </button>
+      </div>
+    </>
   )
 }
 
 export function Pay(props: Props) {
   return props.stripeKey ? <StripePay {...props} /> : <DemoPay {...props} />
 }
-
-/** For the sums on a ticket: the price before points and postage. */
-export const fullPrice = (product: Product) => fmtCents(priceCents(product))

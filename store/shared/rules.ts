@@ -91,7 +91,7 @@ export function updateOf(member: Pick<Member, 'roles' | 'funds'>, product: Produ
 /** An address kept on file is a few lines of text: a name, a street, a city. Two lines at least. */
 export const onFile = (shipTo: string | null | undefined): shipTo is string => !!shipTo && shipTo.split('\n').filter((line) => line.trim()).length >= 2
 
-export type OrderStatus = 'Paid' | 'Points' | 'Pre-order' | 'Requested' | 'Needs review' | 'Sent' | 'Refunded'
+export type OrderStatus = 'Paid' | 'Points' | 'Pre-order' | 'Ready' | 'Requested' | 'Needs review' | 'Sent' | 'Refunded'
 
 export interface Order {
   id: string

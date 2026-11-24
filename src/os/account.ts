@@ -1,4 +1,4 @@
-import { free, has, keptTo, type Order, type Product } from '../../store/shared/rules'
+import type { Update } from '../../store/shared/rules'
 import { samplePdf } from '../../store/shared/sample'
 import { createStore } from './store'
 
@@ -18,7 +18,7 @@ export const ACCOUNT_DEMO = !LIVE
 export interface Doc {
   id: string
   name: string
-  /** It can be downloaded now. One that has a price in points is got in the store first. */
+  /** It can be downloaded now. One that is not theirs yet (to be asked for, or with no file yet) is seen to on the points site. */
   open: boolean
   /** The groups it is kept to, for its label: empty where every member sees it. */
   keptTo: string[]
@@ -28,7 +28,7 @@ export type Account = { status: 'checking' | 'anon' | 'applied' | 'down' } | { s
 
 export const account = createStore<Account>({ status: 'checking' })
 
-type Answer = { status: 'anon' } | { status: 'applied' } | { status: 'member'; member: { name: string; first: string; points: number }; products: Product[]; orders: Order[] } | { error: string }
+type Answer = { status: 'anon' } | { status: 'applied' } | { status: 'member'; member: { name: string; first: string; points: number }; updates: Update[] } | { error: string }
 export type Sent = { ok: true; note?: string } | { error: string; retryIn?: number }
 export type Checked = { ok: true } | { error: string; left?: number }
 
@@ -68,8 +68,8 @@ const demoKeep = (signedIn: boolean) => {
 
 // ---- Asking
 
-const docsOf = (products: Product[], orders: Order[]): Doc[] =>
-  products.filter((product) => product.kind === 'Document').map((product) => ({ id: product.id, name: product.name, open: free(product) || has(orders, product), keptTo: keptTo(product) }))
+/** The folder holds the same list as Updates on the points site, which is where the server says what each member is shown. */
+const docsOf = (updates: Update[]): Doc[] => updates.map((update) => ({ id: update.id, name: update.name, open: update.state === 'open', keptTo: update.forWhom === 'Everyone on the list' ? [] : [update.forWhom] }))
 
 /** Asks who is logged in, and what is theirs. */
 export async function refreshAccount(): Promise<Account> {
@@ -82,7 +82,7 @@ export async function refreshAccount(): Promise<Account> {
       'error' in answer
         ? { status: answer.error === 'anon' ? 'anon' : answer.error === 'member' ? 'applied' : 'down' }
         : answer.status === 'member'
-          ? { status: 'member', first: answer.member.first, name: answer.member.name, points: answer.member.points, docs: docsOf(answer.products, answer.orders) }
+          ? { status: 'member', first: answer.member.first, name: answer.member.name, points: answer.member.points, docs: docsOf(answer.updates ?? []) }
           : { status: answer.status }
   }
   account.set(next)

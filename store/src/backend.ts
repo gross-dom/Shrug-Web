@@ -1,15 +1,16 @@
-import type { Address, Member, Order, Product } from '../shared/rules'
+import type { Member, Order, Product, Update } from '../shared/rules'
 
-// What the page asks of the server, and the answers it can get. Built as the demo, a stand-in in the browser
-// answers instead (demo.ts), in exactly these shapes.
+// What the pages ask of the server, and the answers they can get. Built as the demo, a stand-in in the
+// browser answers instead (demo.ts), in exactly these shapes.
 
 declare const __DEMO__: boolean
 export const DEMO = __DEMO__
 
-export type StoreAnswer =
-  | { status: 'anon' }
-  | { status: 'applied' }
-  | { status: 'member'; member: Member & { number?: string }; products: Product[]; orders: Order[]; stripeKey: string }
+/** A member, with what Yours shows of them besides. */
+export type Who = Member & { number: string; since: number | null; reason: string | null; emails: boolean; email: string; shipTo: string }
+
+export type StoreAnswer = { status: 'anon' } | { status: 'applied' } | { status: 'member'; member: Who; products: Product[]; updates: Update[]; orders: Order[]; stripeKey: string }
+export type Shop = Extract<StoreAnswer, { status: 'member' }>
 
 export type Failed = { error: string }
 export type Placed = { ok: true; order: Order; points: number }
@@ -20,8 +21,8 @@ export interface Asked {
   option?: string
   /** How many of their points to put towards it. */
   points?: number
-  /** Where to send it, when nothing is left to pay (a payment gives its own). */
-  address?: Address | null
+  /** An address typed with the order: where it goes, and kept on file from then on. */
+  shipTo?: string
 }
 
 export interface Backend {
@@ -31,8 +32,13 @@ export interface Backend {
   pay(asked: Asked): Promise<PayStart | Failed>
   /** A payment made: the order it becomes. In the demo there is no payment, only what was asked for. */
   paid(payment: string, asked: Asked): Promise<Placed | Failed>
-  /** A document's file, saved to the device. */
-  download(product: Product): Promise<true | Failed>
+  /** Keeps an address on file. */
+  address(shipTo: string): Promise<{ ok: true; shipTo: string } | Failed>
+  emails(on: boolean): Promise<{ ok: true; emails: boolean } | Failed>
+  /** Where an update can be read from, in the page. */
+  view(update: Update): Promise<string | Failed>
+  /** An update's file, saved to the device. */
+  download(update: Update): Promise<true | Failed>
   signout(): Promise<void>
 }
 
@@ -46,16 +52,22 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T 
   }
 }
 
+const fileAt = (update: Update, view: boolean) => `/api/file?product=${encodeURIComponent(update.id)}${view ? '&view=1' : ''}`
+
 export const server: Backend = {
   store: () => call<StoreAnswer>('GET', '/api/store'),
   order: (asked) => call<Placed>('POST', '/api/order', asked),
   pay: (asked) => call<PayStart>('POST', '/api/pay', asked),
   paid: (payment) => call<Placed>('POST', '/api/order', { payment }),
-  async download(product) {
+  address: (shipTo) => call<{ ok: true; shipTo: string }>('POST', '/api/address', { shipTo }),
+  emails: (on) => call<{ ok: true; emails: boolean }>('POST', '/api/emails', { on }),
+  // The page reads it straight from the server, which checks again that it is theirs and notes that it was opened
+  view: async (update) => fileAt(update, true),
+  async download(update) {
     try {
-      const res = await fetch(`/api/file?product=${encodeURIComponent(product.id)}`, { credentials: 'same-origin', cache: 'no-store' })
+      const res = await fetch(fileAt(update, false), { credentials: 'same-origin', cache: 'no-store' })
       if (!res.ok) return { error: ((await res.json().catch(() => null)) as Failed | null)?.error ?? 'server' }
-      save(await res.blob(), /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? `${product.name}.pdf`)
+      save(await res.blob(), /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? `${update.name}.pdf`)
       return true
     } catch {
       return { error: 'offline' }
