@@ -20,6 +20,7 @@ function standOf(order: Order, shop: Shop): string {
   const update = shop.updates.some((u) => u.id === order.productId)
   if (order.status === 'Requested') return shop.updates.some((u) => u.id === order.productId && u.state === 'open') ? 'Open' : 'Requested'
   if (update && (order.status === 'Points' || order.status === 'Paid')) return 'Unlocked'
+  if (order.status === 'Pre-order' && (order.points || order.paid)) return 'Pre-ordered'
   return ({ Paid: 'Ordered', Points: 'Ordered', Sent: 'Sent', 'Pre-order': 'Reserved', Ready: 'Ready', 'Needs review': 'Being checked', Refunded: 'Refunded' } as Record<string, string>)[order.status] ?? order.status
 }
 

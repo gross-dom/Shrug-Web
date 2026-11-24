@@ -45,7 +45,7 @@ const SHELVES: Product[] = [
   item('chair-red', 'Workspace, Ferrari Red', { kind: 'Chair', status: 'On request', points: 15000, floor: 1500, needsAddress: true, description: LINE }),
   item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, floor: 75, postage: 5, editionOf: 10, left: 7, needsAddress: true, description: LINE }),
   item('catalog', 'WS Catalog', { kind: 'Book', points: 1000, needsAddress: true, description: LINE }),
-  item('2027', 'Shrug 2027', { kind: 'Book', status: 'Pre-order', needsAddress: true, description: LINE }),
+  item('2027', 'Shrug 2027', { kind: 'Book', status: 'Pre-order', points: 550, needsAddress: true, description: LINE }),
 ].map((product, place) => ({ ...product, place }))
 
 /** An update is unlocked for 10 points by the people it was written for (Products → Points on its row). */

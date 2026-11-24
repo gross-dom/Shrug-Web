@@ -313,7 +313,7 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
         <Tick />
       </span>
       <div style={{ display: 'flex', flexDirection: 'column', gap: phone ? 6 : 8 }}>
-        <h1 className="t-title">{done.order.status === 'Requested' ? 'Requested.' : done.order.status === 'Pre-order' ? 'Reserved.' : 'It’s yours.'}</h1>
+        <h1 className="t-title">{done.order.status === 'Requested' ? 'Requested.' : done.order.status === 'Pre-order' ? (done.order.points || done.order.paid ? 'Pre-ordered.' : 'Reserved.') : 'It’s yours.'}</h1>
         <p className="t-words">{done.order.status === 'Requested' ? 'We’ll write to you about it.' : done.order.status === 'Pre-order' ? 'We’ll let you know when it’s ready.' : 'We’ll email you when it is on its way.'}</p>
       </div>
       <dl className="ui-card rows">

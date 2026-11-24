@@ -41,6 +41,7 @@ points are used: the page says so as "You can use a maximum of 9,500 points agai
 | Workspace, Matte Black | 10,000 | $450 | $70 | $1,070 | $520, using 5,500 points |
 | Art on Acrylic | 2,800 | $75 | $5 | $285 | $80, using 2,050 points |
 | Chromatic | 400 | none | none | $40 | nothing, using 400 points |
+| Shrug 2027 (pre-order) | 550 | none | none | $55 | nothing, using 550 points |
 
 So nobody is told they have too few points: they pay the difference. All of this is in `shared/rules.ts`,
 which both the server and the pages go by.
