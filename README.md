@@ -294,10 +294,11 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   its app icon: 69 taken from the head of the company's own website and six from files Shrug sent (Cameo,
   Cloud23, Enigma, Alt, Poparazzi, HQ Trivia), all kept in `vc/public/companies/` as a picture of the
   mark's shape alone, which the page draws in the colour of its text in either theme (`vc/src/marks.ts`
-  lists them and says how to replace one). **Still placeholder:** a lit tile shows a
-  dark fill marked `[Photo: …]` where the photograph will be; to put one in, save it (800px square or
-  more) in `vc/public/companies/` and name it against the company's key in `PHOTOS` at the top of
-  `vc/src/pages/Portfolio.tsx`. Fifteen companies have no
+  lists them and says how to replace one). A lit tile shows the company's photograph: six
+  are in (Varda, Hadrian, Senra, AMCA, Avalanche Energy, Eight Sleep), from files Shrug sent. **Still
+  placeholder:** every other lit tile shows a dark fill marked `[Photo: …]`; to put a photograph in, save
+  it (900px or more on its shorter side) in `vc/public/companies/` and name it against the company's key
+  in `PHOTOS` at the top of `vc/src/pages/Portfolio.tsx`. Fifteen companies have no
   write-up in the data; their tiles show the sector and the name.
 - **VIP** is a wall of cards in columns, in the order `vc/src/wall.ts` gives them. The 33 photographs are
   real (the ones in `src/data/drops.ts`, each under its drop's name), and so is the one text card about the
@@ -308,7 +309,7 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   `vc/public/wall/`; a card with a link gets the arrow and becomes a link.
 - **FAQ** is a stack of sections, each a label in the small type beside what it labels: an opening
   statement in large type (the page's heading), then every question and answer in `src/data/faqs.ts`,
-  numbered, under a hairline and all open, and last where to write.
+  numbered, under a hairline and all open, and last a line sending the reader on to shrug.vip.
 - **The case studies** are one PDF. Put it at `vc/public/shrug-case-studies.pdf` and build again: the
   menu's "Case studies PDF" then downloads it, and `/case-studies` already redirects to it
   (`vc/vercel.json`). Until the file is there the link goes to `https://www.shrug.vc/case-studies`, the

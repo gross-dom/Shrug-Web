@@ -13,12 +13,24 @@ import { MARKS, type Mark } from '../marks'
 // The marks are in vc/public/companies and are listed in ../marks.ts, which says where they came from and
 // which companies have none yet: those show their name set in type.
 
-/** WHERE THE PHOTOGRAPHS GO. None has been supplied, so a lit tile shows a dark fill marked [Photo: …].
- * To put one in, save it in vc/public/companies (800px square or more; it is cropped to cover the tile)
- * and name the file here against the company's `key` from src/data/portfolio.ts:
+/** WHERE THE PHOTOGRAPHS GO. A lit tile shows the company's photograph; a company with none here shows a
+ * dark fill marked [Photo: …]. The six here are files Shrug sent, brought down to the size a tile can use.
+ * To put one in, save it in vc/public/companies (900px or more on its shorter side; it is cropped to cover
+ * the square tile) and name the file here against the company's `key` from src/data/portfolio.ts. The
+ * crop keeps the middle of the picture; `at` moves it, where what matters is off to one side (it is CSS's
+ * object-position: across, then down).
  *
- *   Varda: 'varda.jpg', */
-const PHOTOS: Record<string, string> = {}
+ * Antares has none yet: two different pictures came for it, and Shrug is to say which. */
+const PHOTOS: Record<string, { file: string; at?: string }> = {
+  Varda: { file: 'varda-photo.webp' },
+  Hadrian: { file: 'hadrian-photo.webp' },
+  // The file came with no company's name on it. It is a picture of wire harnesses, which is what Senra makes.
+  Senra: { file: 'senra-photo.webp' },
+  AMCA: { file: 'amca-photo.webp' },
+  // The machine being measured is at the left of the picture
+  'Avalanche Energy': { file: 'avalanche-energy-photo.webp', at: '22% 50%' },
+  'Eight Sleep': { file: 'eight-sleep-photo.webp' },
+}
 
 /** How much of its tile's width a mark takes. A long thin wordmark and a square symbol given the same width
  * would not look the same size, so a mark's width goes by the root of its proportions: about half the tile
@@ -47,7 +59,7 @@ function Tile({ company, on, onTap }: { company: Company; on: boolean; onTap: (e
       </span>
       {/* The photograph says nothing the words do not: it is not read out */}
       <span className="tile__photo" aria-hidden>
-        {photo && <img src={fileOf(photo)} alt="" loading="lazy" decoding="async" />}
+        {photo && <img src={fileOf(photo.file)} alt="" loading="lazy" decoding="async" style={photo.at ? { objectPosition: photo.at } : undefined} />}
       </span>
       <span className="tile__shade" aria-hidden />
       <span className="tile__top" aria-hidden>

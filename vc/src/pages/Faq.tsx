@@ -1,12 +1,12 @@
 import type { CSSProperties } from 'react'
 import { ANSWER_PENDING, answerBlocks, FAQS, type Inline } from '@data/faqs'
-import { EMAIL } from '../content'
+import { VIP_SITE } from '../content'
 import { PageLink, type Path } from '../router'
 
 // The FAQs, in Shrug's own words (src/data/faqs.ts), as a stack of sections that are all the same row: a
 // small label on the left and what it labels on the right. First a statement in large type, which is the
 // page's heading; then one section for each question, numbered, under a hairline, with its answer under it
-// and always open; and last, where to write with any other question. A link in an answer that points at
+// and always open; and last, where to go next: shrug.vip. A link in an answer that points at
 // one of the desktop site's apps points here at the page that holds the same thing.
 
 const PAGE_OF: Record<string, Path> = { messages: '/', finder: '/portfolio', photos: '/vip', notes: '/faq', about: '/', terminal: '/', wallpapers: '/' }
@@ -46,7 +46,7 @@ export function Faq() {
           [FAQ]
         </p>
         <h1 className="qa__lead rise" style={turn(3)}>
-          Nobody asks these that often. <span>They’re the questions we’d want answered before working closely with someone for the next ten years, so we’ve written them down.</span>
+          These are the questions we’d want answered before working closely with someone for the next ten years, so we’ve written them down.
         </h1>
       </section>
       {FAQS.map((faq, n) => (
@@ -90,7 +90,7 @@ export function Faq() {
         <div className="qa__in">
           <p className="qa__label mono rise">[Anything else]</p>
           <p className="qa__lead qa__lead--write rise">
-            <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
+            Go visit: <a href={VIP_SITE}>shrug.vip</a>
           </p>
         </div>
       </section>

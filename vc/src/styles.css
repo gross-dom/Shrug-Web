@@ -1491,7 +1491,7 @@ a.tile {
   padding-top: 20px;
 }
 
-/* The statement the page opens with, and the address it closes with: the largest type on the site */
+/* The statement the page opens with, and the line it closes with: the largest type on the site */
 .qa__lead {
   padding-top: clamp(24px, 6vw, 112px);
   font-size: clamp(30px, 3.1vw, 56px);
@@ -1505,12 +1505,6 @@ a.tile {
    over and above the spacing every section has: that is how the approved page sets it. */
 .qa--open .qa__lead {
   margin: 0.67em 0;
-}
-
-/* Its first sentence is said at full strength and the rest quietly */
-.qa__lead span {
-  color: var(--sub);
-  transition: color 0.35s ease;
 }
 
 .qa__lead--write {

@@ -14,9 +14,6 @@ export type { Company, Person }
 const LEFT_OFF = new Set(['Layer2', 'The Network', 'Lula', 'YOLO'])
 export const COMPANIES = EVERY_COMPANY.filter((company) => !LEFT_OFF.has(company.key))
 
-/** Where a visitor writes to. */
-export const EMAIL = 'niv@shrug.vc'
-
 /** The people who have something to say: everyone with a quote, in Shrug's own order. */
 export const VOICES = PEOPLE.filter((person): person is Person & { quote: string } => !!person.quote)
 
