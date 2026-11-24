@@ -1,20 +1,26 @@
-import type { Update } from '../../store/shared/rules'
+import { endOf, phoneOf, type Needs, type Picture, type Update, type Via } from '../../store/shared/rules'
 import { samplePdf } from '../../store/shared/sample'
 import { createStore } from './store'
 
-// Who is logged in on the desktop, and the documents that are theirs to read. It is the points site's own
-// system (store/): the same members, the same sign-in by a six-digit code, and the same rule for who sees
-// what (Products → Visible to in Airtable, against a member's Role and Funds). The desktop asks that
-// site's server, at /api on its own address (vercel.json sends those requests on to it), so the answer here
-// and the answer in the store are always the same one.
+// Who is logged in on the desktop, and what is theirs. It is the store's own system (store/): the same
+// members, the same way in, and the same rule for who sees what (Products → Visible to in Airtable, against a
+// member's Role and Funds). The desktop asks that server, at /api on its own address (vercel.json sends those
+// requests on to it), so the answer here and the answer in the store are always the same one.
+//
+// Logging in, as the server has it (store/README.md, "Signing in"): an email first, and the answer says what
+// comes next. An address nobody has is asked for a phone number, which is texted six digits. An address with
+// a number on file is texted there. Someone on the list confirms their inbox once, and then adds a number.
+// The first time, a display name and a picture are asked for.
 //
 // Until that server is live the desktop is built as a demo (anything but VITE_ACCOUNT=live): a stand-in
-// here in the browser answers instead. It sends no email and knows one sample member, an LP in Shrug 1.
+// here in the browser answers instead, by the same rules. It sends nothing. Any six digits are right and
+// 000000 is wrong; an address that begins "lp" is on the list (an LP in Shrug 2 and Shrug 4); any other is
+// not. What it knows is kept in this browser, so someone who has logged in is known the next time.
 
 const LIVE = import.meta.env.VITE_ACCOUNT === 'live'
 export const ACCOUNT_DEMO = !LIVE
 
-/** A document in the LP Updates folder. */
+/** A document in the Updates folder. */
 export interface Doc {
   id: string
   name: string
@@ -24,15 +30,64 @@ export interface Doc {
   keptTo: string[]
 }
 
-export type Account = { status: 'checking' | 'anon' | 'applied' | 'down' } | { status: 'member'; first: string; name: string; points: number; docs: Doc[] }
+export interface Member {
+  first: string
+  name: string
+  email: string
+  points: number
+  /** Founder, LP, Investor: any of them, or none for a standard member. */
+  roles: string[]
+  /** The Shrug funds they are an LP in. */
+  funds: string[]
+  picture: Picture | null
+  /** What their account still lacks: a number to log in with, a name and picture of their own. */
+  needs: Needs
+  /** How they got in this time. Someone who has just proved their email may add or change a number. */
+  via: Via
+  docs: Doc[]
+}
+
+export type Account = { status: 'checking' | 'anon' | 'down' } | ({ status: 'member' } & Member)
 
 export const account = createStore<Account>({ status: 'checking' })
 
-type Answer = { status: 'visitor' } | { status: 'member'; member: { name: string; first: string; points: number }; updates: Update[] } | { error: string }
-export type Sent = { ok: true; note?: string } | { error: string; retryIn?: number }
-export type Checked = { ok: true } | { error: string; left?: number }
+/** One of Shrug's LPs: the Updates folder is theirs to open. */
+export const isLP = (who: Account): boolean => who.status === 'member' && who.roles.includes('LP')
 
-async function call<T>(method: string, path: string, body?: unknown): Promise<T | { error: string }> {
+// ---- The sheet: let down by Log In itself, or by something locked that needs someone logged in
+
+/** What the sheet was opened for, where something locked opened it: it says so at its head. */
+export type Why = 'updates' | 'request' | 'post' | null
+
+/** An LP has just logged in: when, and how many documents are theirs. The desk says so once (Surface.tsx). */
+export const unlocked = createStore<{ at: number; docs: number } | null>(null)
+
+export const logIn = createStore<{ open: boolean; why: Why }>({ open: false, why: null })
+export const askLogIn = (why: Why = null) => logIn.set({ open: true, why })
+export const closeLogIn = () => logIn.set((s) => (s.open || s.why ? { open: false, why: null } : s))
+
+// ---- What the server answers
+
+export interface Failed {
+  error: string
+  /** How long until it can be tried again, in seconds. */
+  retryIn?: number
+  /** Guesses left at a code. */
+  left?: number
+  /** A code sent a moment ago is still good: which kind, and (for a text) where the number ends. */
+  step?: 'text' | 'inbox'
+  to?: string
+}
+/** What comes after an email: a phone number to give; a code texted to the number on file; a code in their inbox. */
+export type Started = { step: 'phone' } | { step: 'text'; to: string; resendIn: number } | { step: 'inbox'; resendIn: number }
+export type Texted = { ok: true; phone: string; resendIn: number }
+
+type StoreAnswer =
+  | { status: 'visitor' }
+  | { status: 'member'; member: { name: string; first: string; email: string; points: number; roles: string[]; funds: string[]; picture: Picture | null }; needs: Needs; via: Via; updates: Update[] }
+  | { error: string }
+
+async function call<T>(method: string, path: string, body?: unknown): Promise<T | Failed> {
   try {
     const res = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin', cache: 'no-store' })
     const answer = await res.json().catch(() => null)
@@ -42,78 +97,254 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T 
   }
 }
 
+/** The folder holds the same list as the server's updates, which is where it is said what each member is shown. */
+const docsOf = (updates: Update[]): Doc[] => updates.map((update) => ({ id: update.id, name: update.name, open: update.state === 'open', keptTo: update.forWhom === 'Everyone on the list' ? [] : [update.forWhom] }))
+
 // ---- The stand-in, for the demo
 
-const KEPT = 'shrug:account-demo'
-const DEMO_DOCS: Doc[] = [
-  { id: 'update-4', name: 'Shrug 4 LP Update', open: true, keptTo: [] },
-  { id: 'update-1', name: 'Shrug 1 LP Update', open: true, keptTo: ['Shrug 1 LPs'] },
-]
-const lag = (ms: number) => new Promise((done) => setTimeout(done, ms))
-const demoIn = () => {
-  try {
-    return window.localStorage.getItem(KEPT) === 'in'
-  } catch {
-    return false
-  }
+const KEPT = 'shrug:account-demo.v2'
+
+interface DemoRow {
+  email: string
+  listed: boolean
+  confirmed: boolean
+  phone: string | null
+  /** The name Shrug has for someone on the list. */
+  shrugName: string
+  /** The name they chose. */
+  name: string
+  picture: Picture | null
+  points: number
+  roles: string[]
+  funds: string[]
 }
-const demoKeep = (signedIn: boolean) => {
+interface Demo {
+  rows: Record<string, DemoRow>
+  in: string | null
+  via: Via
+  /** Wrong guesses since the last code, and until when codes are paused. */
+  wrong: number
+  pausedUntil: number
+}
+
+const DEMO_DOCS: Doc[] = [
+  { id: 'update-4', name: 'Shrug 4 LP Update', open: true, keptTo: ['Shrug 4 LPs'] },
+  { id: 'update-2', name: 'Shrug 2 LP Update', open: true, keptTo: ['Shrug 2 LPs'] },
+  { id: 'update-capital', name: 'Shrug Capital Update', open: true, keptTo: [] },
+]
+/** How long the demo pauses codes for after five wrong guesses: long enough to see, short enough to wait out. */
+const DEMO_PAUSE = 30
+const DEMO_AGAIN = 20
+/** The address the demo's personal link is for. */
+const DEMO_LP = 'lp@example.com'
+const lag = (ms: number) => new Promise((done) => setTimeout(done, ms))
+const onList = (email: string) => /^lp([.+_-][^@]*)?@/i.test(email)
+
+function demo(): Demo {
   try {
-    if (signedIn) window.localStorage.setItem(KEPT, 'in')
-    else window.localStorage.removeItem(KEPT)
+    const kept = JSON.parse(window.localStorage.getItem(KEPT) ?? 'null') as Demo | null
+    if (kept && typeof kept === 'object' && kept.rows) return kept
+  } catch {
+    // No storage, or nothing kept: begin again
+  }
+  return { rows: {}, in: null, via: 'text', wrong: 0, pausedUntil: 0 }
+}
+let held: Demo | null = null
+const state = () => (held ??= demo())
+function keep() {
+  try {
+    window.localStorage.setItem(KEPT, JSON.stringify(state()))
   } catch {
     // No storage: logged in for as long as the page is open
   }
 }
+const listedRow = (email: string): DemoRow => ({ email, listed: true, confirmed: false, phone: null, shrugName: 'Jordan Avery', name: '', picture: null, points: 8400, roles: ['LP'], funds: ['Shrug 2', 'Shrug 4'] })
+const standardRow = (email: string, phone: string | null): DemoRow => ({ email, listed: false, confirmed: false, phone, shrugName: '', name: '', picture: null, points: 100, roles: [], funds: [] })
+const textsIn = (row: DemoRow) => !!row.phone && (!row.listed || row.confirmed)
+
+/** A guess at a code, in the demo: 000000 is wrong, five wrong ones pause codes, and anything else is right. */
+function demoGuess(code: string): Failed | null {
+  const s = state()
+  const now = Date.now()
+  if (now < s.pausedUntil) return { error: 'locked', retryIn: Math.ceil((s.pausedUntil - now) / 1000) }
+  if (code !== '000000') {
+    s.wrong = 0
+    return null
+  }
+  s.wrong += 1
+  if (s.wrong < 5) return keep(), { error: 'wrong', left: 5 - s.wrong }
+  s.wrong = 0
+  s.pausedUntil = now + DEMO_PAUSE * 1000
+  keep()
+  return { error: 'locked', retryIn: DEMO_PAUSE }
+}
+
+function demoAccount(): Account {
+  const s = state()
+  const row = s.in ? s.rows[s.in] : null
+  if (!row) return { status: 'anon' }
+  const name = row.name || row.shrugName
+  return { status: 'member', first: name.split(/\s+/)[0] ?? '', name, email: row.email, points: row.points, roles: row.roles, funds: row.funds, picture: row.picture, needs: { phone: !row.phone, profile: !row.name }, via: s.via, docs: row.roles.includes('LP') ? DEMO_DOCS : [] }
+}
 
 // ---- Asking
-
-/** The folder holds the same list as Updates on the points site, which is where the server says what each member is shown. */
-const docsOf = (updates: Update[]): Doc[] => updates.map((update) => ({ id: update.id, name: update.name, open: update.state === 'open', keptTo: update.forWhom === 'Everyone on the list' ? [] : [update.forWhom] }))
 
 /** Asks who is logged in, and what is theirs. */
 export async function refreshAccount(): Promise<Account> {
   let next: Account
-  if (!LIVE) {
-    next = demoIn() ? { status: 'member', first: 'Sample', name: 'Sample Member', points: 8400, docs: DEMO_DOCS } : { status: 'anon' }
-  } else {
-    const answer = await call<Answer>('GET', '/api/store')
+  if (!LIVE) next = demoAccount()
+  else {
+    const answer = await call<StoreAnswer>('GET', '/api/store')
     next =
       'error' in answer
-        ? { status: answer.error === 'anon' ? 'anon' : answer.error === 'member' ? 'applied' : 'down' }
+        ? { status: 'down' }
         : answer.status === 'member'
-          ? { status: 'member', first: answer.member.first, name: answer.member.name, points: answer.member.points, docs: docsOf(answer.updates ?? []) }
-          : // Nobody signed in: the points site calls them a visitor, and shows them its store
+          ? { status: 'member', ...answer.member, needs: answer.needs, via: answer.via, docs: docsOf(answer.updates ?? []) }
+          : // Nobody logged in: the store calls them a visitor, and shows them its shelves
             { status: 'anon' }
   }
   account.set(next)
   return next
 }
 
-/** The first half of logging in: a code is sent to the address. */
-export async function sendCode(email: string): Promise<Sent> {
-  if (LIVE) return call<Sent>('POST', '/api/start', { email })
-  await lag(500)
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? { ok: true, note: 'Demo: no email is sent. Any six digits will do.' } : { error: 'email' }
+/** The first step: an email, and what comes next for it. `byInbox` asks for the email whatever their account says: for a number that is lost. */
+export async function start(email: string, byInbox = false): Promise<Started | Failed> {
+  if (LIVE) {
+    const answer = await call<Started & { ok?: true }>('POST', '/api/start', byInbox ? { email, by: 'inbox' } : { email })
+    return answer
+  }
+  await lag(450)
+  email = email.trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'email' }
+  const s = state()
+  if (Date.now() < s.pausedUntil) return { error: 'locked', retryIn: Math.ceil((s.pausedUntil - Date.now()) / 1000) }
+  let row = s.rows[email]
+  if (!row && !onList(email)) return { step: 'phone' }
+  if (!row) {
+    row = s.rows[email] = listedRow(email)
+    keep()
+  }
+  return !byInbox && textsIn(row) ? { step: 'text', to: endOf(row.phone!), resendIn: DEMO_AGAIN } : { step: 'inbox', resendIn: DEMO_AGAIN }
 }
 
-/** The second half: the six digits. Right, and the desk knows who is here. */
-export async function checkCode(email: string, code: string): Promise<Checked> {
+/** For someone new: their number, which is texted six digits. */
+export async function textTo(email: string, phone: string): Promise<Texted | Failed> {
+  if (LIVE) return call<Texted>('POST', '/api/text', { email, phone })
+  await lag(450)
+  const number = phoneOf(phone)
+  return number ? { ok: true, phone: number, resendIn: DEMO_AGAIN } : { error: 'phone' }
+}
+
+/** The six digits. Right, and the desk knows who is here. `phone` goes with it for someone new; `byInbox` as it was started. */
+export async function verify(asked: { email: string; code: string; phone?: string; byInbox?: boolean }): Promise<{ ok: true; existing: boolean } | Failed> {
+  let existing = false
   if (LIVE) {
-    const answer = await call<{ status?: string; error?: string; left?: number }>('POST', '/api/verify', { email, code })
-    if (answer.error) return { error: answer.error, left: 'left' in answer ? answer.left : undefined }
+    const answer = await call<{ status?: string; existing?: boolean }>('POST', '/api/verify', { email: asked.email, code: asked.code, ...(asked.phone ? { phone: asked.phone } : {}), ...(asked.byInbox ? { by: 'inbox' } : {}) })
+    if ('error' in answer) return answer
+    existing = answer.existing === true
   } else {
-    await lag(600)
-    if (code === '000000') return { error: 'wrong', left: 4 }
-    demoKeep(true)
+    await lag(550)
+    const wrong = demoGuess(asked.code)
+    if (wrong) return wrong
+    const s = state()
+    const email = asked.email.trim().toLowerCase()
+    let row = s.rows[email]
+    if (!row) {
+      const number = phoneOf(asked.phone)
+      if (!number) return { error: 'expired' }
+      // One account to a number: someone whose number already has one is logged in to that
+      const theirs = Object.values(s.rows).find((other) => other.phone === number)
+      existing = !!theirs
+      row = theirs ?? (s.rows[email] = standardRow(email, number))
+      s.via = 'text'
+    } else if (!asked.byInbox && textsIn(row)) s.via = 'text'
+    else {
+      row.confirmed = true
+      s.via = 'inbox'
+    }
+    s.in = row.email
+    keep()
+  }
+  await refreshAccount()
+  return { ok: true, existing }
+}
+
+/** A number for whoever is logged in: asked with the number alone, it is texted six digits. */
+export async function addPhone(phone: string): Promise<Texted | Failed> {
+  if (LIVE) return call<Texted>('POST', '/api/phone', { phone })
+  await lag(450)
+  const s = state()
+  const row = s.in ? s.rows[s.in] : null
+  const number = phoneOf(phone)
+  if (!row) return { error: 'anon' }
+  if (!number) return { error: 'phone' }
+  if (!(s.via === 'inbox' || s.via === 'link') && (row.listed || row.phone)) return { error: 'confirm' }
+  return { ok: true, phone: number, resendIn: DEMO_AGAIN }
+}
+
+/** The six digits texted to it: right, and the number is theirs to log in with. */
+export async function provePhone(phone: string, code: string): Promise<{ ok: true } | Failed> {
+  if (LIVE) {
+    const answer = await call<{ ok?: true }>('POST', '/api/phone', { phone, code })
+    if ('error' in answer) return answer
+  } else {
+    await lag(550)
+    const wrong = demoGuess(code)
+    if (wrong) return wrong
+    const s = state()
+    const row = s.in ? s.rows[s.in] : null
+    const number = phoneOf(phone)
+    if (!row || !number) return { error: 'expired' }
+    if (Object.values(s.rows).some((other) => other !== row && other.phone === number)) return { error: 'taken' }
+    row.phone = number
+    keep()
   }
   await refreshAccount()
   return { ok: true }
 }
 
+/** A display name, and a picture: one of Shrug's faces by its name, or a photo as a data: address. */
+export async function saveProfile(asked: { name?: string; face?: string; photo?: string }): Promise<{ ok: true } | Failed> {
+  if (LIVE) {
+    const answer = await call<{ ok?: true }>('POST', '/api/profile', asked)
+    if ('error' in answer) return answer
+  } else {
+    await lag(400)
+    const s = state()
+    const row = s.in ? s.rows[s.in] : null
+    if (!row) return { error: 'anon' }
+    if (asked.name !== undefined) {
+      const name = asked.name.replace(/\s+/g, ' ').trim().slice(0, 40)
+      if (!name) return { error: 'name' }
+      row.name = name
+    }
+    if (asked.face) row.picture = { face: asked.face }
+    else if (asked.photo) row.picture = { url: asked.photo }
+    keep()
+  }
+  await refreshAccount()
+  return { ok: true }
+}
+
+/** In the demo, what a personal link does (the address says ?login=link): an LP arrives with their email
+ * confirmed, and is asked only for a number. On the real site the server has already done it (api/link.ts). */
+export function demoLink() {
+  if (LIVE) return
+  const s = state()
+  const row = (s.rows[DEMO_LP] ??= listedRow(DEMO_LP))
+  if (row.phone) return
+  row.confirmed = true
+  s.in = row.email
+  s.via = 'link'
+  keep()
+}
+
 export async function logOut() {
   if (LIVE) await call('POST', '/api/signout', {})
-  else demoKeep(false)
+  else {
+    state().in = null
+    keep()
+  }
   account.set({ status: 'anon' })
 }
 

@@ -483,7 +483,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- Log In, at the right of the menu bar (os/Account.tsx): its title, and the sheet it lets down ---- */
+/* ---- Log In, at the right of the menu bar (os/Account.tsx): its title, and the sheet it lets down.
+   The sheet is design/v1's (screens/shrugos.css, "The sheet let down from Log In"): a frosted panel under
+   its title, as a Mac lets one down for Wi-Fi or Sound, with a Mac's fields, buttons and rows ---- */
 
 .menubar__account {
   position: relative;
@@ -496,16 +498,54 @@
   font-weight: 600;
 }
 
+/* Logged in, it is their picture and first name */
+.menubar__login[data-in] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.menubar__login .face {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+/* Someone's picture, in a circle: a photo, one of Shrug's faces, or their initial (os/Face.tsx) */
+.face {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  line-height: 1;
+  text-shadow: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.face--photo {
+  object-fit: cover;
+}
+
+.face--emoji {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
+
+.face--mono {
+  background: linear-gradient(#b7b9c0, #8c8e97);
+  color: #fff;
+  font-weight: 600;
+}
+
 .account {
   position: absolute;
   top: 100%;
   right: 0;
   z-index: 2;
-  width: 272px;
-  margin-top: 2px;
+  width: 300px;
+  margin-top: 4px;
   padding: 14px;
   border-radius: 13px;
-  background: rgba(246, 247, 250, 0.86);
+  background: rgba(246, 247, 250, 0.9);
   -webkit-backdrop-filter: blur(34px) saturate(1.8);
   backdrop-filter: blur(34px) saturate(1.8);
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.7), 0 18px 46px -6px rgba(6, 14, 60, 0.4), 0 4px 12px rgba(6, 14, 60, 0.14);
@@ -528,25 +568,43 @@
 .account__form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: 9px;
+  margin: 0;
 }
 
 .account__head {
+  margin: 0;
   font-size: 14px;
   font-weight: 700;
 }
 
 .account__lead,
 .account__note {
-  margin-top: -4px;
+  margin: 0;
   color: var(--ss-text);
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.38;
   overflow-wrap: anywhere;
 }
 
+/* What the demo says of itself: under everything, and quieter */
 .account__note {
-  margin-top: 0;
+  padding-top: 7px;
+  border-top: 0.5px solid rgba(0, 0, 0, 0.12);
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.account__label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ss-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account__field {
+  display: block;
 }
 
 .account__field input {
@@ -563,27 +621,72 @@
   -webkit-user-select: text;
 }
 
+.account__field input::placeholder {
+  color: #a4a5ab;
+}
+
 .account__field input:focus {
-  outline: 3px solid color-mix(in srgb, var(--ss-accent) 55%, transparent);
+  outline: 3px solid color-mix(in srgb, var(--ss-accent) 50%, transparent);
   outline-offset: 0;
 }
 
-.account__field .account__code {
-  font-size: 17px;
+/* Six digits in six boxes. The one field that takes them lies over the boxes, unseen: the boxes show what it holds */
+.account__code {
+  position: relative;
+  display: block;
+}
+
+.account__code input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: none;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+  opacity: 0;
+}
+
+.account__boxes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.account__boxes span {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.26);
+  font-size: 19px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.3em;
-  text-align: center;
+}
+
+.account__code:focus-within [data-cur] {
+  outline: 3px solid color-mix(in srgb, var(--ss-accent) 50%, transparent);
+}
+
+.account__code[data-bad] .account__boxes span {
+  outline: 2px solid rgba(214, 48, 40, 0.4);
 }
 
 .account__go {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   height: 30px;
   border-radius: 7px;
   background: var(--ss-accent);
   color: #fff;
+  font-size: 13px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .account__go:disabled {
@@ -596,50 +699,197 @@
 }
 
 .account__said {
+  margin: 0;
   color: #b3261e;
   font-size: 12px;
   line-height: 1.35;
 }
 
-.account__link {
+.account__link,
+.account__wait {
   justify-self: start;
+  margin: 0;
   color: var(--ss-accent);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.account__link:disabled {
+  opacity: 0.5;
+}
+
+/* Logged in: who it is, then rows as a menu has them */
+.account__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.account__who > div {
+  min-width: 0;
+}
+
+.account__who b {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account__who small {
+  color: var(--ss-text);
+  font-size: 12px;
+}
+
+.account hr {
+  height: 1px;
+  margin: 2px -14px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.account__menu {
+  gap: 3px;
+}
+
+.account__menu .account__who {
+  margin-bottom: 6px;
 }
 
 .account__row {
   display: flex;
   align-items: center;
-  height: 26px;
+  gap: 8px;
+  width: auto;
+  height: 28px;
   margin: 0 -6px;
   padding: 0 6px;
   border-radius: 6px;
   color: inherit;
+  font-size: 13px;
   text-align: left;
   text-decoration: none;
 }
 
-.account__row:hover {
+.account__row small {
+  margin-left: auto;
+  color: var(--ss-text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+:where(a, button).account__row:hover {
   background: var(--ss-accent);
   color: #fff;
 }
 
-/* The folder that logging in unlocks arrives on the desk: it is seen to */
-.desk__item[data-desk='updates'] {
-  animation: desk-arrive 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2) backwards;
+/* The picture: Shrug's faces four to a row, and last a photo of their own */
+.account__faces {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  justify-items: center;
 }
 
-@keyframes desk-arrive {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
+.account__faces button {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+}
+
+.account__faces [data-on] {
+  box-shadow: 0 0 0 3px var(--ss-accent);
+}
+
+.account__faces [data-upload] {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  color: var(--ss-text);
+}
+
+/* What an icon on the desk is, said beside it while it is picked or has the keyboard: the locked folder says
+   who it is for. It sits to the icon's left, clear of the icons under it */
+.desk__cell {
+  position: relative;
+}
+
+.desk__tip {
+  position: absolute;
+  top: 26px;
+  right: 100%;
+  margin-right: 2px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: rgba(244, 245, 249, 0.92);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 6px 18px rgba(4, 10, 50, 0.28);
+  color: var(--ss-text-strong);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.desk__item[data-picked] + .desk__tip,
+.desk__item:focus-visible + .desk__tip {
+  opacity: 1;
+}
+
+/* An LP has just logged in: said once, where a notification lands, a line lower so that one arriving is not covered */
+.desk-note {
+  position: absolute;
+  top: 40px;
+  right: 118px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 300px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  background: rgba(246, 247, 250, 0.9);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  backdrop-filter: blur(30px) saturate(1.8);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 14px 36px -8px rgba(4, 10, 50, 0.45);
+  color: var(--ss-text-strong);
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-align: left;
+  pointer-events: auto;
+  animation: account-in 0.22s ease-out backwards;
+}
+
+.desk-note__icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+
+.desk-note__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.desk-note b {
+  display: block;
+  font-size: 13px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .account,
-  .desk__item[data-desk='updates'] {
+  .desk-note {
     animation: none;
+  }
+
+  .desk__tip {
+    transition: none;
   }
 }
 

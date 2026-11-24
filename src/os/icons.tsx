@@ -243,8 +243,8 @@ const ICONS: Record<AppId, () => ReactNode> = {
   terminal: TerminalIcon,
   finder: FinderIcon,
   about: ShrugIcon,
-  wallpapers: FolderIcon,
-  updates: FolderIcon,
+  wallpapers: () => <FolderIcon />,
+  updates: () => <FolderIcon />,
 }
 
 export function AppIcon({ id }: { id: AppId }) {
@@ -273,11 +273,49 @@ export function DocumentIcon() {
   )
 }
 
-/** A folder, as it sits in a Finder window or on the desktop. */
-export function FolderIcon() {
+/** A folder, as it sits in a Finder window or on the desktop. One that is locked wears a padlock at its corner. */
+export function FolderIcon({ locked = false }: { locked?: boolean }) {
   return (
     <svg viewBox="12 20 76 62" className="folder-icon" aria-hidden>
       <FolderGlyph />
+      {locked && (
+        <g data-lock>
+          <circle cx="72" cy="68" r="10.5" fill="#1d1d1f" stroke="#fff" strokeWidth="1.5" />
+          <rect x="67.2" y="66.5" width="9.6" height="7.2" rx="1.6" fill="#fff" />
+          <path d="M69 66.5v-2.3a3 3 0 0 1 6 0v2.3" fill="none" stroke="#fff" strokeWidth="1.6" />
+        </g>
+      )}
+    </svg>
+  )
+}
+
+/** The one-pager, as a file on the desk: a sheet with Shrug's mark at its head, a few lines, and what kind of file it is. */
+export function OnePagerIcon() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg viewBox="0 0 100 100" className="app-icon" aria-hidden>
+      <defs>
+        <linearGradient id={`${id}-page`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#e9ebf0" />
+        </linearGradient>
+      </defs>
+      <path d="M22 13a7 7 0 0 1 7-7h29l21 21v60a7 7 0 0 1-7 7H29a7 7 0 0 1-7-7z" fill={`url(#${id}-page)`} stroke="rgba(0,0,0,0.16)" strokeWidth="1" />
+      <path d="M58 6l21 21H65a7 7 0 0 1-7-7z" fill="#d3d6de" />
+      <rect x="30" y="34" width="14" height="14" rx="2" fill="#000" />
+      <path
+        d="M154.17 79.38H115.83Q115.42 74.06 110.78 70.99Q106.15 67.92 100 67.92Q94.58 67.92 90.83 69.84Q87.08 71.77 87.08 75.42Q87.08 78.02 89.32 80.31Q91.56 82.6 98.12 83.75L121.88 87.92Q139.69 91.04 148.49 98.75Q157.29 106.46 157.29 119.38Q157.29 131.88 150 140.99Q142.71 150.1 130.05 155.05Q117.4 160 101.25 160Q74.58 160 59.53 149.11Q44.48 138.23 42.71 120.42H84.17Q85.1 125.94 89.79 128.91Q94.48 131.88 101.46 131.88Q107.29 131.88 111.04 129.9Q114.79 127.92 114.79 124.38Q114.79 118.23 101.46 115.83L80.83 112.08Q63.12 108.85 54.27 100.26Q45.42 91.67 45.42 77.92Q45.42 65.73 51.93 57.29Q58.44 48.85 70.47 44.43Q82.5 40 99.17 40Q124.38 40 138.91 50.47Q153.44 60.94 154.17 79.38Z"
+        fill="#fff"
+        transform="translate(30 34) scale(.07) translate(-38 -20) scale(1.38)"
+      />
+      <g fill="none" strokeLinecap="round">
+        <path d="M30 57h40" stroke="#1d1d1f" strokeWidth="4.2" />
+        <path d="M30 66h40M30 73h40M30 80h26" stroke="#c4c7cf" strokeWidth="2.8" />
+      </g>
+      <rect x="52" y="85" width="24" height="10" rx="3" fill="#e5484d" />
+      <text x="64" y="92.8" textAnchor="middle" fontFamily="Inter,Arial,sans-serif" fontWeight="700" fontSize="7.5" fill="#fff">
+        PDF
+      </text>
     </svg>
   )
 }

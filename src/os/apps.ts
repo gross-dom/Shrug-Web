@@ -115,14 +115,15 @@ export const APPS: Record<AppId, AppSpec> = {
     lightsY: 26,
     dock: null,
   },
-  // The LP Updates folder: documents for Shrug's LPs. It is on the desk only for someone who has logged in
-  // (the menu bar's Log In), and what is in it is theirs alone (os/account.ts)
+  // The Updates folder: documents for Shrug's LPs. It is always on the desk, with a lock: nobody but an LP
+  // sees what is inside, not even the names of the files, and what an LP sees is theirs alone (os/account.ts).
+  // Opened by someone who is not logged in, it lets down Log In instead (Surface.tsx)
   updates: {
     id: 'updates',
-    name: 'LP Updates',
+    name: 'Updates',
     blurb: 'For Shrug’s LPs',
-    size: fit({ w: 0.44, h: 0.56 }, { w: 560, h: 420 }, { w: 720, h: 560 }),
-    min: { w: 380, h: 300 },
+    size: fit({ w: 0.53, h: 0.66 }, { w: 620, h: 440 }, { w: 760, h: 540 }),
+    min: { w: 520, h: 360 },
     nudge: { x: 60, y: 24 },
     resizable: true,
     lightsY: 26,

@@ -3,7 +3,7 @@ import { useNewReplies } from '../apps/state'
 import { SITE } from '../data/site'
 import { APPS, DOCK_APPS, type AppId } from './apps'
 import { dockPoint, prefersReducedMotion } from './dom'
-import { AppIcon, DocumentIcon, VipIcon } from './icons'
+import { AppIcon, VipIcon } from './icons'
 import { useStore } from './store'
 import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 
@@ -13,9 +13,9 @@ import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 // icon, and the group chat's icon counts the replies that came in while the
 // conversation wasn't showing.
 //
-// Two of its icons are links and open no window: VIP, last among the apps,
-// which is the way to the points site, and the one-pager after the rule.
-// Each opens in a tab of its own and says so.
+// One of its icons is a link and opens no window: VIP, last among the apps,
+// which is the way to the points site. It opens in a tab of its own and says
+// so. (The one-pager, which was after a rule at its end, is a file on the desk.)
 
 /** How much the icon under the pointer grows, and how far the swell reaches. */
 const SWELL = 0.55
@@ -129,16 +129,6 @@ export function Dock() {
           </span>
           <span className="dock__icon">
             <VipIcon />
-          </span>
-          <span className="dock__dot" aria-hidden />
-        </a>
-        <span className="dock__rule" aria-hidden />
-        <a className="dock__item" data-dock-item href={SITE.onePager} target="_blank" rel="noreferrer" draggable={false} aria-label="One-pager, opens in a new tab">
-          <span className="dock__label" aria-hidden>
-            One-pager
-          </span>
-          <span className="dock__icon dock__icon--doc">
-            <DocumentIcon />
           </span>
           <span className="dock__dot" aria-hidden />
         </a>

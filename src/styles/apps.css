@@ -2630,6 +2630,20 @@
   opacity: 0.5;
 }
 
+/* The one thing to press under a locked folder's words: a little larger, and a little apart from them */
+.os .updates__get--lead {
+  height: 34px;
+  margin-top: 8px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.updates__locked .vip__sub {
+  max-width: 46ch;
+  text-align: center;
+}
+
 .updates__locked {
   display: grid;
   flex: 1;

@@ -1163,7 +1163,17 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     async start() {
       await lag(550);
       state.wrong = 0;
-      return { ok: true, resendIn: 45, note: 'Demo: any six digits will do.' };
+      // Someone not on the list, who has not been here before: a phone number comes next, and nothing is sent
+      if (state.pick === 'standard' && !state.phoned) return { ok: true, step: 'phone' };
+      return { ok: true, step: state.pick === 'standard' ? 'text' : 'inbox', to: '34', resendIn: 45, note: 'Demo: any six digits will do.' };
+    },
+    async text(email, phone) {
+      await lag(550);
+      state.wrong = 0;
+      if (String(phone).replace(/\D/g, '').length < 8) return { error: 'phone' };
+      state.phoned = true;
+      save();
+      return { ok: true, step: 'text', phone: phone, resendIn: 45, note: 'Demo: no text is sent. Any six digits will do.' };
     },
     async verify(email, code) {
       await lag(650);
@@ -1243,7 +1253,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     save();
     if (state.session) again(); // a card is showing: put a fresh pack up with the new card inside
   });
-  reset.addEventListener('click', again);
+  // Start again forgets the number too: whoever is in the pack is new again
+  reset.addEventListener('click', () => { state.phoned = false; again(); });
   bump.addEventListener('click', () => {
     const s = state.session;
     if (!s || !s.member) return;
@@ -1351,7 +1362,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   const backend = window.ShrugBackend || {
     me: () => call('GET', 'api/me', null, 10000),
     start: (email) => call('POST', 'api/start', { email }, 15000),
-    verify: (email, code) => call('POST', 'api/verify', { email, code }, 12000),
+    text: (email, phone) => call('POST', 'api/text', { email, phone }, 15000),
+    verify: (email, code, phone) => call('POST', 'api/verify', phone ? { email, code, phone } : { email, code }, 12000),
     signout: () => call('POST', 'api/signout', {}, 8000),
     emails: (on) => call('POST', 'api/emails', { on }, 10000),
   };
@@ -1361,7 +1373,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     const done = (r) => { clearTimeout(t); resolve(r && typeof r === 'object' ? r : { error: 'server' }); };
     Promise.resolve().then(() => backend[name](...args)).then(done, () => done(null));
   });
-  const api = { me: sure('me', 12000), start: sure('start', 17000), verify: sure('verify', 14000), signout: sure('signout', 10000), emails: sure('emails', 12000) };
+  const api = { me: sure('me', 12000), start: sure('start', 17000), text: sure('text', 17000), verify: sure('verify', 14000), signout: sure('signout', 10000), emails: sure('emails', 12000) };
   /** No answer at all: nothing reached the server, or nothing came back. */
   const down = (r) => !!r && (r.error === 'offline' || r.error === 'timeout');
 
@@ -2194,6 +2206,10 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   window.addEventListener('pageshow', () => document.body.classList.remove('to-store'));
 
   function showEmail(prefill, error, pulled) {
+    S.asking = '';
+    S.phone = '';
+    S.by = '';
+    S.to = '';
     S.engaged = true;
     S.startP = null;
     S.busy = false;
@@ -2208,8 +2224,63 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     footer('anon');
     emailShelf(error, pulled);
   }
+  /** Someone new: nobody has their address, so a phone number is asked for. It is texted six digits, and
+   * is how they sign in from then on. The strip is the email's own, asked a different question. */
+  function showPhone(error) {
+    S.asking = 'phone';
+    S.phone = '';
+    S.startP = null;
+    S.busy = false;
+    S.codeUi = null;
+    stopClock();
+    keep.set('pending', null);
+    setMode('email');
+    settle();
+    paintTilt(false);
+    stripEmail('');
+    const input = $('email');
+    input.type = 'tel';
+    input.setAttribute('inputmode', 'tel');
+    input.setAttribute('autocomplete', 'tel');
+    input.placeholder = '+1 (415) 555 0134';
+    tear.querySelector('label[for="email"]').textContent = 'Phone number';
+    tear.querySelector('.tear-send').setAttribute('aria-label', 'Text me a code');
+    S.foot = { kind: 'phone', first: S.email };
+    clearTimeout(footNote.t);
+    botL.textContent = '';
+    botR.textContent = '';
+    botL.append(h('span', 'bot-clip', 'New here: ' + S.email));
+    botR.append(linkBtn('Wrong address?', () => showEmail(S.email)));
+    phoneShelf(error);
+  }
+  function phoneShelf(error) {
+    setShelf(label2("What's your number?", [error || "We'll text you a code. It's how you'll sign in from now on."]));
+    const input = $('email');
+    if (!input) return;
+    if (error) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+    input.dataset.said = error ? 'on' : '';
+  }
+  function submitPhone() {
+    const input = $('email');
+    if (!input) return;
+    const typed = input.value.trim();
+    if (typed.replace(/\D/g, '').length < 8) {
+      phoneShelf("That doesn't look like a phone number.");
+      return;
+    }
+    S.phone = typed;
+    S.by = 'text';
+    S.codeUi = { head: 'Sending your code', lead: '', note: null, dead: false, sending: false, retry: null, count: '', tries: 0 };
+    setMode('code');
+    stripCode();
+    footer('sending', typed);
+    codeShelf();
+    send(false);
+  }
+
   /** One line: the question. A second only when something was wrong with the answer. */
   function emailShelf(error, pulled, mild) {
+    if (S.asking === 'phone') return phoneShelf(error);
     const head = S.direct ? 'Sign in. Where should the code go?' : pulled ? 'Sealed. Where should the code go?' : 'Where should the code go?';
     setShelf(error ? label2(head, Array.isArray(error) ? error : [error]) : label(head));
     const input = $('email');
@@ -2257,6 +2328,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   }
 
   function submitEmail() {
+    if (S.asking === 'phone') return submitPhone();
     const input = $('email');
     if (!input) return;
     const email = cleanEmail(input.value);
@@ -2286,20 +2358,34 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
   /** Asks for a code to S.email. `again`: this is not the first. */
   function send(again) {
-    const p = api.start(S.email);
+    const p = S.phone ? api.text(S.email, S.phone) : api.start(S.email);
     S.startP = p;
     p.then((r) => { if (S.startP === p && S.mode === 'code') onStarted(r, again); });
     return p;
   }
 
+  /** Where a code went, for the footer: the address, or the number (only its end, where it was not just typed). */
+  const sentTo = () => (S.by !== 'text' ? S.email : S.phone || 'your number' + (S.to ? ' ending ' + S.to : ''));
+  const headType = () => (S.by === 'text' ? 'Check your texts' : HEAD_TYPE);
+
   function onStarted(r, again) {
+    // Nobody has this address yet: a phone number comes next, and nothing has been sent
+    if (r.ok && r.step === 'phone') { showPhone(); return; }
+    // Asked for a number that will not do, or for one on an address that turns out to have an account
+    if (S.phone && (r.error === 'phone' || r.error === 'start')) {
+      if (r.error === 'start') showEmail(S.email, 'That address has an account. Send it again.');
+      else showPhone("That doesn't look like a phone number.");
+      return;
+    }
+    if (r.step) S.by = r.step === 'text' ? 'text' : '';
+    if (r.to) S.to = r.to;
     const ui = S.codeUi;
     ui.sending = false;
     stopClock();
     if (r.ok) {
-      keep.write('pending', { e: S.email, t: Date.now(), d: S.direct ? 1 : 0 });
-      footer('sent', S.email);
-      ui.head = HEAD_TYPE;
+      keep.write('pending', { e: S.email, t: Date.now(), d: S.direct ? 1 : 0, p: S.phone || '', b: S.by || '', o: S.to || '' });
+      footer('sent', sentTo());
+      ui.head = headType();
       ui.lead = ui.sentOnce ? 'Sent again. Give it a minute.' : 'Nothing yet?';
       ui.askAt = Date.now() + PATIENCE;
       ui.sentOnce = true;
@@ -2325,10 +2411,10 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       }
     } else if (r.error === 'wait') {
       const long = r.retryIn > 120;
-      keep.write('pending', { e: S.email, t: Date.now(), d: S.direct ? 1 : 0 }); // one went to this address a moment ago
+      keep.write('pending', { e: S.email, t: Date.now(), d: S.direct ? 1 : 0, p: S.phone || '', b: S.by || '', o: S.to || '' }); // one went there a moment ago
       ui.sentOnce = true;
-      footer('sent', S.email);
-      if (!ui.dead) ui.head = HEAD_TYPE;
+      footer('sent', sentTo());
+      if (!ui.dead) ui.head = headType();
       if (long) {
         ui.lead = again ? 'Too many codes for now. Try again in ' + Math.ceil(r.retryIn / 60) + ' min.' : "That's a lot of codes. Use the last one we sent.";
       } else if (again) {
@@ -2338,6 +2424,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       } else {
         ui.lead = 'We sent one a moment ago. Use that.';
       }
+    } else if (!again && S.phone) {
+      showPhone(r.error === 'text' ? "We couldn't text that number. Check it and try again." : whyNot(r));
+      return;
     } else if (!again) {
       showEmail(S.email, r.error === 'email' ? "That doesn't look like an email address." : r.error === 'mail' ? "We couldn't send to that address. Check it and try again." : whyNot(r));
       if (down(r)) S.resendOnline = S.email; // back on line with the same address still in the field: send it
@@ -2478,7 +2567,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       if (S.codeUi !== ui) return; // they have moved on; whatever is on the strip now is not this check's to unlock
     if (S.mode !== 'code') { S.busy = false; return; }
     }
-    if (!r) r = await api.verify(S.email, code);
+    if (!r) r = await api.verify(S.email, code, S.phone || undefined);
     if (S.codeUi !== ui) return; // they have moved on; whatever is on the strip now is not this check's to unlock
     if (S.mode !== 'code') { S.busy = false; return; }
     tear.classList.remove('is-checking');
@@ -3650,12 +3739,15 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     } else if (pending && typeof pending.e === 'string' && Date.now() - Number(pending.t) < 10 * 60 * 1000) {
       // They asked for a code, went to fetch it, and the page was loaded afresh on the way back.
       S.email = pending.e;
+      S.phone = typeof pending.p === 'string' ? pending.p : '';
+      S.by = pending.b === 'text' ? 'text' : '';
+      S.to = typeof pending.o === 'string' ? pending.o : '';
       S.engaged = true;
       S.direct = !!pending.d;
-      S.codeUi = { head: HEAD_TYPE, lead: 'Nothing yet?', note: null, dead: false, sending: false, retry: null, count: '', tries: 0, sentOnce: true, askAt: Math.min(Date.now(), Number(pending.t)) + PATIENCE };
+      S.codeUi = { head: headType(), lead: 'Nothing yet?', note: null, dead: false, sending: false, retry: null, count: '', tries: 0, sentOnce: true, askAt: Math.min(Date.now(), Number(pending.t)) + PATIENCE };
       setMode('code');
       stripCode();
-      footer('sent', S.email);
+      footer('sent', sentTo());
       codeShelf();
       setPhase('idle');
     } else {

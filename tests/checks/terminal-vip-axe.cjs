@@ -1,6 +1,6 @@
 // axe over fixer T's screens on both layouts: node terminal-vip-axe.cjs [base]
 // The terminal; where VIP is (a link in each layout's Dock, in About Shrug and in the Drops conversation); and the
-// two windows laid out with the classes VIP's window had, Wallpapers and LP Updates.
+// two windows laid out with the classes VIP's window had, Wallpapers and Updates.
 const A = require('./lib.cjs')
 const path = require('path')
 const AXE = (() => {
@@ -67,10 +67,10 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
   t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=wallpapers,updates', reducedMotion: true })
   p = t.page
   await arrived(p); await p.waitForTimeout(1500)
-  await run(p, 'desktop LP Updates, locked', '.wf[data-app="updates"]')
+  await run(p, 'desktop Updates, locked', '.wf[data-app="updates"]')
   await p.locator('.menubar__login').click(); await p.locator('.account input[type=email]').fill('lp@example.test'); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
-  await p.keyboard.type('246810'); await p.keyboard.press('Enter'); await p.waitForTimeout(2400)
-  await run(p, 'desktop LP Updates, its documents', '.wf[data-app="updates"]')
+  await p.keyboard.type('246810'); await p.waitForTimeout(2000); await p.keyboard.press('Escape'); await p.waitForTimeout(400)
+  await run(p, 'desktop Updates, its documents', '.wf[data-app="updates"]')
   await p.locator('.wf[data-app="wallpapers"] .ss-window__bar').click({ position: { x: 200, y: 12 } }).catch(() => {}); await p.waitForTimeout(400)
   await run(p, 'desktop Wallpapers', '.wf[data-app="wallpapers"]')
   await p.locator('.wf[data-app="wallpapers"] .walls-tile').first().click(); await p.waitForTimeout(700)

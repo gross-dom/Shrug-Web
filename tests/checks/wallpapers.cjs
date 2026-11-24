@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => {
   const first = await onDesk(p)
   check('a visit begins on the first wallpaper, the picture the site has always had', first?.id === 'indigo' && /\/wallpaper\.webp$/.test(first.picture) && first.layers === 1, JSON.stringify(first))
   const desk = await p.evaluate(() => [...document.querySelectorAll('.desk__item')].map((i) => i.getAttribute('aria-label')))
-  check('the desk has a Wallpapers folder, between Portfolio and the one-pager', desk.join(' | ') === 'Portfolio, desktop icon | Wallpapers, desktop icon | One-pager, desktop icon, opens in a new tab', desk.join(' | '))
+  check('the desk has a Wallpapers folder, after Updates and the one-pager', desk.join(' | ') === 'Updates, desktop icon, locked | One-pager, desktop icon, opens in a new tab | Wallpapers, desktop icon', desk.join(' | '))
   check('it is not in the Dock', (await p.locator('.dock [data-dock-app="wallpapers"]').count()) === 0)
 
   // ---- the folder opens a photo library of them

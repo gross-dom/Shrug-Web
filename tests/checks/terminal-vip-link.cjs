@@ -2,7 +2,7 @@
 // (`SITE.points` in src/data/site.ts): a link, in a tab of its own, wherever it appears, and nowhere a window
 // or an app. These hold to that on both layouts, by every route there is besides the Dock's own icon (which
 // desktop-flow.cjs and phone-flow.cjs press) and an address (addresses.cjs, phone-apps.cjs); and to the two
-// windows that are still laid out with the classes VIP's window had, Wallpapers and LP Updates.
+// windows that are still laid out with the classes VIP's window had, Wallpapers and Updates.
 
 exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   const POINTS = A.POINTS
@@ -146,7 +146,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   check('Wallpapers, on a small screen: nothing runs off the side of the window', slim.fits && slim.tiles, JSON.stringify(slim))
   await t.ctx.close()
 
-  // LP Updates: the library's window and head, over a list of its own
+  // Updates (the folder for Shrug's LPs): the library's window and head, over a list of its own
   t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=updates' })
   p = t.page
   await arrived(p)
@@ -162,21 +162,22 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
     return { across: Math.round(w.getBoundingClientRect().width), body: { display: cs('.vip__body').display, way: cs('.vip__body').flexDirection, wide: body.scrollWidth <= body.clientWidth, tall: body.scrollHeight <= body.clientHeight }, title: `${w.querySelector('.vip__title').textContent} ${cs('.vip__title').fontSize} ${cs('.vip__title').fontWeight}`, sub: `${cs('.vip__sub').fontSize} ${cs('.vip__sub').marginTop}`, subInk: cs('.vip__sub').color, titleAt: box(w.querySelector('.vip__title')), subAt: box(w.querySelector('.vip__sub')), pad: w.querySelector('.vip__head') ? cs('.vip__head').padding : null, list: list ? box(list) : null, inside: [...w.querySelectorAll('.vip__title, .vip__sub')].every((el) => { const r = el.getBoundingClientRect(); const b = body.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom }) }
   }, U)
   const locked = await head(p)
-  check('LP Updates, locked: its body is the library’s column, and Locked is set as the library’s title is, with its line under it at 14px, all of it inside the window', locked.body.display === 'flex' && locked.body.way === 'column' && locked.body.wide && locked.title === 'Locked 30px 800' && locked.sub === '14px 6px' && locked.subAt.y >= locked.titleAt.b && locked.inside, JSON.stringify(locked))
+  check('Updates, locked: its body is the library’s column, and Locked is set as the library’s title is, with its line under it at 14px, all of it inside the window', locked.body.display === 'flex' && locked.body.way === 'column' && locked.body.wide && locked.title === 'Locked 30px 800' && locked.sub === '14px 6px' && locked.subAt.y >= locked.titleAt.b && locked.inside, JSON.stringify(locked))
   await shot(p, 'vip-classes-updates-locked')
   await p.locator('.menubar__login').click()
   await p.locator('.account input[type=email]').fill('lp@example.test')
   await p.keyboard.press('Enter')
   await p.waitForTimeout(900)
+  // (an address on the list: the six digits are the ones to its inbox, and the sheet then asks for a number, which is left for later)
   await p.keyboard.type('246810')
-  await p.keyboard.press('Enter')
   await p.waitForSelector(`${U} .updates__row`, { timeout: 8000 })
+  await p.keyboard.press('Escape')
   await p.waitForTimeout(1200)
   const opened = await head(p)
   // (a window 640 points across or less draws the head's sides in from 22 to 14, as the library's did: apps.css)
-  check('LP Updates, logged in: the library’s head (a 30px title in the heaviest weight, the line under it, its room round them) over the list of documents', opened.pad === (opened.across <= 640 ? '4px 14px 18px' : '4px 22px 18px') && opened.title === 'LP Updates 30px 800' && opened.sub === '14px 6px' && opened.subAt.y >= opened.titleAt.b && !!opened.list && opened.list.y >= opened.subAt.b + 18 && opened.body.wide && opened.inside, JSON.stringify(opened))
+  check('Updates, logged in as an LP: the library’s head (a 30px title in the heaviest weight, the line under it, its room round them) over the list of documents', opened.pad === (opened.across <= 640 ? '4px 14px 18px' : '4px 22px 18px') && opened.title === 'Updates 30px 800' && opened.sub === '14px 6px' && opened.subAt.y >= opened.titleAt.b && !!opened.list && opened.list.y >= opened.subAt.b + 18 && opened.body.wide && opened.inside, JSON.stringify(opened))
   await shot(p, 'vip-classes-updates')
-  check('LP Updates: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
+  check('Updates: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 
   // ================= the iPhone

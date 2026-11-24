@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { Download, Lock } from 'lucide-react'
 import { SITE } from '../data/site'
 import { Window } from '../kit/window'
-import { account, downloadDoc, type Doc } from '../os/account'
+import { account, askLogIn, downloadDoc, isLP, type Doc } from '../os/account'
 import { DocumentIcon } from '../os/icons'
+import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
 
-// The LP Updates folder on the desk, opened: the documents that are this member's to read. Which those are
-// is decided by the points site's server from Airtable (os/account.ts): an update for the LPs of one fund
-// is shown to them and to nobody else. The folder is on the desk only for someone logged in; opened by its
-// address without that, it says how to get in.
+// The Updates folder on the desk, opened: the documents that are this LP's to read. Which those are is
+// decided by the store's server from Airtable (os/account.ts): an update for the LPs of one fund is shown to
+// them and to nobody else. The folder is always on the desk, with a lock. Nobody but an LP is shown what is
+// in it, not even the names of the files: someone logged in who is not an LP is told who it is for.
 
 function Row({ doc }: { doc: Doc }) {
   const [busy, setBusy] = useState(false)
@@ -50,20 +51,40 @@ function Row({ doc }: { doc: Doc }) {
 
 export function UpdatesApp() {
   const who = useStore(account, (s) => s)
+  const lp = isLP(who)
   const docs = who.status === 'member' ? who.docs : []
   return (
-    <Window className="app vip updates" title="LP Updates" lightsSize="large" barSize="tall" body={{ className: 'vip__body scrolls', tabIndex: 0, role: 'group', 'aria-label': 'LP Updates' }}>
+    <Window className="app vip updates" title="Updates" lightsSize="large" barSize="tall" body={{ className: 'vip__body scrolls', tabIndex: 0, role: 'group', 'aria-label': 'Updates' }}>
       {who.status !== 'member' ? (
+        // Nobody logged in. (The folder on the desk lets down Log In instead of opening this: it is reached
+        // by an address that names it, or by logging out while it is open)
         <div className="updates__locked">
           <Lock size={30} strokeWidth={2} aria-hidden />
           <h2 className="vip__title">Locked</h2>
-          <p className="vip__sub">{who.status === 'checking' ? 'One moment…' : 'This folder is for Shrug’s LPs. Log In, at the right of the menu bar, opens it.'}</p>
+          <p className="vip__sub">{who.status === 'checking' ? 'One moment…' : 'This folder is for Shrug’s LPs.'}</p>
+          {who.status !== 'checking' && (
+            <button type="button" className="updates__get updates__get--lead" onClick={() => askLogIn('updates')}>
+              Log In
+            </button>
+          )}
+        </div>
+      ) : !lp ? (
+        // Logged in, and not an LP: still locked. They are told who it is for, and shown nothing of what is in it
+        <div className="updates__locked">
+          <Lock size={30} strokeWidth={2} aria-hidden />
+          <h2 className="vip__title">For Shrug’s LPs</h2>
+          <p className="vip__sub">
+            You’re logged in as {who.name || who.email}. This folder holds documents written for the people in Shrug’s funds, and nothing in it is shown to anyone else. An LP who used a different email can log in with that one.
+          </p>
+          <button type="button" className="updates__get updates__get--lead" onClick={() => launchApp('messages')}>
+            Message Shrug
+          </button>
         </div>
       ) : (
         <>
           <div className="vip__head">
-            <h2 className="vip__title">LP Updates</h2>
-            <p className="vip__sub">{docs.length ? `${docs.length === 1 ? 'One document' : `${docs.length} documents`}, for you.` : 'Nothing here for you yet.'}</p>
+            <h2 className="vip__title">Updates</h2>
+            <p className="vip__sub">{docs.length ? `${docs.length === 1 ? 'One document' : `${docs.length} documents`}, for you.` : 'Nothing here yet. Updates written for your funds will appear in this folder.'}</p>
           </div>
           <ul className="updates__list">
             {docs.map((doc) => (

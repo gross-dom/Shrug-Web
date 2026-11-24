@@ -416,7 +416,8 @@ const touchOf = (t) => ({
       // the bubble and its tail: drawn as two shapes under one shadow
       const [bubble, tail] = chat ? [...chat.querySelectorAll('g[filter] > path')].map(box) : []
       out.bubble = bubble && tail ? { wide: Math.round(bubble[2] * 10) / 10, tall: Math.round(bubble[3] * 10) / 10, foot: Math.round((bubble[1] + bubble[3]) * 10) / 10, tailFoot: Math.round((tail[1] + tail[3]) * 10) / 10 } : null
-      const folder = document.querySelector('.desk .folder-icon')
+      // (a plain folder: the first on the desk is Updates, which wears a padlock)
+      const folder = document.querySelector('.desk [data-desk="wallpapers"] .folder-icon')
       const front = folder && [...folder.querySelectorAll(':scope > rect')].find((r) => /^url/.test(r.getAttribute('fill')) && !r.getAttribute('clip-path'))
       const all = folder && [...folder.querySelectorAll(':scope > path, :scope > rect')].map(box)
       out.folder = folder ? {

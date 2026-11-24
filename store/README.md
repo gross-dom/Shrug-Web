@@ -71,7 +71,10 @@ An email comes first, and the server says what comes next (`api/start.ts`).
   with nothing of it kept here (`api/_lib/texts.ts`). An emailed code is the store's own, as before
   (`api/_lib/codes.ts`): out of guesses, no new one is sent until the old one would have run out.
 - **A name and a picture** (`api/profile.ts`) are asked for the first time someone signs in. The picture is
-  one of Shrug's faces, kept as a file named for it (`face-3.png`), or a photo of theirs.
+  one of Shrug's faces (`shared/faces.ts`), kept as a file named for it (`face-shrug.png`), or a photo of theirs.
+- **Where it is asked.** The desktop's Log In sheet (`src/os/Account.tsx`, in the desktop's own folder) is
+  the whole of it. The card page's strip is the same way in for a phone: an email, then a number for someone
+  new, then six digits.
 - A session says how it began (`via`: text, inbox, link or pay), and every answer about a member says what
   their account still lacks (`needs`: a phone, a profile).
 
@@ -260,9 +263,11 @@ For Apple Pay, the site's domain has to be added in Stripe (Settings → Payment
   Verify; it needs a Twilio account and its three settings before a real number is texted. Until bots are
   kept off `api/text.ts` (a rate limit, or Vercel's BotID), anyone can have a code texted to any number at
   Shrug's cost: Verify's own Fraud Guard is the only guard.
-- **The card page signs in by email only.** Its strip does not yet ask a new address for a phone number, so
-  someone new cannot make an account there. The desktop's Log In does.
-- **The faces** are stand-ins until the set that ships is chosen.
+- **The card page cannot add a number to an account that has none.** Its strip asks someone new for their
+  number and takes a texted code, as the desktop's Log In does; but someone on the list who signs in there
+  (by their inbox) is not then asked for a number, nor for a name and picture. They are asked on the desktop.
+- **The faces** (`shared/faces.ts`) are emoji on a colored ground, as Contacts on a Mac offers them. Which
+  set ships is Dom's to say; the list can be changed without touching anyone's row.
 
 - **Payments have not been run against Stripe.** The code follows Stripe's documented flow and the
   server's side of it is tested against a stand-in, but no real or test payment has been made.

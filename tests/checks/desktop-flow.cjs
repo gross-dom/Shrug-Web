@@ -40,16 +40,15 @@ const { chromium } = require('playwright')
   // The shrug is drawn in one place on the desktop: the corner of the menu bar. It is the emoticon there, not the logo
   const mark = await page.evaluate(() => { const el = document.querySelector('[data-menu-mark]'); const shrug = '¯\\_(ツ)_/¯'; const rest = document.body.innerText.split(shrug).length - 1; return { text: el?.textContent.trim(), drawn: !!el?.querySelector('svg'), times: rest } })
   ok('the corner of the menu bar is the shrug emoticon, and that is the only place it is', mark.text === '¯\\_(ツ)_/¯' && !mark.drawn && mark.times === 1, JSON.stringify(mark))
-  // The Dock: air between its icons, and the one-pager as a sheet of paper as tall as they are
-  // (five tiles before the rule: the four apps, and VIP, which is a link drawn as they are)
+  // The Dock: air between its icons. The one-pager, which it kept after a rule at its end, is a file on the desk
+  // (five tiles: the four apps, and VIP, which is a link drawn as they are)
   const dock = await page.evaluate(() => {
     const icons = [...document.querySelectorAll('.dock__item .dock__icon')].map((el) => el.getBoundingClientRect())
     const apps = icons.slice(0, 5)
     const gaps = apps.slice(1).map((r, i) => Math.round(r.left - apps[i].right))
-    const paper = document.querySelector('.dock__icon--doc svg')?.getBoundingClientRect()
-    return { gaps, app: Math.round(apps[0].height), paper: paper ? Math.round(paper.height) : 0, sheet: !!document.querySelector('.dock__icon--doc') }
+    return { gaps, icons: icons.length, sheet: !!document.querySelector('.dock__icon--doc'), rule: !!document.querySelector('.dock__rule'), onDesk: !!document.querySelector('[data-desk="one-pager"] svg') }
   })
-  ok('the Dock keeps a quarter of an icon between two, and the one-pager is its sheet of paper, as tall as they are', dock.gaps.every((g) => g >= 12 && g <= 18) && dock.sheet && Math.abs(dock.paper - dock.app) <= 4, JSON.stringify(dock))
+  ok('the Dock keeps a quarter of an icon between two, and the one-pager has left it for the desk, the rule with it', dock.gaps.every((g) => g >= 12 && g <= 18) && dock.icons === 5 && !dock.sheet && !dock.rule && dock.onDesk, JSON.stringify(dock))
   // every reply is written, then sent, at one pace
   const times = await page.evaluate(() => new Promise((done) => {
     const seen = new Map(); const typed = new Set(); const t0 = performance.now()
@@ -200,10 +199,9 @@ const { chromium } = require('playwright')
   const vip = await page.evaluate(() => {
     const items = [...document.querySelectorAll('.dock [data-dock-item]')]
     const a = document.querySelector('.dock [data-dock-link="vip"]')
-    const rule = document.querySelector('.dock__rule')
-    return a && { tag: a.tagName, at: items.indexOf(a), of: items.length, beforeRule: a.nextElementSibling === rule, afterApps: a.previousElementSibling?.getAttribute('data-dock-app'), name: a.getAttribute('aria-label'), label: a.querySelector('.dock__label').textContent.trim(), href: a.getAttribute('href'), target: a.target, rel: a.rel, drag: a.draggable, tile: !!a.querySelector('.dock__icon svg.app-icon'), app: a.hasAttribute('data-dock-app') }
+    return a && { tag: a.tagName, at: items.indexOf(a), of: items.length, last: a.nextElementSibling === null, afterApps: a.previousElementSibling?.getAttribute('data-dock-app'), name: a.getAttribute('aria-label'), label: a.querySelector('.dock__label').textContent.trim(), href: a.getAttribute('href'), target: a.target, rel: a.rel, drag: a.draggable, tile: !!a.querySelector('.dock__icon svg.app-icon'), app: a.hasAttribute('data-dock-app') }
   })
-  ok('VIP is the fifth icon in the Dock, after Case Studies and before the rule, under its own tile and name', !!vip && vip.at === 4 && vip.of === 6 && vip.beforeRule && vip.afterApps === 'terminal' && vip.label === 'VIP' && vip.tile, JSON.stringify(vip))
+  ok('VIP is the fifth icon in the Dock, after Case Studies and the last, under its own tile and name', !!vip && vip.at === 4 && vip.of === 5 && vip.last && vip.afterApps === 'terminal' && vip.label === 'VIP' && vip.tile, JSON.stringify(vip))
   ok('it is a link to the points site that opens in a new tab, with no way back to this one, and says so', !!vip && vip.tag === 'A' && vip.href === POINTS && vip.target === '_blank' && vip.rel === 'noopener noreferrer' && vip.name === 'VIP, opens in a new tab' && vip.drag === false && !vip.app, JSON.stringify(vip))
   const front = () => page.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, wins: [...document.querySelectorAll('.wf')].map((w) => w.dataset.app).sort().join(), dot: document.querySelector('.dock [data-dock-link="vip"]').hasAttribute('data-open'), title: document.title }))
   const was = await front()

@@ -7,13 +7,13 @@ import { TerminalApp } from '../apps/Terminal'
 import { UpdatesApp } from '../apps/Updates'
 import { WallpapersApp } from '../apps/Wallpapers'
 import { SITE } from '../data/site'
-import { account } from './account'
+import { account, askLogIn, unlocked } from './account'
 import { APPS, APP_IDS, type AppId } from './apps'
 import { Boundary } from './Boundary'
 import { Dock } from './Dock'
 import { dockPoint } from './dom'
 import { focusFirst } from './focus'
-import { DocumentIcon, FolderIcon } from './icons'
+import { FolderIcon, OnePagerIcon } from './icons'
 import { MenuBar } from './MenuBar'
 import { Notifications } from './Notifications'
 import { SanFrancisco } from './SanFrancisco'
@@ -44,52 +44,54 @@ interface DeskItem {
   /** What it is, after its name, for assistive tech. */
   says: string
   icon: JSX.Element
+  /** A line under it while it is picked: what it is, where its icon alone does not say. */
+  tip?: string
   open: () => void
 }
 
-const DESK: DeskItem[] = [
-  {
-    id: 'portfolio',
-    name: 'Portfolio',
-    says: 'desktop icon',
-    icon: <FolderIcon />,
-    open: () => {
-      openApp('finder', dockPoint('finder'))
-      // The window that was asked for takes the keyboard, as it does from the Dock
-      focusWindow('finder')
+/** What is left out on the desk, down its right-hand side, in this order (design/v1/DESIGN.md, section 3). The
+ * Updates folder is first: it is always there, locked to everyone but Shrug's LPs. Portfolio is in the Dock. */
+function useDesk(): DeskItem[] {
+  const who = useStore(account, (s) => (s.status === 'member' ? (s.roles.includes('LP') ? 'lp' : 'member') : s.status === 'checking' ? 'checking' : 'nobody'))
+  const locked = who !== 'lp'
+  return [
+    {
+      id: 'updates',
+      name: 'Updates',
+      says: locked ? 'desktop icon, locked' : 'desktop icon',
+      icon: <FolderIcon locked={locked} />,
+      tip: who === 'lp' ? undefined : who === 'member' ? 'For Shrug’s LPs.' : 'For Shrug’s LPs. Log in to open.',
+      open: () => {
+        // Nobody logged in: the folder lets down Log In, which says what it was opened for. Someone logged
+        // in is shown the window: what is theirs, or, for someone who is not an LP, who it is for
+        if (account.get().status !== 'member') return askLogIn('updates')
+        openApp('updates', dockPoint('updates'))
+        focusWindow('updates')
+      },
     },
-  },
-  {
-    id: 'wallpapers',
-    name: 'Wallpapers',
-    says: 'desktop icon',
-    icon: <FolderIcon />,
-    open: () => {
-      // It has no icon in the Dock to open out of: it opens out of its own, here on the desk (dockPoint)
-      openApp('wallpapers', dockPoint('wallpapers'))
-      focusWindow('wallpapers')
+    { id: 'one-pager', name: 'One-pager', says: 'desktop icon, opens in a new tab', icon: <OnePagerIcon />, open: () => window.open(SITE.onePager, '_blank', 'noopener,noreferrer') },
+    {
+      id: 'wallpapers',
+      name: 'Wallpapers',
+      says: 'desktop icon',
+      icon: <FolderIcon />,
+      open: () => {
+        // It has no icon in the Dock to open out of: it opens out of its own, here on the desk (dockPoint)
+        openApp('wallpapers', dockPoint('wallpapers'))
+        focusWindow('wallpapers')
+      },
     },
-  },
-  { id: 'one-pager', name: 'One-pager', says: 'desktop icon, opens in a new tab', icon: <DocumentIcon />, open: () => window.open(SITE.onePager, '_blank', 'noopener,noreferrer') },
-]
-
-/** The LP Updates folder. It is not left out on the desk for everyone: logging in is what puts it there. */
-const UPDATES: DeskItem = {
-  id: 'updates',
-  name: 'LP Updates',
-  says: 'desktop icon',
-  icon: <FolderIcon />,
-  open: () => {
-    openApp('updates', dockPoint('updates'))
-    focusWindow('updates')
-  },
+  ]
 }
 
 function DeskIcons() {
   const [picked, setPicked] = useState<string | null>(null)
-  // Someone logged in who has documents to read has their folder, above the one-pager
-  const unlocked = useStore(account, (s) => s.status === 'member' && s.docs.length > 0)
-  const items = unlocked ? [...DESK.slice(0, -1), UPDATES, ...DESK.slice(-1)] : DESK
+  const items = useDesk()
+  // An LP who has just logged in is shown their folder: it is picked, as the note beside it says it is open
+  const opened = useStore(unlocked, (s) => s?.at ?? 0)
+  useEffect(() => {
+    if (opened) setPicked('updates')
+  }, [opened])
   /** What last pressed an icon, and whether that icon was already picked when it did. */
   const press = useRef({ pointer: '', again: false })
   useEffect(() => {
@@ -110,6 +112,7 @@ function DeskIcons() {
             data-desk={item.id}
             data-picked={picked === item.id || undefined}
             aria-label={`${item.name}, ${item.says}`}
+            aria-describedby={item.tip ? `desk-tip-${item.id}` : undefined}
             onPointerDown={(e) => {
               press.current = { pointer: e.pointerType, again: picked === item.id }
               if (e.pointerType === 'mouse') setPicked(item.id)
@@ -125,9 +128,37 @@ function DeskIcons() {
             <span className="desk__icon">{item.icon}</span>
             <span className="desk__name">{item.name}</span>
           </button>
+          {item.tip && (
+            <span className="desk__tip" id={`desk-tip-${item.id}`} role="tooltip">
+              {item.tip}
+            </span>
+          )}
         </li>
       ))}
     </ul>
+  )
+}
+
+/** Said once, beside the desk's icons, when an LP has just logged in: their folder is open to them. It goes by itself. */
+function Unlocked() {
+  const note = useStore(unlocked, (s) => s)
+  useEffect(() => {
+    if (!note) return
+    const timer = setTimeout(() => unlocked.set(null), 6500)
+    return () => clearTimeout(timer)
+  }, [note])
+  if (!note) return null
+  const count = ['No documents', 'One document', 'Two documents', 'Three documents', 'Four documents', 'Five documents'][note.docs] ?? `${note.docs} documents`
+  return (
+    <button type="button" className="desk-note" onClick={() => (unlocked.set(null), openApp('updates', dockPoint('updates')), focusWindow('updates'))}>
+      <span className="desk-note__icon">
+        <FolderIcon />
+      </span>
+      <span role="status">
+        <b>Updates is unlocked</b>
+        {note.docs ? `${count} written for your funds.` : 'Documents written for your funds will appear here.'}
+      </span>
+    </button>
   )
 }
 
@@ -221,6 +252,7 @@ export default function Surface() {
         <MenuBar />
         <main className="os__windows">
           <DeskIcons />
+          <Unlocked />
           <SanFrancisco />
           <TilePreview />
           {APP_IDS.map((id) => {

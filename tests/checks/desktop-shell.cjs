@@ -382,8 +382,8 @@ const parts = {
       lights: [...document.querySelectorAll('.wf[data-app="finder"] .wf__light')].map((b) => b.getAttribute('aria-label')),
     }))
     check('menus: Pause Replies is in the mark\'s menu with Portfolio in front', names.app === 'Portfolio' && names.mark.includes('Pause Replies') && names.mark.includes('Screen Saver') && names.mark.includes('Never'), JSON.stringify(names.mark))
-    check('copy: "Minimize", "Group Chat", "Questions about Shrug", and the Dock\'s two links, VIP and the One-pager, "…, opens in a new tab"', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager, opens in a new tab') && names.dock.includes('FAQs: Questions about Shrug') && names.dock.includes('One-pager, opens in a new tab') && names.lights.includes('Minimize Portfolio') && names.go.includes('VIP, opens in a new tab') && names.dock.join(' | ') === 'Portfolio: Every company, by vertical | Group Chat: What people say | FAQs: Questions about Shrug | Case Studies: Private. Ask nicely. | VIP, opens in a new tab | One-pager, opens in a new tab', JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
-    check('desk: icons are named "…, desktop icon", sit inside main, and links do not drag', names.desk.join(' | ') === 'Portfolio, desktop icon | Wallpapers, desktop icon | One-pager, desktop icon, opens in a new tab' && names.deskInMain && names.dockDrag === 'false', JSON.stringify(names.desk))
+    check('copy: "Minimize", "Group Chat", "Questions about Shrug", and the links, VIP in the Dock and the One-pager in the Go menu, "…, opens in a new tab"', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager, opens in a new tab') && names.dock.includes('FAQs: Questions about Shrug') && names.lights.includes('Minimize Portfolio') && names.go.includes('VIP, opens in a new tab') && names.dock.join(' | ') === 'Portfolio: Every company, by vertical | Group Chat: What people say | FAQs: Questions about Shrug | Case Studies: Private. Ask nicely. | VIP, opens in a new tab', JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
+    check('desk: icons are named "…, desktop icon", the locked folder says it is locked, they sit inside main, and links do not drag', names.desk.join(' | ') === 'Updates, desktop icon, locked | One-pager, desktop icon, opens in a new tab | Wallpapers, desktop icon' && names.deskInMain && names.dockDrag === 'false', JSON.stringify(names.desk))
     check('title: names the window in front', names.title === 'Portfolio · Shrug', names.title)
     check('menus: What’s New in Shrug V is in the mark\'s menu, straight under About Shrug', names.mark[0] === 'About Shrug' && names.mark[1] === 'What’s New in Shrug V', JSON.stringify(names.mark.slice(0, 3)))
     await t.ctx.close()
@@ -459,26 +459,27 @@ const parts = {
     const none = await t.page.evaluate(() => ({ labels: [...document.querySelectorAll('.menubar__title')].map((b) => b.getAttribute('aria-label')), title: document.title }))
     check('menus: with no window open the titles\' names are all different, one "Shrug menu"', new Set(none.labels).size === none.labels.length && none.labels.filter((l) => l === 'Shrug menu').length === 1, JSON.stringify(none.labels))
     check('title: the bare desk is the site\'s own', none.title === 'Shrug', none.title)
-    await t.page.click('.desk__item >> nth=0')
+    // (The Wallpapers folder: the first icon on the desk is Updates, which is locked and opens Log In, not a window)
+    await t.page.click('[data-desk="wallpapers"]')
     await t.page.waitForTimeout(1600)
-    const one = !!(await win(t.page, 'finder'))?.open
-    await t.page.click('.desk__item >> nth=0')
+    const one = !!(await win(t.page, 'wallpapers'))?.open
+    await t.page.click('[data-desk="wallpapers"]')
     await t.page.waitForTimeout(700)
-    const two = !!(await win(t.page, 'finder'))?.open
+    const two = !!(await win(t.page, 'wallpapers'))?.open
     check('desk: one click picks the icon, a second, later click opens it', !one && two, `after one: ${one}, after two: ${two}`)
-    check('desk: and the keyboard goes into the window', (await focusIs(t.page)) === 'wf:finder', await focusIs(t.page))
+    check('desk: and the keyboard goes into the window', (await focusIs(t.page)) === 'wf:wallpapers', await focusIs(t.page))
     await t.ctx.close()
     t = await fresh('desktop', 'still&empty')
-    await t.page.dblclick('.desk__item >> nth=0')
+    await t.page.dblclick('[data-desk="wallpapers"]')
     await t.page.waitForTimeout(700)
-    check('desk: a double-click opens it once', !!(await win(t.page, 'finder'))?.open)
+    check('desk: a double-click opens it once', !!(await win(t.page, 'wallpapers'))?.open)
     await t.page.keyboard.press('Escape')
     await t.ctx.close()
     t = await fresh('desktop', 'still&empty')
-    await t.page.focus('.desk__item >> nth=0')
+    await t.page.focus('[data-desk="wallpapers"]')
     await t.page.keyboard.press('Enter')
     await t.page.waitForTimeout(700)
-    check('desk: Enter on the icon opens it and moves the keyboard into the window', !!(await win(t.page, 'finder'))?.open && (await focusIs(t.page)) === 'wf:finder', await focusIs(t.page))
+    check('desk: Enter on the icon opens it and moves the keyboard into the window', !!(await win(t.page, 'wallpapers'))?.open && (await focusIs(t.page)) === 'wf:wallpapers', await focusIs(t.page))
     await t.ctx.close()
 
     // A menu open: a click elsewhere puts it away and presses nothing

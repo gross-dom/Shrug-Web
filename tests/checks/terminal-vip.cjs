@@ -1,7 +1,7 @@
 // Fixer T's checks: Case Studies (the terminal) and VIP, on both layouts. VIP was a photo library when these
 // were written; it is the way to the points site now, a link wherever it appears, and its half of these holds
 // to that: the link by every route, no window or app by any, and the two windows still laid out with its
-// classes (Wallpapers, LP Updates) looking as they did.
+// classes (Wallpapers, Updates) looking as they did.
 //   node terminal-vip.cjs [base] [only: term|vip|axe]
 // (term: terminal-vip.cjs itself; vip: terminal-vip-link.cjs; axe: terminal-vip-axe.cjs, axe-core over the same screens on both layouts.)
 // The base is the dev server unless given (the built site: http://127.0.0.1:4173/). One group of checks needs a
