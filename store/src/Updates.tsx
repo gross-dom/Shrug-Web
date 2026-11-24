@@ -1,30 +1,42 @@
 import { useEffect, useState } from 'react'
-import { UPDATE_GROUPS, type Update } from '../shared/rules'
+import { fmtPoints, UPDATE_GROUPS, type Update } from '../shared/rules'
 import type { Backend, Shop } from './backend'
-import { DocIcon } from './icons'
+import { Points, Wordmark } from './brand'
+import { DocIcon, Lock } from './icons'
 
-// Updates: what Shrug has written to its LPs. They are not for sale, so they are not in the store. One list,
-// in groups, and each update in one of four states: open (theirs to read), to request, requested, or coming
-// soon. Opening one shows it in the page, in the place of its preview. The markup is the design's
-// (store/design/screens: Updates, PhoneUpdates).
+// Updates: what Shrug has written to its LPs. They are not in the store. One list, in groups, and each
+// update in one of five states: open (theirs to read), locked (theirs to unlock, for a few points), to
+// request, requested, or coming soon. Opening one shows it in the page, in the place of its preview.
+// A row is only marked while the pointer is on it: which one is chosen is said by the preview beside the list.
 
 const WHEN = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 /** What is at the right of a row: the thing to press, or what it is waiting on. */
 function Stand({ update }: { update: Update }) {
   if (update.state === 'open') return <span className="ui-btn sec sm">Open</span>
+  if (update.state === 'locked')
+    return (
+      <span className="ui-btn sec sm">
+        Unlock
+        <Points n={update.points} size={14} />
+      </span>
+    )
   if (update.state === 'request') return <span className="ui-btn sec sm">Request</span>
   return <span className="t-sm t-3">{update.state === 'requested' ? 'Requested' : 'Coming soon'}</span>
 }
 
-export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; phone: boolean; backend: Backend; onChange: () => void }) {
+export function UpdatesView({ shop, phone, backend, onChange, onSpent }: { shop: Shop; phone: boolean; backend: Backend; onChange: () => void; onSpent: (points: number) => void }) {
   const updates = shop.updates
   const [at, setAt] = useState<string | null>(updates.find((u) => u.state === 'open')?.id ?? updates[0]?.id ?? null)
   /** The one being read in the page, and where its file is. */
   const [reading, setReading] = useState<{ id: string; url: string } | null>(null)
+  /** On a phone: the one being asked about, before any points are taken. */
+  const [asking, setAsking] = useState<string | null>(null)
   const [busy, setBusy] = useState('')
   const [said, setSaid] = useState('')
   const chosen = updates.find((u) => u.id === at) ?? null
+  const asked = updates.find((u) => u.id === asking && u.state === 'locked') ?? null
+  const short = (update: Update) => shop.member.points < update.points
   // The name of each heading that has something under it, in their order, and any other after them
   const groups = [...UPDATE_GROUPS, ...updates.map((u) => u.group).filter((g) => !UPDATE_GROUPS.includes(g))].filter((g, n, all) => all.indexOf(g) === n && updates.some((u) => u.group === g))
 
@@ -49,6 +61,17 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
     if ('error' in asked && asked.error !== 'already') return setSaid(asked.error === 'offline' ? 'No connection.' : 'That did not send. Try again.')
     onChange()
   }
+  /** Its points are taken, and it is theirs to read from then on. */
+  const unlock = async (update: Update) => {
+    setBusy(update.id)
+    setSaid('')
+    const got = await backend.order({ product: update.id, points: update.points })
+    setBusy('')
+    setAsking(null)
+    if ('error' in got && got.error !== 'already') return setSaid(got.error === 'offline' ? 'No connection. Nothing was taken.' : got.error === 'points' ? `You need ${fmtPoints(update.points)} points to unlock this.` : 'That did not work. Nothing was taken.')
+    if (!('error' in got)) onSpent(got.order.points)
+    onChange()
+  }
   const download = async (update: Update) => {
     setBusy(update.id)
     setSaid('')
@@ -62,6 +85,7 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
     if (reading && reading.id !== update.id) setReading(null)
     if (!phone) return
     if (update.state === 'open') open(update)
+    else if (update.state === 'locked') (setSaid(''), setAsking(update.id))
     else if (update.state === 'request') request(update)
   }
 
@@ -73,12 +97,7 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
           .filter((u) => u.group === group)
           .map((update) => (
             <li key={update.id}>
-              <a
-                className={`ui-row ui-upd${!phone && update.id === at ? ' on' : ''}`}
-                href={`?s=updates#${encodeURIComponent(update.id)}`}
-                aria-current={!phone && update.id === at ? 'true' : undefined}
-                onClick={(e) => (e.preventDefault(), press(update))}
-              >
+              <a className="ui-row ui-upd" href={`?s=updates#${encodeURIComponent(update.id)}`} aria-current={!phone && update.id === at ? 'true' : undefined} onClick={(e) => (e.preventDefault(), press(update))}>
                 {!phone && (
                   <span className="ui-thumb lg">
                     <DocIcon />
@@ -86,7 +105,7 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
                 )}
                 <span className="who">
                   <b>{update.name}</b>
-                  <span>{update.state === 'soon' ? ' ' : phone ? update.forWhom : `PDF · ${update.forWhom}`}</span>
+                  <span>{update.state === 'soon' ? ' ' : phone ? update.forWhom : `PDF · ${update.forWhom}`}</span>
                 </span>
                 <span className="r">
                   <Stand update={update} />
@@ -110,15 +129,45 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
 
   if (phone)
     return (
-      <main className="up-body" style={{ gap: 0 }}>
-        <h1 className="t-title">Updates</h1>
-        {said && (
-          <p className="ui-note" role="alert" style={{ marginTop: 12 }}>
-            {said}
-          </p>
+      <>
+        <main className="up-body" style={{ gap: 0, paddingBottom: 28 }}>
+          <h1 className="t-title">Updates</h1>
+          {said && (
+            <p className="ui-note" role="alert" style={{ marginTop: 12 }}>
+              {said}
+            </p>
+          )}
+          {list}
+        </main>
+        {asked && (
+          <>
+            <div className="up-veil" onClick={() => setAsking(null)} />
+            <section className="up-sheet" aria-label={`Unlock ${asked.name}`}>
+              <div className="ui-item">
+                <span className="ui-thumb lg">
+                  <Lock />
+                </span>
+                <div>
+                  <b>{asked.name}</b>
+                  <span className="t-sm t-2">PDF · {asked.forWhom}</span>
+                </div>
+              </div>
+              {short(asked) ? (
+                <button type="button" className="ui-btn off" disabled>
+                  {fmtPoints(asked.points)} points needed
+                </button>
+              ) : (
+                <button type="button" className="ui-btn" data-busy={busy === asked.id || undefined} disabled={busy === asked.id} onClick={() => unlock(asked)}>
+                  Unlock for {fmtPoints(asked.points)} points
+                </button>
+              )}
+              <button type="button" className="ui-btn sec" disabled={busy === asked.id} onClick={() => setAsking(null)}>
+                Not now
+              </button>
+            </section>
+          </>
         )}
-        {list}
-      </main>
+      </>
     )
 
   return (
@@ -127,7 +176,6 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
         <div className="ui-head" style={{ paddingBottom: 6 }}>
           <h1 className="t-title">Updates</h1>
         </div>
-        <p className="t-words">What Shrug has written to its LPs. Each one opens for the people it was written for.</p>
         {list}
       </div>
       {chosen && (
@@ -141,7 +189,7 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
             </>
           ) : (
             <figure className="ui-paper">
-              <b>Shrug</b>
+              <Wordmark lockup="shrug" height={11} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <h3>{chosen.name}</h3>
                 <small>
@@ -168,6 +216,16 @@ export function UpdatesView({ shop, phone, backend, onChange }: { shop: Shop; ph
                 Download PDF
               </button>
             )}
+            {chosen.state === 'locked' &&
+              (short(chosen) ? (
+                <button type="button" className="ui-btn off" disabled>
+                  {fmtPoints(chosen.points)} points needed
+                </button>
+              ) : (
+                <button type="button" className="ui-btn" data-busy={busy === chosen.id || undefined} disabled={busy === chosen.id} onClick={() => unlock(chosen)}>
+                  Unlock for {fmtPoints(chosen.points)} points
+                </button>
+              ))}
             {chosen.state === 'request' && (
               <button type="button" className="ui-btn" data-busy={busy === chosen.id || undefined} disabled={busy === chosen.id} onClick={() => request(chosen)}>
                 Request

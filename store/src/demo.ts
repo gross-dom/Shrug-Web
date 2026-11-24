@@ -12,10 +12,10 @@ const CARD = 'shrugdemo.v1'
 const STORE = 'shrugdemo.store.v2'
 
 export const PEOPLE: Record<string, { label: string; member: { name: string; first: string; roles: string[]; tier: string; points: number; number: string; since: number } | null; funds: string[] }> = {
-  founder: { label: 'Founder, silver, 1,250 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['Founder'], tier: 'silver', points: 1250, number: '014', since: 2026 }, funds: [] },
-  lp: { label: 'LP in Shrug 1, gold, 8,400 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['LP'], tier: 'gold', points: 8400, number: '003', since: 2021 }, funds: ['Shrug 1'] },
-  investor: { label: 'Investor, silver, 400 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 }, funds: [] },
-  black: { label: 'Investor, black, 20,000 pts', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'black', points: 20000, number: '027', since: 2024 }, funds: [] },
+  founder: { label: 'Founder, silver, 1,250 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Founder'], tier: 'silver', points: 1250, number: '014', since: 2026 }, funds: [] },
+  lp: { label: 'LP in Shrug 1, gold, 8,400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['LP'], tier: 'gold', points: 8400, number: '003', since: 2021 }, funds: ['Shrug 1'] },
+  investor: { label: 'Investor, silver, 400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 }, funds: [] },
+  black: { label: 'Investor, black, 20,000 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'black', points: 20000, number: '027', since: 2024 }, funds: [] },
 }
 
 /** Things the demo can be made to do, so that every state the store has can be seen. */
@@ -31,20 +31,25 @@ export const SCENES: Record<string, string> = {
 }
 
 const item = (id: string, name: string, more: Partial<Product>): Product => ({
-  id, name, kind: 'Other', status: 'Available', visibleTo: ['Everyone'], points: null, floor: null, postage: null, description: '', picture: null, hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0, ...more,
+  id, name, kind: 'Other', status: 'Available', visibleTo: ['Everyone'], points: null, floor: null, postage: null, description: '', picture: null, pictures: [], hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0, ...more,
 })
 
-/** The store as the design draws it. (In Airtable, Chromatic is 400 points until Shrug says it is free.) */
+/** Where each product's one line goes, until Shrug has written them (Products → Description in Airtable). */
+const LINE = 'A one-line write-up goes here.'
+
+/** The store as Shrug has it. A chair is a product for each color (Workspace, Matte Black), and the
+ * photographs are found by name (pictures.ts). */
 const SHELVES: Product[] = [
-  item('chromatic', 'Chromatic', { kind: 'Book', points: 0, needsAddress: true }),
-  item('chair', 'Workspace Chair', { kind: 'Chair', points: 14500, floor: 500, postage: 70, options: ['Black', 'Stone', 'White'], editionOf: 5, left: 3, needsAddress: true }),
-  item('chair-red', 'Workspace Chair, Ferrari Red', { kind: 'Chair', status: 'On request', points: 15000, floor: 1500, needsAddress: true }),
-  item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, floor: 75, postage: 5, editionOf: 10, left: 7, needsAddress: true }),
-  item('catalog', 'WS Catalog', { kind: 'Book', points: 1000, needsAddress: true }),
-  item('2027', 'Shrug 2027', { kind: 'Book', status: 'Pre-order', needsAddress: true }),
+  item('chromatic', 'Chromatic', { kind: 'Book', points: 400, needsAddress: true, description: LINE }),
+  item('chair', 'Workspace, Matte Black', { kind: 'Chair', points: 14500, floor: 500, postage: 70, editionOf: 5, left: 3, needsAddress: true, description: LINE }),
+  item('chair-red', 'Workspace, Ferrari Red', { kind: 'Chair', status: 'On request', points: 15000, floor: 1500, needsAddress: true, description: LINE }),
+  item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, floor: 75, postage: 5, editionOf: 10, left: 7, needsAddress: true, description: LINE }),
+  item('catalog', 'WS Catalog', { kind: 'Book', points: 1000, needsAddress: true, description: LINE }),
+  item('2027', 'Shrug 2027', { kind: 'Book', status: 'Pre-order', needsAddress: true, description: LINE }),
 ].map((product, place) => ({ ...product, place }))
 
-const paper = (id: string, name: string, more: Partial<Product>): Product => item(id, name, { kind: 'Document', points: 0, hasFile: true, group: 'Funds', ...more })
+/** An update is unlocked for 10 points by the people it was written for (Products → Points on its row). */
+const paper = (id: string, name: string, more: Partial<Product>): Product => item(id, name, { kind: 'Document', points: 10, hasFile: true, group: 'Funds', ...more })
 const PAPERS: Product[] = [
   paper('update-4', 'Shrug 4 LP Update', {}),
   paper('update-capital', 'Shrug Capital Update', {}),
@@ -124,7 +129,13 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   }
   // An update that is listed to them and written for others: asked for
   const doc = papers(store).find((p) => p.id === asked.product)
-  if (doc) return updateOf(member, doc, mine)?.state === 'request' ? ask(doc, 'Requested', 0, 0, false) : { error: 'already' }
+  if (doc) {
+    const state = updateOf(member, doc, mine)?.state
+    if (state === 'request') return ask(doc, 'Requested', 0, 0, false)
+    // Theirs to unlock: the points it costs are taken, and it is open to them from then on
+    if (state === 'locked') return refusalOf(member, doc, mine, { points: asked.points ?? 0 }) || dueCents(doc, asked.points ?? 0) > 0 ? { error: 'points' } : ask(doc, 'Points', asked.points ?? 0, 0, false)
+    return { error: 'already' }
+  }
   const product = shelves(store).find((p) => p.id === asked.product && canSee(member, p))
   if (!product) return { error: 'hidden' }
   if (store.scene === 'lastgone') return { error: 'sold-out' }

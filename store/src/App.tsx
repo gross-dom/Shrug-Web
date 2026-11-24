@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fmtPoints } from '../shared/rules'
 import { DEMO, server, type Backend, type Placed, type Shop, type StoreAnswer } from './backend'
+import { PointsMark, Wordmark } from './brand'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
 import { Lock, NoCloud } from './icons'
-import { Picture, ProductView, type Go } from './Product'
+import { Picture, Price, ProductView, type Go } from './Product'
 import { UpdatesView } from './Updates'
 import { badgeOf, priceOf } from './words'
 import { YoursView } from './Yours'
 
 // The store. Three sections under one bar: the store itself (a display of everything in it, pictures first,
-// and a screen for each product), Updates, and Yours. The card (the site's front page) is where a member
-// signs in; these pages show what the server says is theirs, and ask it for everything they do. The markup
-// and the stylesheet are the design's (store/design), lifted as they are.
+// and a screen for each product), Updates, and My VIP (the address still says ?s=yours, as links already
+// sent do). The card (the site's front page) is where a member signs in; these pages show what the server
+// says is theirs, and ask it for everything they do.
 
 const backend: Backend = DEMO ? demo : server
 
@@ -71,8 +72,9 @@ function Wallet({ shop, spent }: { shop: Shop; spent: number }) {
   return (
     <a className="ui-wallet" href="/" aria-label={`Your card: ${metal}${me.number ? `, number ${me.number}` : ''}, ${fmtPoints(me.points)} points`}>
       <span className={`ui-chip m-${metal}`} />
-      <span>
-        {fmtPoints(points)} <small>pts</small>
+      <span className="pts-n">
+        <PointsMark size={16} />
+        {fmtPoints(points)}
       </span>
       {spent > 0 && <span className="ui-delta">&minus;{fmtPoints(spent)}</span>}
     </a>
@@ -89,7 +91,7 @@ function Sections({ at, go }: { at: Section; go: (section: Section) => void }) {
     <nav className="ui-seg" aria-label="Sections">
       {link('store', 'Store')}
       {link('updates', 'Updates')}
-      {link('yours', 'Yours')}
+      {link('yours', 'My VIP')}
     </nav>
   )
 }
@@ -112,7 +114,7 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
         const badge = badgeOf(product, shop.orders)
         return (
           <li key={product.id}>
-            <a className="ui-prod" href={`?p=${encodeURIComponent(product.id)}`} onClick={(e) => (e.preventDefault(), open(product.id))}>
+            <a className="ui-prod" href={`?p=${encodeURIComponent(product.id)}`} aria-label={[product.name, product.kind, priceOf(product), badge?.text].filter(Boolean).join(', ')} onClick={(e) => (e.preventDefault(), open(product.id))}>
               <span className="ui-prod-pic">
                 <Picture product={product} size={phone ? 26 : 44} />
                 {badge && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
@@ -122,7 +124,9 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
                   <b>{product.name}</b>
                   <small>{product.kind}</small>
                 </span>
-                <span className="r">{priceOf(product) || ' '}</span>
+                <span className="r">
+                  <Price product={product} />
+                </span>
               </span>
             </a>
           </li>
@@ -130,25 +134,15 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
       })}
     </ol>
   )
-  const count = (
-    <span className="t-sm t-2">
-      {products.length} {products.length === 1 ? 'item' : 'items'}
-    </span>
-  )
+  // The bar says where this is (Shrug VIP Store): the page itself goes straight to what is in it
   return phone ? (
-    <main className="up-body" style={{ gap: 12, paddingBottom: 28 }}>
-      <div className="ui-head" style={{ paddingBottom: 0 }}>
-        <h1 className="t-title">Store</h1>
-        {count}
-      </div>
+    <main className="up-body" style={{ paddingBottom: 28 }}>
+      <h1 className="sr">Shrug VIP Store</h1>
       {list}
     </main>
   ) : (
-    <main className={`ui-display${products.length > 6 ? ' more' : ''}`}>
-      <div className="ui-head">
-        <h1 className="t-title">Store</h1>
-        {count}
-      </div>
+    <main className="ui-display">
+      <h1 className="sr">Shrug VIP Store</h1>
       {list}
     </main>
   )
@@ -194,7 +188,7 @@ function DemoTab({ signedIn, onChange }: { signedIn: boolean; onChange: () => vo
         </label>
         <div>
           <button type="button" disabled={!signedIn} onClick={() => (demoAddPoints(5000), onChange())}>
-            +5,000 pts
+            +5,000 points
           </button>
           <button type="button" onClick={() => (demoReset(), setScene('normal'), onChange())}>
             Start again
@@ -252,7 +246,7 @@ export function App() {
   const shop = answer.status === 'member' ? answer : null
   const product = shop && place.section === 'store' ? (shop.products.find((p) => p.id === place.product) ?? null) : null
   useEffect(() => {
-    const names: Record<Section, string> = { store: product ? product.name : 'Store', updates: 'Updates', yours: 'Yours' }
+    const names: Record<Section, string> = { store: product ? product.name : 'Store', updates: 'Updates', yours: 'My VIP' }
     document.title = `${names[place.section]} · Shrug VIP`
   }, [place.section, product])
 
@@ -260,7 +254,7 @@ export function App() {
   if (shop) {
     body =
       place.section === 'updates' ? (
-        <UpdatesView shop={shop} phone={phone} backend={backend} onChange={load} />
+        <UpdatesView shop={shop} phone={phone} backend={backend} onChange={load} onSpent={(points) => setSpent((n) => n + points)} />
       ) : place.section === 'yours' ? (
         <YoursView shop={shop} phone={phone} backend={backend} onChange={load} onSignOut={signout} />
       ) : product ? (
@@ -295,10 +289,13 @@ export function App() {
           <span className="ui-thumb lg">
             <Lock />
           </span>
-          <h2 className="t-h2">Open your pack to come in.</h2>
-          <p className="t-words">The store is for members.</p>
-          <div style={{ paddingTop: 6 }}>
-            <a className="ui-btn fit" href="/">
+          <h2 className="t-h2">Sign in to come in.</h2>
+          <p className="t-words">The store is for members. New here? Open your pack first.</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 6 }}>
+            <a className="ui-btn fit" href="/?signin=store">
+              Sign in
+            </a>
+            <a className="ui-btn sec fit" href="/">
               Open your pack
             </a>
           </div>
@@ -324,7 +321,7 @@ export function App() {
 
   const mark = (
     <a className="ui-mark" href="./" onClick={(e) => (e.preventDefault(), move({ section: 'store', product: null }))}>
-      Shrug VIP
+      <Wordmark lockup="store" height={phone ? 12 : 14} />
     </a>
   )
   // A product is one screen and does not scroll; everything else on a phone is a page, as long as it is

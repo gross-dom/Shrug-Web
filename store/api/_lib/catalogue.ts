@@ -12,7 +12,8 @@ export function productOf(row: Row): Product | null {
   const name = str(f[F.product.name]).trim()
   if (!name || (status !== 'Available' && status !== 'Pre-order' && status !== 'On request')) return null
   const kind = str(f[F.product.kind]) as Kind
-  const picture = files(f[F.product.picture])[0]
+  // Airtable's links to a picture last a couple of hours, which is longer than a page is looked at
+  const pictured = files(f[F.product.picture])
   return {
     id: row.id,
     name,
@@ -23,8 +24,9 @@ export function productOf(row: Row): Product | null {
     floor: num(f[F.product.floor]),
     postage: num(f[F.product.postage]),
     description: str(f[F.product.description]).trim(),
-    // Airtable's links to a picture last a couple of hours, which is longer than a page is looked at
-    picture: picture ? (picture.thumbnails?.large?.url ?? picture.url ?? null) : null,
+    // The first, small, is what the display and the foot show; a product's own screen has every one, whole
+    picture: pictured[0] ? (pictured[0].thumbnails?.large?.url ?? pictured[0].url ?? null) : null,
+    pictures: pictured.map((picture) => picture.url ?? '').filter(Boolean),
     hasFile: files(f[F.product.file]).length > 0,
     options: str(f[F.product.options])
       .split(',')

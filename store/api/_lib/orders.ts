@@ -108,7 +108,7 @@ export async function settle(paymentId: string, forMember?: string): Promise<{ o
 }
 
 const EMPTY: Omit<Product, 'id' | 'name'> = {
-  kind: 'Other', status: 'Available', visibleTo: [], points: null, floor: null, postage: null, description: '', picture: null, hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0,
+  kind: 'Other', status: 'Available', visibleTo: [], points: null, floor: null, postage: null, description: '', picture: null, pictures: [], hasFile: false, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: 0,
 }
 
 
