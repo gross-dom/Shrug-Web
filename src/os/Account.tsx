@@ -139,7 +139,7 @@ type Stage =
   | { at: 'profile'; first: boolean }
   | { at: 'menu' }
 
-function Sheet({ who, why, onDone }: { who: Member | null; why: Why; onDone: () => void }) {
+function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?: string; onDone: () => void }) {
   const [at, setStage] = useState<Stage>(() => (who ? (who.via === 'link' && who.needs.phone ? { at: 'addphone' } : { at: 'menu' }) : { at: 'email' }))
   // What is only for someone logged in is not shown to nobody: should they be logged out under it, it begins again
   const stage: Stage = !who && (at.at === 'menu' || at.at === 'profile' || at.at === 'addphone') ? { at: 'email' } : at
@@ -242,7 +242,7 @@ function Sheet({ who, why, onDone }: { who: Member | null; why: Why; onDone: () 
     return (
       <form className="account__form" onSubmit={sendEmail} noValidate>
         <h3 className="account__head">{words.head}</h3>
-        <p className="account__lead">{words.lead}</p>
+        <p className="account__lead">{says ?? words.lead}</p>
         <label className="account__field">
           <span className="sr-only">Email address</span>
           <input ref={field} type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -552,7 +552,7 @@ export function AccountItem() {
       </button>
       {sheet.open && who.status !== 'checking' && (
         <div className="account" role="dialog" aria-label={member ? 'Your account' : 'Log in'}>
-          <Sheet who={member} why={sheet.why} onDone={done} />
+          <Sheet who={member} why={sheet.why} says={sheet.says} onDone={done} />
         </div>
       )}
     </div>

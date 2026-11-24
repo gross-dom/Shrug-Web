@@ -4,7 +4,7 @@
 // The VIP Store is one of them (design/v1): the store's own pages, in a window, last in the Dock. (It was a
 // link to the points site, which opened in a tab of its own.) An address can ask for it by name: `?open=vip`.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace'
 
 export interface Size {
   w: number
@@ -119,6 +119,20 @@ export const APPS: Record<AppId, AppSpec> = {
     resizable: true,
     lightsY: 30,
     dock: 6,
+  },
+  // Workspace: the studio (design/v1-workspace). A color picker for the chair with one button: eight slabs,
+  // and then the whole window in the color picked, with the chair on a turntable (src/apps/Workspace.tsx).
+  // In the Dock between Mail and VIP Store
+  workspace: {
+    id: 'workspace',
+    name: 'Workspace',
+    blurb: 'The chair, in every color',
+    size: fit({ w: 0.77, h: 0.95 }, { w: 900, h: 620 }, { w: 1100, h: 720 }),
+    min: { w: 900, h: 620 },
+    nudge: { x: 0, y: -4 },
+    resizable: true,
+    lightsY: 24,
+    dock: 5,
   },
   // Mail: twenty email exchanges that led to something, read-only, in a window driven as Superhuman is
   // (design/v1; src/apps/Mail.tsx). 1180 by 740, at which all twenty are on the screen at once
@@ -235,7 +249,7 @@ export const APP_IDS = Object.keys(APPS) as AppId[]
 export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
 
 /** The windows that are the desktop's alone, with nothing of theirs on a phone: an address that names one names nothing there. */
-export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube']
+export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'workspace']
 
 /** The apps that are in the Dock only while they have something open, after its rule. */
 export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
@@ -258,6 +272,7 @@ export const ALIASES: Record<string, AppId> = {
   shop: 'store',
   inbox: 'mail',
   email: 'mail',
+  chair: 'workspace',
   film: 'quicktime',
   films: 'quicktime',
   'photo-booth': 'photobooth',

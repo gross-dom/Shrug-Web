@@ -22,7 +22,7 @@ export interface Spot {
 }
 
 /** The name each app goes by in an address. */
-const NAMES: Record<AppId, string> = { messages: 'chat', finder: 'portfolio', notes: 'faqs', terminal: 'case-studies', about: 'about', wallpapers: 'wallpapers', updates: 'updates', store: 'vip', preview: 'preview', mail: 'mail', quicktime: 'film', photobooth: 'photo-booth', spotify: 'spotify', youtube: 'youtube' }
+const NAMES: Record<AppId, string> = { messages: 'chat', finder: 'portfolio', notes: 'faqs', terminal: 'case-studies', about: 'about', wallpapers: 'wallpapers', updates: 'updates', store: 'vip', preview: 'preview', mail: 'mail', quicktime: 'film', photobooth: 'photo-booth', spotify: 'spotify', youtube: 'youtube', workspace: 'workspace' }
 
 /** A name as an address writes it: "Eight Sleep" is eight-sleep. */
 export const slug = (text: string) =>

@@ -13,14 +13,19 @@ import { DOCK_APPS, type AppId } from './apps'
 // (data/site.ts, TEMPLATED). Only the desktop reads this: a phone has none of these apps.
 
 const HELD: Partial<Record<AppId, boolean>> = TEMPLATED
-  ? {}
+  ? { workspace: true }
   : {
+      workspace: true,
       mail: EXCHANGES.every((exchange) => exchange.from.startsWith('[')),
       // (a film is its file, and a row to be listened to or watched is its link: with none supplied there is nothing to play)
       quicktime: FILMS.every((film) => !film.src),
       spotify: EPISODES.every((episode) => !episode.link) && PLAYLISTS.every((playlist) => !playlist.link),
       youtube: VIDEOS.every((video) => !video.id),
     }
+
+// Workspace is left out everywhere for now, for another reason: it is a first draft (the studio, and a
+// placeholder for the chair) that has not been looked at or put through its checks yet. It is built, and an
+// address that names it opens it (?open=workspace); it has no icon in the Dock until it has been checked.
 
 /** Whether an app is left out for now. */
 export const held = (id: AppId) => !!HELD[id]

@@ -75,8 +75,9 @@ export type Why = 'updates' | 'request' | 'post' | null
 /** An LP has just logged in: when, and how many documents are theirs. The desk says so once (Surface.tsx). */
 export const unlocked = createStore<{ at: number; docs: number } | null>(null)
 
-export const logIn = createStore<{ open: boolean; why: Why }>({ open: false, why: null })
-export const askLogIn = (why: Why = null) => logIn.set({ open: true, why })
+/** `says` is a line of the opener's own under the sheet's head, in place of the usual one: what is kept while they log in. */
+export const logIn = createStore<{ open: boolean; why: Why; says?: string }>({ open: false, why: null })
+export const askLogIn = (why: Why = null, says?: string) => logIn.set({ open: true, why, says })
 export const closeLogIn = () => logIn.set((s) => (s.open || s.why ? { open: false, why: null } : s))
 
 // ---- What the server answers

@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { IN_DISC, ON_TILE, S, VIP_LETTERS } from '../data/logo'
 import type { AppId } from './apps'
-import { MailIcon, PhotoBoothIcon, QuickTimeIcon, SpotifyIcon, YouTubeIcon } from './icons-v1'
+import { MailIcon, PhotoBoothIcon, QuickTimeIcon, SpotifyIcon, WorkspaceIcon, YouTubeIcon } from './icons-v1'
 
 // The desktop's own icons, drawn here: app icons in the rounded-square shape a
 // Dock expects, a document, a folder, and Shrug's logo. The group chat's, the
@@ -265,6 +265,7 @@ const ICONS: Record<AppId, () => ReactNode> = {
   photobooth: PhotoBoothIcon,
   spotify: SpotifyIcon,
   youtube: YouTubeIcon,
+  workspace: WorkspaceIcon,
 }
 
 export function AppIcon({ id }: { id: AppId }) {
