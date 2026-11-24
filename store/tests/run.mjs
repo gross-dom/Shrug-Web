@@ -143,7 +143,7 @@ check('documents are not in the store: they are updates', updates(maxStore).join
 check('updates are for LPs alone: a founder on the list is shown none, even one for everyone', adaStore.updates.length === 0 && !JSON.stringify(adaStore).match(/Update/), updates(adaStore).join('|'))
 check('only Shrug 1 LPs see the Shrug 1 update, which has no file yet', updates(leeStore).join('|') === 'Shrug 4 LP Update:open|Shrug 1 LP Update:soon' && !JSON.stringify(maxStore).includes('Shrug 1 LP Update'), updates(leeStore).join('|'))
 check('an update says who it was written for and which heading it is under', leeStore.updates[0].forWhom === 'Everyone on the list' && leeStore.updates[1].forWhom === 'Shrug 1 LPs' && leeStore.updates.every((u) => u.group === 'Funds'))
-check('the store is told what Yours shows: the card, the address, the email', adaStore.member.number === '014' && adaStore.member.since === 2026 && adaStore.member.email === 'Ada@Example.test' && adaStore.member.shipTo === '' && adaStore.member.emails === true, JSON.stringify(adaStore.member))
+check('the store is told what My VIP shows: the card, the address, the email', adaStore.member.number === '014' && adaStore.member.since === 2026 && adaStore.member.email === 'Ada@Example.test' && adaStore.member.shipTo === '' && adaStore.member.emails === true, JSON.stringify(adaStore.member))
 check('hidden things, and things for nobody, are never sent', !JSON.stringify([adaStore, leeStore]).match(/Not out yet|For nobody/))
 check('what is not theirs to see cannot be ordered', (await call('ada', 'order', 'POST', { product: update1.id })).status === 404)
 check('nor ordered by someone signed out', (await call('nobody', 'order', 'POST', { product: book.id })).body.error === 'anon')
@@ -288,6 +288,21 @@ Object.assign(intents.get(newPay.body.payment), { status: 'succeeded', amount_re
 await call('new', 'order', 'POST', { payment: newPay.body.payment })
 check('with none on file, the address a payment gives is used and kept', tables[T.orders].at(-1).fields[F.order.shipTo].includes('7 Example Way') && newcomer.fields[M.shipTo].includes('7 Example Way'))
 
+// An update with a price in points: locked until it is unlocked, by the LPs it was written for
+const locked = rec(T.products, { [P.name]: 'Shrug 5 LP Update', [P.kind]: 'Document', [P.status]: 'Available', [P.visibleTo]: ['Shrug 1 LPs'], [P.listed]: true, [P.points]: 10, [P.file]: [{ url: 'https://files.example.test/u5.pdf', filename: 'Shrug 5.pdf', type: 'application/pdf' }], [P.place]: 12 })
+const stateOf = async (who) => (await call(who, 'store', 'GET')).body.updates.find((u) => u.name === 'Shrug 5 LP Update')
+check('an update with a price is locked for those it is for, and says what it costs', (await stateOf('lee')).state === 'locked' && (await stateOf('lee')).points === 10, JSON.stringify(await stateOf('lee')))
+check('for an LP it was not written for it is still one to ask for, never one to buy', (await stateOf('max')).state === 'request' && (await call('max', 'order', 'POST', { product: locked.id, points: 10 })).body.order?.status === 'Requested' && (await call('max', 'file', 'GET', null, `?product=${locked.id}`)).status === 404)
+check('and someone who is not an LP is not shown it, and cannot unlock it', (await stateOf('ada')) === undefined && (await call('ada', 'order', 'POST', { product: locked.id, points: 10 })).status === 404)
+check('locked, its file is not handed over', (await call('lee', 'file', 'GET', null, `?product=${locked.id}`)).body.error === 'not-yours')
+check('it is not unlocked for nothing', (await call('lee', 'order', 'POST', { product: locked.id })).body.error === 'pay')
+const had = lp.fields[M.points]
+const unlocked = await call('lee', 'order', 'POST', { product: locked.id, points: 10 })
+check('unlocking takes its points, and is an order', unlocked.body.ok && unlocked.body.order.status === 'Points' && unlocked.body.order.points === 10 && unlocked.body.points === had - 10 && lp.fields[M.points] === had - 10, JSON.stringify(unlocked.body))
+check('it is then open, and its file is theirs', (await stateOf('lee')).state === 'open' && (await call('lee', 'file', 'GET', null, `?product=${locked.id}`)).status === 200)
+check('and is not unlocked twice', (await call('lee', 'order', 'POST', { product: locked.id, points: 10 })).body.error === 'already' && lp.fields[M.points] === had - 10)
+locked.fields[P.status] = 'Hidden'
+
 // Emails, and out
 check('emails can be turned off', (await call('ada', 'emails', 'POST', { on: false })).body.emails === false && founder.fields[M.noEmails] === true && (await call('ada', 'me', 'GET')).body.member.emails === false)
 await call('ada', 'signout', 'POST', {})
@@ -295,7 +310,7 @@ check('signed out is a visitor to the store, and nobody to the card', (await cal
 tables[T.members].splice(tables[T.members].indexOf(samRow), 1)
 check('taken out of Members, someone signed in is a visitor again, and nobody to the card', (await call('sam', 'store', 'GET')).body.status === 'visitor' && (await call('sam', 'me', 'GET')).body.status === 'anon' && (await call('sam', 'order', 'POST', { product: book.id })).body.error === 'anon')
 const orders = (await call('lee', 'store', 'GET')).body.orders
-check('a member is shown only their own orders', orders.map((o) => o.productName).sort().join('|') === 'Chromatic|Second Book|Shrug 4 LP Update', orders.map((o) => o.productName).sort().join('|'))
+check('a member is shown only their own orders', orders.map((o) => o.productName).sort().join('|') === 'Chromatic|Second Book|Shrug 4 LP Update|Shrug 5 LP Update', orders.map((o) => o.productName).sort().join('|'))
 
 rmSync(out, { recursive: true, force: true })
 console.log(failed ? `\n${failed} failed` : '\nall passed')

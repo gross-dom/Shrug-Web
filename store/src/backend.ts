@@ -6,7 +6,7 @@ import type { Member, Order, Product, Update } from '../shared/rules'
 declare const __DEMO__: boolean
 export const DEMO = __DEMO__
 
-/** A member, with what Yours shows of them besides. */
+/** A member, with what My VIP shows of them besides. */
 export type Who = Member & { number: string; since: number | null; reason: string | null; emails: boolean; email: string; shipTo: string }
 
 /** What the server says of whoever is asking: a visitor (nobody signed in), who is shown the store and nothing

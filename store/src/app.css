@@ -36,11 +36,12 @@ body {
   overflow-y: auto;
 }
 
-/* The picture gives up its height first, so that the name, the sums and the button all stay on the screen */
+/* The picture keeps its square while there is room, and is never more than about half the screen: what is
+   under it scrolls beneath the button, which stays where it is */
 .up.fix .up-media {
-  flex: 0 1 236px;
-  min-height: 96px;
-  height: auto;
+  flex: none;
+  max-height: 46vh;
+  max-height: 46dvh;
 }
 
 .up-dock {
@@ -74,9 +75,15 @@ body {
   display: none;
 }
 
-/* A list longer than the window scrolls in its place, under the bar */
+/* A list longer than the window scrolls in its place, under the bar. A row's surface reaches 12px past its
+   words on either side, so the box that scrolls is that much wider than the page's margin and padded back:
+   otherwise the surface is cut square where the box ends */
 .ui-page {
+  left: calc(var(--edge) - 12px);
+  right: calc(var(--edge) - 12px);
+  padding-right: 12px;
   padding-bottom: 28px;
+  padding-left: 12px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -86,31 +93,20 @@ body {
   display: none;
 }
 
-/* Past six, the display's rows keep the height they have at six, and the page scrolls */
-.ui-display.more {
+/* The display is as long as what is in it, and scrolls in its place under the bar */
+.ui-display {
   overflow-y: auto;
   scrollbar-width: none;
 }
 
-.ui-display.more .ui-shop {
-  flex: none;
-  grid-auto-rows: calc((100vh - var(--bar) - 20px - 28px - 62px - 28px) / 2);
+/* A very wide window has room for four across */
+@media (min-width: 1700px) {
+  .ui .ui-shop {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
-/* ---- A photograph, where there is one: whole, on its tile ---- */
-
-.ui-media img,
-.up-media img {
-  max-width: 78%;
-  max-height: 84%;
-  object-fit: contain;
-}
-
-.ui-prod-pic img {
-  max-width: 72%;
-  max-height: 78%;
-  object-fit: contain;
-}
+/* ---- A photograph in a small place fills it ---- */
 
 .ui-thumb img {
   width: 100%;
@@ -182,10 +178,20 @@ body {
   transition: background-color 0.12s;
 }
 
+.ui-prod-pic img {
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
 @media (hover: hover) {
   .ui-prod:hover .ui-prod-pic {
     background: var(--surface-2);
   }
+
+  /* A photograph under the pointer comes a little closer */
+  .ui-prod:hover .ui-prod-pic img {
+    transform: scale(1.03);
+  }
+
 
   a.ui-row:hover,
   .ui-rail ol a:hover {
@@ -212,10 +218,53 @@ body {
   opacity: 0.85;
 }
 
+/* Glass under the pointer catches a little more light, and gives a little when it is pressed */
+.ui-btn,
+.ui-round,
+.mc {
+  transition: filter 0.15s, transform 0.15s, background-color 0.12s;
+}
+
+/* The card, which goes to the card page, lifts a little under the pointer */
+@media (hover: hover) {
+  .mc-link:hover .mc {
+    filter: brightness(1.06);
+  }
+}
+
+.mc-link:focus-visible {
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  .ui-btn:not(.off):not(:disabled):hover,
+  .ui-round:hover {
+    filter: brightness(1.14);
+  }
+}
+
+.ui-btn:not(.off):not(:disabled):active {
+  transform: scale(0.985);
+}
+
+/* At checkout, while the points slider is still moving, the way to pay waits for the figure it comes to rest on */
+.ui-pay {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: opacity 0.15s;
+}
+
+.ui-pay[data-moving] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* ---- How it moves: short, quiet, one easing ---- */
 
 .ui-col,
-.ui-media > img,
+.ui-media-pic,
+.up-media .ui-media-pic,
 .ui-media > span.t-3,
 .up-body {
   animation: fade 0.2s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
@@ -298,7 +347,7 @@ body {
 .demo {
   position: fixed;
   top: 20px;
-  left: 148px;
+  left: 252px;
   z-index: 20;
   font: 500 12px/1.3 'Inter', system-ui, sans-serif;
   color: #f5f5f7;
@@ -325,14 +374,27 @@ body {
   display: none;
 }
 
+/* On a phone the bar is full: there it is a small tab at the middle of the foot */
 @media (max-width: 739px) {
   .demo {
-    top: 14px;
-    left: 108px;
+    top: auto;
+    bottom: max(27px, calc(env(safe-area-inset-bottom) + 5px));
+    left: 50%;
+    z-index: 1;
+    transform: translateX(-50%);
+  }
+
+  .demo summary {
+    min-height: 28px;
+    opacity: 0.9;
   }
 
   .demo[open] {
+    top: 14px;
+    bottom: auto;
     left: 12px;
+    z-index: 20;
+    transform: none;
   }
 }
 

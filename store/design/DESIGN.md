@@ -7,6 +7,35 @@ the documents live.
 It replaces the wall of foil packs built in `cd58477`. That was drawn from an earlier pass of this design, which
 has been dropped: the store is now a plain dark interface, and only the card page keeps the pack's look.
 
+> **Since this was drawn (24 Nov 2026).** The pages have moved on from the still screens in a few places,
+> and where they differ the pages are right. `screens/store.css` is kept in step with the build
+> (`src/styles.css` is a copy of it); the `screens/*.html` pages are as first drawn.
+>
+> - **The name** is Shrug's wordmark from the brand kit (SHRUG VIP STORE in the bar, SHRUG VIP on the card
+>   page, SHRUG on the pack and the card), not type.
+> - **Prices are points**, shown with the points mark (a gold coin). Dollars are only what is left to pay
+>   by card. "Your points" is "Use points", and its slider is there wherever points can be used, at
+>   checkout too. The balance in the bar is the mark and the figure, without the small card.
+> - **Buttons are glass**, not solid white and grey: the thing to do next is the brightest pane on the
+>   screen. Rule 3 holds, with "white" read as "bright".
+> - **The display** has no title or count, and its tiles are upright (4 by 5), filled by the photograph.
+>   The page scrolls. Rule 2's "fits six without scrolling" no longer holds.
+> - **A product** shows its own pictures, paged by the arrows; another product is reached from the foot.
+>   Each picture is shown whole over an out-of-focus copy of itself. There is a line under the name for
+>   the product's write-up.
+> - **Everything bought goes through checkout**, points or not ("Claim for 400 points", then checkout, then
+>   "Confirm order"). The ways to finish come first; the address is asked for after one is chosen, and only
+>   where it is needed (a card or points alone, with none on file). Apple Pay brings its own.
+> - **Updates are not in these pages any more** (they are being given a place elsewhere): the bar has two
+>   sections, Store and My VIP. The server still serves them, and an update can be locked ("Unlock" for
+>   10 points).
+> - **Yours is My VIP**, and opens with the account at a glance: account type, card, balance, member since,
+>   purchases, investments. The balance in the bar goes there, and the card there goes to the card page.
+>   What was bought is listed apart from what was only requested or reserved.
+> - **The card page** has Sign in at its foot (no tear for someone who has had their pack), and under the
+>   card, in place of the balance ticket, the way to the store as plain white words with an arrow (Go to
+>   the store). Its labels are as they always were.
+
 In this folder:
 
 - `screens/*.html`: every screen as a static page, on `screens/store.css`. Open `screens/Store.html` and follow

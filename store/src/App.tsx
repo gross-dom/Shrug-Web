@@ -1,34 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fmtPoints } from '../shared/rules'
 import { CARD, DEMO, server, shopOf, type Backend, type Placed, type Shop, type StoreAnswer } from './backend'
+import { PointsMark, Wordmark } from './brand'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
 import { Lock, NoCloud } from './icons'
-import { Picture, ProductView, type Go } from './Product'
-import { UpdatesView } from './Updates'
+import { Picture, Price, ProductView, type Go } from './Product'
 import { badgeOf, priceOf } from './words'
 import { YoursView } from './Yours'
 
-// The store. Three sections under one bar: the store itself (a display of everything in it, pictures first,
-// and a screen for each product), Updates, and Yours. The card (the site's front page) is where a member
-// signs in; these pages show what the server says is theirs, and ask it for everything they do. A visitor,
-// who has not signed in, is shown the store all the same: what is for everyone, at its price, with the way
-// to the card where a member's balance would be. The markup and the stylesheet are the design's
-// (store/design), lifted as they are.
+// The store. Two sections under one bar: the store itself (a display of everything in it, pictures first,
+// and a screen for each product) and My VIP (the address still says ?s=yours, as links already sent do).
+// Updates are not shown here any more: Shrug has them elsewhere. (The server still answers with them, for
+// whatever reads them.) The card (the site's front page) is where a member signs in; these pages show what
+// the server says is theirs, and ask it for everything they do. A visitor, who has not signed in, is shown
+// the store all the same: what is for everyone, at its price, with the way to sign in where a member's
+// balance would be.
 
 const backend: Backend = DEMO ? demo : server
 
-type Section = 'store' | 'updates' | 'yours'
+type Section = 'store' | 'yours'
 interface Place {
   section: Section
   /** The product on screen, in the store. */
   product: string | null
 }
 
-/** Where an address says the page is: /store/?p=<id> is a product, ?s=updates and ?s=yours the other sections. */
+/** Where an address says the page is: /store/?p=<id> is a product, and ?s=yours is My VIP. (An old link to ?s=updates lands on the store.) */
 function placeOf(search: string): Place {
   const asked = new URLSearchParams(search)
   const section = asked.get('s')
-  return { section: section === 'updates' || section === 'yours' ? section : 'store', product: asked.get('p') }
+  return { section: section === 'yours' ? 'yours' : 'store', product: asked.get('p') }
 }
 const addressOf = (place: Place) => (place.section !== 'store' ? `?s=${place.section}` : place.product ? `?p=${encodeURIComponent(place.product)}` : './')
 
@@ -65,25 +66,27 @@ function useCount(to: number) {
   return shown
 }
 
-/** The balance at the right of the bar: the member's card, small, in its metal, then their points. It goes to the card. */
-function Wallet({ shop, spent }: { shop: Shop; spent: number }) {
+/** The balance at the right of the bar: the points mark, and their points. It goes to My VIP (where their card is, and the way to it). */
+function Wallet({ shop, spent, onOpen }: { shop: Shop; spent: number; onOpen: () => void }) {
   const me = shop.member
-  const metal = me.tier === 'gold' || me.tier === 'black' ? me.tier : 'silver'
   const points = useCount(me.points)
   return (
-    <a className="ui-wallet" href={CARD} aria-label={`Your card: ${metal}${me.number ? `, number ${me.number}` : ''}, ${fmtPoints(me.points)} points`}>
-      <span className={`ui-chip m-${metal}`} />
-      <span>
-        {fmtPoints(points)} <small>pts</small>
+    <a className="ui-wallet" href="?s=yours" aria-label={`Your balance: ${fmtPoints(me.points)} points. My VIP`} onClick={(e) => (e.preventDefault(), onOpen())}>
+      <span className="pts-n">
+        <PointsMark size={16} />
+        {fmtPoints(points)}
       </span>
       {spent > 0 && <span className="ui-delta">&minus;{fmtPoints(spent)}</span>}
     </a>
   )
 }
 
-/** Where a member's balance would be, for a visitor: the way to the card, which is where signing in is. */
+/** Where a member signs in: the card's page, asked to go straight to signing in and then back to the store. */
+const SIGN_IN = `${CARD}?signin=store`
+
+/** Where a member's balance would be, for a visitor: the way to sign in. */
 const SignIn = () => (
-  <a className="ui-btn sec sm" href={CARD}>
+  <a className="ui-btn sec sm" href={SIGN_IN}>
     Sign in
   </a>
 )
@@ -97,8 +100,7 @@ function Sections({ at, go }: { at: Section; go: (section: Section) => void }) {
   return (
     <nav className="ui-seg" aria-label="Sections">
       {link('store', 'Store')}
-      {link('updates', 'Updates')}
-      {link('yours', 'Yours')}
+      {link('yours', 'My VIP')}
     </nav>
   )
 }
@@ -121,9 +123,9 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
         const badge = badgeOf(product, shop.orders)
         return (
           <li key={product.id}>
-            <a className="ui-prod" href={`?p=${encodeURIComponent(product.id)}`} onClick={(e) => (e.preventDefault(), open(product.id))}>
+            <a className="ui-prod" href={`?p=${encodeURIComponent(product.id)}`} aria-label={[product.name, product.kind, priceOf(product), badge?.text].filter(Boolean).join(', ')} onClick={(e) => (e.preventDefault(), open(product.id))}>
               <span className="ui-prod-pic">
-                <Picture product={product} size={phone ? 26 : 44} />
+                <Picture product={product} size={phone ? 26 : 44} tile />
                 {badge && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
               </span>
               <span className="ui-prod-cap">
@@ -131,7 +133,9 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
                   <b>{product.name}</b>
                   <small>{product.kind}</small>
                 </span>
-                <span className="r">{priceOf(product) || ' '}</span>
+                <span className="r">
+                  <Price product={product} />
+                </span>
               </span>
             </a>
           </li>
@@ -139,25 +143,15 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
       })}
     </ol>
   )
-  const count = (
-    <span className="t-sm t-2">
-      {products.length} {products.length === 1 ? 'item' : 'items'}
-    </span>
-  )
+  // The bar says where this is (Shrug VIP Store): the page itself goes straight to what is in it
   return phone ? (
-    <main className="up-body" style={{ gap: 12, paddingBottom: 28 }}>
-      <div className="ui-head" style={{ paddingBottom: 0 }}>
-        <h1 className="t-title">Store</h1>
-        {count}
-      </div>
+    <main className="up-body" style={{ paddingBottom: 28 }}>
+      <h1 className="sr">Shrug VIP Store</h1>
       {list}
     </main>
   ) : (
-    <main className={`ui-display${products.length > 6 ? ' more' : ''}`}>
-      <div className="ui-head">
-        <h1 className="t-title">Store</h1>
-        {count}
-      </div>
+    <main className="ui-display">
+      <h1 className="sr">Shrug VIP Store</h1>
       {list}
     </main>
   )
@@ -203,7 +197,7 @@ function DemoTab({ signedIn, onChange }: { signedIn: boolean; onChange: () => vo
         </label>
         <div>
           <button type="button" disabled={!signedIn} onClick={() => (demoAddPoints(5000), onChange())}>
-            +5,000 pts
+            +5,000 points
           </button>
           <button type="button" onClick={() => (demoReset(), setScene('normal'), onChange())}>
             Start again
@@ -262,21 +256,24 @@ export function App() {
   const shop = answer.status === 'member' ? answer : answer.status === 'visitor' ? shopOf(answer) : null
   const product = shop && place.section === 'store' ? (shop.products.find((p) => p.id === place.product) ?? null) : null
   useEffect(() => {
-    const names: Record<Section, string> = { store: product ? product.name : 'Store', updates: 'Updates', yours: 'Yours' }
+    const names: Record<Section, string> = { store: product ? product.name : 'Store', yours: 'My VIP' }
     document.title = `${names[place.section]} · Shrug VIP`
   }, [place.section, product])
 
   let body: JSX.Element
-  /** What a visitor is told where only a member's things are: Updates and Yours. */
+  /** What a visitor is told where only a member's things are: My VIP. */
   const door = (
     <div className="ui-gate">
       <span className="ui-thumb lg">
         <Lock />
       </span>
-      <h2 className="t-h2">Open your pack to come in.</h2>
-      <p className="t-words">This part is for members.</p>
-      <div style={{ paddingTop: 6 }}>
-        <a className="ui-btn fit" href={CARD}>
+      <h2 className="t-h2">Sign in to come in.</h2>
+      <p className="t-words">This part is for members. New here? Open your pack first.</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 6 }}>
+        <a className="ui-btn fit" href={SIGN_IN}>
+          Sign in
+        </a>
+        <a className="ui-btn sec fit" href={CARD}>
           Open your pack
         </a>
       </div>
@@ -285,15 +282,13 @@ export function App() {
   if (shop && visiting && place.section !== 'store') {
     body = (
       <main className={phone ? 'up-body' : 'ui-display'}>
-        <h1 className="sr">Shrug VIP: {place.section === 'updates' ? 'Updates' : 'Yours'}</h1>
+        <h1 className="sr">Shrug VIP: My VIP</h1>
         {door}
       </main>
     )
   } else if (shop) {
     body =
-      place.section === 'updates' ? (
-        <UpdatesView shop={shop} phone={phone} backend={backend} onChange={load} />
-      ) : place.section === 'yours' ? (
+      place.section === 'yours' ? (
         <YoursView shop={shop} phone={phone} backend={backend} onChange={load} onSignOut={signout} />
       ) : product ? (
         <ProductView key={product.id} shop={shop} visiting={visiting} product={product} phone={phone} backend={backend} go={go} onPlaced={placed} />
@@ -335,7 +330,7 @@ export function App() {
 
   const mark = (
     <a className="ui-mark" href="./" onClick={(e) => (e.preventDefault(), move({ section: 'store', product: null }))}>
-      Shrug VIP
+      <Wordmark lockup="store" height={phone ? 12 : 14} />
     </a>
   )
   // A product is one screen and does not scroll; everything else on a phone is a page, as long as it is
@@ -346,7 +341,7 @@ export function App() {
         <div className={`up${oneScreen ? ' fix' : ''}`}>
           <header className="up-top">
             {mark}
-            {shop && (visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} />)}
+            {shop && (visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} onOpen={() => move({ section: 'yours', product: null })} />)}
           </header>
           {shop && (
             <div className="up-tabs">
@@ -360,7 +355,7 @@ export function App() {
           <header className="ui-top">
             {mark}
             {shop ? <Sections at={place.section} go={(section) => move({ section, product: null })} /> : <span />}
-            {shop ? visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} /> : <span />}
+            {shop ? visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} onOpen={() => move({ section: 'yours', product: null })} /> : <span />}
           </header>
           {body}
         </div>

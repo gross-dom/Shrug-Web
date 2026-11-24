@@ -56,8 +56,10 @@ export interface Product {
   floor: number | null
   postage: number | null
   description: string
-  /** Where its picture is, if it has one. */
+  /** Where its picture is, if it has one: the first of its pictures. */
   picture: string | null
+  /** Every picture it has, the first first. A product's own screen pages through them. */
+  pictures?: string[]
   /** A Document whose file has been supplied. */
   hasFile: boolean
   /** Choices the buyer picks one of (a chair's colours). */
@@ -77,10 +79,11 @@ export interface Product {
 
 /** An update: a document, as one member is shown it. Not for sale, so not in the store.
  *   open       theirs to read
+ *   locked     theirs to unlock: it has a price in points, and they have not paid it yet
  *   request    listed to them, but written for others: they may ask
  *   requested  they have asked
  *   soon       listed, with no file yet */
-export type UpdateState = 'open' | 'request' | 'requested' | 'soon'
+export type UpdateState = 'open' | 'locked' | 'request' | 'requested' | 'soon'
 
 export interface Update {
   id: string
@@ -90,6 +93,8 @@ export interface Update {
   /** Who it was written for, as its second line says it: "Everyone on the list", "Shrug 1 LPs". */
   forWhom: string
   state: UpdateState
+  /** What it costs to unlock, in points: nothing for one that is simply theirs to read. */
+  points: number
 }
 
 export const UPDATE_GROUPS = ['Funds', 'SPVs']
@@ -100,9 +105,10 @@ export function updateOf(member: Pick<Member, 'roles' | 'funds'>, product: Produ
   if (product.kind !== 'Document' || !isLP(member)) return null
   const theirs = canSee(member, product)
   if (!theirs && !product.listed) return null
-  // Theirs to read once it has a file (and, for one with a price, once they have it)
-  const state: UpdateState = !product.hasFile ? 'soon' : theirs && (free(product) || has(orders, product)) ? 'open' : has(orders, product) ? 'requested' : 'request'
-  return { id: product.id, name: product.name, group: product.group || UPDATE_GROUPS[0]!, forWhom: product.visibleTo.includes('Everyone') ? 'Everyone on the list' : product.visibleTo.join(', '), state }
+  // Theirs to read once it has a file. One with a price is unlocked first, with points; one written for
+  // others is asked for
+  const state: UpdateState = !product.hasFile ? 'soon' : theirs && (free(product) || has(orders, product)) ? 'open' : theirs ? 'locked' : has(orders, product) ? 'requested' : 'request'
+  return { id: product.id, name: product.name, group: product.group || UPDATE_GROUPS[0]!, forWhom: product.visibleTo.includes('Everyone') ? 'Everyone on the list' : product.visibleTo.join(', '), state, points: Math.max(0, Math.round(product.points ?? 0)) }
 }
 
 /** An address kept on file is a few lines of text: a name, a street, a city. Two lines at least. */
