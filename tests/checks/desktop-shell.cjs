@@ -384,7 +384,7 @@ const parts = {
       lights: [...document.querySelectorAll('.wf[data-app="finder"] .wf__light')].map((b) => b.getAttribute('aria-label')),
     }))
     check('menus: Pause Replies is in the mark\'s menu with Portfolio in front', names.app === 'Portfolio' && names.mark.includes('Pause Replies') && names.mark.includes('Screen Saver') && names.mark.includes('Never'), JSON.stringify(names.mark))
-    check('copy: "Minimize", "Group Chat", "Questions about Shrug", "VIP Store" in the Dock and the Go menu, and the One-pager in the Go menu, which is no link now: it opens in Preview', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager') && !names.go.some((n) => /opens in a new tab/.test(n)) && names.dock.includes('FAQs: Questions about Shrug') && names.lights.includes('Minimize Portfolio') && names.go.includes('VIP Store') && !names.go.some((n) => /^VIP,/.test(n)) && names.dock.join(' | ') === 'Portfolio: Every company, by vertical | Group Chat: What people say | FAQs: Questions about Shrug | Case Studies: Private. Ask nicely. | VIP Store: Points, and what they buy', JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
+    check('copy: "Minimize", "Group Chat", "Questions about Shrug", "VIP Store" in the Dock and the Go menu, and the One-pager in the Go menu, which is no link now: it opens in Preview', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager') && !names.go.some((n) => /opens in a new tab/.test(n)) && names.dock.includes('FAQs: Questions about Shrug') && names.lights.includes('Minimize Portfolio') && names.go.includes('VIP Store') && !names.go.some((n) => /^VIP,/.test(n)) && names.dock.join(' | ') === A.DOCK.map(([, name, line]) => `${name}: ${line}`).join(' | '), JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
     check('desk: icons are named "…, desktop icon", the locked folder says it is locked, they sit inside main, and nothing in the Dock is a link', names.desk.join(' | ') === 'Updates, desktop icon, locked | One-pager, desktop icon | Wallpapers, desktop icon' && names.deskInMain && names.dockLinks === 0, JSON.stringify(names.desk))
     check('title: names the window in front', names.title === 'Portfolio · Shrug', names.title)
     check('menus: What’s New in Shrug V is in the mark\'s menu, straight under About Shrug', names.mark[0] === 'About Shrug' && names.mark[1] === 'What’s New in Shrug V', JSON.stringify(names.mark.slice(0, 3)))
@@ -577,7 +577,7 @@ const parts = {
     await t.page.keyboard.press('F6')
     const along = [await focusIs(t.page)]
     for (const k of ['ArrowRight', 'ArrowRight', 'ArrowLeft', 'End', 'ArrowRight', 'Home', 'ArrowLeft']) { await t.page.keyboard.press(k); along.push(await focusIs(t.page)) }
-    check('keys: the arrows go along the Dock, Home and End to its ends, and it does not wrap', along.join(' ') === 'dock:finder dock:messages dock:notes dock:messages dock:store dock:store dock:finder dock:finder', along.join(' > '))
+    check('keys: the arrows go along the Dock, Home and End to its ends, and it does not wrap', along.join(' ') === `dock:finder dock:messages dock:notes dock:messages dock:${A.DOCK_IDS.at(-1)} dock:${A.DOCK_IDS.at(-1)} dock:finder dock:finder`, along.join(' > '))
 
     // Select All keeps to the window in front
     await t.page.evaluate(() => document.querySelector('.wf[data-active]').focus())

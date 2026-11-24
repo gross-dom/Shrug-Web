@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AboutApp } from '../apps/About'
 import { FinderApp } from '../apps/Finder'
+import { MailApp } from '../apps/Mail'
 import { MessagesApp } from '../apps/Messages'
 import { NotesApp } from '../apps/Notes'
 import { PreviewApp } from '../apps/Preview'
@@ -40,6 +41,7 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   updates: UpdatesApp,
   store: StoreApp,
   preview: PreviewApp,
+  mail: MailApp,
 }
 
 interface DeskItem {

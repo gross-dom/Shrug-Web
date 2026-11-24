@@ -4,7 +4,7 @@ const { chromium } = require('playwright')
   const browser = await chromium.launch()
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   // (the weather the desk's widget asks for is answered here: lib.cjs)
-  const { weather } = require('./lib.cjs')
+  const { weather, DOCK, DOCK_IDS } = require('./lib.cjs')
   await weather(ctx)
   const page = await ctx.newPage()
   const errors = []
@@ -40,14 +40,14 @@ const { chromium } = require('playwright')
   const mark = await page.evaluate(() => { const el = document.querySelector('[data-menu-mark]'); const shrug = '¯\\_(ツ)_/¯'; const rest = document.body.innerText.split(shrug).length - 1; return { text: el?.textContent.trim(), drawn: !!el?.querySelector('svg'), times: rest } })
   ok('the corner of the menu bar is the shrug emoticon, and that is the only place it is', mark.text === '¯\\_(ツ)_/¯' && !mark.drawn && mark.times === 1, JSON.stringify(mark))
   // The Dock: air between its icons. The one-pager, which it kept after a rule at its end, is a file on the desk
-  // (five tiles: the four apps, and VIP Store, which is an app as they are)
+  // (its tiles are the apps lib.cjs lists, VIP Store last among them, an app as they are)
   const dock = await page.evaluate(() => {
     const icons = [...document.querySelectorAll('.dock__item .dock__icon')].map((el) => el.getBoundingClientRect())
     const apps = icons.slice(0, 5)
     const gaps = apps.slice(1).map((r, i) => Math.round(r.left - apps[i].right))
     return { gaps, icons: icons.length, sheet: !!document.querySelector('.dock__icon--doc'), rule: !!document.querySelector('.dock__rule'), onDesk: !!document.querySelector('[data-desk="one-pager"] svg') }
   })
-  ok('the Dock keeps a quarter of an icon between two, and the one-pager has left it for the desk, the rule with it', dock.gaps.every((g) => g >= 12 && g <= 18) && dock.icons === 5 && !dock.sheet && !dock.rule && dock.onDesk, JSON.stringify(dock))
+  ok('the Dock keeps a quarter of an icon between two, and the one-pager has left it for the desk, the rule with it', dock.gaps.every((g) => g >= 12 && g <= 18) && dock.icons === DOCK.length && !dock.sheet && !dock.rule && dock.onDesk, JSON.stringify(dock))
   // every reply is written, then sent, at one pace
   const times = await page.evaluate(() => new Promise((done) => {
     const seen = new Map(); const typed = new Set(); const t0 = performance.now()
@@ -201,7 +201,7 @@ const { chromium } = require('playwright')
     const b = document.querySelector('.dock [data-dock-app="store"]')
     return b && { tag: b.tagName, at: items.indexOf(b), of: items.length, last: b.nextElementSibling === null, afterApps: b.previousElementSibling?.getAttribute('data-dock-app'), name: b.getAttribute('aria-label'), label: b.querySelector('.dock__label').textContent.trim(), tile: !!b.querySelector('.dock__icon svg.app-icon'), links: document.querySelectorAll('.dock a').length, open: b.hasAttribute('data-open') }
   })
-  ok('VIP Store is the fifth icon in the Dock, after Case Studies and the last, under its own tile and name', !!vip && vip.at === 4 && vip.of === 5 && vip.last && vip.afterApps === 'terminal' && vip.label === 'VIP Store' && vip.tile, JSON.stringify(vip))
+  ok('VIP Store is the last icon in the Dock, under its own tile and name', !!vip && vip.at === DOCK.length - 1 && vip.of === DOCK.length && vip.last && vip.afterApps === DOCK_IDS[DOCK.length - 2] && vip.label === 'VIP Store' && vip.tile, JSON.stringify(vip))
   ok('it is an app as the others are: a button that says what it holds, and nothing in the Dock is a link', !!vip && vip.tag === 'BUTTON' && vip.name === 'VIP Store: Points, and what they buy' && vip.links === 0 && !vip.open, JSON.stringify(vip))
   const front = () => page.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, open: [...document.querySelectorAll('.wf[data-app]')].filter((w) => !w.hasAttribute('inert') && getComputedStyle(w).visibility !== 'hidden').map((w) => w.dataset.app).sort().join(), dot: document.querySelector('.dock [data-dock-app="store"]').hasAttribute('data-open'), title: document.title }))
   const tabs = ctx.pages().length
@@ -234,14 +234,14 @@ const { chromium } = require('playwright')
   ok('a press inside the store brings its window to the front', behind.front === 'terminal' && (await front()).front === 'store', JSON.stringify(behind))
   // From the keyboard it is a stop along the Dock like any other, and Return comes to it
   await page.click('.dock [data-dock-app="terminal"]'); await page.waitForTimeout(400)
-  await page.focus('[data-dock-app="terminal"]'); await page.keyboard.press('ArrowRight')
+  await page.focus(`[data-dock-app="${DOCK_IDS[DOCK.length - 2]}"]`); await page.keyboard.press('ArrowRight')
   const onIt = await page.evaluate(() => document.activeElement?.getAttribute('data-dock-app'))
   await page.keyboard.press('Enter'); await page.waitForTimeout(500)
   ok('the arrow keys along the Dock stop on it, and Return brings its window forward', onIt === 'store' && (await front()).front === 'store' && ctx.pages().length === tabs, JSON.stringify({ onIt }))
   // The Go menu lists it with the Dock's apps, as the app it is; the one-pager after them, which opens in Preview (preview.cjs)
   await page.click('[data-menu-title="go"]'); await page.waitForTimeout(300)
   const go = await page.evaluate(() => [...document.querySelectorAll('[data-menu="go"] [data-menu-item]')].map((el) => `${el.tagName.toLowerCase()} ${el.getAttribute('aria-label') ?? el.textContent.trim()}${el.tagName === 'A' ? ` ${el.getAttribute('href')} ${el.target}` : ''}`))
-  ok('the Go menu has it after the apps, as one of them, and nothing in the menu is a link', go.join(' | ') === 'button Portfolio | button Group Chat | button FAQs | button Case Studies | button VIP Store | button One-pager', go.join(' | '))
+  ok('the Go menu has it after the apps, as one of them, and nothing in the menu is a link', go.join(' | ') === [...DOCK.map(([, name]) => `button ${name}`), 'button One-pager'].join(' | '), go.join(' | '))
   await page.keyboard.press('Escape'); await page.waitForTimeout(300)
   // Closed, it leaves the desk as it was: the dot goes, and the window behind it is in front
   await page.click('.wf[data-app="store"] button[aria-label^="Close"]'); await page.waitForTimeout(600)

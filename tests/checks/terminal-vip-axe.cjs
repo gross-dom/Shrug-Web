@@ -86,6 +86,21 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
   await arrived(p); await p.waitForTimeout(1500)
   await run(p, 'desktop About Shrug, its Drops row', '.wf[data-app="about"]')
   await t.ctx.close()
+  // Mail: its inbox, a conversation, the command palette, the sheet of its keys, and Inbox Zero
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=mail', reducedMotion: true })
+  p = t.page
+  await arrived(p); await p.waitForSelector('.wf[data-app="mail"] .ml-row', { timeout: 15000 }); await p.waitForTimeout(800)
+  await run(p, 'desktop Mail, the inbox', '.wf[data-app="mail"]')
+  await p.locator('.wf[data-app="mail"] .ml').focus()
+  await p.keyboard.press('Enter'); await p.waitForTimeout(400)
+  await run(p, 'desktop Mail, a conversation', '.wf[data-app="mail"]')
+  await p.keyboard.press('Control+k'); await p.waitForTimeout(400)
+  await run(p, 'desktop Mail, the command palette', '.wf[data-app="mail"]')
+  await p.keyboard.press('Escape'); await p.keyboard.press('?'); await p.waitForTimeout(400)
+  await run(p, 'desktop Mail, the sheet of its keys', '.wf[data-app="mail"]')
+  await p.keyboard.press('Escape'); await p.keyboard.press('Control+Shift+E'); await p.waitForTimeout(500)
+  await run(p, 'desktop Mail, Inbox Zero', '.wf[data-app="mail"]')
+  await t.ctx.close()
   // The windows laid out with VIP's classes
   t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=wallpapers,updates', reducedMotion: true })
   p = t.page

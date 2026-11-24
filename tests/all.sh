@@ -42,6 +42,7 @@ run "wallpapers"                     node wallpapers.cjs $BASE
 run "log in and LP Updates"          node account.cjs $BASE
 run "VIP Store, in its window"       node store-window.cjs $BASE
 run "Updates, Preview, the one-pager" node preview.cjs $BASE
+run "Mail"                           node mail.cjs $BASE
 run "desktop shell"                  node desktop-shell.cjs $BASE
 run "forced colours, reduced motion" node forced-colours.cjs $BASE
 run "messages"                       node messages.cjs $BASE

@@ -53,7 +53,7 @@ const check = (name, ok, detail = '') => {
   let t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty' })
   let p = t.page
   await p.waitForTimeout(1600)
-  check('at rest the Dock has its five apps, no rule after them and no Preview', (await dock(p)) === 'finder messages notes terminal store', await dock(p))
+  check('at rest the Dock has its apps, no rule after them and no Preview', (await dock(p)) === A.DOCK_IDS.join(' '), await dock(p))
   const file = await p.evaluate(() => { const b = document.querySelector('[data-desk="one-pager"]'); return { tag: b.tagName, says: b.getAttribute('aria-label'), links: document.querySelectorAll('.desk a').length } })
   check('the one-pager on the desk is a file, and no link: nothing says it opens anywhere else', file.tag === 'BUTTON' && file.says === 'One-pager, desktop icon' && file.links === 0, JSON.stringify(file))
   const tabs = t.ctx.pages().length
@@ -64,7 +64,7 @@ const check = (name, ok, detail = '') => {
   let b = await bar(p)
   let pg = await pages(p)
   check('opened, it is in Preview: a window of this desk, 980 by 720, in front, and no tab', size === '980x720' && (await front(p)) === 'preview' && t.ctx.pages().length === tabs && /^Preview/.test(await p.title()), JSON.stringify({ size }))
-  check('Preview is in the Dock now, after a rule, with its dot', (await dock(p)) === 'finder messages notes terminal store | preview*', await dock(p))
+  check('Preview is in the Dock now, after a rule, with its dot', (await dock(p)) === `${A.DOCK_IDS.join(' ')} | preview*`, await dock(p))
   check('its bar has the file’s name over which page it is on, with no Private tag, and Download and Full Screen to press', b.name === 'One-pager.pdf' && b.tag === null && b.sub === 'Page 1 of 2' && !b.noDownload && !b.noFull && b.download === 'Download', JSON.stringify(b))
   check('its two pages are down the side, the first picked, and the first page is whole in the window on Preview’s grey', pg.n === 2 && pg.thumbs === 2 && pg.on === 0 && pg.whole && pg.ground === 'rgb(223, 225, 230)' && pg.forWhom === null, JSON.stringify(pg))
   check('the page is fitted: a US Letter page at the 78% the window gives it', b.zoom === '78%' && pg.page === '478x619', JSON.stringify({ zoom: b.zoom, page: pg.page }))
@@ -119,7 +119,7 @@ const check = (name, ok, detail = '') => {
   // closed, Preview leaves the Dock, and the rule with it
   await p.locator(`${P} button[aria-label^="Close"]`).click()
   await p.waitForTimeout(700)
-  check('closed, Preview leaves the Dock and the rule goes with it', (await dock(p)) === 'finder messages notes terminal store', await dock(p))
+  check('closed, Preview leaves the Dock and the rule goes with it', (await dock(p)) === A.DOCK_IDS.join(' '), await dock(p))
 
   // every way to the one-pager on the desktop opens it here
   await p.click('[data-menu-title="go"]')

@@ -409,7 +409,7 @@ const touchOf = (t) => ({
       const of = (id) => document.querySelector(`.dock [data-dock-app="${id}"] svg.app-icon`)
       const out = {}
       // (rim: an outline stroked round the tile itself, over what is drawn on it: the lit edge the tiles used to wear)
-      // (the Dock's five tiles in their order: the four apps, and VIP Store, the fifth)
+      // (the tiles drawn after the Mac's own, and VIP Store's)
       for (const id of ['finder', 'messages', 'notes', 'terminal', 'store']) { const svg = of(id); out[id] = svg ? { stops: fills(svg).slice(0, 2), ellipse: !!svg.querySelector('ellipse'), dots: svg.querySelectorAll('circle').length, rect: svg.querySelectorAll('rect').length, rim: svg.querySelectorAll(':scope > path[stroke]').length } : null }
       const box = (el) => { const b = el.getBBox(); return [b.x, b.y, b.width, b.height] }
       const chat = of('messages')

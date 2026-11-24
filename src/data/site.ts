@@ -69,7 +69,19 @@ export function reach(words = '', subject = ''): Reach {
 /** There is a real way to write to Shrug (not only the one-pager). */
 export const reachable = () => reach().kind !== 'doc'
 
+/** The site is built to be shown round, not yet to go live: the demo, in which nothing is sent or charged
+ * (src/os/account.ts). */
+// (asked for with care: this file is also read when the site is built, where there is no such thing to ask)
+const DEMO = (import.meta.env as { VITE_ACCOUNT?: string } | undefined)?.VITE_ACCOUNT !== 'live'
+
 /** The address asks for the editor's view (`?draft`): what Shrug has still to
  * supply (an FAQ's answer) is drawn as the note that says so.
  * Without it a visitor is shown a line written for them instead. */
 export const DRAFT = typeof window !== 'undefined' && /[?&]draft(?![^&=]*=(0|false|off|no)(&|$))/i.test(window.location.search)
+
+/** Whether what is still templated is shown. Mail's exchanges, the listening room's episodes, the videos, the
+ * owners in Workspace: the design gives these as rows whose words are in [square brackets], for Shrug to
+ * supply. A visitor never reads a note written for Shrug, so on the live site an app whose rows are all
+ * still templated is left out, and its bracketed lines are not drawn. They are shown in the demo, which is
+ * built to be looked at before it is live, and to the editor (`?draft`). */
+export const TEMPLATED = DEMO || DRAFT

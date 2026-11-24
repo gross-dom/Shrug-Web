@@ -4,7 +4,10 @@
 // The VIP Store is one of them (design/v1): the store's own pages, in a window, last in the Dock. (It was a
 // link to the points site, which opened in a tab of its own.) An address can ask for it by name: `?open=vip`.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview'
+import { EXCHANGES } from '../data/mail'
+import { TEMPLATED } from '../data/site'
+
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail'
 
 export interface Size {
   w: number
@@ -30,8 +33,9 @@ export interface AppSpec {
   resizable: boolean
   /** How far the traffic lights' centers sit from the window's top and left
    * edges: 19 for the kit's 38px bar, 26 for its tall icon-and-label toolbar,
-   * 30 for the store's 60px bar, which they sit in the middle of. */
-  lightsY: 19 | 26 | 30
+   * 30 for the store's 60px bar, which they sit in the middle of. A window with a bar of its own height
+   * says where its middle is. */
+  lightsY: number
   /** In the Dock, in this order. */
   dock: number | null
   /** In the Dock only while it has something open, after the rule at the end of the apps, in this order
@@ -117,6 +121,19 @@ export const APPS: Record<AppId, AppSpec> = {
     nudge: { x: 0, y: -6 },
     resizable: true,
     lightsY: 30,
+    dock: 6,
+  },
+  // Mail: twenty email exchanges that led to something, read-only, in a window driven as Superhuman is
+  // (design/v1; src/apps/Mail.tsx). 1180 by 740, at which all twenty are on the screen at once
+  mail: {
+    id: 'mail',
+    name: 'Mail',
+    blurb: 'Twenty exchanges that led to something',
+    size: fit({ w: 0.82, h: 0.97 }, { w: 860, h: 560 }, { w: 1180, h: 740 }),
+    min: { w: 860, h: 560 },
+    nudge: { x: 0, y: -4 },
+    resizable: true,
+    lightsY: 25,
     dock: 4,
   },
   // The desk's wallpapers, to look at, to keep on the desk and to download. It is a folder on the desk, not
@@ -165,7 +182,11 @@ export const APPS: Record<AppId, AppSpec> = {
 
 export const APP_IDS = Object.keys(APPS) as AppId[]
 
-export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
+/** An app whose rows are all still templated is left out of the live site until they are supplied
+ * (data/site.ts, TEMPLATED): it is in the demo, and in the editor's view. */
+const HELD: Partial<Record<AppId, boolean>> = { mail: !TEMPLATED && EXCHANGES.every((exchange) => exchange.from.startsWith('[')) }
+
+export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null && !HELD[id]).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
 
 /** The apps that are in the Dock only while they have something open, after its rule. */
 export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
@@ -186,6 +207,8 @@ export const ALIASES: Record<string, AppId> = {
   vip: 'store',
   'vip-store': 'store',
   shop: 'store',
+  inbox: 'mail',
+  email: 'mail',
   // (the one-pager is a file that opens in Preview: asked for by its own name, that is what opens, on it)
   'one-pager': 'preview',
   onepager: 'preview',

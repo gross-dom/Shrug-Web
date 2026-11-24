@@ -57,6 +57,18 @@ const NETWORK = {
 
 exports.launch = () => chromium.launch()
 
+/** The Dock's apps, in their order, with the name and the line each tile says (src/os/apps.ts). The checks
+ * that hold the Dock, the Go menu and the keys along them to what they are read it here, in one place. */
+exports.DOCK = [
+  ['finder', 'Portfolio', 'Every company, by vertical'],
+  ['messages', 'Group Chat', 'What people say'],
+  ['notes', 'FAQs', 'Questions about Shrug'],
+  ['terminal', 'Case Studies', 'Private. Ask nicely.'],
+  ['mail', 'Mail', 'Twenty exchanges that led to something'],
+  ['store', 'VIP Store', 'Points, and what they buy'],
+]
+exports.DOCK_IDS = exports.DOCK.map(([id]) => id)
+
 /** Where VIP leads: the points site's address, as the site itself has it (`SITE.points` in src/data/site.ts). */
 exports.POINTS = /\bpoints: '([^']+)'/.exec(fs.readFileSync(path.join(S, '..', 'src', 'data', 'site.ts'), 'utf8'))[1]
 
