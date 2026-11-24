@@ -876,18 +876,20 @@ a.tile {
   transition: opacity 0.2s;
 }
 
-/* A company's own wordmark, once supplied: one colour, drawn as a mask so that it takes the colour of the text in either theme */
+/* A company's own wordmark: a picture of its shape, drawn as a mask so that it takes the colour of the text in
+   either theme. Its width is a share of the tile's (--share, from Portfolio.tsx, by the mark's proportions; a
+   quarter of the window stands in for the tile, four across, where the tile cannot be measured), and its
+   height follows from the proportions given with it. */
 .tile__mark {
-  /* Half the tile's width (an eighth of the window's, four across, where the tile cannot be measured) */
-  width: 12.5vw;
-  width: 50cqw;
+  width: calc(25vw * var(--share, 0.5));
+  width: calc(100cqw * var(--share, 0.5));
   aspect-ratio: 2 / 1;
   background: currentColor;
   -webkit-mask: center / contain no-repeat;
   mask: center / contain no-repeat;
 }
 
-/* Until there is one: the company's name, set in type as its wordmark */
+/* For a company with no mark yet: its name, set in type */
 .tile__name {
   font-size: clamp(18px, 2vw, 27px);
   line-height: 1.15;

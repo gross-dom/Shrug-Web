@@ -271,12 +271,15 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
   founders (those Shrug funded) or investors (everyone else). The counts are of the data.
 - **Portfolio** is every company in `src/data/portfolio.ts` as an edge-to-edge grid of squares. A tile lit
   (a pointer over it, the keyboard on it, or the first tap on a touch screen; the second tap follows the
-  link) shows the company's sector, name and write-up. At rest a tile shows the company's wordmark, as Founders Fund's
-  portfolio does, and not its app icon. **Still placeholder:** no company's own wordmark has been supplied
-  (the repository has only their app icons), so each name is set in type, all in the one face; and a lit
-  tile shows a dark fill marked `[Photo: …]` where the photograph will be. To put a real one in, save the logo as a
-  one-colour SVG and the photograph (800px square or more) in `vc/public/portfolio/`, and name the files
-  against the company's key in `ART` at the top of `vc/src/pages/Portfolio.tsx`. Sixteen companies have no
+  link) shows the company's sector, name and write-up. At rest a tile shows the company's own wordmark, as
+  Founders Fund's portfolio does, and not its app icon: 69 of the 79, each taken from the head of the
+  company's own website and kept in `vc/public/companies/` as a picture of its shape alone, which the page
+  draws in the colour of its text in either theme (`vc/src/marks.ts` lists them and says how to replace
+  one). Ten have none and show their name in type: Cameo, Cloud23, Enigma, Layer2, The Network, Lula, Alt,
+  HQ Trivia, Poparazzi and YOLO (`marks.ts` says why for each). **Still placeholder:** a lit tile shows a
+  dark fill marked `[Photo: …]` where the photograph will be; to put one in, save it (800px square or
+  more) in `vc/public/companies/` and name it against the company's key in `PHOTOS` at the top of
+  `vc/src/pages/Portfolio.tsx`. Sixteen companies have no
   write-up in the data; their tiles show the sector and the name.
 - **VIP** is a wall of cards in columns, in the order `vc/src/wall.ts` gives them. The 33 photographs are
   real (the ones in `src/data/drops.ts`, each under its drop's name), and so is the one text card about the

@@ -1,49 +1,57 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type MouseEvent } from 'react'
 import { Arrow } from '../Brand'
 import { COMPANIES, type Company } from '../content'
+import { MARKS, type Mark } from '../marks'
 
 // The portfolio: a grid of square tiles from one edge of the window to the other, with nothing between
-// them and nothing else on the page, as Founders Fund's is. At rest a tile holds the company's wordmark and
-// that is all: its name as a mark, in the colour of the text, not its app icon. Highlighted
-// (a pointer over it, the keyboard on it, or the first tap on a touch screen) the logo gives way to the
-// company's photograph, with its sector, its name and Shrug's line on it laid over the foot. A tile is one
-// link to the company's site; a company with no site still highlights, and goes nowhere.
+// them and nothing else on the page, as Founders Fund's is. At rest a tile holds the company's own wordmark
+// and that is all: the mark its own site carries, in the colour of this page's text, not its app icon.
+// Highlighted (a pointer over it, the keyboard on it, or the first tap on a touch screen) the mark gives way
+// to the company's photograph, with its sector, its name and Shrug's line on it laid over the foot. A tile
+// is one link to the company's site; a company with no site still highlights, and goes nowhere.
+//
+// The marks are in vc/public/companies and are listed in ../marks.ts, which says where they came from and
+// which companies have none yet: those show their name set in type.
 
-/** WHERE THE REAL PICTURES GO. The design wants, for each company, its wordmark in one colour and a
- * photograph. Neither has been supplied (the repository has the companies' app icons, in public/logos, and
- * those are not wordmarks and are not shown here). Until they are, a tile shows the company's name set in
- * type as its wordmark, every one in the same face; and a dark fill marked [Photo: …] where the photograph
- * will be.
+/** WHERE THE PHOTOGRAPHS GO. None has been supplied, so a lit tile shows a dark fill marked [Photo: …].
+ * To put one in, save it in vc/public/companies (800px square or more; it is cropped to cover the tile)
+ * and name the file here against the company's `key` from src/data/portfolio.ts:
  *
- * To put one in: save the logo as an SVG in vc/public/portfolio (one colour, any colour: it is drawn as a
- * mask and takes the colour of the text) and the photograph beside it (800px square or more; it is cropped
- * to cover the tile), then name the files here against the company's `key` from src/data/portfolio.ts:
- *
- *   Varda: { logo: 'varda.svg', photo: 'varda.jpg' },
- *
- * A company named here with only one of the two shows that one and keeps the placeholder for the other. */
-const ART: Record<string, { logo?: string; photo?: string }> = {}
+ *   Varda: 'varda.jpg', */
+const PHOTOS: Record<string, string> = {}
 
-const fileOf = (name: string) => `/portfolio/${name}`
+/** How much of its tile's width a mark takes. A long thin wordmark and a square symbol given the same width
+ * would not look the same size, so a mark's width goes by the root of its proportions: about half the tile
+ * for a wordmark of ordinary length, less for a compact one, more for a long one, within limits. */
+const shareOf = (mark: Mark) => Math.min(0.64, Math.max(0.22, 0.5 * Math.sqrt(mark.w / mark.h / 4.5)))
+
+// Not /portfolio, which is this page's own address: a folder of that name beside the page would be taken for it
+const fileOf = (name: string) => `/companies/${name}`
 
 function Tile({ company, on, onTap }: { company: Company; on: boolean; onTap: (e: MouseEvent) => void }) {
-  const art = ART[company.key] ?? {}
+  const mark = MARKS[company.key]
+  const photo = PHOTOS[company.key]
   const inside = (
     <>
       <span className="tile__logo">
-        {art.logo ? (
-          <span className="tile__mark" role="img" aria-label={company.name} style={{ maskImage: `url(${fileOf(art.logo)})`, WebkitMaskImage: `url(${fileOf(art.logo)})` }} />
+        {mark ? (
+          <span
+            className="tile__mark"
+            role="img"
+            aria-label={company.name}
+            style={{ '--share': shareOf(mark).toFixed(3), aspectRatio: `${mark.w} / ${mark.h}`, maskImage: `url(${fileOf(mark.file)})`, WebkitMaskImage: `url(${fileOf(mark.file)})` } as CSSProperties}
+          />
         ) : (
           <span className="tile__name">{company.name}</span>
         )}
       </span>
       {/* The photograph says nothing the words do not: it is not read out */}
       <span className="tile__photo" aria-hidden>
-        {art.photo && <img src={fileOf(art.photo)} alt="" loading="lazy" decoding="async" />}
+        {photo && <img src={fileOf(photo)} alt="" loading="lazy" decoding="async" />}
       </span>
       <span className="tile__shade" aria-hidden />
       <span className="tile__top" aria-hidden>
-        <span className="label">{!art.photo && `[Photo: ${company.name}]`}</span>
+        <span className="label">{!photo && `[Photo: ${company.name}]`}</span>
         {company.url && <Arrow size={13} />}
       </span>
       {/* Faded out at rest, never taken off the page: a screen reader has the sector and the write-up whether or not the tile is lit */}
