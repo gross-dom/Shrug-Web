@@ -9,3 +9,6 @@ dist
 .agents
 tests
 docs
+# The design handovers are read by people, not by the build; and design/v1/reference holds screenshots that
+# are kept out of the repository (.gitignore), which this file would otherwise send up with the rest
+design
