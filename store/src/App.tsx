@@ -5,29 +5,29 @@ import { PointsMark, Wordmark } from './brand'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
 import { Lock, NoCloud } from './icons'
 import { Picture, Price, ProductView, type Go } from './Product'
-import { UpdatesView } from './Updates'
 import { badgeOf, priceOf } from './words'
 import { YoursView } from './Yours'
 
-// The store. Three sections under one bar: the store itself (a display of everything in it, pictures first,
-// and a screen for each product), Updates, and My VIP (the address still says ?s=yours, as links already
-// sent do). The card (the site's front page) is where a member signs in; these pages show what the server
-// says is theirs, and ask it for everything they do.
+// The store. Two sections under one bar: the store itself (a display of everything in it, pictures first,
+// and a screen for each product) and My VIP (the address still says ?s=yours, as links already sent do).
+// Updates are not shown here any more: Shrug has them elsewhere. (The server still answers with them, for
+// whatever reads them.) The card (the site's front page) is where a member signs in; these pages show what
+// the server says is theirs, and ask it for everything they do.
 
 const backend: Backend = DEMO ? demo : server
 
-type Section = 'store' | 'updates' | 'yours'
+type Section = 'store' | 'yours'
 interface Place {
   section: Section
   /** The product on screen, in the store. */
   product: string | null
 }
 
-/** Where an address says the page is: /store/?p=<id> is a product, ?s=updates and ?s=yours the other sections. */
+/** Where an address says the page is: /store/?p=<id> is a product, and ?s=yours is My VIP. (An old link to ?s=updates lands on the store.) */
 function placeOf(search: string): Place {
   const asked = new URLSearchParams(search)
   const section = asked.get('s')
-  return { section: section === 'updates' || section === 'yours' ? section : 'store', product: asked.get('p') }
+  return { section: section === 'yours' ? 'yours' : 'store', product: asked.get('p') }
 }
 const addressOf = (place: Place) => (place.section !== 'store' ? `?s=${place.section}` : place.product ? `?p=${encodeURIComponent(place.product)}` : './')
 
@@ -89,7 +89,6 @@ function Sections({ at, go }: { at: Section; go: (section: Section) => void }) {
   return (
     <nav className="ui-seg" aria-label="Sections">
       {link('store', 'Store')}
-      {link('updates', 'Updates')}
       {link('yours', 'My VIP')}
     </nav>
   )
@@ -245,16 +244,14 @@ export function App() {
   const shop = answer.status === 'member' ? answer : null
   const product = shop && place.section === 'store' ? (shop.products.find((p) => p.id === place.product) ?? null) : null
   useEffect(() => {
-    const names: Record<Section, string> = { store: product ? product.name : 'Store', updates: 'Updates', yours: 'My VIP' }
+    const names: Record<Section, string> = { store: product ? product.name : 'Store', yours: 'My VIP' }
     document.title = `${names[place.section]} · Shrug VIP`
   }, [place.section, product])
 
   let body: JSX.Element
   if (shop) {
     body =
-      place.section === 'updates' ? (
-        <UpdatesView shop={shop} phone={phone} backend={backend} onChange={load} onSpent={(points) => setSpent((n) => n + points)} />
-      ) : place.section === 'yours' ? (
+      place.section === 'yours' ? (
         <YoursView shop={shop} phone={phone} backend={backend} onChange={load} onSignOut={signout} />
       ) : product ? (
         <ProductView key={product.id} shop={shop} product={product} phone={phone} backend={backend} go={go} onPlaced={placed} />

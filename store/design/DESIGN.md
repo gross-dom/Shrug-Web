@@ -25,11 +25,14 @@ has been dropped: the store is now a plain dark interface, and only the card pag
 >   the product's write-up.
 > - **Everything bought goes through checkout**, points or not ("Claim for 400 points", then checkout, then
 >   "Confirm order"). The address is asked for there, never on the product.
-> - **Updates** can be locked: "Unlock" for 10 points. A row has its surface only under the pointer.
+> - **Updates are not in these pages any more** (they are being given a place elsewhere): the bar has two
+>   sections, Store and My VIP. The server still serves them, and an update can be locked ("Unlock" for
+>   10 points).
 > - **Yours is My VIP**, and opens with the account at a glance: account type, card, balance, member since,
 >   purchases, investments.
-> - **The card page** has Sign in at its foot (no tear for someone who has had their pack), one white
->   button under the card (Go to the store) in place of the balance ticket, and rounded controls.
+> - **The card page** has Sign in at its foot (no tear for someone who has had their pack), and under the
+>   card, in place of the balance ticket, the way to the store as plain white words with an arrow (Go to
+>   the store). Its labels are rounded glass.
 
 In this folder:
 

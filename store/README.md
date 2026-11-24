@@ -7,10 +7,11 @@ Where Shrug people see their points and spend them. Two pages and a small server
   comes out. After that they use **Sign in** at the foot of the page: the same code by email, and their card
   is simply there, with nothing to tear (a pack waiting to be torn can also be skipped). Under the card is
   one button, **Go to the store**.
-- **The store** (`/store/`, `src/`): three sections under one bar. **Store** is a display of everything in
-  it, pictures first, and a screen for each product, with checkout and the receipt in its panel. **Updates**
-  is what Shrug has written to its LPs. **My VIP** is the member's card, their account at a glance, what they
-  have bought, the funds they are in, their points and their address.
+- **The store** (`/store/`, `src/`): two sections under one bar. **Store** is a display of everything in
+  it, pictures first, and a screen for each product, with checkout and the receipt in its panel. **My VIP**
+  is the member's card, their account at a glance, what they have bought, the funds they are in, their
+  points and their address. (Updates, what Shrug writes to its LPs, are no longer shown here: they are
+  being given a place of their own elsewhere. The server still has them: see below.)
 - **The server** (`api/`): signs members in, says who may see what, places orders and takes payments.
   Everything is kept in the Shrug base in Airtable; there is no other database.
 
@@ -61,8 +62,8 @@ Besides buying:
   Orders and Shrug writes back. (Give it a Floor equal to its whole price: points are not used on it.)
 - Status **Pre-order** with no Points yet: the member reserves one, and nothing is taken. With Points, it
   is pre-ordered as anything else is bought, and the button says "Pre-order for …".
-- A **Document** (a PDF) is an update, and is in Updates, not the store. One with no price is there for
-  anyone who may see it; one with a price is **unlocked** with points first (see Updates below).
+- A **Document** (a PDF) is an update, and is not in the store. One with no price is there for anyone
+  who may see it; one with a price is **unlocked** with points first (see Updates below).
 
 ## The pages, and the design they are built from
 
@@ -70,8 +71,7 @@ The design is in `design/`: `DESIGN.md`, and every screen as a still page in `de
 were built from it, and have since moved on from it (`DESIGN.md` says where, at its head): the still pages
 show the store as it was first drawn. `src/styles.css` **is** `design/screens/store.css`, kept the same: to
 change how the store looks, change that file and copy it across. The markup is in `src/App.tsx` (the bar,
-the display, the gates), `src/Product.tsx` (a product, checkout, the receipt), `src/Updates.tsx` and
-`src/Yours.tsx` (My VIP). `src/app.css` holds what a still page cannot say: the size of a real window and
+the display, the gates), `src/Product.tsx` (a product, checkout, the receipt) and `src/Yours.tsx` (My VIP). `src/app.css` holds what a still page cannot say: the size of a real window and
 phone, where a long page scrolls, the box an address is typed in, what is under the pointer, and how
 things move.
 
@@ -82,8 +82,8 @@ things move.
   points. Dollars appear only as what is left to pay by card, and as postage.
 - **Buttons are glass**: a pane that what is behind shows through, lit along its top edge. The thing to do
   next is the brightest one on the screen (`.ui-btn`), anything else that can be pressed a dimmer one
-  (`.sec`). The card page's labels and its "Go to the store" are the same; the links in its footer are the
-  footer's own small capitals.
+  (`.sec`). Each has a hairline round its rim. The card page's labels are the same glass; its "Go to the
+  store" is plain white words with an arrow, and the links in its footer are the footer's own small capitals.
 - **Photographs.** The ones Shrug has supplied are in `public/pictures/`, each whole, as WebP at two sizes,
   and are found by the product's name (`src/pictures.ts`). A product with none there shows what its row in
   Airtable has (`Picture`, which can hold several), and one with nothing shows a drawing of the sort of
@@ -97,8 +97,8 @@ things move.
 - **A product's one line** is its `Description` in Airtable, shown under its name.
 - A phone's layout is used under 740px across. There a product's button stays at the foot and what is
   above it scrolls.
-- A product is in the address (`/store/?p=<id>`), so a link from an email lands on it; `?s=updates` and
-  `?s=yours` (My VIP) are the other two sections.
+- A product is in the address (`/store/?p=<id>`), so a link from an email lands on it; `?s=yours` is
+  My VIP. An old link to `?s=updates` lands on the store.
 - Where a product has `Options`, they are drawn as swatches. Black, Stone and White are known; any other
   is given its color after its name ("Sand #c8b89a"). The chairs are now a product for each color
   ("Workspace, Matte Black"), so none has options at present.
@@ -112,8 +112,11 @@ still.
 
 ## Updates, and the address on file
 
-**Updates** are the documents (a Product whose Kind is Document). They are not in the store. Each is shown
-to a member in one of five states:
+**Updates** are the documents (a Product whose Kind is Document). **The store's pages no longer show them**
+(the Updates section has been taken out: Shrug is putting them somewhere else), but the server
+still does everything below, for whatever comes to read them: `/api/store` answers with `updates`, an order
+asks for one or unlocks one, and `/api/file` hands one over. The page that showed them is in the
+repository's history (`src/Updates.tsx`). Each update is, for a member, in one of five states:
 
 | State | When |
 | --- | --- |

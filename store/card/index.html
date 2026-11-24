@@ -782,10 +782,10 @@ html.is-scroll .page { touch-action: pan-y pinch-zoom; }
 .shelf > .after { animation: rise 0.7s ease-out 0.9s both; } /* after the card has arrived */
 /* Dark, and quiet: the wall's black a shade up, ruled in dark grey, with grey type. A label says what to do
    next and is not the thing to look at; the note under a card, which is, keeps its gold rule and white type. */
-/* Glass. What the page says to the visitor, and the one button under a card, are panes of it: the wall shows
-   through, out of focus; the top edge catches the light; a hairline runs round the rim. (The footer's links
-   are not: they are the footer's own type.) */
-.label, .label2, .ticket, .go {
+/* Glass. What the page says to the visitor is a pane of it: the wall shows through, out of focus; the top
+   edge catches the light; a hairline runs round the rim. (The footer's links are not, and nor is the way to
+   the store under a card: those are plain words.) */
+.label, .label2, .ticket {
   -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
 }
 .label, .label2 { box-sizing: border-box; margin: 0; background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.06)); color: #d5d7dc; font-family: var(--sans); }
@@ -833,19 +833,20 @@ html.is-scroll .page { touch-action: pan-y pinch-zoom; }
 .ticket .linkbtn { color: var(--paper); }
 .ticket-next { display: block; margin-top: 7px; }
 
-/* Under a member's card there is one thing to do: go to the store. One rounded button of bright glass, as the store's own are. */
+/* Under a member's card there is one thing to do: go to the store. It is said in words, with nothing drawn
+   round them: white, a size up from a label, and an arrow that leans the way they go. What answers a press
+   is 44 pixels deep all the same. */
 .go {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
-  min-width: min(260px, var(--shelf-w)); height: calc(50px * var(--tf)); padding: 0 calc(28px * var(--tf)); border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.17)); color: #fff; font: 600 calc(16px * var(--tf)) / 1 var(--sans); letter-spacing: -0.01em; text-decoration: none; white-space: nowrap;
-  box-shadow: inset 0 12px 16px -12px rgba(255, 255, 255, 0.4), inset 0 -12px 16px -12px rgba(255, 255, 255, 0.18), 0 12px 30px rgba(0, 0, 0, 0.5); /* no line round it: the light is soft, inside the pane */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); cursor: pointer; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-  transition: filter 0.15s, transform 0.15s;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+  height: calc(44px * var(--tf)); padding: 0 calc(12px * var(--tf)); border-radius: 10px;
+  color: #fff; font: 600 calc(17px * var(--tf)) / 1 var(--sans); letter-spacing: -0.01em; text-decoration: none; white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6); cursor: pointer; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  transition: opacity 0.15s;
 }
 .go svg { flex: none; margin-right: -4px; transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
-@media (hover: hover) { .go:hover { filter: brightness(1.14); } .go:hover svg { transform: translateX(3px); } }
-.go:active { transform: scale(0.98); }
-.go:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
+@media (hover: hover) { .go:hover svg { transform: translateX(4px); } }
+.go:active { opacity: 0.7; }
+.go:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 /* Pressed, the card's page fades and the store comes in */
 body.to-store .page { opacity: 0; transform: scale(1.03); transition: opacity 0.4s ease, transform 0.45s ease; }
 

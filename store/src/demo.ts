@@ -23,7 +23,7 @@ export const SCENES: Record<string, string> = {
   normal: 'As it is',
   soldout: 'The acrylic sold out',
   kept: 'The acrylic kept to Shrug 1 LPs',
-  empty: 'Nothing in the store, no updates',
+  empty: 'Nothing in the store',
   down: 'The store does not answer',
   declined: 'A payment that fails',
   lastgone: 'The last one goes as you buy',
