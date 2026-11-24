@@ -1,7 +1,12 @@
 // The few things every answer needs: JSON out, JSON in, and cookies.
 
-export const json = (body: unknown, init: { status?: number; headers?: HeadersInit } = {}) =>
-  new Response(JSON.stringify(body), { status: init.status ?? 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...Object.fromEntries(new Headers(init.headers)) } })
+export const json = (body: unknown, init: { status?: number; headers?: HeadersInit } = {}) => {
+  // (Kept as a list of headers, not folded into an object: an answer may set more than one cookie)
+  const headers = new Headers(init.headers)
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json; charset=utf-8')
+  if (!headers.has('Cache-Control')) headers.set('Cache-Control', 'no-store')
+  return new Response(JSON.stringify(body), { status: init.status ?? 200, headers })
+}
 
 /** The body of a request as an object, or an empty one where it is not JSON. */
 export async function read(request: Request): Promise<Record<string, unknown>> {

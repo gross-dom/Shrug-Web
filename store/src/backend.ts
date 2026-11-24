@@ -1,4 +1,4 @@
-import type { Member, Order, Product, Update } from '../shared/rules'
+import type { Member, Needs, Order, Picture, Product, Update, Via } from '../shared/rules'
 
 // What the pages ask of the server, and the answers they can get. Built as the demo, a stand-in in the
 // browser answers instead (demo.ts), in exactly these shapes.
@@ -7,11 +7,11 @@ declare const __DEMO__: boolean
 export const DEMO = __DEMO__
 
 /** A member, with what My VIP shows of them besides. */
-export type Who = Member & { number: string; since: number | null; reason: string | null; emails: boolean; email: string; shipTo: string }
+export type Who = Member & { number: string; since: number | null; reason: string | null; emails: boolean; email: string; shipTo: string; picture?: Picture | null }
 
 /** What the server says of whoever is asking: a visitor (nobody signed in), who is shown the store and nothing
  * of anybody's, or a member, with everything that is theirs. */
-export type StoreAnswer = { status: 'visitor'; products: Product[]; stripeKey: string } | { status: 'member'; member: Who; products: Product[]; updates: Update[]; orders: Order[]; stripeKey: string }
+export type StoreAnswer = { status: 'visitor'; products: Product[]; stripeKey: string } | { status: 'member'; member: Who; products: Product[]; updates: Update[]; orders: Order[]; stripeKey: string; needs?: Needs; via?: Via }
 export type Shop = Extract<StoreAnswer, { status: 'member' }>
 
 /** The store as a visitor has it, in the shape the pages are drawn from: the same shelves, and a member who is
@@ -29,7 +29,10 @@ export const shopOf = (answer: Extract<StoreAnswer, { status: 'visitor' }>): Sho
 export const CARD = import.meta.env.BASE_URL.replace(/store\/$/, '')
 
 export type Failed = { error: string }
-export type Placed = { ok: true; order: Order; points: number }
+/** An order placed. For a visitor, who paid without an account: `account` says whether the payment made them
+ * one (`new`: they are signed in to it, and are asked for a phone number) or the email already had one
+ * (`theirs`: the order is that account's, and nobody is signed in), and `email` is where the receipt went. */
+export type Placed = { ok: true; order: Order; points: number; account?: 'new' | 'theirs'; email?: string }
 export type PayStart = { ok: true; clientSecret: string; payment: string; cents: number } | { ok: true; demo: true; cents: number }
 
 export interface Asked {
@@ -39,6 +42,10 @@ export interface Asked {
   points?: number
   /** An address typed with the order: where it goes, and kept on file from then on. */
   shipTo?: string
+  /** A visitor's: where the receipt goes, which is the account the payment makes. */
+  email?: string
+  /** A visitor's: Apple Pay will give the address, so none is typed. */
+  wallet?: boolean
 }
 
 export interface Backend {
@@ -55,6 +62,8 @@ export interface Backend {
   view(update: Update): Promise<string | Failed>
   /** An update's file, saved to the device. */
   download(update: Update): Promise<true | Failed>
+  /** A phone number for the account that is signed in: asked with the number alone, it is texted six digits; with the six digits, it is theirs to sign in with. */
+  phone(phone: string, code?: string): Promise<{ ok: true; phone?: string } | Failed>
   signout(): Promise<void>
 }
 
@@ -89,6 +98,7 @@ export const server: Backend = {
       return { error: 'offline' }
     }
   },
+  phone: (phone, code) => call<{ ok: true; phone?: string }>('POST', '/api/phone', code ? { phone, code } : { phone }),
   async signout() {
     await call('POST', '/api/signout', {})
   },

@@ -1231,8 +1231,14 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   const controls = el('span', 'demo-controls');
   controls.append(pickLabel, pick, bump, reset);
   bar.append(tag, more, hint, controls);
-  document.body.prepend(bar);
-  document.body.classList.add('is-demo');
+  // In a window of the desk (the desktop's VIP Store), who is in the pack is whoever is logged in there: the
+  // desk's own demo says so, and these controls are not shown
+  let inWindow = false;
+  try { inWindow = window.parent !== window && !!window.parent.shrugDesk; } catch (e) { /* somebody else's frame */ }
+  if (!inWindow) {
+    document.body.prepend(bar);
+    document.body.classList.add('is-demo');
+  }
 
   function sync() { bump.disabled = !(state.session && state.session.member); }
   sync();
@@ -1357,6 +1363,12 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       clearTimeout(timer);
     }
   }
+
+  // The desk this page is in a window of, when it is one (the desktop's VIP Store window opens the pack here
+  // the first time someone logged in comes to the store). It is this page's own site. Nobody signs in here
+  // then: the desk has done that, so the pack hangs with its strip loose and the tear is theirs. The desk is
+  // told when someone signs out.
+  const DESK = (() => { try { const up = window.parent; return up !== window && up.shrugDesk ? up.shrugDesk : null; } catch (e) { return null; } })();
 
   // demo.js (never deployed) swaps this for a stand-in that runs in the browser.
   const backend = window.ShrugBackend || {
@@ -3622,6 +3634,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     S.who = null;
     S.email = '';
     S.engaged = false;
+    // In a window of the desk, who is logged in is the desk's to show: it is told, and takes it from there
+    if (DESK) { DESK.changed(); return true; }
     hangPack();
     const strip = $('tearBtn');
     if (strip) strip.focus({ preventScroll: true });

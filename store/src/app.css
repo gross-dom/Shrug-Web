@@ -442,3 +442,122 @@ body {
   outline: 2px solid #f5f5f7;
   outline-offset: 2px;
 }
+
+/* ---- In a window of the desk (desk.ts): sized to its window, not the browser. These are design/v1's own
+   adjustments (screens/shrugos.css, "The store in a window"), less the bar, which the window draws: a 28px
+   edge and an 88px foot, so that a product does not scroll at 1120 by 720 ---- */
+
+.win .ui {
+  min-height: 0;
+  --edge: 28px;
+  --bar: 0px;
+  --foot: 88px;
+}
+
+.win .ui-main {
+  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 400px);
+  gap: 36px;
+}
+
+.win .ui-col {
+  gap: 15px;
+}
+
+.win .ui-media {
+  margin: 2px 0 16px;
+  border-radius: 22px;
+}
+
+.win .t-title {
+  font-size: 30px;
+}
+
+.win .ui-card.rows > div {
+  padding: 10px 0;
+}
+
+.win .ui-btn {
+  min-height: 48px;
+}
+
+.win .ui-rail {
+  gap: 12px;
+}
+
+.win .ui-rail ol {
+  gap: 0;
+}
+
+.win .ui-rail ol a {
+  min-height: 56px;
+  gap: 9px;
+  padding: 6px 10px 6px 6px;
+}
+
+.win .ui-rail ol a > span:last-child {
+  font-size: 13px;
+}
+
+.win .ui-rail .ui-thumb {
+  width: 40px;
+  height: 40px;
+}
+
+.win .mc-win b {
+  font-size: 50px;
+}
+
+.win .ui-display {
+  padding: 8px 0 22px;
+}
+
+.win .ui-shop {
+  gap: 20px 20px;
+}
+
+.win .ui-page {
+  gap: 40px;
+  padding-top: 12px;
+}
+
+/* A whole view that is one thing to say and one thing to press: nothing in the store, no answer, My VIP for a visitor */
+.ui-door {
+  position: absolute;
+  inset: var(--bar) var(--edge) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.ui-door svg {
+  color: var(--text-3);
+}
+
+.ui-door .ui-btn.fit {
+  align-self: center;
+}
+
+/* Somewhere to type one line, at checkout and after it: a visitor's email, a phone number, a code */
+input.ui-in {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 400 15px/1.3 var(--font);
+}
+
+input.ui-in::placeholder {
+  color: var(--text-3);
+}
+
+input.ui-in:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}

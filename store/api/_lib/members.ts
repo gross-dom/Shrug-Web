@@ -1,4 +1,4 @@
-import { add, all, change, F, files, list, num, str, T, type Row } from './airtable.js'
+import { add, all, change, F, files, list, num, remove, str, T, type Row } from './airtable.js'
 import { phoneOf, STANDARD_TIER, STARTING_POINTS, type Member, type Needs, type Picture, type Via } from '../../shared/rules.js'
 
 // The members, as Airtable has them, and as the card and the store are told of them.
@@ -48,6 +48,22 @@ export const welcome = (email: string, more: { phone?: string; shipTo?: string }
     ...(more.phone ? { [F.member.phone]: more.phone } : {}),
     ...(more.shipTo ? { [F.member.shipTo]: more.shipTo } : {}),
   })
+
+/** The row for an address, made if there is none: for a payment by a visitor, which makes their account.
+ * The page and Stripe may both come to say the payment arrived, at the same moment, and each would make the
+ * row: each makes its own first, and only the earlier of the two is kept. `made` says whether it was made now. */
+export async function rowFor(email: string, more: { shipTo?: string } = {}): Promise<{ row: Row; made: boolean }> {
+  const there = await rowOf(email)
+  if (there) return { row: there, made: false }
+  const mine = await welcome(email, more)
+  const same = (await all(T.members)).filter((row) => sameAddress(str(row.fields[F.member.email]), email)).sort((a, b) => a.id.localeCompare(b.id))
+  const first = same[0]
+  if (first && first.id !== mine.id) {
+    await remove(T.members, mine.id).catch(() => {})
+    return { row: first, made: false }
+  }
+  return { row: mine, made: true }
+}
 
 /** A member's picture: one of Shrug's faces (kept as a file named for it, face-3.png) or a photo of theirs. */
 export function pictureOf(row: Row): Picture | null {

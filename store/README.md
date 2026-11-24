@@ -255,10 +255,32 @@ Set on the Vercel project (Settings → Environment Variables). None is kept in 
 
 For Apple Pay, the site's domain has to be added in Stripe (Settings → Payment method domains).
 
+## A visitor buys
+
+Someone not signed in can buy what is paid for with money (asking, reserving and anything that costs nothing
+need an account, and the button is the way in instead). At checkout they give an email for the receipt; the
+price is the price, with no points. The payment makes their account (`api/pay.ts`, `api/order.ts`):
+
+- A standard account, from the email and the address they paid with, with the starting points. They are
+  signed in to it, and the receipt says so and asks for a phone number, which is how they log in from then on.
+- If that email already has an account, the order is that account's and **nobody is signed in**: paying with
+  an address does not show it is theirs. The order goes where the payer said; the address on file is left.
+- Only the browser that began a payment is answered when it is made into an order (a cookie says which
+  payment is its own), and only an account the payment has just made is opened this way (no number, and this
+  its only order). Stripe's own word arriving first makes the same account and order, once.
+- An account made by a payment and left without a number is opened by a code to its email.
+
+## In a window of the desktop
+
+On Shrug's own site the store is the VIP Store window (`src/apps/Store.tsx`, in the desktop's folder): these
+pages in a frame, served by the same site at `/vip/` (the desktop's build puts them there: `tools/store.mjs`).
+The window draws the bar; here it is not drawn, the layout is sized to the window, Log In is the desk's
+sheet, and moving about adds nothing to the browser's history (`src/desk.ts`). The first time someone signed
+in comes to the store, the frame shows the card's page: the pack hangs with its strip loose, and asks for no
+code. A visitor's prices are in dollars, in a window and out of one.
+
 ## Not done yet
 
-- **A visitor cannot buy.** They are shown everything, and the button sends them to the card. Buying without
-  an account, with the account made from what the payment gives, waits on payments being set up.
 - **No text has been sent for real.** Signing in by text is built and checked against a stand-in for Twilio
   Verify; it needs a Twilio account and its three settings before a real number is texted. Until bots are
   kept off `api/text.ts` (a rate limit, or Vercel's BotID), anyone can have a code texted to any number at

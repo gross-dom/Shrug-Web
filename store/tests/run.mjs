@@ -111,8 +111,14 @@ async function call(who, name, method, body, query = '') {
   const headers = { 'content-type': 'application/json' }
   if (jar[who]) headers.cookie = jar[who]
   const res = await api[name][method](new Request(`https://store.test/api/${name}${query}`, { method, headers, body: body ? JSON.stringify(body) : undefined }))
-  const set = res.headers.get('set-cookie')
-  if (set) jar[who] = set.split(';')[0]
+  // Every cookie the answer sets is kept, by its name; one set to nothing is thrown away, as a browser would
+  for (const set of res.headers.getSetCookie()) {
+    const [name, value] = set.split(';')[0].split('=')
+    const kept = Object.fromEntries((jar[who] ?? '').split('; ').filter(Boolean).map((pair) => pair.split('=')))
+    if (value) kept[name] = value
+    else delete kept[name]
+    jar[who] = Object.entries(kept).map(([n, v]) => `${n}=${v}`).join('; ')
+  }
   const type = res.headers.get('content-type') ?? ''
   return { status: res.status, body: type.includes('json') ? await res.json() : await res.text(), headers: res.headers }
 }
@@ -151,7 +157,7 @@ check('a forged session is nobody', (await call('forged', 'me', 'GET')).body.sta
 const visitor = (await call('nobody', 'store', 'GET')).body
 check('a visitor is shown the store: what is for everyone, in order, and nothing of anybody\'s', visitor.status === 'visitor' && visitor.products.map((p) => p.name).join('|') === 'Chromatic|Workspace Chair|Workspace Chair, Ferrari Red|Art on Acrylic|Shrug 2027' && !('member' in visitor) && !('updates' in visitor) && !('orders' in visitor), JSON.stringify(visitor).slice(0, 300))
 check('and no document, hidden thing or thing for nobody', !JSON.stringify(visitor).match(/Update|Not out yet|For nobody/))
-check('a visitor can order nothing, pay for nothing and fetch no file', (await call('nobody', 'order', 'POST', { product: book.id })).body.error === 'anon' && (await call('nobody', 'pay', 'POST', { product: book.id, points: 0 })).body.error === 'anon' && (await call('nobody', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'anon')
+check('a visitor can order nothing and fetch no file; and to pay, they have to say where the receipt goes', (await call('nobody', 'order', 'POST', { product: book.id })).body.error === 'anon' && (await call('nobody', 'pay', 'POST', { product: book.id, points: 0 })).body.error === 'email' && (await call('nobody', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'anon')
 
 // Someone not on the list: a standard user
 const members = tables[T.members].length
@@ -423,6 +429,51 @@ const unaMe = (await call('una', 'me', 'GET')).body
 check('a personal link signs its LP in, with their email confirmed, and takes them to the desk', si_opened.status === 302 && si_opened.headers.get('location') === '/?login=1' && !!una.fields[M.confirmed] && unaMe.via === 'link' && unaMe.member.email === 'una@example.test' && unaMe.needs.phone === true, JSON.stringify(unaMe))
 check('they add their number with no code to their inbox', (await call('una', 'phone', 'POST', { phone: '+14155550106' })).body.ok && (await call('una', 'phone', 'POST', { phone: '+14155550106', code: textIn('+14155550106') })).body.ok && una.fields[M.phone] === '+14155550106' && !mail.some((m) => m.to[0] === 'una@example.test'))
 check('and the link is spent once the account has a number', !(await call('una2', 'link', 'GET', null, linkFor('una@example.test'))).headers.get('set-cookie') && (await call('una2', 'me', 'GET')).body.status === 'anon')
+
+// ---- A visitor buys: the payment makes their account
+/** Stripe's own word that a payment arrived, as its webhook brings it. */
+const settledBy = (payment) => {
+  const said = JSON.stringify({ type: 'payment_intent.succeeded', data: { object: { id: payment } } })
+  const when = Math.floor(Date.now() / 1000)
+  return api.stripe.POST(new Request('https://store.test/api/stripe', { method: 'POST', headers: { 'stripe-signature': `t=${when},v1=${createHmac('sha256', 'whsec_test').update(`${when}.${said}`).digest('hex')}` }, body: said }))
+}
+const home2 = 'Vera Example\n9 Example Road\nPortland, OR 97201'
+check('a visitor says where the receipt goes, and where a posted thing is sent', (await call('vera', 'pay', 'POST', { product: book.id })).body.error === 'email' && (await call('vera', 'pay', 'POST', { product: book.id, email: 'vera@example.test' })).body.error === 'address')
+check('only what is for everyone and is bought with money: not a request, not what they are not shown', (await call('vera', 'pay', 'POST', { product: red.id, email: 'vera@example.test' })).body.error === 'anon' && (await call('vera', 'pay', 'POST', { product: update4.id, email: 'vera@example.test' })).status === 404)
+const veraPay = await call('vera', 'pay', 'POST', { product: book.id, email: 'Vera@Example.test', shipTo: home2 })
+const veraIntent = intents.get(veraPay.body.payment)
+check('a visitor pays the price as it stands, with no points', veraPay.body.ok && veraPay.body.cents === 4000 && veraIntent.metadata.visitor === '1' && veraIntent.metadata.email === 'vera@example.test' && veraIntent.metadata.points === '0' && veraIntent.metadata.shipTo === home2, JSON.stringify(veraPay.body))
+check('it is nothing until the money has arrived', (await call('vera', 'order', 'POST', { payment: veraPay.body.payment })).body.error === 'unpaid' && !rowFor('vera@example.test'))
+Object.assign(veraIntent, { status: 'succeeded', amount_received: 4000 })
+check('and is nobody else\'s to make into an order: only the browser that began it is answered', (await call('nobody', 'order', 'POST', { payment: veraPay.body.payment })).status === 401 && !rowFor('vera@example.test'))
+const veraOrder = await call('vera', 'order', 'POST', { payment: veraPay.body.payment })
+const vera = rowFor('vera@example.test')
+check('the payment makes their account: a standard one, with their address on file, and the order is its', veraOrder.body.ok && veraOrder.body.account === 'new' && veraOrder.body.order.status === 'Paid' && !!vera && vera.fields[M.tier] === 'Standard' && vera.fields[M.points] === 100 && vera.fields[M.shipTo] === home2 && !vera.fields[M.phone] && tables[T.orders].at(-1).fields[F.order.member][0] === vera.id && tables[T.orders].at(-1).fields[F.order.shipTo] === home2, JSON.stringify(veraOrder.body))
+const veraMe = (await call('vera', 'me', 'GET')).body
+check('they are signed in to it, and it lacks a number', veraMe.status === 'member' && veraMe.via === 'pay' && veraMe.needs.phone === true && (await call('vera', 'store', 'GET')).body.orders.length === 1, JSON.stringify(veraMe))
+check('which they add there and then, with no code to their inbox', (await call('vera', 'phone', 'POST', { phone: '+14155550107' })).body.ok && (await call('vera', 'phone', 'POST', { phone: '+14155550107', code: textIn('+14155550107') })).body.ok && vera.fields[M.phone] === '+14155550107' && !mail.some((m) => m.to[0] === 'vera@example.test'))
+check('asked twice, the payment is still one order and one account', (await call('vera', 'order', 'POST', { payment: veraPay.body.payment })).body.order?.reference === veraOrder.body.order.reference && tables[T.members].filter((r) => r.fields[M.email] === 'vera@example.test').length === 1)
+// Paying with an address that has an account already: the order is that account's, and nobody is let in
+const adaShip = founder.fields[M.shipTo]
+const adaOrders = tables[T.orders].filter((r) => r.fields[F.order.member]?.[0] === founder.id).length
+const asAda = await call('stranger', 'pay', 'POST', { product: book.id, email: 'ada@example.test', shipTo: 'A Stranger\n1 Other Street\nElsewhere, NY 10001' })
+Object.assign(intents.get(asAda.body.payment), { status: 'succeeded', amount_received: 4000 })
+const asAdaOrder = await call('stranger', 'order', 'POST', { payment: asAda.body.payment })
+check('paying with an address that has an account puts the order on that account, and lets nobody in', asAdaOrder.body.ok && asAdaOrder.body.account === 'theirs' && (await call('stranger', 'me', 'GET')).body.status === 'anon' && tables[T.orders].filter((r) => r.fields[F.order.member]?.[0] === founder.id).length === adaOrders + 1)
+check('it goes where the payer said, and the address on file is not theirs to change', tables[T.orders].at(-1).fields[F.order.shipTo].includes('1 Other Street') && founder.fields[M.shipTo] === adaShip)
+// Stripe's own word arriving first: the account is made then, and the browser that paid is still signed in to it
+const walPay = await call('wal', 'pay', 'POST', { product: art.id, email: 'wal@example.test', wallet: true })
+Object.assign(intents.get(walPay.body.payment), { status: 'succeeded', amount_received: 28500, shipping: { name: 'Wal Example', address: { line1: '3 Example Quay', city: 'Seattle', state: 'WA', postal_code: '98101', country: 'US' } } })
+await settledBy(walPay.body.payment)
+const wal = rowFor('wal@example.test')
+const walOrder = await call('wal', 'order', 'POST', { payment: walPay.body.payment })
+check('paid by Apple Pay, no address is typed: the one the payment gives is used and kept', walPay.body.ok && !!wal && wal.fields[M.shipTo].includes('3 Example Quay'))
+check('where Stripe\'s word came first, the account was made then, and the browser that paid is still signed in to it', walOrder.body.ok && walOrder.body.account === 'new' && (await call('wal', 'me', 'GET')).body.via === 'pay' && tables[T.members].filter((r) => r.fields[M.email] === 'wal@example.test').length === 1 && tables[T.orders].filter((r) => r.fields[F.order.payment] === walPay.body.payment).length === 1)
+// An account made by a payment and left without a number is opened only by its inbox, and by no second payment
+const again2 = await call('wal2', 'pay', 'POST', { product: book.id, email: 'wal@example.test', shipTo: home2 })
+Object.assign(intents.get(again2.body.payment), { status: 'succeeded', amount_received: 4000 })
+check('a second payment with that address, from anywhere, lets nobody in to it', (await call('wal2', 'order', 'POST', { payment: again2.body.payment })).body.account === 'theirs' && (await call('wal2', 'me', 'GET')).body.status === 'anon')
+check('and its way in, with no number, is its inbox', (await call('wal3', 'start', 'POST', { email: 'wal@example.test' })).body.step === 'inbox')
 
 // Emails, and out
 check('emails can be turned off', (await call('ada', 'emails', 'POST', { on: false })).body.emails === false && founder.fields[M.noEmails] === true && (await call('ada', 'me', 'GET')).body.member.emails === false)

@@ -26,8 +26,9 @@ export interface Intent {
   shipping: { name?: string; address?: { line1?: string; line2?: string; city?: string; state?: string; postal_code?: string; country?: string } } | null
 }
 
-/** A payment to be made: so many cents, for one product, by one member. */
-export function newIntent(cents: number, says: { member: string; email: string; product: string; option: string; points: string; name: string }): Promise<Intent> {
+/** A payment to be made: so many cents, for one product, by one member; or by a visitor, who has no row yet
+ * (`visitor`), with the address they typed (`shipTo`). The account is made from the payment once it arrives. */
+export function newIntent(cents: number, says: { member: string; email: string; product: string; option: string; points: string; name: string; visitor?: string; shipTo?: string }): Promise<Intent> {
   const form: Record<string, string> = {
     amount: String(cents),
     currency: 'usd',
@@ -35,7 +36,7 @@ export function newIntent(cents: number, says: { member: string; email: string; 
     description: `Shrug VIP: ${says.name}${says.option ? ` (${says.option})` : ''}`,
     receipt_email: says.email,
   }
-  for (const [key, value] of Object.entries(says)) form[`metadata[${key}]`] = value
+  for (const [key, value] of Object.entries(says)) if (value !== undefined) form[`metadata[${key}]`] = value
   return ask('POST', 'payment_intents', form)
 }
 

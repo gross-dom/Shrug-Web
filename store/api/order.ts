@@ -1,8 +1,9 @@
-import { F, str } from './_lib/airtable.js'
+import { all, F, list, str, T } from './_lib/airtable.js'
 import { ordersFor, productOf, shelvesFor } from './_lib/catalogue.js'
 import { json, read, text } from './_lib/http.js'
-import { keepAddress, tidied } from './_lib/members.js'
+import { keepAddress, listed, phoneOn, tidied } from './_lib/members.js'
 import { request as ask, reserve, settle, withPoints } from './_lib/orders.js'
+import { beganPayment, noPayCookie, sessionCookie, sessionOf } from './_lib/session.js'
 import { memberAsking, trouble } from './_lib/who.js'
 import { dueCents, has, onFile, refusalOf, updateOf, wayOf, type Address } from '../shared/rules.js'
 
@@ -15,16 +16,38 @@ const addressOf = (given: unknown): Address | null => {
 // An order. Either the page says a payment has been made, and the store asks Stripe whether it has; or it
 // asks for something that takes no money: a request, a reservation, or a thing whose price the member's
 // points cover in full.
+//
+// A visitor's payment (api/pay.ts) is made into an order here too, for the browser that began it and nobody
+// else. The payment makes their account: a standard one, from the email and address they paid with. Where it
+// has just made it (the account has no number, and this is its only order) they are signed in to it, so
+// that the page can ask them for a phone number, and the order is in My VIP. Where that email already had
+// an account, the order is that account's and nobody is signed in: paying with an address does not show it
+// is theirs.
+async function forAVisitor(request: Request, payment: string) {
+  if (!beganPayment(request, payment)) return json({ error: 'anon' }, { status: 401 })
+  const settled = await settle(payment)
+  if ('error' in settled) return json(settled, { status: 400 })
+  const { member, order } = settled
+  const email = str(member.fields[F.member.email]).trim().toLowerCase()
+  const theirs = (await all(T.orders)).filter((row) => list(row.fields[F.order.member]).includes(member.id))
+  const fresh = !listed(member) && !phoneOn(member) && theirs.length === 1 && str(theirs[0]!.fields[F.order.payment]) === payment
+  const headers = new Headers({ 'Set-Cookie': noPayCookie() })
+  if (fresh) headers.append('Set-Cookie', sessionCookie(email, 'pay'))
+  return json({ ok: true, order, points: fresh ? settled.points : 0, account: fresh ? 'new' : 'theirs', email }, { headers })
+}
+
 export async function POST(request: Request) {
   try {
+    const body = await read(request)
+    const payment = text(body.payment, 80)
+    if (payment && !sessionOf(request)) return await forAVisitor(request, payment)
     const who = await memberAsking(request)
     if ('refuse' in who) return who.refuse
-    const body = await read(request)
 
-    const payment = text(body.payment, 80)
     if (payment) {
       const settled = await settle(payment, who.row.id)
-      return 'error' in settled ? json(settled, { status: 400 }) : json({ ok: true, ...settled })
+      if ('error' in settled) return json(settled, { status: 400 })
+      return json({ ok: true, order: settled.order, points: settled.points })
     }
 
     const { products, rows } = await shelvesFor(who.member)

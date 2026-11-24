@@ -3,8 +3,10 @@ import { fmtPoints } from '../shared/rules'
 import { CARD, DEMO, server, shopOf, type Backend, type Placed, type Shop, type StoreAnswer } from './backend'
 import { PointsMark, Wordmark } from './brand'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
+import { DESK, type StoreInWindow } from './desk'
 import { Lock, NoCloud } from './icons'
 import { Picture, Price, ProductView, type Go } from './Product'
+import { Visiting } from './visiting'
 import { badgeOf, priceOf } from './words'
 import { YoursView } from './Yours'
 
@@ -15,6 +17,9 @@ import { YoursView } from './Yours'
 // the server says is theirs, and ask it for everything they do. A visitor, who has not signed in, is shown
 // the store all the same: what is for everyone, at its price, with the way to sign in where a member's
 // balance would be.
+//
+// As a window of the desktop (desk.ts) the same pages are drawn without their bar, which the window draws
+// as its own, and Log In is the desk's.
 
 const backend: Backend = DEMO ? demo : server
 
@@ -109,7 +114,12 @@ function Sections({ at, go }: { at: Section; go: (section: Section) => void }) {
 function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id: string) => void }) {
   const products = shop.products
   if (!products.length)
-    return (
+    return DESK ? (
+      <div className="ui-door">
+        <h2 className="t-h2">Nothing in the store yet</h2>
+        <p className="t-words">New pieces land here first. We’ll email you when one does.</p>
+      </div>
+    ) : (
       <main className={phone ? 'up-body' : 'ui-display'}>
         <div className="ui-gate">
           <h2 className="t-h2">Nothing in the store just now.</h2>
@@ -238,18 +248,37 @@ export function App() {
   }, [load])
 
   const move = (next: Place) => {
-    if (addressOf(next) !== addressOf(place)) window.history.pushState(null, '', addressOf(next))
+    // In a window of the desk the browser's history is the desk's: the address follows, and nothing is added to it
+    if (addressOf(next) !== addressOf(place)) window.history[DESK ? 'replaceState' : 'pushState'](null, '', addressOf(next))
     setPlace(next)
     window.scrollTo(0, 0)
   }
+  // The desk is told where the store is (its bar shows it), and is left the two things it asks: to go
+  // somewhere, and to ask the server again when whoever is logged in has changed
+  const mover = useRef(move)
+  mover.current = move
+  useEffect(() => {
+    DESK?.at({ section: place.section, product: place.product })
+  }, [place.section, place.product])
+  useEffect(() => {
+    if (!DESK) return
+    const here = window as Window & { shrugStore?: StoreInWindow }
+    here.shrugStore = { go: (to) => mover.current({ section: to.section === 'yours' ? 'yours' : 'store', product: to.product }), reload: load }
+    return () => {
+      delete here.shrugStore
+    }
+  }, [load])
   const go: Go = (to) => move(to.view === 'product' ? { section: 'store', product: to.id } : { section: to.view === 'yours' ? 'yours' : 'store', product: null })
   const signout = async () => {
     await backend.signout()
+    // In a window, who is logged in is the desk's to say: it is told, and asks these pages to look again
+    if (DESK) return DESK.changed()
     window.location.assign(CARD)
   }
   const placed = (done: Placed) => {
     setSpent((n) => n + done.order.points)
     load()
+    DESK?.changed()
   }
 
   const visiting = answer.status === 'visitor'
@@ -280,7 +309,18 @@ export function App() {
     </div>
   )
   if (shop && visiting && place.section !== 'store') {
-    body = (
+    body = DESK ? (
+      // In a window: My VIP is a door to the desk's Log In
+      <div className="ui-door">
+        <h1 className="sr">Shrug VIP: My VIP</h1>
+        <Lock />
+        <h2 className="t-h2">Log in to see My VIP</h2>
+        <p className="t-words">Your card, your orders and the address on file live here.</p>
+        <button type="button" className="ui-btn fit" onClick={() => DESK!.logIn('store')}>
+          Log In
+        </button>
+      </div>
+    ) : (
       <main className={phone ? 'up-body' : 'ui-display'}>
         <h1 className="sr">Shrug VIP: My VIP</h1>
         {door}
@@ -304,6 +344,15 @@ export function App() {
             <div style={{ height: 18, width: '60%', borderRadius: 6, background: '#222226' }} />
             <div style={{ height: 18, width: '40%', borderRadius: 6, background: '#222226' }} />
           </div>
+        </div>
+      ) : answer.status === 'down' && DESK ? (
+        <div className="ui-door">
+          <NoCloud />
+          <h2 className="t-h2">The store isn’t answering</h2>
+          <p className="t-words">Nothing was charged. Check your connection and try again.</p>
+          <button type="button" className="ui-btn fit" onClick={() => (setAnswer({ status: 'loading' }), load())}>
+            Try Again
+          </button>
         </div>
       ) : answer.status === 'down' ? (
         <div className="ui-gate">
@@ -335,8 +384,17 @@ export function App() {
   )
   // A product is one screen and does not scroll; everything else on a phone is a page, as long as it is
   const oneScreen = !!shop && !!product
+  // In a window of the desk: the pages alone, sized to the window. The bar is the window's own
+  if (DESK)
+    return (
+      <Visiting.Provider value={visiting}>
+        <div className="win">
+          <div className="ui">{body}</div>
+        </div>
+      </Visiting.Provider>
+    )
   return (
-    <>
+    <Visiting.Provider value={visiting}>
       {phone ? (
         <div className={`up${oneScreen ? ' fix' : ''}`}>
           <header className="up-top">
@@ -361,6 +419,6 @@ export function App() {
         </div>
       )}
       {DEMO && <DemoTab signedIn={!!shop && !visiting} onChange={load} />}
-    </>
+    </Visiting.Provider>
   )
 }

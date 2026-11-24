@@ -63,7 +63,8 @@ const PAPERS: Product[] = [
 
 interface CardState {
   pick: string
-  session: { member: NonNullable<(typeof PEOPLE)[string]['member']> | null; seen: number | null; emails?: boolean; reason?: string } | null
+  /** `email` and `phone`: for an account a visitor's payment made, which has an address and, once they give it, a number. */
+  session: { member: NonNullable<(typeof PEOPLE)[string]['member']> | null; seen: number | null; emails?: boolean; reason?: string; email?: string; phone?: string } | null
 }
 interface StoreState {
   orders: (Order & { who: string })[]
@@ -161,7 +162,7 @@ export const demo: Backend = {
     // Nobody signed in (or the card's "not on the list", which the demo has no account for): a visitor
     if (!state.session || !member) return { status: 'visitor', products: shelves(store).filter((p) => mayHave(VISITOR, p)), stripeKey: '' }
     const orders = store.orders.filter((order) => order.who === member.id)
-    const who: Who = { ...member, number: state.session.member?.number ?? '', since: state.session.member?.since ?? null, reason: state.session.reason ?? null, emails: state.session.emails !== false, email: 'sample@example.com', shipTo: store.shipTo }
+    const who: Who = { ...member, number: state.session.member?.number ?? '', since: state.session.member?.since ?? null, reason: state.session.reason ?? null, emails: state.session.emails !== false, email: state.session.email ?? 'sample@example.com', shipTo: store.shipTo }
     return {
       status: 'member',
       member: who,
@@ -178,13 +179,37 @@ export const demo: Backend = {
   async pay(asked) {
     await lag(300)
     const { member } = now()
-    const product = member && shelves(kept()).find((p) => p.id === asked.product && mayHave(member, p))
-    if (!member || !product) return { error: 'hidden' }
-    return { ok: true, demo: true, cents: dueCents(product, asked.points ?? 0) }
+    const product = shelves(kept()).find((p) => p.id === asked.product && mayHave(member ?? VISITOR, p))
+    if (!product) return { error: 'hidden' }
+    return { ok: true, demo: true, cents: dueCents(product, member ? (asked.points ?? 0) : 0) }
   },
   async paid(_payment, asked) {
     await lag(900)
-    return place(asked, true)
+    const state = card()
+    if (state.session?.member) return place(asked, true)
+    // A visitor: the payment makes their account, a standard one, from the email they paid with, and they are
+    // signed in to it (api/order.ts does the same). The order is then that account's
+    const email = (asked.email ?? '').trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'email' }
+    if (kept().scene === 'declined') return { error: 'unpaid' }
+    write(CARD, { ...state, pick: 'standard', session: { member: { ...PEOPLE.standard!.member! }, seen: null, emails: true, email } })
+    const placed = place({ ...asked, points: 0 }, true)
+    if ('error' in placed) {
+      write(CARD, state)
+      return placed
+    }
+    return { ...placed, account: 'new', email }
+  },
+  async phone(phone, code) {
+    await lag(500)
+    const state = card()
+    if (!state.session?.member) return { error: 'anon' }
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 8) return { error: 'phone' }
+    if (!code) return { ok: true, phone }
+    if (code === '000000') return { error: 'wrong' }
+    write(CARD, { ...state, session: { ...state.session, phone } })
+    return { ok: true }
   },
   async address(shipTo) {
     await lag(300)

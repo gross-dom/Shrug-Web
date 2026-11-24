@@ -43,3 +43,20 @@ export const signedIn = (request: Request): string | null => sessionOf(request)?
 
 /** A mark made with the server's secret, for anything else that has to be shown to be the server's own (a personal link). */
 export const markOf = (what: string): string => sign(what)
+
+// A visitor's payment. Nobody is signed in, so the browser that began it is given a cookie that says which
+// payment is its own: only that browser is answered when the payment is made into an order, and only it is
+// signed in to the account the payment makes.
+const PAY = 'shrug_pay'
+
+export const payCookie = (payment: string) => cookie(PAY, `${payment}.${sign(`pay:${payment}`)}`, 2 * 3600)
+export const noPayCookie = () => cookie(PAY, '', 0)
+
+/** Whether this browser is the one that began a payment. */
+export function beganPayment(request: Request, payment: string): boolean {
+  const [id, mark] = (cookiesOf(request)[PAY] ?? '').split('.')
+  if (!id || !mark || id !== payment) return false
+  const good = Buffer.from(sign(`pay:${payment}`))
+  const given = Buffer.from(mark)
+  return good.length === given.length && timingSafeEqual(good, given)
+}

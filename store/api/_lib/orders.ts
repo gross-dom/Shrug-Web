@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto'
 import { add, all, change, F, num, one, remove, str, T, type Row } from './airtable.js'
-import { keepAddress } from './members.js'
+import { keepAddress, rowFor } from './members.js'
 import { orderOf, productOf } from './catalogue.js'
 import { intentOf, type Intent } from './stripe.js'
 import { dueCents, fitPoints, numberOf, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
@@ -82,19 +82,27 @@ const shipToOf = (intent: Intent) => {
  * with the same order. If the money is in but the order no longer adds up (the last one went, the points
  * were spent elsewhere meanwhile, or the price was changed), nothing more is taken and the order is marked
  * for Shrug to look at. */
-export async function settle(paymentId: string, forMember?: string): Promise<{ order: Order; points: number } | { error: 'unpaid' | 'unknown' }> {
+export async function settle(paymentId: string, forMember?: string): Promise<{ order: Order; points: number; member: Row } | { error: 'unpaid' | 'unknown' }> {
   const intent = await intentOf(paymentId)
   if (intent.status !== 'succeeded') return { error: 'unpaid' }
-  const [member, productRow] = await Promise.all([one(T.members, intent.metadata.member ?? ''), one(T.products, intent.metadata.product ?? '')])
-  if (!member || !productRow || (forMember && member.id !== forMember)) return { error: 'unknown' }
+  const productRow = await one(T.products, intent.metadata.product ?? '')
+  if (!productRow) return { error: 'unknown' }
+  // A visitor's payment (api/pay.ts): the email and address they paid with make their account, a standard
+  // one, unless that address has one already, and the order is that account's
+  const visitor = intent.metadata.visitor === '1' && !!intent.metadata.email
+  const typed = (intent.metadata.shipTo ?? '').trim()
+  const member = visitor ? (await rowFor(intent.metadata.email!, { shipTo: typed || shipToOf(intent) })).row : await one(T.members, intent.metadata.member ?? '')
+  if (!member || (forMember && member.id !== forMember)) return { error: 'unknown' }
   const balance = num(member.fields[F.member.points]) ?? 0
   const already = (await all(T.orders)).find((row) => str(row.fields[F.order.payment]) === paymentId)
-  if (already) return { order: orderOf(already, new Map([[productRow.id, str(productRow.fields[F.product.name])]])), points: balance }
+  if (already) return { order: orderOf(already, new Map([[productRow.id, str(productRow.fields[F.product.name])]])), points: balance, member }
   const product = productOf(productRow)
-  // It goes to the address on file. With none, the one the payment gave is used, and kept for next time
-  const kept = str(member.fields[F.member.shipTo]).trim()
-  const shipTo = kept || shipToOf(intent)
-  if (!kept && shipTo) await keepAddress(member, shipTo).catch(() => {})
+  // It goes to the address on file. With none, the one the payment gave is used, and kept for next time. (A
+  // visitor's goes where they said this time, whatever an account of that address has on file: nobody has
+  // shown the account is theirs)
+  const kept = visitor ? '' : str(member.fields[F.member.shipTo]).trim()
+  const shipTo = kept || typed || shipToOf(intent)
+  if (!kept && shipTo && !str(member.fields[F.member.shipTo]).trim()) await keepAddress(member, shipTo).catch(() => {})
   const paid = intent.amount_received / 100
   const option = intent.metadata.option ?? ''
   // The points that were to be used are said on the payment itself, as the store wrote them when it began
@@ -102,9 +110,9 @@ export async function settle(paymentId: string, forMember?: string): Promise<{ o
   const sound = !!product && wayOf(product) === 'buy' && !soldOut(product) && Number.isInteger(points) && points === fitPoints({ points: balance }, product, points) && dueCents(product, points) === intent.amount_received
   if (!product || !sound) {
     const shown = product ?? ({ ...EMPTY, id: productRow.id, name: str(productRow.fields[F.product.name]) } as Product)
-    return place({ member, productRow, product: shown, status: 'Needs review', option, shipTo, paid, payment: paymentId, takes: false })
+    return { ...(await place({ member, productRow, product: shown, status: 'Needs review', option, shipTo, paid, payment: paymentId, takes: false })), member }
   }
-  return place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Paid', option, shipTo, paid, payment: paymentId, points, takes: true })
+  return { ...(await place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Paid', option, shipTo, paid, payment: paymentId, points, takes: true })), member }
 }
 
 const EMPTY: Omit<Product, 'id' | 'name'> = {

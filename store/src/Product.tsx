@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { asksAddress, dueCents, fitPoints, fmtCents, fmtPoints, has, mostPoints, numberOf, onFile, POINTS_PER_DOLLAR, postageCents, priceCents, soldOut, wayOf, type Order, type Product } from '../shared/rules'
 import { CARD, type Backend, type Placed, type Shop } from './backend'
 import { Points } from './brand'
+import { DESK } from './desk'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
 import { shotsOf, tileSizes, wholeSizes } from './pictures'
+import { Visiting } from './visiting'
 import { badgeOf, captionOf, editionOf, keptOf, owned, pointsOf, shortOf } from './words'
 
 // One product to a screen: its pictures, then what it is and what it costs this member. The arrows on the
@@ -41,8 +43,10 @@ export function Picture({ product, size, tile }: { product: Product; size: numbe
 
 /** A price beside a name: the points mark and the figure, "Free", or nothing for something with no price yet. */
 export function Price({ product, size = 16 }: { product: Product; size?: number }) {
+  // A visitor is shown the price in dollars: points are a member's
+  const visiting = useContext(Visiting)
   const points = pointsOf(product)
-  return points === null ? null : points === 0 ? <>Free</> : <Points n={points} size={size} />
+  return points === null ? null : points === 0 ? <>Free</> : visiting ? <>{fmtCents(priceCents(product))}</> : <Points n={points} size={size} />
 }
 
 /** What an order came to: the points, and whatever was paid by card besides. */
@@ -100,6 +104,64 @@ function AddressField({ typed, onType }: { typed: string; onType: (text: string)
   )
 }
 
+/** After a visitor has paid: their payment made them an account, from the email and address they paid with.
+ * They are told so and asked for a phone number, which is how they log in: it is texted six digits, and the
+ * six digits make it theirs. Not now leaves the account as it is (its way in is then a code to that email). */
+function NewAccount({ backend, email, onLater }: { backend: Backend; email: string; onLater: () => void }) {
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState<'phone' | 'code' | 'done'>('phone')
+  const [busy, setBusy] = useState(false)
+  const [said, setSaid] = useState('')
+  const WHY: Record<string, string> = { phone: 'That doesn’t look like a phone number.', wrong: 'That code isn’t right. Try again.', taken: 'That number is on another account. Log in with it instead.', locked: 'Too many tries. Try again in a few minutes.', expired: 'That code has run out. Send a new one.', wait: 'One was sent a moment ago. Give it a minute.', offline: 'No connection.' }
+  const ask = async (given?: string) => {
+    setBusy(true)
+    setSaid('')
+    const answer = await backend.phone(phone, given)
+    setBusy(false)
+    if ('error' in answer) return setSaid(WHY[answer.error] ?? 'That didn’t work. Try again.')
+    if (!given) return setStep('code')
+    setStep('done')
+    // The desk shows who is logged in: it is told there is someone now
+    DESK?.changed()
+  }
+  return (
+    <>
+      <div className="ui-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <h2 className="t-h2">You have an account now.</h2>
+        {step === 'done' ? (
+          <p className="t-sm t-2">That number is how you log in from now on, with a texted code. This order is in My VIP.</p>
+        ) : (
+          <>
+            <p className="t-sm t-2">We made it from the email and address you just paid with, so this order is in My VIP and the next one is quicker. Add a phone number: it is how you log in, with a texted code.</p>
+            {step === 'phone' ? (
+              <input className="ui-in" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 (___) ___ ____" aria-label="Phone number" value={phone} onChange={(e) => (setPhone(e.target.value), setSaid(''))} />
+            ) : (
+              <input className="ui-in" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="The six digits we texted" aria-label="Six-digit code" value={code} onChange={(e) => (setCode(e.target.value.replace(/\D/g, '').slice(0, 6)), setSaid(''))} />
+            )}
+            {said && (
+              <p className="ui-note" role="alert">
+                {said}
+              </p>
+            )}
+            <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy || (step === 'phone' ? phone.replace(/\D/g, '').length < 8 : code.length !== 6)} onClick={() => ask(step === 'code' ? code : undefined)}>
+              {step === 'phone' ? 'Text Me a Code' : 'Confirm'}
+            </button>
+          </>
+        )}
+      </div>
+      <button type="button" className="ui-link quiet ui-other" onClick={onLater}>
+        {step === 'done' ? 'Done' : 'Not now'}
+      </button>
+      {step !== 'done' && email && (
+        <p className="t-sm t-3" style={{ textAlign: 'center' }}>
+          Your receipt is on its way to {email} either way.
+        </p>
+      )}
+    </>
+  )
+}
+
 export function ProductView({ shop, visiting, product, phone, backend, go, onPlaced }: { shop: Shop; /** Nobody is signed in: everything is shown, and the button is the way to the card. */ visiting?: boolean; product: Product; phone: boolean; backend: Backend; go: Go; onPlaced: (placed: Placed) => void }) {
   const all = shop.products
   const at = all.findIndex((p) => p.id === product.id)
@@ -114,6 +176,10 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const [mode, setMode] = useState<'product' | 'checkout'>('product')
   const [done, setDone] = useState<Placed | null>(null)
   const [typed, setTyped] = useState('')
+  /** A visitor's email: where the receipt goes, and what the account their payment makes is under. */
+  const [email, setEmail] = useState('')
+  /** A visitor whose payment made them an account has put off giving it a phone number. */
+  const [later, setLater] = useState(false)
   /** At checkout: a way to finish that needs an address has been chosen (a card, or points alone), so the address is asked for now, if there is none on file. */
   const [finishing, setFinishing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -202,7 +268,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     <dl className="ui-card rows">
       <div>
         <dt>Price</dt>
-        <dd>{price === 0 ? 'Free' : <Points n={Math.round(product.points ?? 0)} />}</dd>
+        <dd>{price === 0 ? 'Free' : visiting ? fmtCents(priceCents(product)) : <Points n={Math.round(product.points ?? 0)} />}</dd>
       </div>
       {way === 'buy' && price > 0 && most > 0 && (
         <div className="pts">
@@ -271,8 +337,13 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     if (way !== 'buy' && asked) return { text: way === 'request' ? 'Requested' : 'Reserved', off: true }
     if (out) return { text: 'Sold out', off: true }
     if (bought && product.left === null && !product.editionOf && price === 0) return { text: 'Yours', off: true }
-    // A visitor is shown everything and can take nothing yet: an order needs someone to belong to
-    if (visiting) return { text: `Open your pack to ${way === 'request' ? 'request' : way === 'reserve' ? 'reserve' : price === 0 ? 'claim' : 'buy'}`, act: () => window.location.assign(CARD) }
+    // A visitor can buy what is paid for with money: the payment makes their account. Asking, reserving and
+    // what costs nothing need someone for the order to belong to, so those are the way in instead
+    // (in a window of the desk, the desk's Log In, which says what it was opened for)
+    if (visiting && !(way === 'buy' && due > 0)) {
+      const what = way === 'request' ? 'request' : way === 'reserve' ? 'reserve' : 'claim'
+      return DESK ? { text: `Log in to ${what}`, act: () => DESK!.logIn(way === 'request' ? 'request' : 'store') } : { text: `Open your pack to ${what}`, act: () => window.location.assign(CARD) }
+    }
     if (needsOption) return { text: label === 'Color' ? 'Choose a color' : 'Choose one', off: true }
     if (way === 'request') return { text: 'Request', act: order }
     if (way === 'reserve') return { text: 'Reserve', act: order }
@@ -370,8 +441,13 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
       </dl>
     </>
   )
-  const after = (
+  const after =
+    done?.account === 'new' && !later ? (
+      // A visitor's payment made them an account: they are told so, and asked for the number they will log in with
+      <NewAccount backend={backend} email={done.email ?? email} onLater={() => setLater(true)} />
+    ) : (
     <>
+      {done?.account === 'theirs' && <p className="t-sm t-2">That email already has an account, so this order is in its My VIP. Log in to see it.</p>}
       <a className="ui-btn" href="./" onClick={(e) => (e.preventDefault(), go({ view: 'store' }))}>
         Back to the store
       </a>
@@ -379,7 +455,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         View in My VIP
       </a>
     </>
-  )
+    )
 
   // Checkout: the same whether points cover it or not, with the slider again in case they would sooner not
   // use them all. First the ways to finish: with something left to pay, Apple Pay and the card; with nothing,
@@ -398,6 +474,12 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         </div>
       </div>
       {ships && onFile(shop.member.shipTo) && <OnFile shop={shop} go={go} />}
+      {visiting && (
+        <label className="ui-field">
+          <span className="sr">Email for the receipt</span>
+          <input className="ui-in" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="Email for the receipt" value={email} onChange={(e) => (setEmail(e.target.value), setError(''))} />
+        </label>
+      )}
       {sums(true, true)}
       {said}
       {due > 0 ? (
@@ -412,6 +494,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
               stripeKey={shop.stripeKey}
               shipTo={needsAddress && onFile(typed) ? typed : ''}
               needsAddress={needsAddress}
+              email={visiting ? email : undefined}
               byCard={finishing}
               onCard={() => setFinishing(true)}
               onOptions={() => (setError(''), setFinishing(false))}
