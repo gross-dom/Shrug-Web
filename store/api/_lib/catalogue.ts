@@ -1,5 +1,5 @@
 import { all, F, files, list, num, str, T, type Row } from './airtable.js'
-import { canSee, updateOf, type Kind, type Member, type Order, type OrderStatus, type Product, type Status, type Update } from '../../shared/rules.js'
+import { mayHave, updateOf, VISITOR, type Kind, type Member, type Order, type OrderStatus, type Product, type Status, type Update } from '../../shared/rules.js'
 
 // The store's shelves and a member's orders, read from Airtable and put into the shapes the rules work with.
 
@@ -45,9 +45,18 @@ export async function shelvesFor(member: Member): Promise<{ products: Product[];
   const rows = await all(T.products)
   const products = rows
     .map(productOf)
-    .filter((product): product is Product => !!product && canSee(member, product))
+    .filter((product): product is Product => !!product && mayHave(member, product))
     .sort((a, b) => a.place - b.place || a.name.localeCompare(b.name))
   return { products, rows }
+}
+
+/** What a visitor is shown: everything in the store that is for Everyone, in its order, and no document. */
+export async function shelvesForAVisitor(): Promise<Product[]> {
+  const rows = await all(T.products)
+  return rows
+    .map(productOf)
+    .filter((product): product is Product => !!product && product.kind !== 'Document' && mayHave(VISITOR, product))
+    .sort((a, b) => a.place - b.place || a.name.localeCompare(b.name))
 }
 
 /** The updates a member is shown: every document that is theirs, or listed to everyone, in its order. */

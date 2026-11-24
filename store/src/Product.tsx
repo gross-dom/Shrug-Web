@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { asksAddress, dueCents, fitPoints, fmtCents, fmtPoints, has, mostPoints, numberOf, onFile, POINTS_PER_DOLLAR, postageCents, priceCents, soldOut, wayOf, type Product } from '../shared/rules'
-import type { Backend, Placed, Shop } from './backend'
+import { CARD, type Backend, type Placed, type Shop } from './backend'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
 import { badgeOf, captionOf, editionOf, keptOf, owned, paidOf, priceOf, shortOf } from './words'
@@ -70,7 +70,7 @@ function ShipTo({ shop, typed, onType, go }: { shop: Shop; typed: string; onType
   )
 }
 
-export function ProductView({ shop, product, phone, backend, go, onPlaced }: { shop: Shop; product: Product; phone: boolean; backend: Backend; go: Go; onPlaced: (placed: Placed) => void }) {
+export function ProductView({ shop, visiting, product, phone, backend, go, onPlaced }: { shop: Shop; /** Nobody is signed in: everything is shown, and the button is the way to the card. */ visiting?: boolean; product: Product; phone: boolean; backend: Backend; go: Go; onPlaced: (placed: Placed) => void }) {
   const all = shop.products
   const at = all.findIndex((p) => p.id === product.id)
   const way = wayOf(product)
@@ -206,6 +206,8 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
     if (way !== 'buy' && asked) return { text: way === 'request' ? 'Requested' : 'Reserved', off: true }
     if (out) return { text: 'Sold out', off: true }
     if (bought && product.left === null && !product.editionOf && price === 0) return { text: 'Yours', off: true }
+    // A visitor is shown everything and can take nothing yet: an order needs someone to belong to
+    if (visiting) return { text: `Open your pack to ${way === 'request' ? 'request' : way === 'reserve' ? 'reserve' : price === 0 ? 'claim' : 'buy'}`, act: () => window.location.assign(CARD) }
     if (needsOption) return { text: label === 'Color' ? 'Choose a color' : 'Choose one', off: true }
     if (way === 'request') return { text: 'Request', act: order }
     if (way === 'reserve') return { text: 'Reserve', act: order }

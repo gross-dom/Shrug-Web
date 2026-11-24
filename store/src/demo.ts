@@ -1,4 +1,4 @@
-import { canSee, dueCents, numberOf, onFile, refusalOf, updateOf, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
+import { dueCents, mayHave, numberOf, onFile, refusalOf, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
 import { samplePdf } from '../shared/sample'
 import { save, type Asked, type Backend, type Failed, type Placed, type Who } from './backend'
 
@@ -125,7 +125,7 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   // An update that is listed to them and written for others: asked for
   const doc = papers(store).find((p) => p.id === asked.product)
   if (doc) return updateOf(member, doc, mine)?.state === 'request' ? ask(doc, 'Requested', 0, 0, false) : { error: 'already' }
-  const product = shelves(store).find((p) => p.id === asked.product && canSee(member, p))
+  const product = shelves(store).find((p) => p.id === asked.product && mayHave(member, p))
   if (!product) return { error: 'hidden' }
   if (store.scene === 'lastgone') return { error: 'sold-out' }
   const refusal = refusalOf(member, product, mine, { ...asked, shipTo: onFile(typed) ? typed : store.shipTo })
@@ -145,14 +145,14 @@ export const demo: Backend = {
     const { state, member } = now()
     const store = kept()
     if (store.scene === 'down') return { error: 'server' }
-    if (!state.session) return { status: 'anon' }
-    if (!member) return { status: 'applied' }
+    // Nobody signed in (or the card's "not on the list", which the demo has no account for): a visitor
+    if (!state.session || !member) return { status: 'visitor', products: shelves(store).filter((p) => mayHave(VISITOR, p)), stripeKey: '' }
     const orders = store.orders.filter((order) => order.who === member.id)
     const who: Who = { ...member, number: state.session.member?.number ?? '', since: state.session.member?.since ?? null, reason: state.session.reason ?? null, emails: state.session.emails !== false, email: 'sample@example.com', shipTo: store.shipTo }
     return {
       status: 'member',
       member: who,
-      products: shelves(store).filter((p) => canSee(member, p)),
+      products: shelves(store).filter((p) => mayHave(member, p)),
       updates: papers(store).map((p) => updateOf(member, p, orders)).filter((u): u is Update => !!u),
       orders,
       stripeKey: '',
@@ -165,7 +165,7 @@ export const demo: Backend = {
   async pay(asked) {
     await lag(300)
     const { member } = now()
-    const product = member && shelves(kept()).find((p) => p.id === asked.product && canSee(member, p))
+    const product = member && shelves(kept()).find((p) => p.id === asked.product && mayHave(member, p))
     if (!member || !product) return { error: 'hidden' }
     return { ok: true, demo: true, cents: dueCents(product, asked.points ?? 0) }
   },

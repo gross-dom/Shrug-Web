@@ -282,6 +282,16 @@ body {
   white-space: nowrap;
 }
 
+/* ---- A visitor ---- */
+
+/* A visitor's way to the card, where a member's balance is: at the end of the bar, and no wider than its words */
+.ui-top > .ui-btn {
+  justify-self: end;
+}
+.up-top > .ui-btn {
+  flex: none;
+}
+
 /* ---- The demo's own controls: a small tab at the foot, never in the real store ---- */
 
 /* It sits beside the name in the bar, where no screen puts anything */

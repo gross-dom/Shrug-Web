@@ -17,10 +17,30 @@ npm run build         # the real site, which talks to the server in api/
 npm test              # the server's endpoints, run against stand-ins for Airtable, Stripe and Resend
 ```
 
+## Who is asking
+
+There are three kinds of person, and one set of rules (`shared/rules.ts`) answers for each.
+
+| Who | How | What they are shown |
+| --- | --- | --- |
+| A visitor | Nobody is signed in | The store: everything that is `Visible to` Everyone, at its price. No points, no orders, no updates. The button on a product is the way to the card |
+| A standard user | They signed in, and are not on Shrug's list | The same store, as a member: a row in Members with no `Role`, the tier Standard and 100 points to begin with (`STARTING_POINTS`, which is $10) |
+| Someone on the list | A row in Members with a `Role` | What is for Everyone and for their groups; and, for an LP, the updates |
+
+- **Signing in makes the account.** The first time an address that is not in Members gives a right code, a
+  row is added for it (`welcome` in `api/_lib/members.ts`). Signing in again finds that row: there is no second
+  account and no more points. Applications is no longer written to.
+- **Updates are for LPs alone.** A document is never shown or handed to anyone whose `Role` does not include
+  LP, whatever is ticked on it: on a document, Everyone means every LP (`mayHave`). Anyone can sign in now, so
+  a box ticked in Airtable cannot by itself put an LP update in front of the public.
+- **Taken out of Members, someone is a visitor again** at their next request, and their session is ended.
+
 In the demo a small **Demo** tab beside the name in the bar chooses who is looking, adds points, and brings
 on the states that cannot otherwise be got to (sold out, a payment that fails, an empty store, no answer).
 
-Both builds go to `dist/`. The demo is plain files and can be put anywhere. The real site is deployed to
+Both builds go to `dist/`: the card at its root and the store under `store/`. `SHRUG_BASE=/vip/` builds them
+to be served under that path of another site (the card at `/vip/`, the store at `/vip/store/`); the server
+stays at `/api`. The demo is plain files and can be put anywhere. The real site is deployed to
 Vercel from this folder (`vercel deploy`), which builds it and runs `api/`.
 
 ## How buying works
@@ -114,8 +134,10 @@ The base is **Shrug**. The store reads it afresh on every visit, so a change the
 - **Orders**: written by the store. Set `Status` as you deal with one: Sent, Ready (for a reservation
   that can now be had), or Refunded. Yours shows the member where each stands.
 - **Opens**: written by the store. Who opened or downloaded which update, and when.
-- **Applications** and **Sign-ins**: the store's own. People who signed in and are not members; and
-  the sign-in codes, kept only as marks that cannot be read back.
+- **Sign-ins**: the store's own. The sign-in codes, kept only as marks that cannot be read back.
+- **Applications**: no longer written to. Someone who signs in without being on the list is given a row in
+  Members (see Who is asking). `Tier` needs the choice **Standard** for them (the store writes it, and
+  Airtable adds a choice it has not seen).
 
 ## What the real site needs
 
@@ -134,6 +156,14 @@ Set on the Vercel project (Settings → Environment Variables). None is kept in 
 For Apple Pay, the site's domain has to be added in Stripe (Settings → Payment method domains).
 
 ## Not done yet
+
+- **A visitor cannot buy.** They are shown everything, and the button sends them to the card. Buying without
+  an account, with the account made from what the payment gives, waits on payments being set up.
+- **The standard card.** A standard user's tier is `standard`, which the card page does not know: it draws
+  them the silver card until theirs is designed.
+- **Signing in by text.** Every code is still emailed. A phone number tied to an account, and a code sent to
+  it, need two things this does not have yet: a column for the number in Members, and something to send texts.
+- **A display name and a picture** for an account, for the same reason: they need their columns.
 
 - **Payments have not been run against Stripe.** The code follows Stripe's documented flow and the
   server's side of it is tested against a stand-in, but no real or test payment has been made.

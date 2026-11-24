@@ -11,6 +11,22 @@
 /** 10 points are $1. */
 export const POINTS_PER_DOLLAR = 10
 
+// Who is asking. There are three kinds of person, and the same rules answer for each:
+//   a visitor        nobody signed in. They are shown what is for Everyone, at its price, and no points
+//   a standard user  signed in, and not on Shrug's list: a member with no Role. They are given a few points
+//                    to begin with, and see what a visitor sees
+//   someone listed   a member with a Role (Founder, LP, Investor), and for an LP the funds they are in
+// Documents are a matter apart: they are what Shrug has written to its LPs, and only an LP is ever shown one.
+
+/** What someone who signs in without being on the list is given to begin with: 100 points, which is $10. */
+export const STARTING_POINTS = 100
+/** The tier of a member who is not on the list. Their card is the standard one. */
+export const STANDARD_TIER = 'standard'
+/** Nobody signed in, as the rules see them: in no group at all. */
+export const VISITOR: Pick<Member, 'roles' | 'funds'> = { roles: [], funds: [] }
+
+export const isLP = (member: Pick<Member, 'roles'>): boolean => member.roles.includes('LP')
+
 export interface Member {
   id: string
   name: string
@@ -80,7 +96,8 @@ export const UPDATE_GROUPS = ['Funds', 'SPVs']
 
 /** A document as an update for one member, or null where they are not shown it at all. */
 export function updateOf(member: Pick<Member, 'roles' | 'funds'>, product: Product, orders: Pick<Order, 'productId' | 'status'>[]): Update | null {
-  if (product.kind !== 'Document') return null
+  // Only an LP is shown an update, or told that one exists: not its name, and not that it can be asked for
+  if (product.kind !== 'Document' || !isLP(member)) return null
   const theirs = canSee(member, product)
   if (!theirs && !product.listed) return null
   // Theirs to read once it has a file (and, for one with a price, once they have it)
@@ -134,6 +151,12 @@ export function canSee(member: Pick<Member, 'roles' | 'funds'>, product: Pick<Pr
   const groups = groupsOf(member)
   return product.visibleTo.some((group) => groups.includes(group))
 }
+
+/** Whether a member may be handed a product at all: what they can see, and for a document only if they are an LP.
+ * "Everyone" on a document means every LP. It was written when everyone was on the list, and anyone can sign
+ * in now, so a box ticked in Airtable cannot by itself put an LP update in front of the public. */
+export const mayHave = (member: Pick<Member, 'roles' | 'funds'>, product: Pick<Product, 'visibleTo' | 'kind'>): boolean =>
+  canSee(member, product) && (product.kind !== 'Document' || isLP(member))
 
 /** The groups a product is kept to, for the label on it: nothing where everyone sees it. */
 export const keptTo = (product: Pick<Product, 'visibleTo'>): string[] => (product.visibleTo.includes('Everyone') ? [] : product.visibleTo)
@@ -213,7 +236,7 @@ export interface Asking {
 }
 
 export function refusalOf(member: Member, product: Product, orders: Order[], asked: Asking): Refusal | null {
-  if (!canSee(member, product)) return 'hidden'
+  if (!mayHave(member, product)) return 'hidden'
   const way = wayOf(product)
   // One request, one reservation and one copy of a document each
   if ((way !== 'buy' || product.kind === 'Document') && has(orders, product)) return 'already'

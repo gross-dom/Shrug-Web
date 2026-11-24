@@ -9,8 +9,24 @@ export const DEMO = __DEMO__
 /** A member, with what Yours shows of them besides. */
 export type Who = Member & { number: string; since: number | null; reason: string | null; emails: boolean; email: string; shipTo: string }
 
-export type StoreAnswer = { status: 'anon' } | { status: 'applied' } | { status: 'member'; member: Who; products: Product[]; updates: Update[]; orders: Order[]; stripeKey: string }
+/** What the server says of whoever is asking: a visitor (nobody signed in), who is shown the store and nothing
+ * of anybody's, or a member, with everything that is theirs. */
+export type StoreAnswer = { status: 'visitor'; products: Product[]; stripeKey: string } | { status: 'member'; member: Who; products: Product[]; updates: Update[]; orders: Order[]; stripeKey: string }
 export type Shop = Extract<StoreAnswer, { status: 'member' }>
+
+/** The store as a visitor has it, in the shape the pages are drawn from: the same shelves, and a member who is
+ * nobody, with no points, no orders and no address. What only a member can do is asked of `visiting`. */
+export const shopOf = (answer: Extract<StoreAnswer, { status: 'visitor' }>): Shop => ({
+  status: 'member',
+  member: { id: '', name: '', first: '', roles: [], funds: [], tier: '', points: 0, number: '', since: null, reason: null, emails: false, email: '', shipTo: '' },
+  products: answer.products,
+  updates: [],
+  orders: [],
+  stripeKey: answer.stripeKey,
+})
+
+/** Where the card is: the page a member signs in on, one step up from the store's own (see vite.config.ts). */
+export const CARD = import.meta.env.BASE_URL.replace(/store\/$/, '')
 
 export type Failed = { error: string }
 export type Placed = { ok: true; order: Order; points: number }

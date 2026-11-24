@@ -28,7 +28,7 @@ export type Account = { status: 'checking' | 'anon' | 'applied' | 'down' } | { s
 
 export const account = createStore<Account>({ status: 'checking' })
 
-type Answer = { status: 'anon' } | { status: 'applied' } | { status: 'member'; member: { name: string; first: string; points: number }; updates: Update[] } | { error: string }
+type Answer = { status: 'visitor' } | { status: 'member'; member: { name: string; first: string; points: number }; updates: Update[] } | { error: string }
 export type Sent = { ok: true; note?: string } | { error: string; retryIn?: number }
 export type Checked = { ok: true } | { error: string; left?: number }
 
@@ -83,7 +83,8 @@ export async function refreshAccount(): Promise<Account> {
         ? { status: answer.error === 'anon' ? 'anon' : answer.error === 'member' ? 'applied' : 'down' }
         : answer.status === 'member'
           ? { status: 'member', first: answer.member.first, name: answer.member.name, points: answer.member.points, docs: docsOf(answer.updates ?? []) }
-          : { status: answer.status }
+          : // Nobody signed in: the points site calls them a visitor, and shows them its store
+            { status: 'anon' }
   }
   account.set(next)
   return next

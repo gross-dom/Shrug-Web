@@ -1,5 +1,5 @@
-import { all, change, F, list, num, str, T, type Row } from './airtable.js'
-import type { Member } from '../../shared/rules.js'
+import { add, all, change, F, list, num, str, T, type Row } from './airtable.js'
+import { STANDARD_TIER, STARTING_POINTS, type Member } from '../../shared/rules.js'
 
 // The members, as Airtable has them, and as the card and the store are told of them.
 
@@ -10,6 +10,20 @@ export async function rowOf(email: string): Promise<Row | null> {
   const rows = await all(T.members)
   return rows.find((row) => sameAddress(str(row.fields[F.member.email]), email)) ?? null
 }
+
+/** Whether a member is on Shrug's list: someone Shrug has given a Role. Anyone else is a standard user. */
+export const listed = (row: Row) => list(row.fields[F.member.role]).length > 0
+
+/** A row for someone who has signed in and is not on the list: a standard user, with a few points to begin
+ * with. They have no Role, so they are in no group, and are shown what is for Everyone and nothing else. */
+export const welcome = (email: string): Promise<Row> =>
+  add(T.members, {
+    [F.member.email]: email,
+    [F.member.tier]: STANDARD_TIER[0]!.toUpperCase() + STANDARD_TIER.slice(1),
+    [F.member.points]: STARTING_POINTS,
+    [F.member.reason]: 'A welcome from Shrug',
+    [F.member.since]: String(new Date().getUTCFullYear()),
+  })
 
 export function memberOf(row: Row): Member {
   const name = str(row.fields[F.member.name]).trim()

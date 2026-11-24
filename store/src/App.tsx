@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fmtPoints } from '../shared/rules'
-import { DEMO, server, type Backend, type Placed, type Shop, type StoreAnswer } from './backend'
+import { CARD, DEMO, server, shopOf, type Backend, type Placed, type Shop, type StoreAnswer } from './backend'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
 import { Lock, NoCloud } from './icons'
 import { Picture, ProductView, type Go } from './Product'
@@ -10,8 +10,10 @@ import { YoursView } from './Yours'
 
 // The store. Three sections under one bar: the store itself (a display of everything in it, pictures first,
 // and a screen for each product), Updates, and Yours. The card (the site's front page) is where a member
-// signs in; these pages show what the server says is theirs, and ask it for everything they do. The markup
-// and the stylesheet are the design's (store/design), lifted as they are.
+// signs in; these pages show what the server says is theirs, and ask it for everything they do. A visitor,
+// who has not signed in, is shown the store all the same: what is for everyone, at its price, with the way
+// to the card where a member's balance would be. The markup and the stylesheet are the design's
+// (store/design), lifted as they are.
 
 const backend: Backend = DEMO ? demo : server
 
@@ -69,7 +71,7 @@ function Wallet({ shop, spent }: { shop: Shop; spent: number }) {
   const metal = me.tier === 'gold' || me.tier === 'black' ? me.tier : 'silver'
   const points = useCount(me.points)
   return (
-    <a className="ui-wallet" href="/" aria-label={`Your card: ${metal}${me.number ? `, number ${me.number}` : ''}, ${fmtPoints(me.points)} points`}>
+    <a className="ui-wallet" href={CARD} aria-label={`Your card: ${metal}${me.number ? `, number ${me.number}` : ''}, ${fmtPoints(me.points)} points`}>
       <span className={`ui-chip m-${metal}`} />
       <span>
         {fmtPoints(points)} <small>pts</small>
@@ -78,6 +80,13 @@ function Wallet({ shop, spent }: { shop: Shop; spent: number }) {
     </a>
   )
 }
+
+/** Where a member's balance would be, for a visitor: the way to the card, which is where signing in is. */
+const SignIn = () => (
+  <a className="ui-btn sec sm" href={CARD}>
+    Sign in
+  </a>
+)
 
 function Sections({ at, go }: { at: Section; go: (section: Section) => void }) {
   const link = (section: Section, label: string) => (
@@ -217,7 +226,7 @@ export function App() {
 
   const load = useCallback(async () => {
     const got = await backend.store()
-    setAnswer('error' in got ? (got.error === 'anon' ? { status: 'anon' } : got.error === 'member' ? { status: 'applied' } : { status: 'down' }) : got)
+    setAnswer('error' in got ? { status: 'down' } : got)
   }, [])
   useEffect(() => {
     load()
@@ -242,14 +251,15 @@ export function App() {
   const go: Go = (to) => move(to.view === 'product' ? { section: 'store', product: to.id } : { section: to.view === 'yours' ? 'yours' : 'store', product: null })
   const signout = async () => {
     await backend.signout()
-    window.location.assign('/')
+    window.location.assign(CARD)
   }
   const placed = (done: Placed) => {
     setSpent((n) => n + done.order.points)
     load()
   }
 
-  const shop = answer.status === 'member' ? answer : null
+  const visiting = answer.status === 'visitor'
+  const shop = answer.status === 'member' ? answer : answer.status === 'visitor' ? shopOf(answer) : null
   const product = shop && place.section === 'store' ? (shop.products.find((p) => p.id === place.product) ?? null) : null
   useEffect(() => {
     const names: Record<Section, string> = { store: product ? product.name : 'Store', updates: 'Updates', yours: 'Yours' }
@@ -257,14 +267,36 @@ export function App() {
   }, [place.section, product])
 
   let body: JSX.Element
-  if (shop) {
+  /** What a visitor is told where only a member's things are: Updates and Yours. */
+  const door = (
+    <div className="ui-gate">
+      <span className="ui-thumb lg">
+        <Lock />
+      </span>
+      <h2 className="t-h2">Open your pack to come in.</h2>
+      <p className="t-words">This part is for members.</p>
+      <div style={{ paddingTop: 6 }}>
+        <a className="ui-btn fit" href={CARD}>
+          Open your pack
+        </a>
+      </div>
+    </div>
+  )
+  if (shop && visiting && place.section !== 'store') {
+    body = (
+      <main className={phone ? 'up-body' : 'ui-display'}>
+        <h1 className="sr">Shrug VIP: {place.section === 'updates' ? 'Updates' : 'Yours'}</h1>
+        {door}
+      </main>
+    )
+  } else if (shop) {
     body =
       place.section === 'updates' ? (
         <UpdatesView shop={shop} phone={phone} backend={backend} onChange={load} />
       ) : place.section === 'yours' ? (
         <YoursView shop={shop} phone={phone} backend={backend} onChange={load} onSignOut={signout} />
       ) : product ? (
-        <ProductView key={product.id} shop={shop} product={product} phone={phone} backend={backend} go={go} onPlaced={placed} />
+        <ProductView key={product.id} shop={shop} visiting={visiting} product={product} phone={phone} backend={backend} go={go} onPlaced={placed} />
       ) : (
         <Display shop={shop} phone={phone} open={(id) => go({ view: 'product', id })} />
       )
@@ -290,29 +322,8 @@ export function App() {
             </button>
           </div>
         </div>
-      ) : answer.status === 'anon' ? (
-        <div className="ui-gate">
-          <span className="ui-thumb lg">
-            <Lock />
-          </span>
-          <h2 className="t-h2">Open your pack to come in.</h2>
-          <p className="t-words">The store is for members.</p>
-          <div style={{ paddingTop: 6 }}>
-            <a className="ui-btn fit" href="/">
-              Open your pack
-            </a>
-          </div>
-        </div>
       ) : (
-        <div className="ui-gate">
-          <h2 className="t-h2">You’re not on the list yet.</h2>
-          <p className="t-words">We’ll write when it’s your time.</p>
-          <div style={{ paddingTop: 6 }}>
-            <a className="ui-btn sec fit" href="/">
-              Back to your card
-            </a>
-          </div>
-        </div>
+        door
       )
     body = (
       <main className={phone ? 'up-body' : 'ui-display'}>
@@ -335,7 +346,7 @@ export function App() {
         <div className={`up${oneScreen ? ' fix' : ''}`}>
           <header className="up-top">
             {mark}
-            {shop && <Wallet shop={shop} spent={spent} />}
+            {shop && (visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} />)}
           </header>
           {shop && (
             <div className="up-tabs">
@@ -349,12 +360,12 @@ export function App() {
           <header className="ui-top">
             {mark}
             {shop ? <Sections at={place.section} go={(section) => move({ section, product: null })} /> : <span />}
-            {shop ? <Wallet shop={shop} spent={spent} /> : <span />}
+            {shop ? visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} /> : <span />}
           </header>
           {body}
         </div>
       )}
-      {DEMO && <DemoTab signedIn={!!shop} onChange={load} />}
+      {DEMO && <DemoTab signedIn={!!shop && !visiting} onChange={load} />}
     </>
   )
 }

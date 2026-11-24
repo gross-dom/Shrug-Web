@@ -62,6 +62,8 @@ globalThis.fetch = async (input, init = {}) => {
 const P = F.product, M = F.member
 const founder = rec(T.members, { [M.name]: 'Ada Example', [M.email]: 'Ada@Example.test', [M.role]: ['Founder'], [M.tier]: 'Gold', [M.points]: 12000, [M.number]: 14, [M.since]: '2026' })
 const lp = rec(T.members, { [M.name]: 'Lee Example', [M.email]: 'lee@example.test', [M.role]: ['LP'], [M.funds]: ['Shrug 1'], [M.points]: 300, [M.number]: 3, [M.since]: '2021' })
+// An LP in another fund: what is written for Shrug 1 is not theirs, and they may ask for it
+const max = rec(T.members, { [M.name]: 'Max Example', [M.email]: 'max@example.test', [M.role]: ['LP'], [M.funds]: ['Shrug 3'], [M.points]: 0, [M.number]: 9, [M.since]: '2023' })
 const book = rec(T.products, { [P.name]: 'Chromatic', [P.kind]: 'Book', [P.status]: 'Available', [P.visibleTo]: ['Everyone'], [P.points]: 400, [P.needsAddress]: true, [P.place]: 1 })
 const chair = rec(T.products, { [P.name]: 'Workspace Chair', [P.kind]: 'Chair', [P.status]: 'Available', [P.visibleTo]: ['Everyone'], [P.points]: 10000, [P.floor]: 450, [P.postage]: 70, [P.options]: 'Black, Stone, White', [P.limited]: true, [P.place]: 2 })
 const red = rec(T.products, { [P.name]: 'Workspace Chair, Ferrari Red', [P.kind]: 'Chair', [P.status]: 'On request', [P.visibleTo]: ['Everyone'], [P.points]: 15000, [P.floor]: 1500, [P.place]: 3 })
@@ -107,10 +109,28 @@ const me = await call('ada', 'me', 'GET')
 check('me is the member, and looking was seeing', me.body.status === 'member' && me.body.seenPoints === 12000)
 jar.forged = jar.ada.replace(/\.[^.]+$/, '.' + createHmac('sha256', 'not-the-secret').update('x').digest('base64url'))
 check('a forged session is nobody', (await call('forged', 'me', 'GET')).body.status === 'anon')
+// A visitor: nobody signed in
+const visitor = (await call('nobody', 'store', 'GET')).body
+check('a visitor is shown the store: what is for everyone, in order, and nothing of anybody\'s', visitor.status === 'visitor' && visitor.products.map((p) => p.name).join('|') === 'Chromatic|Workspace Chair|Workspace Chair, Ferrari Red|Art on Acrylic|Shrug 2027' && !('member' in visitor) && !('updates' in visitor) && !('orders' in visitor), JSON.stringify(visitor).slice(0, 300))
+check('and no document, hidden thing or thing for nobody', !JSON.stringify(visitor).match(/Update|Not out yet|For nobody/))
+check('a visitor can order nothing, pay for nothing and fetch no file', (await call('nobody', 'order', 'POST', { product: book.id })).body.error === 'anon' && (await call('nobody', 'pay', 'POST', { product: book.id, points: 0 })).body.error === 'anon' && (await call('nobody', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'anon')
+
+// Someone not on the list: a standard user
+const members = tables[T.members].length
 const stranger = await signIn('sam', 'sam@elsewhere.test')
-check('someone not on the list is applied, once', stranger.body.status === 'applied' && tables[T.applications].length === 1)
-check('and is shown no store', (await call('sam', 'store', 'GET')).body.status === 'applied' && (await call('sam', 'order', 'POST', { product: book.id })).body.error === 'member')
+const samRow = tables[T.members].at(-1)
+check('someone not on the list is given an account: no Role, the standard tier, 100 points', stranger.body.status === 'member' && stranger.body.member.tier === 'standard' && stranger.body.member.points === 100 && stranger.body.member.roles.length === 0 && tables[T.members].length === members + 1 && samRow.fields[M.email] === 'sam@elsewhere.test' && samRow.fields[M.points] === 100 && !samRow.fields[M.role] && tables[T.applications].length === 0, JSON.stringify(stranger.body))
+await call('sam', 'signout', 'POST', {})
+await new Promise((done) => setTimeout(done, 5))
+tables[T.signIns].length = 0
+check('and signing in again makes no second account, and gives no more points', (await signIn('sam', 'sam@elsewhere.test')).body.member.points === 100 && tables[T.members].length === members + 1)
+const samStore = (await call('sam', 'store', 'GET')).body
+check('they are shown what a visitor is, and no update: not its name, and not that it can be asked for', samStore.status === 'member' && samStore.products.map((p) => p.name).join('|') === visitor.products.map((p) => p.name).join('|') && samStore.updates.length === 0 && !JSON.stringify(samStore).match(/Update/))
+check('nor handed one, for everyone or not, nor able to ask', (await call('sam', 'file', 'GET', null, `?product=${update4.id}`)).status === 404 && (await call('sam', 'file', 'GET', null, `?product=${update1.id}`)).status === 404 && (await call('sam', 'order', 'POST', { product: update4.id })).status === 404)
+const samPay = await call('sam', 'pay', 'POST', { product: book.id, points: 100 })
+check('their points are points: $40 less 100 of them is $30', samPay.body.ok && samPay.body.cents === 3000, JSON.stringify(samPay.body))
 await signIn('lee', 'lee@example.test')
+await signIn('max', 'max@example.test')
 
 // Who sees what
 const adaStore = (await call('ada', 'store', 'GET')).body
@@ -118,8 +138,10 @@ const leeStore = (await call('lee', 'store', 'GET')).body
 const names = (s) => s.products.map((p) => p.name)
 const updates = (s) => s.updates.map((u) => `${u.name}:${u.state}`)
 check('everyone sees what is for everyone, in order', names(adaStore).join('|') === 'Chromatic|Workspace Chair|Workspace Chair, Ferrari Red|Art on Acrylic|Shrug 2027', names(adaStore).join('|'))
-check('documents are not in the store: they are updates', updates(adaStore).join('|') === 'Shrug 4 LP Update:open' && !names(leeStore).some((n) => /Update/.test(n)), updates(adaStore).join('|'))
-check('only Shrug 1 LPs see the Shrug 1 update, which has no file yet', updates(leeStore).join('|') === 'Shrug 4 LP Update:open|Shrug 1 LP Update:soon' && !JSON.stringify(adaStore).includes('Shrug 1 LP Update'), updates(leeStore).join('|'))
+const maxStore = (await call('max', 'store', 'GET')).body
+check('documents are not in the store: they are updates', updates(maxStore).join('|') === 'Shrug 4 LP Update:open' && !names(leeStore).some((n) => /Update/.test(n)), updates(maxStore).join('|'))
+check('updates are for LPs alone: a founder on the list is shown none, even one for everyone', adaStore.updates.length === 0 && !JSON.stringify(adaStore).match(/Update/), updates(adaStore).join('|'))
+check('only Shrug 1 LPs see the Shrug 1 update, which has no file yet', updates(leeStore).join('|') === 'Shrug 4 LP Update:open|Shrug 1 LP Update:soon' && !JSON.stringify(maxStore).includes('Shrug 1 LP Update'), updates(leeStore).join('|'))
 check('an update says who it was written for and which heading it is under', leeStore.updates[0].forWhom === 'Everyone on the list' && leeStore.updates[1].forWhom === 'Shrug 1 LPs' && leeStore.updates.every((u) => u.group === 'Funds'))
 check('the store is told what Yours shows: the card, the address, the email', adaStore.member.number === '014' && adaStore.member.since === 2026 && adaStore.member.email === 'Ada@Example.test' && adaStore.member.shipTo === '' && adaStore.member.emails === true, JSON.stringify(adaStore.member))
 check('hidden things, and things for nobody, are never sent', !JSON.stringify([adaStore, leeStore]).match(/Not out yet|For nobody/))
@@ -153,11 +175,12 @@ check('a free document is got with no address', got.body.ok && got.body.points =
 check('and only once', (await call('lee', 'order', 'POST', { product: update4.id })).body.error === 'already')
 const file = await call('lee', 'file', 'GET', null, `?product=${update4.id}`)
 check('its file comes down', file.status === 200 && file.body.startsWith('%PDF') && file.headers.get('content-disposition').includes('Shrug 4.pdf'))
-check('a free document needs no order first', (await call('ada', 'file', 'GET', null, `?product=${update4.id}`)).status === 200)
+check('a free document needs no order first', (await call('max', 'file', 'GET', null, `?product=${update4.id}`)).status === 200)
+check('but it is never handed to someone who is not an LP', (await call('ada', 'file', 'GET', null, `?product=${update4.id}`)).status === 404 && (await call('ada', 'order', 'POST', { product: update4.id })).status === 404)
 update4.fields[P.points] = 50
-check('one with a price is not handed to someone who has not got it', (await call('ada', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'not-yours' && (await call('lee', 'file', 'GET', null, `?product=${update4.id}`)).status === 200)
+check('one with a price is not handed to someone who has not got it', (await call('max', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'not-yours' && (await call('lee', 'file', 'GET', null, `?product=${update4.id}`)).status === 200)
 update4.fields[P.points] = 0
-check('nor a document they may not see', (await call('ada', 'file', 'GET', null, `?product=${update1.id}`)).status === 404)
+check('nor a document they may not see', (await call('max', 'file', 'GET', null, `?product=${update1.id}`)).status === 404)
 
 // On request, and a pre-order
 const asked = await call('ada', 'order', 'POST', { product: red.id })
@@ -216,16 +239,17 @@ update1.fields[P.listed] = true
 update1.fields[P.group] = 'SPVs'
 const spv = rec(T.products, { [P.name]: 'SPV updates', [P.kind]: 'Document', [P.status]: 'Available', [P.visibleTo]: ['Shrug 2 LPs'], [P.listed]: true, [P.group]: 'SPVs', [P.place]: 9 })
 const seen = async (who) => (await call(who, 'store', 'GET')).body.updates.map((u) => `${u.name}:${u.state}:${u.group}`).join('|')
-check('listed to everyone: those it is for open it, the rest may ask; no file is coming soon', (await seen('lee')) === 'Shrug 4 LP Update:open:Funds|Shrug 1 LP Update:open:SPVs|SPV updates:soon:SPVs' && (await seen('ada')) === 'Shrug 4 LP Update:open:Funds|Shrug 1 LP Update:request:SPVs|SPV updates:soon:SPVs', await seen('ada'))
-check('asking does not hand the file over', (await call('ada', 'file', 'GET', null, `?product=${update1.id}`)).status === 404)
-const wanted = await call('ada', 'order', 'POST', { product: update1.id })
-check('a request for an update is an order, Requested, with nothing taken', wanted.body.ok && wanted.body.order.status === 'Requested' && wanted.body.order.productName === 'Shrug 1 LP Update' && wanted.body.points === founder.fields[M.points], JSON.stringify(wanted.body))
-check('it then says Requested, and cannot be asked for twice', (await seen('ada')).includes('Shrug 1 LP Update:requested') && (await call('ada', 'order', 'POST', { product: update1.id })).body.error === 'already')
-founder.fields[M.funds] = ['Shrug 1']
-check('once Shrug adds them to the group it opens', (await seen('ada')).includes('Shrug 1 LP Update:open') && (await call('ada', 'file', 'GET', null, `?product=${update1.id}`)).status === 200)
-founder.fields[M.funds] = []
-check('something not listed, and not theirs, cannot be asked for', (() => { update1.fields[P.listed] = false; return true })() && (await call('sam2', 'order', 'POST', { product: update1.id })).body.error === 'anon' && !(await seen('ada')).includes('Shrug 1'))
-check('an update with no file yet cannot be asked for', (await call('ada', 'order', 'POST', { product: spv.id })).body.error === 'hidden')
+check('listed to every LP: those it is for open it, the rest may ask; no file is coming soon', (await seen('lee')) === 'Shrug 4 LP Update:open:Funds|Shrug 1 LP Update:open:SPVs|SPV updates:soon:SPVs' && (await seen('max')) === 'Shrug 4 LP Update:open:Funds|Shrug 1 LP Update:request:SPVs|SPV updates:soon:SPVs', await seen('max'))
+check('listed is listed to LPs: a founder and a standard user are still shown none, and cannot ask', (await seen('ada')) === '' && (await seen('sam')) === '' && (await call('ada', 'order', 'POST', { product: update1.id })).status === 404 && (await call('sam', 'order', 'POST', { product: update1.id })).status === 404)
+check('asking does not hand the file over', (await call('max', 'file', 'GET', null, `?product=${update1.id}`)).status === 404)
+const wanted = await call('max', 'order', 'POST', { product: update1.id })
+check('a request for an update is an order, Requested, with nothing taken', wanted.body.ok && wanted.body.order.status === 'Requested' && wanted.body.order.productName === 'Shrug 1 LP Update' && wanted.body.points === max.fields[M.points], JSON.stringify(wanted.body))
+check('it then says Requested, and cannot be asked for twice', (await seen('max')).includes('Shrug 1 LP Update:requested') && (await call('max', 'order', 'POST', { product: update1.id })).body.error === 'already')
+max.fields[M.funds] = ['Shrug 3', 'Shrug 1']
+check('once Shrug adds them to the group it opens', (await seen('max')).includes('Shrug 1 LP Update:open') && (await call('max', 'file', 'GET', null, `?product=${update1.id}`)).status === 200)
+max.fields[M.funds] = ['Shrug 3']
+check('something not listed, and not theirs, cannot be asked for', (() => { update1.fields[P.listed] = false; return true })() && (await call('sam2', 'order', 'POST', { product: update1.id })).body.error === 'anon' && !(await seen('max')).includes('Shrug 1'))
+check('an update with no file yet cannot be asked for', (await call('max', 'order', 'POST', { product: spv.id })).body.error === 'hidden')
 
 // Reading one in the page, and the note that is kept
 const before = tables[T.opens].length
@@ -267,7 +291,9 @@ check('with none on file, the address a payment gives is used and kept', tables[
 // Emails, and out
 check('emails can be turned off', (await call('ada', 'emails', 'POST', { on: false })).body.emails === false && founder.fields[M.noEmails] === true && (await call('ada', 'me', 'GET')).body.member.emails === false)
 await call('ada', 'signout', 'POST', {})
-check('signed out is anon', (await call('ada', 'store', 'GET')).body.status === 'anon')
+check('signed out is a visitor to the store, and nobody to the card', (await call('ada', 'store', 'GET')).body.status === 'visitor' && (await call('ada', 'me', 'GET')).body.status === 'anon')
+tables[T.members].splice(tables[T.members].indexOf(samRow), 1)
+check('taken out of Members, someone signed in is a visitor again, and nobody to the card', (await call('sam', 'store', 'GET')).body.status === 'visitor' && (await call('sam', 'me', 'GET')).body.status === 'anon' && (await call('sam', 'order', 'POST', { product: book.id })).body.error === 'anon')
 const orders = (await call('lee', 'store', 'GET')).body.orders
 check('a member is shown only their own orders', orders.map((o) => o.productName).sort().join('|') === 'Chromatic|Second Book|Shrug 4 LP Update', orders.map((o) => o.productName).sort().join('|'))
 
