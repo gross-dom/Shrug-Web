@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { fmtCents, fmtPoints, onFile, type Order } from '../shared/rules'
-import type { Backend, Shop } from './backend'
+import { fmtCents, fmtPoints, onFile, stockOf, type Order } from '../shared/rules'
+import { CARD, type Backend, type Shop } from './backend'
 import { Points, Wordmark } from './brand'
 import { DocIcon } from './icons'
 import { Lines, Paid, Picture } from './Product'
@@ -90,11 +90,14 @@ function Address({ shop, backend, onChange, style }: { shop: Shop; backend: Back
   )
 }
 
+/** What is on a card where a name would be, until its member has given one: two lines, as the card page sets them. */
+const NO_NAME = ['Your name', 'here']
+
 export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop: Shop; phone: boolean; backend: Backend; onChange: () => void; onSignOut: () => void }) {
   const me = shop.member
   const [emails, setEmails] = useState(me.emails)
-  const metal = me.tier === 'gold' || me.tier === 'black' ? me.tier : 'silver'
-  const Metal = metal[0]!.toUpperCase() + metal.slice(1)
+  const stock = stockOf(me.tier)
+  const Stock = stock[0]!.toUpperCase() + stock.slice(1)
   const spent = shop.orders.filter((order) => order.points > 0)
   const spentPoints = spent.reduce((sum, order) => sum + order.points, 0)
   const bought = boughtOf(shop.orders)
@@ -120,7 +123,7 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
       </div>
       <div>
         <dt>Card</dt>
-        <dd>{Metal}</dd>
+        <dd>{Stock}</dd>
         <dd className="sub">{me.number ? `No. ${me.number} · Series 01` : 'Series 01'}</dd>
       </div>
       <div>
@@ -260,18 +263,27 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
 
   // Their card, as the card page draws it. Pressed, it goes there
   const card = (
-    <a className="mc-link" href="/" aria-label="Your card. Open it">
-      <div className={`mc m-${metal}`}>
+    <a className="mc-link" href={CARD} aria-label="Your card. Open it">
+      <div className={`mc m-${stock}`}>
         <div className="mc-top">
           <Wordmark lockup="shrug" height={15} />
           <small>
-            {Metal}
+            {Stock}
             {me.number ? ` · No. ${me.number}` : ''}
           </small>
         </div>
         <div className="mc-win">
           {/* A long name is set smaller, so that its longest word still fits the window */}
-          <b style={{ fontSize: Math.min(60, Math.round(430 / Math.max(...me.name.split(/\s+/).map((word) => word.length), 1))) }}>{me.name}</b>
+          {/* A member who has not given a name yet (a standard one, newly made) has the card's own words there */}
+          {me.name ? (
+            <b style={{ fontSize: Math.min(60, Math.round(430 / Math.max(...me.name.split(/\s+/).map((word) => word.length), 1))) }}>{me.name}</b>
+          ) : (
+            <b style={{ fontSize: Math.round(430 / NO_NAME[0]!.length), whiteSpace: 'nowrap' }}>
+              {NO_NAME[0]}
+              <br />
+              {NO_NAME[1]}
+            </b>
+          )}
         </div>
         <div className="mc-band">
           <b>{me.roles[0] ?? 'Member'}</b>

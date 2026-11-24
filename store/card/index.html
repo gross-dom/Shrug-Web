@@ -1134,7 +1134,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     investor: { label: 'Investor, silver', member: { name: 'Dom Santry', first: 'Dom', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 } },
     // The third tier. Who is given a black card has not been decided: this is here so that one can be seen.
     black: { label: 'Investor, black', member: { name: 'Dom Santry', first: 'Dom', roles: ['Investor'], tier: 'black', points: 400, number: '027', since: 2024 } },
-    none: { label: 'Nothing: not on the list', member: null },
+    // Not on the list: a standard member, as the server makes of anyone who signs in. No name until they give one.
+    standard: { label: 'Standard, not on the list', member: { name: '', first: '', roles: [], tier: 'standard', points: 100, number: '', since: 2026 } },
   };
   const REASONS = ['the intro to Ada', 'hosting the dinner', 'the reference call'];
   const KEY = 'shrugdemo.v1';
@@ -2575,6 +2576,31 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     return back;
   }
 
+  /** A standard member's card: someone who signed in and is not on the list. It is the placeholder's black
+   * stock and steel outline type, printed with what they have: their name once they have given one, and
+   * their points. */
+  function standardCard(m, printed) {
+    const grain = h('div', 'blank-grain');
+    grain.setAttribute('aria-hidden', 'true');
+    const glare = h('div', 'glare');
+    glare.setAttribute('aria-hidden', 'true');
+    const words = (m.name || '').trim().split(/\s+/).filter(Boolean);
+    const name = h('div', 'blank-name hollow');
+    name.id = 'cardName';
+    if (!words.length) name.append('Your name', h('br'), 'here');
+    else if (words.length === 1) name.append(words[0]);
+    else name.append(words[0], h('br'), words.slice(1).join(' '));
+    const num = h('div', 'card-num hollow', fmt(printed));
+    num.id = 'cardNum';
+    return h('article', 'card blank standard',
+      grain,
+      h('div', 'card-head', mark('card-brand'), h('div', 'card-micro', 'Standard')),
+      h('div', 'card-art blank-art', name),
+      h('div', 'card-band role-none', h('div', 'card-role', 'Member'), m.since ? h('div', 'card-micro card-since', 'Member since ' + m.since) : null),
+      h('div', 'card-foot', h('div', 'card-pts', h('div', 'card-micro', 'Points'), num), h('div', 'card-micro card-ser', 'Series 01', h('br'), '1 of 1')),
+      glare);
+  }
+
   function blankCard() {
     const grain = h('div', 'blank-grain');
     grain.setAttribute('aria-hidden', 'true');
@@ -2744,6 +2770,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       // The placeholder's two lines of outline type, inside its dashed window.
       const name = card.querySelector('.blank-name');
       if (name) fitIn(name, name, 20);
+      // A standard card has a balance printed on it, fitted as a metal card's is
+      const num = card.querySelector('#cardNum');
+      if (num) fitLine(num, card.querySelector('.card-foot').clientWidth - card.querySelector('.card-ser').offsetWidth - 12, 66);
       return;
     }
     fitName($('cardName'), S.who.member.name);
@@ -2754,7 +2783,11 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
   /** A member's card is one of three metals: gold, black, or (whatever else the server says) silver. */
   const metalOf = (tier) => (tier === 'gold' || tier === 'black' ? tier : 'silver');
-  const tierOf = (who) => (who.status !== 'member' ? 'blank' : metalOf(who.member.tier));
+  /** Someone who signed in and is not on the list: their card is the standard one, on black stock. */
+  const isStandard = (m) => m.tier === 'standard';
+  /** How the card comes out of the pack. A standard card comes out as a metal one does, lights and all:
+   * 'blank' is only the placeholder, for nobody. */
+  const tierOf = (who) => (who.status !== 'member' ? 'blank' : isStandard(who.member) ? 'standard' : metalOf(who.member.tier));
 
   function mountCard(who) {
     cardTilt.textContent = '';
@@ -2762,7 +2795,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       const m = who.member;
       const moved = who.seenPoints != null && m.points > who.seenPoints;
       S.printed = moved ? who.seenPoints : m.points;
-      cardTilt.append(memberCard(m, S.printed));
+      cardTilt.append(isStandard(m) ? standardCard(m, S.printed) : memberCard(m, S.printed));
       cardslot.setAttribute('aria-label', 'Your card');
     } else {
       S.printed = 0;

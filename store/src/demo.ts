@@ -16,6 +16,8 @@ export const PEOPLE: Record<string, { label: string; member: { name: string; fir
   lp: { label: 'LP in Shrug 1, gold, 8,400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['LP'], tier: 'gold', points: 8400, number: '003', since: 2021 }, funds: ['Shrug 1'] },
   investor: { label: 'Investor, silver, 400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 }, funds: [] },
   black: { label: 'Investor, black, 20,000 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'black', points: 20000, number: '027', since: 2024 }, funds: [] },
+  // Not on the list: a standard member, as the server makes of anyone who signs in. No name until they give one
+  standard: { label: 'Standard, not on the list, 100 points', member: { name: '', first: '', roles: [], tier: 'standard', points: 100, number: '', since: 2026 }, funds: [] },
 }
 
 /** Things the demo can be made to do, so that every state the store has can be seen. */

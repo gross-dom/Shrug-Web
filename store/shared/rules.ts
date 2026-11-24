@@ -22,6 +22,10 @@ export const POINTS_PER_DOLLAR = 10
 export const STARTING_POINTS = 100
 /** The tier of a member who is not on the list. Their card is the standard one. */
 export const STANDARD_TIER = 'standard'
+/** What a member's card is printed on: one of three metals, or the standard card's black stock. */
+export type Stock = 'silver' | 'gold' | 'black' | 'standard'
+/** The stock for a tier: gold, black and standard are themselves, and anything else is silver. */
+export const stockOf = (tier: string): Stock => (tier === 'gold' || tier === 'black' || tier === STANDARD_TIER ? tier : 'silver')
 /** Nobody signed in, as the rules see them: in no group at all. */
 export const VISITOR: Pick<Member, 'roles' | 'funds'> = { roles: [], funds: [] }
 
@@ -35,7 +39,7 @@ export interface Member {
   roles: string[]
   /** The Shrug funds they are an LP in: "Shrug 1" … */
   funds: string[]
-  /** gold, black, or anything else for silver. */
+  /** gold, black, standard (not on the list), or anything else for silver: see stockOf. */
   tier: string
   points: number
 }

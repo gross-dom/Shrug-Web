@@ -39,6 +39,11 @@ There are three kinds of person, and one set of rules (`shared/rules.ts`) answer
   LP, whatever is ticked on it: on a document, Everyone means every LP (`mayHave`). Anyone can sign in now, so
   a box ticked in Airtable cannot by itself put an LP update in front of the public.
 - **Taken out of Members, someone is a visitor again** at their next request, and their session is ended.
+- **A standard user's card is the black one.** Their tier is `standard`, and their card is the placeholder's
+  black stock and steel outline type, printed with what they have: their points, and their name once they
+  have given one ("Your name here" until then). It comes out of the pack as a metal card does. The card page
+  (`standardCard`) and My VIP (`.mc.m-standard`) draw it; `stockOf` in `shared/rules.ts` says which card a
+  tier is. The placeholder itself ("you're not on the list. yet.") is no longer anybody's.
 
 In the demo a small **Demo** tab beside the name in the bar chooses who is looking, adds points, and brings
 on the states that cannot otherwise be got to (sold out, a payment that fails, an empty store, no answer).
@@ -216,8 +221,6 @@ For Apple Pay, the site's domain has to be added in Stripe (Settings → Payment
 
 - **A visitor cannot buy.** They are shown everything, and the button sends them to the card. Buying without
   an account, with the account made from what the payment gives, waits on payments being set up.
-- **The standard card.** A standard user's tier is `standard`, which the card page does not know: it draws
-  them the silver card until theirs is designed.
 - **Signing in by text.** Every code is still emailed. A phone number tied to an account, and a code sent to
   it, need two things this does not have yet: a column for the number in Members, and something to send texts.
 - **A display name and a picture** for an account, for the same reason: they need their columns.
