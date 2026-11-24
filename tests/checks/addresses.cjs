@@ -69,8 +69,8 @@ const check = (name, ok, detail = '') => {
     ['?open=portfolio&at=varda', 'finder', 'co:Varda'],
     ['?open=portfolio;faqs', 'notes', 'f:faqs'],
     ['?open=faqs+portfolio', 'finder', ''],
-    // (VIP is no app: it is the Dock's link to the points site. Named with an app, the app is what opens;
-    // named alone, by either of the names it had as an app, it names nothing, and the visit begins as any does)
+    // (VIP Store is a window of the desktop's, and no app of the phone's. Named with an app, the app is what opens;
+    // named alone it names nothing here, and the visit begins as any does)
     ['?open=portfolio+vip', 'finder', ''],
     ['?open=vip', null, null],
     ['?open=photos', null, null],
@@ -91,13 +91,28 @@ const check = (name, ok, detail = '') => {
     if (app && app !== 'home') check(`…with no Lock Screen on the way`, !v.seenLock.v)
     await v.t.ctx.close()
   }
-  // and on the desktop (where an address that asks for VIP, by a path or by name, opens no window for it:
-  // the desk is as any visit finds it, with the conversation)
-  for (const [tail, want] of [['?open=Portfolio;FAQs', 'finder,messages,notes'], ['case-studies', 'messages,terminal'], ['vip', 'messages'], ['?open=vip', 'messages'], ['?open=photos,portfolio', 'finder,messages'], ['?phone=0', 'messages'], ['?PHONE', null], ['?phone=off&open=faqs', 'messages,notes']]) {
+  // and on the desktop (where an address that asks for VIP by name opens the store's window, with the conversation)
+  for (const [tail, want] of [['?open=Portfolio;FAQs', 'finder,messages,notes'], ['case-studies', 'messages,terminal'], ['?open=vip', 'messages,store'], ['?open=VIP-Store;faqs', 'messages,notes,store'], ['?open=photos,portfolio', 'finder,messages'], ['?phone=0', 'messages'], ['?PHONE', null], ['?phone=off&open=faqs', 'messages,notes']]) {
     v = await visit('desktop', tail, 1500)
     const got = await v.t.page.evaluate(() => (document.querySelector('.dock') ? [...document.querySelectorAll('.wf[data-app]')].filter((w) => !w.hasAttribute('inert') && getComputedStyle(w).visibility !== 'hidden').map((w) => w.getAttribute('data-app')).sort().join() : null))
     check(`desktop ${tail} -> ${want ?? 'the iPhone'}`, got === want, String(got))
     await v.t.ctx.close()
+  }
+  // /vip is not the desk. It is the store's own pages, which this site serves under that name: the card and its
+  // pack at /vip/, the store at /vip/store/. They are what the window's frame holds, and where a phone is sent.
+  // Asked for without its slash, the card's page is sent to the address with it, so that what it links to is found
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+    const page = await ctx.newPage()
+    await page.goto(BASE + 'vip', { waitUntil: 'load' })
+    await page.waitForSelector('#stage', { timeout: 20000 })
+    const card = await page.evaluate(() => ({ path: location.pathname, desk: !!document.querySelector('.os, .dock'), pack: !!document.querySelector('#stage #pack'), title: document.title }))
+    check('/vip is the card and its pack, at /vip/, and not the desk', /\/vip\/$/.test(card.path) && !card.desk && card.pack && card.title === 'Shrug VIP', JSON.stringify(card))
+    await page.goto(BASE + 'vip/store/', { waitUntil: 'load' })
+    await page.waitForSelector('.ui-prod', { timeout: 20000 })
+    const shop = await page.evaluate(() => ({ desk: !!document.querySelector('.os, .dock'), bar: !!document.querySelector('.ui-top'), products: document.querySelectorAll('.ui-prod').length, title: document.title }))
+    check('/vip/store/ is the store, with its own bar when it is not in a window', !shop.desk && shop.bar && shop.products >= 4 && /Store/.test(shop.title), JSON.stringify(shop))
+    await ctx.close()
   }
   await browser.close()
   console.log(failed ? `${failed} FAILED` : 'all ok')

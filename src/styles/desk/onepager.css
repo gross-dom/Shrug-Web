@@ -1,0 +1,201 @@
+/* The one-pager's page: 816 by 1056, black and white (design/v1, screens/shrugos.css, "The one-pager's page").
+   Set in Shrug's type. Sizes are in px so that a page is the same page however small Preview draws it. */
+
+.op {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  width: 816px;
+  height: 1056px;
+  padding: 56px 60px 44px;
+  background: #fff;
+  color: #0c0c0d;
+  font: 400 13px/1.5 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+}
+
+.op *,
+.op *::before,
+.op *::after {
+  box-sizing: border-box;
+}
+
+.op :where(p, h1, h2, ul, li, blockquote, table) {
+  margin: 0;
+  padding: 0;
+}
+
+.op :where(ul) {
+  list-style: none;
+}
+
+.op-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #55565c;
+  font-size: 12px;
+}
+
+.op-top b {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #0c0c0d;
+}
+
+.op-top b > span {
+  display: block;
+  width: 26px;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.op-top b svg {
+  display: block;
+}
+
+.op h1 {
+  max-width: 17ch;
+  font-size: 52px;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+}
+
+.op h1.op-h1--second {
+  font-size: 32px;
+}
+
+.op-lead {
+  max-width: 56ch;
+  color: #2a2a2e;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.op-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1.5px solid #0c0c0d;
+  border-bottom: 1px solid #d9dadf;
+}
+
+.op-stats--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #d9dadf;
+}
+
+.op-stats div {
+  padding: 14px 12px 14px 0;
+}
+
+.op-stats b {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.op-stats--three b {
+  font-size: 17px;
+}
+
+.op-stats span {
+  color: #55565c;
+  font-size: 11.5px;
+}
+
+.op-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px;
+}
+
+.op h2 {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.op h2.op-h3--after {
+  margin-top: 22px;
+}
+
+.op li {
+  padding: 7px 0;
+  border-bottom: 1px solid #e6e7eb;
+}
+
+.op blockquote {
+  font-size: 20px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.op cite {
+  display: block;
+  margin-top: 6px;
+  color: #55565c;
+  font-size: 11.5px;
+  font-style: normal;
+}
+
+.op-logos {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.op-logos--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.op-logos span {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  border-radius: 6px;
+  background: #f2f3f5;
+  color: #2a2a2e;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.op-said {
+  margin-top: 14px;
+  color: #55565c;
+  font-size: 12px;
+}
+
+.op-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #d9dadf;
+  color: #55565c;
+  font-size: 11px;
+}
+
+.op table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.op td {
+  padding: 9px 0;
+  border-bottom: 1px solid #e6e7eb;
+}
+
+.op td:first-child {
+  width: 36%;
+  color: #55565c;
+}

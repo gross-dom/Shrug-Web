@@ -406,11 +406,11 @@ const touchOf = (t) => ({
     await t.page.waitForTimeout(900)
     const icons = await t.page.evaluate(() => {
       const fills = (el) => [...el.querySelectorAll('stop')].map((s) => s.getAttribute('stop-color').toLowerCase())
-      const of = (id) => document.querySelector(`.dock [data-dock-item="${id}"] svg, .dock [data-app="${id}"] svg`) ?? [...document.querySelectorAll('.dock svg.app-icon')][['finder', 'messages', 'notes', 'terminal', 'vip'].indexOf(id)]
+      const of = (id) => document.querySelector(`.dock [data-dock-app="${id}"] svg.app-icon`)
       const out = {}
       // (rim: an outline stroked round the tile itself, over what is drawn on it: the lit edge the tiles used to wear)
-      // (the Dock's five tiles in their order: the four apps, and VIP, which is a link drawn on a tile as they are)
-      for (const id of ['finder', 'messages', 'notes', 'terminal', 'vip']) { const svg = of(id); out[id] = svg ? { stops: fills(svg).slice(0, 2), ellipse: !!svg.querySelector('ellipse'), dots: svg.querySelectorAll('circle').length, rect: svg.querySelectorAll('rect').length, rim: svg.querySelectorAll(':scope > path[stroke]').length } : null }
+      // (the Dock's five tiles in their order: the four apps, and VIP Store, the fifth)
+      for (const id of ['finder', 'messages', 'notes', 'terminal', 'store']) { const svg = of(id); out[id] = svg ? { stops: fills(svg).slice(0, 2), ellipse: !!svg.querySelector('ellipse'), dots: svg.querySelectorAll('circle').length, rect: svg.querySelectorAll('rect').length, rim: svg.querySelectorAll(':scope > path[stroke]').length } : null }
       const box = (el) => { const b = el.getBBox(); return [b.x, b.y, b.width, b.height] }
       const chat = of('messages')
       // the bubble and its tail: drawn as two shapes under one shadow
@@ -432,7 +432,7 @@ const touchOf = (t) => ({
       out.dot = getComputedStyle(dot).backgroundColor
       return out
     })
-    const tiles = ['finder', 'messages', 'notes', 'terminal', 'vip']
+    const tiles = ['finder', 'messages', 'notes', 'terminal', 'store']
     say(tiles.every((id) => icons[id]?.rim === 0), 'no tile wears a lit rim round its edge', tiles.map((id) => `${id} ${icons[id]?.rim}`).join(', '))
     say(!icons.messages?.ellipse && icons.messages?.stops.join() === '#84ed7d,#63ce54', 'Messages: a pale bubble on the design\'s green', JSON.stringify(icons.messages))
     say(!!icons.bubble && Math.abs(icons.bubble.wide - 72.6) < 1 && Math.abs(icons.bubble.tall - 60.4) < 1 && Math.abs(icons.bubble.tailFoot - icons.bubble.foot) < 0.6, 'its bubble about 72 by 60 of the tile\'s hundred, its tail a nub that ends level with the bubble\'s foot', JSON.stringify(icons.bubble))

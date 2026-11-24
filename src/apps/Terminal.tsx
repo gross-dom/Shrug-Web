@@ -13,6 +13,7 @@ import { shrug } from '../os/shrug'
 import { createStore, useStore } from '../os/store'
 import { openApp, wm } from '../os/wm'
 import { launchApp, showCompany, showReply } from '../os/launch'
+import { openOnePager } from '../os/papers'
 import { folded } from './fold'
 
 // Case studies, in a terminal. Most are private: listing them works, reading
@@ -328,9 +329,9 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
       const study = publicNamed(arg)
       if (study) return { lines: [out(`${study.dir} is public:`), { kind: 'link', text: study.dir, href: study.url }] }
       if (name === 'one-pager' || name === 'onepager') return { lines: [{ kind: 'link', text: 'read the one-pager', href: SITE.onePager }] }
-      // VIP is no app of the site's: it is the points site, and is handed over as the one-pager is, a line
-      // to press that opens in a tab of its own
-      if (name === 'vip') return { lines: [out('vip is on the points site:'), { kind: 'link', text: 'open vip', href: SITE.points }] }
+      // On the desktop VIP is the store, in a window, and opens as any app does. A phone has no such app: there
+      // it is the points site, handed over as the one-pager is, a line to press that opens in a tab of its own
+      if ((name === 'vip' || OPENS[name] === 'store') && wm.get().compact) return { lines: [out('vip is on the points site:'), { kind: 'link', text: 'open vip', href: SITE.points }] }
       const app = OPENS[name]
       if (app === 'terminal') return { lines: [out('you’re in it.')] }
       // The wallpapers are the desktop's: a phone has one of its own, and no folder of them
@@ -507,6 +508,16 @@ const CLASS: Record<Exclude<Line['kind'], 'cmd' | 'link' | 'go'>, string | undef
 /** A line that goes somewhere: a case study, the one-pager, the visitor's own mail. */
 function LinkLine({ text, href }: { text: string; href: string }) {
   const page = /^https?:/.test(href)
+  const compact = useStore(wm, (s) => s.compact)
+  // On the desktop the one-pager is a file, and opens in Preview: nothing leaves for a tab of its own
+  if (href === SITE.onePager && !compact)
+    return (
+      <div className="term__go">
+        <button type="button" className="term__link" onClick={openOnePager}>
+          {text}
+        </button>
+      </div>
+    )
   return (
     <div className="term__go">
       <a

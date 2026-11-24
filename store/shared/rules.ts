@@ -114,6 +114,8 @@ export interface Product {
   listed?: boolean
   /** For a document: the heading it is listed under in Updates. */
   group?: string
+  /** When it was added to the store, as a date and time: an update is dated by it. */
+  added?: string | null
 }
 
 /** An update: a document, as one member is shown it. Not for sale, so not in the store.
@@ -134,6 +136,8 @@ export interface Update {
   state: UpdateState
   /** What it costs to unlock, in points: nothing for one that is simply theirs to read. */
   points: number
+  /** When it was added, as a date and time, where that is known. */
+  date: string | null
 }
 
 export const UPDATE_GROUPS = ['Funds', 'SPVs']
@@ -147,7 +151,7 @@ export function updateOf(member: Pick<Member, 'roles' | 'funds'>, product: Produ
   // Theirs to read once it has a file. One with a price is unlocked first, with points; one written for
   // others is asked for
   const state: UpdateState = !product.hasFile ? 'soon' : theirs && (free(product) || has(orders, product)) ? 'open' : theirs ? 'locked' : has(orders, product) ? 'requested' : 'request'
-  return { id: product.id, name: product.name, group: product.group || UPDATE_GROUPS[0]!, forWhom: product.visibleTo.includes('Everyone') ? 'Everyone on the list' : product.visibleTo.join(', '), state, points: Math.max(0, Math.round(product.points ?? 0)) }
+  return { id: product.id, name: product.name, group: product.group || UPDATE_GROUPS[0]!, forWhom: product.visibleTo.includes('Everyone') ? 'Everyone on the list' : product.visibleTo.join(', '), state, points: Math.max(0, Math.round(product.points ?? 0)), date: product.added ?? null }
 }
 
 /** An address kept on file is a few lines of text: a name, a street, a city. Two lines at least. */

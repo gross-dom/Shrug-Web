@@ -7,7 +7,8 @@ import { Window } from '../kit/window'
 import { APPS } from '../os/apps'
 import { dockPoint } from '../os/dom'
 import { AppIcon } from '../os/icons'
-import { openApp } from '../os/wm'
+import { openOnePager } from '../os/papers'
+import { focusWindow, openApp } from '../os/wm'
 
 // About Shrug: the small window a system keeps for this. Who Shrug is, in a
 // sentence and then in a few facts (when it started, who its partners are,
@@ -22,7 +23,7 @@ const FACTS: ({ label: string; value: string } & ({ open: () => void } | { href:
   { label: APPS.messages.name, value: `${PEOPLE.length} people`, open: () => openApp('messages', dockPoint('messages')) },
   { label: APPS.finder.name, value: `${COMPANY_COUNT} companies`, open: () => openApp('finder', dockPoint('finder')) },
   { label: 'Verticals', value: String(VERTICALS.length), open: () => openApp('finder', dockPoint('finder')) },
-  { label: 'Drops', value: String(DROPS.length), href: SITE.points },
+  { label: 'Drops', value: String(DROPS.length), open: () => (openApp('store', dockPoint('store')), focusWindow('store')) },
 ]
 
 export function AboutApp() {
@@ -69,9 +70,9 @@ export function AboutApp() {
             {way.label}
           </a>
         )}
-        <a className="about__link" data-quiet={way ? '' : undefined} href={SITE.onePager} target="_blank" rel="noreferrer">
-          One-pager<span className="sr-only">, opens in a new tab</span>
-        </a>
+        <button type="button" className="about__link" data-quiet={way ? '' : undefined} onClick={openOnePager}>
+          One-pager
+        </button>
       </div>
     </Window>
   )

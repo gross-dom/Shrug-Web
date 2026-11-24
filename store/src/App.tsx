@@ -7,7 +7,7 @@ import { DESK, type StoreInWindow } from './desk'
 import { Lock, NoCloud } from './icons'
 import { Picture, Price, ProductView, type Go } from './Product'
 import { Visiting } from './visiting'
-import { badgeOf, priceOf } from './words'
+import { badgeOf } from './words'
 import { YoursView } from './Yours'
 
 // The store. Two sections under one bar: the store itself (a display of everything in it, pictures first,
@@ -115,10 +115,10 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
   const products = shop.products
   if (!products.length)
     return DESK ? (
-      <div className="ui-door">
+      <main className="ui-door">
         <h2 className="t-h2">Nothing in the store yet</h2>
         <p className="t-words">New pieces land here first. We’ll email you when one does.</p>
-      </div>
+      </main>
     ) : (
       <main className={phone ? 'up-body' : 'ui-display'}>
         <div className="ui-gate">
@@ -133,7 +133,7 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
         const badge = badgeOf(product, shop.orders)
         return (
           <li key={product.id}>
-            <a className="ui-prod" href={`?p=${encodeURIComponent(product.id)}`} aria-label={[product.name, product.kind, priceOf(product), badge?.text].filter(Boolean).join(', ')} onClick={(e) => (e.preventDefault(), open(product.id))}>
+            <a className="ui-prod" href={`?p=${encodeURIComponent(product.id)}`} onClick={(e) => (e.preventDefault(), open(product.id))}>
               <span className="ui-prod-pic">
                 <Picture product={product} size={phone ? 26 : 44} tile />
                 {badge && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
@@ -311,7 +311,7 @@ export function App() {
   if (shop && visiting && place.section !== 'store') {
     body = DESK ? (
       // In a window: My VIP is a door to the desk's Log In
-      <div className="ui-door">
+      <main className="ui-door">
         <h1 className="sr">Shrug VIP: My VIP</h1>
         <Lock />
         <h2 className="t-h2">Log in to see My VIP</h2>
@@ -319,7 +319,7 @@ export function App() {
         <button type="button" className="ui-btn fit" onClick={() => DESK!.logIn('store')}>
           Log In
         </button>
-      </div>
+      </main>
     ) : (
       <main className={phone ? 'up-body' : 'ui-display'}>
         <h1 className="sr">Shrug VIP: My VIP</h1>
@@ -346,14 +346,14 @@ export function App() {
           </div>
         </div>
       ) : answer.status === 'down' && DESK ? (
-        <div className="ui-door">
+        <main className="ui-door">
           <NoCloud />
           <h2 className="t-h2">The store isn’t answering</h2>
           <p className="t-words">Nothing was charged. Check your connection and try again.</p>
           <button type="button" className="ui-btn fit" onClick={() => (setAnswer({ status: 'loading' }), load())}>
             Try Again
           </button>
-        </div>
+        </main>
       ) : answer.status === 'down' ? (
         <div className="ui-gate">
           <span className="ui-thumb lg">

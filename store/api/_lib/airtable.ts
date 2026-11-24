@@ -79,6 +79,8 @@ export type Fields = Record<string, unknown>
 export interface Row {
   id: string
   fields: Fields
+  /** When the row was added, as Airtable gives it with every row. */
+  createdTime?: string
 }
 
 async function ask(method: string, table: string, query: string, body?: unknown): Promise<any> {

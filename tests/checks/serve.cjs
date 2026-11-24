@@ -8,13 +8,16 @@ const zlib = require('zlib')
 
 const dir = path.resolve(process.argv[2])
 const port = Number(process.argv[3])
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.webp': 'image/webp', '.png': 'image/png', '.woff2': 'font/woff2', '.ico': 'image/x-icon' }
-const TEXT = new Set(['.html', '.js', '.css', '.svg', '.json', '.webmanifest'])
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.pdf': 'application/pdf', '.ttf': 'font/ttf', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.webp': 'image/webp', '.png': 'image/png', '.woff2': 'font/woff2', '.ico': 'image/x-icon' }
+const TEXT = new Set(['.html', '.js', '.mjs', '.css', '.svg', '.json', '.webmanifest'])
 const zipped = new Map()
 
 http
   .createServer((req, res) => {
-    let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname)
+    const asked = new URL(req.url, 'http://x')
+    let rel = decodeURIComponent(asked.pathname)
+    // a folder with a page of its own, asked for without its slash, is sent to the address with it (vercel.json: /vip)
+    if (!rel.endsWith('/') && !path.extname(rel) && fs.existsSync(path.join(dir, rel, 'index.html'))) return void res.writeHead(308, { location: rel + '/' + asked.search }).end()
     if (rel.endsWith('/')) rel += 'index.html'
     let file = path.join(dir, rel)
     const there = file.startsWith(dir) && fs.existsSync(file) && !fs.statSync(file).isDirectory()

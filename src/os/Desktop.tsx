@@ -116,12 +116,16 @@ export function Desktop() {
     // an app arrives in it (the last one named) with the phone already unlocked: no Lock Screen first,
     // and for the chat, the conversation itself
     const resumed = startSystem()
-    if (wm.get().compact && !resumed && named) {
-      if (onPhone(named)) {
-        const { stack, sheet } = placeOfSpot({ app: named, at })
-        arriveIn(named, stack, sheet)
+    // (VIP Store and Preview are windows of the desktop's alone. On a phone VIP and the one-pager are links
+    // out, and an address that names either names nothing here: the visit begins as any does, and beside other
+    // names the others open)
+    const wanted = wm.get().compact ? extra.filter((id) => id !== 'store' && id !== 'preview').pop() : named
+    if (wm.get().compact && !resumed && wanted) {
+      if (onPhone(wanted)) {
+        const { stack, sheet } = placeOfSpot({ app: wanted, at })
+        arriveIn(wanted, stack, sheet)
         // A link to one person's reply: the conversation opens at what they said
-        const who = named === 'messages' ? personAt(at) : null
+        const who = wanted === 'messages' ? personAt(at) : null
         if (who !== null) showInGroup(who)
       }
       // An app the phone does not have. About Shrug is the desktop's: who Shrug is, on a phone, is on Shrug's

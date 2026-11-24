@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useNewReplies } from '../apps/state'
-import { SITE } from '../data/site'
-import { APPS, DOCK_APPS, type AppId } from './apps'
+import { APPS, DOCK_APPS, GUEST_APPS, type AppId } from './apps'
 import { dockPoint, prefersReducedMotion } from './dom'
-import { AppIcon, VipIcon } from './icons'
+import { AppIcon } from './icons'
 import { useStore } from './store'
 import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 
@@ -13,9 +12,12 @@ import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 // icon, and the group chat's icon counts the replies that came in while the
 // conversation wasn't showing.
 //
-// One of its icons is a link and opens no window: VIP, last among the apps,
-// which is the way to the points site. It opens in a tab of its own and says
-// so. (The one-pager, which was after a rule at its end, is a file on the desk.)
+// Every icon opens a window. VIP Store is last: it was a link to the points
+// site, and is the store in a window now (apps/Store.tsx). The one-pager,
+// which was after a rule at the Dock's end, is a file on the desk.
+//
+// After the apps, and a rule, are the apps that are here only while they have
+// something open: Preview, when a document is. With none open there is no rule.
 
 /** How much the icon under the pointer grows, and how far the swell reaches. */
 const SWELL = 0.55
@@ -23,7 +25,7 @@ const REACH = 150
 
 export function Dock() {
   const compact = useStore(wm, (s) => s.compact)
-  const openApps = useStore(wm, (s) => DOCK_APPS.filter((id) => s.wins[id].open).join(' '))
+  const openApps = useStore(wm, (s) => [...DOCK_APPS, ...GUEST_APPS].filter((id) => s.wins[id].open).join(' '))
   const active = useStore(wm, activeApp)
   const unread = useNewReplies()
   const shelf = useRef<HTMLDivElement>(null)
@@ -74,6 +76,36 @@ export function Dock() {
     items[to]!.focus()
   }
 
+  const guests = GUEST_APPS.filter((id) => open.includes(id))
+
+  const tile = (id: AppId) => (
+    <button
+      key={id}
+      type="button"
+      className="dock__item"
+      data-dock-item
+      data-dock-app={id}
+      data-open={open.includes(id) || undefined}
+      aria-current={active === id || undefined}
+      data-hop={hopping === id || undefined}
+      aria-label={`${APPS[id].name}: ${APPS[id].blurb}${id === 'messages' && unread ? `, ${unread} unread` : ''}`}
+      onClick={() => launch(id)}
+    >
+      <span className="dock__label" aria-hidden>
+        {APPS[id].name}
+      </span>
+      <span className="dock__icon">
+        <AppIcon id={id} />
+        {id === 'messages' && unread > 0 && (
+          <span className="dock__badge" data-digits={String(unread).length} aria-hidden>
+            {unread}
+          </span>
+        )}
+      </span>
+      <span className="dock__dot" aria-hidden />
+    </button>
+  )
+
   return (
     <nav className="dock" aria-label="Dock" data-compact={compact || undefined}>
       <div
@@ -93,45 +125,9 @@ export function Dock() {
           swell(null)
         }}
       >
-        {DOCK_APPS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className="dock__item"
-            data-dock-item
-            data-dock-app={id}
-            data-open={open.includes(id) || undefined}
-            aria-current={active === id || undefined}
-            data-hop={hopping === id || undefined}
-            aria-label={`${APPS[id].name}: ${APPS[id].blurb}${id === 'messages' && unread ? `, ${unread} unread` : ''}`}
-            onClick={() => launch(id)}
-          >
-            <span className="dock__label" aria-hidden>
-              {APPS[id].name}
-            </span>
-            <span className="dock__icon">
-              <AppIcon id={id} />
-              {id === 'messages' && unread > 0 && (
-                <span className="dock__badge" data-digits={String(unread).length} aria-hidden>
-                  {unread}
-                </span>
-              )}
-            </span>
-            <span className="dock__dot" aria-hidden />
-          </button>
-        ))}
-        {/* VIP keeps its place, its tile and its name, and is a link: it has no window to open, no dot to
-            light and nothing to hop for. The tab it opens is given no way back to this page, and is not
-            told where the visit came from */}
-        <a className="dock__item" data-dock-item data-dock-link="vip" href={SITE.points} target="_blank" rel="noopener noreferrer" draggable={false} aria-label="VIP, opens in a new tab">
-          <span className="dock__label" aria-hidden>
-            VIP
-          </span>
-          <span className="dock__icon">
-            <VipIcon />
-          </span>
-          <span className="dock__dot" aria-hidden />
-        </a>
+        {DOCK_APPS.map(tile)}
+        {guests.length > 0 && <span className="dock__rule" aria-hidden />}
+        {guests.map(tile)}
       </div>
     </nav>
   )

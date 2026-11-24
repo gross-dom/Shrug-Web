@@ -218,8 +218,7 @@ function FinderIcon() {
   )
 }
 
-/** VIP: black, with its name in white capitals. It is not an app's icon: VIP is the Dock's link to the points
- * site (Dock.tsx), drawn on a tile so that it sits among the apps as one of them would. */
+/** VIP Store: black, with VIP in white capitals. */
 export function VipIcon() {
   return (
     <Tile from="#2a2a2e" to="#000000">
@@ -237,6 +236,19 @@ function ShrugIcon() {
   )
 }
 
+/** Preview: a picture on a page under a loupe, after the Mac's own, on a pale blue tile. */
+function PreviewIcon() {
+  return (
+    <Tile from="#eaf4ff" to="#cfe3fb">
+      <rect x="20" y="17" width="46" height="58" rx="5" fill="#fff" stroke="#b9cde6" strokeWidth="1.2" />
+      <path d="M26 61l11-13 8 9 6-6 9 10z" fill="#7fb2ee" />
+      <circle cx="52" cy="34" r="5" fill="#f7c64a" />
+      <circle cx="64" cy="62" r="14.5" fill="#fff" fillOpacity=".5" stroke="#1f2a44" strokeWidth="5" />
+      <path d="M74.5 73.5 86 85.5" stroke="#1f2a44" strokeWidth="7" strokeLinecap="round" />
+    </Tile>
+  )
+}
+
 const ICONS: Record<AppId, () => ReactNode> = {
   messages: ChatIcon,
   notes: NotesIcon,
@@ -245,6 +257,8 @@ const ICONS: Record<AppId, () => ReactNode> = {
   about: ShrugIcon,
   wallpapers: () => <FolderIcon />,
   updates: () => <FolderIcon />,
+  store: VipIcon,
+  preview: PreviewIcon,
 }
 
 export function AppIcon({ id }: { id: AppId }) {
@@ -268,6 +282,27 @@ export function DocumentIcon() {
       <g fill="none" strokeWidth="3.6" strokeLinecap="round">
         <path d="M32 44h22" stroke="#0a6de6" />
         <path d="M32 56h36M32 66h36M32 76h24" stroke="#c4c7cf" />
+      </g>
+    </svg>
+  )
+}
+
+/** A PDF, as a row in a folder has it: a page with a folded corner, its first line dark. */
+export function PdfIcon() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg viewBox="0 0 100 100" className="app-icon" aria-hidden>
+      <defs>
+        <linearGradient id={`${id}-page`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#e9ebf0" />
+        </linearGradient>
+      </defs>
+      <path d="M22 13a7 7 0 0 1 7-7h29l21 21v60a7 7 0 0 1-7 7H29a7 7 0 0 1-7-7z" fill={`url(#${id}-page)`} stroke="rgba(0,0,0,0.16)" strokeWidth="1" />
+      <path d="M58 6l21 21H65a7 7 0 0 1-7-7z" fill="#d3d6de" />
+      <g fill="none" strokeLinecap="round">
+        <path d="M32 42h30" stroke="#1d1d1f" strokeWidth="4" />
+        <path d="M32 53h36M32 62h36M32 71h24" stroke="#c4c7cf" strokeWidth="3" />
       </g>
     </svg>
   )

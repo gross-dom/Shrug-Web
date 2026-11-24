@@ -1,0 +1,174 @@
+/* Updates: a Finder's list (design/v1, screens/shrugos.css, "Updates: a Finder-style list"). */
+
+.ss-window.updwin {
+  --ss-lights-y: 26px;
+  background: #f6f6f8;
+}
+
+.ss-window.updwin > .ss-window__bar {
+  height: 52px;
+  padding-right: 14px;
+  border-bottom: 0;
+  background: #f6f6f8;
+  gap: 0;
+}
+
+.ss-window.updwin > .ss-window__bar > .ss-window__spacer {
+  display: none;
+}
+
+.updbar {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  margin-left: 14px;
+}
+
+.updbar__title {
+  color: var(--v-ink);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.updbar__grow {
+  flex: 1;
+}
+
+.updwin__body {
+  display: flex;
+  min-height: 0;
+  background: #f6f6f8;
+}
+
+.upd {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: #fff;
+  color: var(--v-ink);
+  outline: none;
+}
+
+.upd:focus-visible {
+  box-shadow: inset 0 0 0 3px rgba(10, 109, 230, 0.5);
+}
+
+.upd-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.upd :where(ul, h2) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upd h2 {
+  padding: 14px 20px 6px;
+  color: var(--v-ink-3);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.upd-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto 96px 104px;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  margin: 0 8px;
+  padding: 0 12px;
+  border-radius: 9px;
+}
+
+.upd-row:nth-child(even) {
+  background: #f5f6f8;
+}
+
+.upd-row.on {
+  background: var(--v-accent);
+  color: #fff;
+}
+
+.upd-row.on small,
+.upd-row.on .d,
+.upd-row.on .t {
+  color: #fff;
+}
+
+.upd-row.on .v-chip {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0a56b8;
+}
+
+/* (on the picked row a button is white, so that it is seen on the blue) */
+.upd-row.on .v-btn {
+  background: #fff;
+  color: var(--v-accent);
+}
+
+.upd-row.on .v-btn:focus-visible {
+  outline-color: #fff;
+}
+
+.upd-row > span:first-child {
+  width: 30px;
+  height: 30px;
+}
+
+.upd-row b {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upd-row small {
+  display: block;
+  overflow: hidden;
+  color: var(--v-ink-2);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upd-row .d {
+  color: var(--v-ink-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.upd-row .s {
+  justify-self: end;
+}
+
+.upd-row .s .v-btn {
+  height: 26px;
+}
+
+.upd-row .t {
+  color: var(--v-ink-3);
+  font-size: 12px;
+}
+
+.upd-foot {
+  display: flex;
+  flex: none;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 20px;
+  border-top: 1px solid var(--v-hair);
+  color: var(--v-ink-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+}

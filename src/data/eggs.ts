@@ -7,7 +7,7 @@ import { SITE } from './site'
 // (the desktop's sidebar and the iPhone's list, each conversation, and search).
 
 /** Something in a bubble that goes somewhere: a page in a new tab, or one of the site's own apps. */
-export type EggLink = { label: string; href: string } | { label: string; app: AppId }
+export type EggLink = { label: string; href: string; /** On the desktop it opens this app's window instead: the page is where a phone goes. */ desk?: AppId } | { label: string; app: AppId }
 
 /** One bubble: Shrug's own (`me`, blue, on the right) or the other side's (`them`, gray, on the left). */
 export type EggMessage = { from: 'me' | 'them'; text: string } | { from: 'me' | 'them'; link: EggLink }
@@ -48,7 +48,7 @@ export const EGGS: Egg[] = [
     messages: [
       { from: 'them', text: 'hi! got your number from a friend. can i send you what we’re building?' },
       { from: 'me', text: 'please do. here’s a bit about us first' },
-      { from: 'me', link: { label: 'Shrug one-pager', href: SITE.onePager } },
+      { from: 'me', link: { label: 'Shrug one-pager', href: SITE.onePager, desk: 'preview' } },
     ],
   },
   {
@@ -58,7 +58,7 @@ export const EGGS: Egg[] = [
     messages: [
       { from: 'them', text: 'Your drop is out for delivery.' },
       // VIP is the points site, not an app of this one: the link leaves for it, in a tab of its own
-      { from: 'them', link: { label: 'See who got one in VIP', href: SITE.points } },
+      { from: 'them', link: { label: 'See who got one in VIP', href: SITE.points, desk: 'store' } },
     ],
   },
 ]

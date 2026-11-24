@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Plus } from 'lucide-react'
 import { FACES } from '../../store/shared/faces'
 import { hidden, phoneOf, POINTS_PER_DOLLAR, type Picture } from '../../store/shared/rules'
-import { SITE } from '../data/site'
 import { account, ACCOUNT_DEMO, addPhone, askLogIn, closeLogIn, demoLink, isLP, logIn, logOut, provePhone, refreshAccount, saveProfile, start, textTo, unlocked, verify, type Failed, type Member, type Why } from './account'
 import { asked } from './address'
 import { Face } from './Face'
@@ -339,10 +338,9 @@ function Sheet({ who, why, onDone }: { who: Member | null; why: Why; onDone: () 
           {ACCOUNT_DEMO ? ' · demo' : ''}
         </small>
       </div>
-      <a className="account__row" href={SITE.store} target="_blank" rel="noreferrer" onClick={onDone}>
+      <button type="button" className="account__row" onClick={() => (onDone(), launchApp('store'))}>
         Open VIP Store
-        <span className="sr-only">, opens in a new tab</span>
-      </a>
+      </button>
       {isLP(account.get()) && (
         <button type="button" className="account__row" onClick={() => (onDone(), launchApp('updates'))}>
           Open Updates
@@ -535,7 +533,7 @@ export function AccountItem() {
   const done = () => {
     const now = account.get()
     // An LP who has just come in is told their folder is open to them
-    if (came.current && isLP(now) && now.status === 'member') unlocked.set({ at: Date.now(), docs: now.docs.length })
+    if (came.current && isLP(now) && now.status === 'member') unlocked.set({ at: Date.now(), docs: now.docs.filter((doc) => doc.state === 'open').length })
     came.current = false
     closeLogIn()
   }

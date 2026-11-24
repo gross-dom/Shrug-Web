@@ -1,11 +1,10 @@
 // The apps on the desktop: what each is called, how big its window opens and
 // how small it can get. The windows themselves are in src/apps.
 //
-// VIP is in the Dock with these and is not one of them: it is the way to the
-// points site, a link that opens in a tab of its own (Dock.tsx). It has no
-// window, so it has no entry here, and an address cannot ask for it by name.
+// The VIP Store is one of them (design/v1): the store's own pages, in a window, last in the Dock. (It was a
+// link to the points site, which opened in a tab of its own.) An address can ask for it by name: `?open=vip`.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview'
 
 export interface Size {
   w: number
@@ -30,10 +29,14 @@ export interface AppSpec {
   nudge: { x: number; y: number }
   resizable: boolean
   /** How far the traffic lights' centers sit from the window's top and left
-   * edges: 19 for the kit's 38px bar, 26 for its tall icon-and-label toolbar. */
-  lightsY: 19 | 26
+   * edges: 19 for the kit's 38px bar, 26 for its tall icon-and-label toolbar,
+   * 30 for the store's 60px bar, which they sit in the middle of. */
+  lightsY: 19 | 26 | 30
   /** In the Dock, in this order. */
   dock: number | null
+  /** In the Dock only while it has something open, after the rule at the end of the apps, in this order
+   * (Preview: it is there when a document is, and not before). */
+  guest?: number
 }
 
 /** A share of the desktop, kept between a smallest and a largest size. */
@@ -102,6 +105,20 @@ export const APPS: Record<AppId, AppSpec> = {
     lightsY: 19,
     dock: null,
   },
+  // The VIP Store: the store's own pages (store/), in a window whose bar is the store's bar. 1120 by 720,
+  // at which a product does not scroll, and no smaller than 960 by 640 (src/apps/Store.tsx). It takes nearly
+  // all the desk's height, so that a 1440 by 900 screen, the one it was drawn on, has it at its full size
+  store: {
+    id: 'store',
+    name: 'VIP Store',
+    blurb: 'Points, and what they buy',
+    size: fit({ w: 0.78, h: 0.95 }, { w: 960, h: 640 }, { w: 1120, h: 720 }),
+    min: { w: 960, h: 640 },
+    nudge: { x: 0, y: -6 },
+    resizable: true,
+    lightsY: 30,
+    dock: 4,
+  },
   // The desk's wallpapers, to look at, to keep on the desk and to download. It is a folder on the desk, not
   // an app in the Dock: only the desktop has it (a phone has a wallpaper of its own)
   wallpapers: {
@@ -122,18 +139,36 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'updates',
     name: 'Updates',
     blurb: 'For Shrug’s LPs',
-    size: fit({ w: 0.53, h: 0.66 }, { w: 620, h: 440 }, { w: 760, h: 540 }),
+    size: fit({ w: 0.53, h: 0.72 }, { w: 620, h: 440 }, { w: 760, h: 540 }),
     min: { w: 520, h: 360 },
     nudge: { x: 60, y: 24 },
     resizable: true,
     lightsY: 26,
     dock: null,
   },
+  // Preview: the one viewer every document opens in (design/v1), after the Mac's own. The one-pager, which
+  // is a file on the desk, and an LP's documents from Updates. It has no icon in the Dock until a document
+  // is open; while one is, it is there after the Dock's rule (src/apps/Preview.tsx)
+  preview: {
+    id: 'preview',
+    name: 'Preview',
+    blurb: 'Documents',
+    size: fit({ w: 0.7, h: 0.95 }, { w: 720, h: 560 }, { w: 980, h: 720 }),
+    min: { w: 560, h: 420 },
+    nudge: { x: -40, y: -6 },
+    resizable: true,
+    lightsY: 26,
+    dock: null,
+    guest: 1,
+  },
 }
 
 export const APP_IDS = Object.keys(APPS) as AppId[]
 
 export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
+
+/** The apps that are in the Dock only while they have something open, after its rule. */
+export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
 
 /** The names an address can ask for besides the apps' own: `?open=portfolio,faqs` opens those, and
  * `/portfolio` (an address the site does not have) is sent to `?open=portfolio` (tools/page.ts). */
@@ -148,4 +183,10 @@ export const ALIASES: Record<string, AppId> = {
   faqs: 'notes',
   faq: 'notes',
   'case-studies': 'terminal',
+  vip: 'store',
+  'vip-store': 'store',
+  shop: 'store',
+  // (the one-pager is a file that opens in Preview: asked for by its own name, that is what opens, on it)
+  'one-pager': 'preview',
+  onepager: 'preview',
 }

@@ -1,8 +1,9 @@
-// VIP's checks, run by terminal-vip.cjs (which hands over its helpers). VIP is the way to the points site
-// (`SITE.points` in src/data/site.ts): a link, in a tab of its own, wherever it appears, and nowhere a window
-// or an app. These hold to that on both layouts, by every route there is besides the Dock's own icon (which
-// desktop-flow.cjs and phone-flow.cjs press) and an address (addresses.cjs, phone-apps.cjs); and to the two
-// windows that are still laid out with the classes VIP's window had, Wallpapers and Updates.
+// VIP's checks, run by terminal-vip.cjs (which hands over its helpers). On the desktop VIP is the store, in a
+// window (design/v1): these hold to it opening that window by every route there is besides the Dock's own icon
+// (which desktop-flow.cjs presses) and an address (addresses.cjs), and to nothing there being a link away. On
+// a phone VIP is still the way to the points site (`SITE.points` in src/data/site.ts): a link, in a tab of its
+// own, and nowhere an app. And they hold to the two windows that are laid out with the classes VIP's window
+// once had, Wallpapers and Updates.
 
 exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   const POINTS = A.POINTS
@@ -11,44 +12,51 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   const leaves = (l) => !!l && l.tag === 'A' && l.href === POINTS && l.target === '_blank' && /\bnoreferrer\b/.test(l.rel)
   const noVip = (p) => p.evaluate(() => document.querySelectorAll('.wf[data-app="photos"], .wf[data-app="vip"], .sb-slot[data-app="photos"], .sb-slot[data-app="vip"], [data-dock-app="photos"]').length === 0)
 
-  // ================= the desktop
+  // ================= the desktop: VIP is the store, in a window, by every route
   let t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still' })
   let p = t.page
   await arrived(p)
   await p.waitForSelector('.wf[data-app="messages"] .conv', { timeout: 15000 })
   await p.waitForTimeout(1200)
+  const S = '.wf[data-app="store"]'
+  /** The store's window: whether it is open and in front, and where its frame is. */
+  const store = (p) => p.evaluate((S) => { const w = document.querySelector(S); const f = w?.querySelector('iframe'); let path = null; try { path = f?.contentWindow?.location?.pathname ?? null } catch {} return { open: !!w?.hasAttribute('data-open'), front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, path } }, S)
+  const shut = async (p) => { await p.locator(`${S} .wf__light[data-kind="close"]`).click(); await p.waitForTimeout(500) }
+  const tabs = () => t.ctx.pages().length
 
   // What the page says it holds, to someone who is told it and not shown it
   const heading = await p.locator('header.sr-only h1').innerText()
   check('desktop: the page’s own heading names what is on it, and the drops are not', heading === 'Shrug: what people say, the portfolio and FAQs', heading)
 
-  // The conversation that pointed at VIP still does, in the same words, and its link leaves for the points site
+  // The conversation that pointed at VIP still does, in the same words, and opens the store's window
   await p.locator('.wf[data-app="messages"] [data-conversation="drops"]').click()
   await p.waitForTimeout(600)
-  const egg = await p.evaluate(() => { const said = [...document.querySelectorAll('.wf[data-app="messages"] .chat__thread .ss-bubble')].map((b) => b.textContent.trim()); const a = document.querySelector('.wf[data-app="messages"] .chat__thread .chat-link'); return { said, link: a && { tag: a.tagName, words: a.childNodes[0].textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel, says: a.textContent } } })
+  const egg = await p.evaluate(() => { const said = [...document.querySelectorAll('.wf[data-app="messages"] .chat__thread .ss-bubble')].map((b) => b.textContent.trim()); const a = document.querySelector('.wf[data-app="messages"] .chat__thread .chat-link'); return { said, link: a && { tag: a.tagName, says: a.textContent.trim(), href: a.getAttribute('href') } } })
   check('desktop: the Drops conversation says what it said, word for word', egg.said.length === 2 && egg.said[0] === 'Your drop is out for delivery.' && /^See who got one in VIP/.test(egg.said[1]), JSON.stringify(egg.said))
-  check('desktop: and its “See who got one in VIP” is a link to the points site that says it opens in a new tab', leaves(egg.link) && egg.link.words === 'See who got one in VIP' && egg.link.says === 'See who got one in VIP, opens in a new tab', JSON.stringify(egg.link))
-  const fromEgg = await A.tabFrom(t.ctx, () => p.locator('.wf[data-app="messages"] .chat__thread .chat-link').click())
-  await p.waitForTimeout(500)
-  check('desktop: pressed, it opens the points site in a tab of its own, and no window for VIP', !!fromEgg && fromEgg.url === POINTS && fromEgg.alone === true && (await noVip(p)), JSON.stringify(fromEgg))
+  check('desktop: and its “See who got one in VIP” is a button, not a link away', !!egg.link && egg.link.tag === 'BUTTON' && egg.link.says === 'See who got one in VIP' && egg.link.href === null, JSON.stringify(egg.link))
+  const before = tabs()
+  await p.locator('.wf[data-app="messages"] .chat__thread .chat-link').click()
+  await p.waitForTimeout(1500)
+  let now = await store(p)
+  check('desktop: pressed, it opens the VIP Store window, in front, on the store, and no tab', now.open && now.front === 'store' && now.path === '/vip/store/' && tabs() === before && (await noVip(p)), JSON.stringify(now))
+  await shut(p)
 
-  // About Shrug counts the drops with the rest; that row is VIP's, and leaves as VIP does
+  // About Shrug counts the drops with the rest; that row is VIP's, and opens the store as VIP does
   await p.click('[data-menu-title="mark"]')
   await p.locator('[data-menu="mark"] .menu__item', { hasText: 'About Shrug' }).click()
   await p.waitForSelector('.wf[data-app="about"] .about__fact', { timeout: 8000 })
   await p.waitForTimeout(700)
-  const about = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="about"] .about__facts:last-of-type .about__fact, .wf[data-app="about"] button.about__fact, .wf[data-app="about"] a.about__fact')].filter((el, i, all) => all.indexOf(el) === i).filter((el) => !el.classList.contains('about__fact--said')).map((el) => ({ tag: el.tagName, label: el.firstElementChild.textContent.trim(), value: el.lastElementChild.childNodes[0].textContent.trim(), href: el.getAttribute('href'), target: el.target || null, rel: el.rel || null, says: el.textContent.replace(/\s+/g, ' ').trim(), tall: Math.round(el.getBoundingClientRect().height), ink: getComputedStyle(el).color, line: getComputedStyle(el).textDecorationLine })))
+  const about = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="about"] button.about__fact, .wf[data-app="about"] a.about__fact')].map((el) => ({ tag: el.tagName, label: el.firstElementChild.textContent.trim(), tall: Math.round(el.getBoundingClientRect().height), ink: getComputedStyle(el).color, line: getComputedStyle(el).textDecorationLine })))
   const drops = about.find((row) => row.label === 'Drops')
-  check('desktop: About Shrug still has its four rows, three that open windows and Drops', about.map((row) => `${row.tag} ${row.label}`).join(' | ') === 'BUTTON Group Chat | BUTTON Portfolio | BUTTON Verticals | A Drops', about.map((row) => `${row.tag} ${row.label}`).join(' | '))
-  check('desktop: the Drops row is a link to the points site, in a new tab, and says so', !!drops && drops.href === POINTS && drops.target === '_blank' && drops.rel === 'noopener noreferrer' && /^Drops ?\d+, opens in a new tab$/.test(drops.says), JSON.stringify(drops))
+  check('desktop: About Shrug still has its four rows, and all four open windows', about.map((row) => `${row.tag} ${row.label}`).join(' | ') === 'BUTTON Group Chat | BUTTON Portfolio | BUTTON Verticals | BUTTON Drops', about.map((row) => `${row.tag} ${row.label}`).join(' | '))
   // (the row before it is the one to go by: the first of the four has no rule over it, and is a pixel shorter)
-  check('desktop: and it is drawn as the row before it is: its height, its ink, no underline', !!drops && drops.tall === about[2].tall && drops.ink === about[2].ink && drops.line === 'none', JSON.stringify(about.map((row) => [row.label, row.tall, row.ink, row.line])))
-  const fromAbout = await A.tabFrom(t.ctx, () => p.locator('.wf[data-app="about"] a.about__fact').click())
-  await p.waitForTimeout(500)
-  check('desktop: pressed, it opens the points site in a tab of its own, and no window for VIP', !!fromAbout && fromAbout.url === POINTS && fromAbout.alone === true && (await noVip(p)), JSON.stringify(fromAbout))
+  check('desktop: the Drops row is drawn as the row before it is: its height, its ink, no underline', !!drops && drops.tall === about[2].tall && drops.ink === about[2].ink && drops.line === 'none', JSON.stringify(about.map((row) => [row.label, row.tall, row.ink, row.line])))
+  await p.locator('.wf[data-app="about"] button.about__fact', { hasText: 'Drops' }).click()
+  await p.waitForTimeout(1500)
+  now = await store(p)
+  check('desktop: pressed, it opens the VIP Store window, and no tab', now.open && now.front === 'store' && tabs() === before, JSON.stringify(now))
 
-  // Nothing in the menus opens a VIP window, or is there for one: the Window menu lists what is open, the
-  // View menu belongs to the window in front, and neither has anything of VIP's
+  // The menus: the Go menu has it with the Dock's apps, the Window menu lists its window while it is open
   const menus = {}
   for (const id of ['app', 'go', 'view', 'window']) {
     const title = p.locator(`[data-menu-title="${id}"]`)
@@ -57,11 +65,17 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
     menus[id] = await p.evaluate((id) => [...document.querySelectorAll(`[data-menu="${id}"] [data-menu-item]`)].map((el) => `${el.tagName === 'A' ? 'link' : 'item'} ${el.querySelector('.menu__label').textContent.trim()}`), id)
     await p.keyboard.press('Escape'); await p.waitForTimeout(200)
   }
-  const vipItems = Object.values(menus).flat().filter((item) => item && /VIP|Photos|Videos/.test(item))
-  check('desktop: the only thing of VIP’s in the menus is the Go menu’s link', vipItems.join() === 'link VIP' && menus.go.includes('link VIP'), JSON.stringify(menus))
+  const links = Object.values(menus).flat().filter((item) => item && /^link .*VIP|Photos|Videos/.test(item))
+  check('desktop: in the menus VIP is the store, an app like the others: in the Go menu, in the Window menu while open, and nowhere a link', menus.go.includes('item VIP Store') && menus.window.includes('item VIP Store') && menus.app.includes('item Quit VIP Store') && links.length === 0, JSON.stringify(menus))
+  await shut(p)
+  await p.click('[data-menu-title="go"]'); await p.waitForTimeout(250)
+  await p.locator('[data-menu="go"] [data-menu-item]', { hasText: 'VIP Store' }).click()
+  await p.waitForTimeout(1500)
+  now = await store(p)
+  check('desktop: the Go menu’s VIP Store opens the window', now.open && now.front === 'store', JSON.stringify(now))
 
-  // A desk kept by the site as it was, with a VIP window on it (a tab left open over the change, then reloaded):
-  // the windows the site still has come back, and nothing comes back for VIP
+  // A desk kept by the site as it was long ago, with a window it no longer has (a tab left open over a change,
+  // then reloaded): the windows the site has come back, the store among them, and nothing comes back for the other
   await p.evaluate(() => {
     const kept = JSON.parse(sessionStorage.getItem('shrug:desk'))
     const like = Object.values(kept.windows.wins)[0]
@@ -75,8 +89,8 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await p.reload({ waitUntil: 'load' })
   await arrived(p)
   await p.waitForTimeout(1800)
-  const back = await p.evaluate(() => ({ wins: [...document.querySelectorAll('.wf[data-app]')].map((w) => w.dataset.app).sort().join(), front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, kept: Object.keys(JSON.parse(sessionStorage.getItem('shrug:desk') ?? '{}').windows?.wins ?? {}).sort().join() }))
-  check('desktop: a reload of a desk that was kept with a VIP window brings back the others and no VIP window', back.wins === 'about,messages' && (await noVip(p)) && !!back.front, JSON.stringify(back))
+  const back = await p.evaluate(() => ({ open: [...document.querySelectorAll('.wf[data-app][data-open]')].map((w) => w.dataset.app).sort().join(), front: document.querySelector('.wf[data-active]')?.dataset.app ?? null }))
+  check('desktop: a reload of a desk kept with a window the site no longer has brings back the others, the store among them', back.open === 'about,messages,store' && (await noVip(p)) && !!back.front, JSON.stringify(back))
   check('desktop: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 
@@ -146,37 +160,39 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   check('Wallpapers, on a small screen: nothing runs off the side of the window', slim.fits && slim.tiles, JSON.stringify(slim))
   await t.ctx.close()
 
-  // Updates (the folder for Shrug's LPs): the library's window and head, over a list of its own
+  // Updates (the folder for Shrug's LPs) was laid out with the library's classes too. It is a Finder's list now
+  // (design/v1, "Updates"): a bar with its name and whose it is, the documents under Funds and SPVs, and a foot
   t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=updates' })
   p = t.page
   await arrived(p)
   const U = '.wf[data-app="updates"]'
-  await p.waitForSelector(`${U} .vip__title`, { timeout: 15000 })
+  await p.waitForSelector(`${U} .updbar`, { timeout: 15000 })
   await p.waitForTimeout(1200)
-  const head = (p) => p.evaluate((U) => {
+  const laid = (p) => p.evaluate((U) => {
     const w = document.querySelector(U)
     const cs = (sel) => getComputedStyle(w.querySelector(sel))
     const box = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), r: Math.round(r.right), b: Math.round(r.bottom) } }
-    const body = w.querySelector('.vip__body')
-    const list = w.querySelector('.updates__list')
-    return { across: Math.round(w.getBoundingClientRect().width), body: { display: cs('.vip__body').display, way: cs('.vip__body').flexDirection, wide: body.scrollWidth <= body.clientWidth, tall: body.scrollHeight <= body.clientHeight }, title: `${w.querySelector('.vip__title').textContent} ${cs('.vip__title').fontSize} ${cs('.vip__title').fontWeight}`, sub: `${cs('.vip__sub').fontSize} ${cs('.vip__sub').marginTop}`, subInk: cs('.vip__sub').color, titleAt: box(w.querySelector('.vip__title')), subAt: box(w.querySelector('.vip__sub')), pad: w.querySelector('.vip__head') ? cs('.vip__head').padding : null, list: list ? box(list) : null, inside: [...w.querySelectorAll('.vip__title, .vip__sub')].every((el) => { const r = el.getBoundingClientRect(); const b = body.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom }) }
+    const win = box(w)
+    const bar = box(w.querySelector('.ss-window__bar'))
+    const inside = [...w.querySelectorAll('.updbar > *, .v-empty > *, .upd-row, .upd-foot')].every((el) => { const b = box(el); return b.x >= win.x && b.r <= win.r && b.b <= win.b })
+    const list = w.querySelector('.upd-list')
+    return { size: `${win.w}x${win.h}`, bar: bar.h, title: `${w.querySelector('.updbar__title').textContent} ${cs('.updbar__title').fontSize} ${cs('.updbar__title').fontWeight}`, chip: w.querySelector('.updbar .v-chip').textContent.trim(), chipAt: win.r - box(w.querySelector('.updbar .v-chip')).r, old: w.querySelectorAll('.vip__title, .vip__body, .updates__list').length, said: w.querySelector('.v-empty h3')?.textContent ?? null, rows: w.querySelectorAll('.upd-row').length, heads: [...w.querySelectorAll('.upd h2')].map((h) => h.textContent).join(), row: w.querySelector('.upd-row') ? box(w.querySelector('.upd-row')).h : null, foot: w.querySelector('.upd-foot') ? win.b - box(w.querySelector('.upd-foot')).b : null, scrolls: list ? list.scrollHeight > list.clientHeight : null, inside }
   }, U)
-  const locked = await head(p)
-  check('Updates, locked: its body is the library’s column, and Locked is set as the library’s title is, with its line under it at 14px, all of it inside the window', locked.body.display === 'flex' && locked.body.way === 'column' && locked.body.wide && locked.title === 'Locked 30px 800' && locked.sub === '14px 6px' && locked.subAt.y >= locked.titleAt.b && locked.inside, JSON.stringify(locked))
-  await shot(p, 'vip-classes-updates-locked')
+  const locked = await laid(p)
+  check('Updates, locked: 760 by 540 under a bar 52 tall, with its name at the left of it and Locked at the right, and who it is for in the middle of the window', locked.size === '760x540' && locked.bar === 52 && locked.title === 'Updates 13px 700' && locked.chip === 'Locked' && locked.chipAt === 14 && locked.said === 'For Shrug’s LPs' && locked.rows === 0 && locked.old === 0 && locked.inside, JSON.stringify(locked))
+  await shot(p, 'updates-locked')
   await p.locator('.menubar__login').click()
   await p.locator('.account input[type=email]').fill('lp@example.test')
   await p.keyboard.press('Enter')
   await p.waitForTimeout(900)
   // (an address on the list: the six digits are the ones to its inbox, and the sheet then asks for a number, which is left for later)
   await p.keyboard.type('246810')
-  await p.waitForSelector(`${U} .updates__row`, { timeout: 8000 })
+  await p.waitForSelector(`${U} .upd-row`, { timeout: 8000 })
   await p.keyboard.press('Escape')
   await p.waitForTimeout(1200)
-  const opened = await head(p)
-  // (a window 640 points across or less draws the head's sides in from 22 to 14, as the library's did: apps.css)
-  check('Updates, logged in as an LP: the library’s head (a 30px title in the heaviest weight, the line under it, its room round them) over the list of documents', opened.pad === (opened.across <= 640 ? '4px 14px 18px' : '4px 22px 18px') && opened.title === 'Updates 30px 800' && opened.sub === '14px 6px' && opened.subAt.y >= opened.titleAt.b && !!opened.list && opened.list.y >= opened.subAt.b + 18 && opened.body.wide && opened.inside, JSON.stringify(opened))
-  await shot(p, 'vip-classes-updates')
+  const opened = await laid(p)
+  check('Updates, logged in as an LP: the same bar, saying whose it is; the documents under Funds and SPVs in rows 50 tall; and its foot along the bottom of the window, nothing scrolling', opened.bar === 52 && opened.chip === 'LP · Shrug 2, 4' && opened.heads === 'Funds,SPVs' && opened.rows === 6 && opened.row === 50 && opened.foot === 0 && opened.scrolls === false && opened.said === null && opened.inside, JSON.stringify(opened))
+  await shot(p, 'updates-lp')
   check('Updates: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 

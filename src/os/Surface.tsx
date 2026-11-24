@@ -3,10 +3,11 @@ import { AboutApp } from '../apps/About'
 import { FinderApp } from '../apps/Finder'
 import { MessagesApp } from '../apps/Messages'
 import { NotesApp } from '../apps/Notes'
+import { PreviewApp } from '../apps/Preview'
+import { StoreApp } from '../apps/Store'
 import { TerminalApp } from '../apps/Terminal'
 import { UpdatesApp } from '../apps/Updates'
 import { WallpapersApp } from '../apps/Wallpapers'
-import { SITE } from '../data/site'
 import { account, askLogIn, unlocked } from './account'
 import { APPS, APP_IDS, type AppId } from './apps'
 import { Boundary } from './Boundary'
@@ -16,6 +17,7 @@ import { focusFirst } from './focus'
 import { FolderIcon, OnePagerIcon } from './icons'
 import { MenuBar } from './MenuBar'
 import { Notifications } from './Notifications'
+import { openOnePager } from './papers'
 import { SanFrancisco } from './SanFrancisco'
 import { saver } from './saver'
 import { ScreenSaver } from './ScreenSaver'
@@ -36,6 +38,8 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   about: AboutApp,
   wallpapers: WallpapersApp,
   updates: UpdatesApp,
+  store: StoreApp,
+  preview: PreviewApp,
 }
 
 interface DeskItem {
@@ -69,7 +73,8 @@ function useDesk(): DeskItem[] {
         focusWindow('updates')
       },
     },
-    { id: 'one-pager', name: 'One-pager', says: 'desktop icon, opens in a new tab', icon: <OnePagerIcon />, open: () => window.open(SITE.onePager, '_blank', 'noopener,noreferrer') },
+    // A file: it opens in Preview (it was a link to a page elsewhere)
+    { id: 'one-pager', name: 'One-pager', says: 'desktop icon', icon: <OnePagerIcon />, open: openOnePager },
     {
       id: 'wallpapers',
       name: 'Wallpapers',

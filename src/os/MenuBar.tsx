@@ -9,6 +9,7 @@ import { APPS, DOCK_APPS, type AppId } from './apps'
 import { formatter, shortDay } from './dates'
 import { dockPoint } from './dom'
 import { focusLost } from './focus'
+import { openOnePager } from './papers'
 import { askedIdle, saver, setSaverNever, startSaver } from './saver'
 import { shrugs } from './shrug'
 import { useStore } from './store'
@@ -121,7 +122,7 @@ function useMenus(): MenuDef[] {
         item(idle ? `After ${idle} Seconds` : 'After 2½ Minutes', () => setSaverNever(false), { checked: idle ? true : !never, says: `Screen Saver: ${idle ? `After ${idle} Seconds` : 'After 2½ Minutes'}` }),
         item('Never', () => setSaverNever(true), { checked: idle ? false : never, disabled: idle !== null, says: 'Screen Saver: Never' }),
         rule,
-        { kind: 'item', label: 'One-pager', href: SITE.onePager },
+        item('One-pager', openOnePager),
       ],
     },
     {
@@ -136,8 +137,8 @@ function useMenus(): MenuDef[] {
       id: 'go',
       label: 'Go menu',
       title: 'Go',
-      // The Dock's own row: its apps, then VIP, which is the points site and leaves for it as the one-pager leaves
-      items: [...DOCK_APPS.map((id) => item(APPS[id].name, () => launch(id))), { kind: 'item', label: 'VIP', href: SITE.points }, rule, { kind: 'item', label: 'One-pager', href: SITE.onePager }],
+      // The Dock's own row: its apps (the VIP Store last among them), then the one-pager, which opens in Preview
+      items: [...DOCK_APPS.map((id) => item(APPS[id].name, () => launch(id))), rule, item('One-pager', openOnePager)],
     },
   ]
   if (viewItems.length) menus.push({ id: 'view', label: 'View menu', title: 'View', items: viewItems })

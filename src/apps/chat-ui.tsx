@@ -13,8 +13,10 @@ import { Row } from '../kit/parts/Row'
 import { prefersReducedMotion } from '../os/dom'
 import { firstControl, focusFirst, useReturnFocus } from '../os/focus'
 import { launchApp, showCompany } from '../os/launch'
+import { openOnePager } from '../os/papers'
 import { atPerson, linkTo } from '../os/place'
 import { useStore } from '../os/store'
+import { wm } from '../os/wm'
 import { attach, attached, attachedTo, chat, detach, finishChat, MOST_FILES, replayChat, resumeChat, sendMessage, setUnsent, toggleChat, TOTAL, unsent, type Chat, type ChatFile, type ChatItem, type Written } from './chat'
 import { folded } from './fold'
 import { clearJump, inbox, openConversation, setInboxQuery, showInGroup, type Conversation } from './state'
@@ -222,6 +224,16 @@ function groupNodes(items: ChatItem[], asked: boolean, startedAt: number, source
 
 /** What a bubble holds when it goes somewhere: a page in a new tab, or one of the site's own apps. */
 function Linked({ link }: { link: EggLink }) {
+  const compact = useStore(wm, (s) => s.compact)
+  // A page that is a window on the desktop (VIP, which is the store there; the one-pager, which is a file in Preview) opens as that window
+  if ('href' in link && link.desk && !compact) {
+    const app = link.desk
+    return (
+      <button type="button" className="chat-link" onClick={() => (app === 'preview' ? openOnePager() : launchApp(app))}>
+        {link.label}
+      </button>
+    )
+  }
   return 'href' in link ? (
     <a className="chat-link" href={link.href} target="_blank" rel="noreferrer">
       {link.label}

@@ -39,6 +39,7 @@ export function productOf(row: Row): Product | null {
     place: num(f[F.product.place]) ?? 9999,
     listed: f[F.product.listed] === true,
     group: str(f[F.product.group]),
+    added: row.createdTime ?? null,
   }
 }
 

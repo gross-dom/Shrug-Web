@@ -152,11 +152,18 @@ async function desk(browser) {
   await p.keyboard.press('ArrowDown')
   await p.waitForTimeout(300)
   say((await active(p)) === 'div.conv-list', 'DK-10 the down arrow goes into the list', await active(p))
-  // UX-19: one wording for a link that leaves
+  // UX-19: one wording for a link that leaves. (The one-pager, which this conversation hands over, no longer
+  // leaves on the desktop: it is a file that opens in Preview, so its bubble is a button and says nothing of a tab)
   await p.fill(`${W} .search__input`, '')
   await p.click(`${W} [data-conversation="unknown"]`)
   await p.waitForTimeout(500)
-  say((await p.textContent(`${W} a.chat-link .sr-only`)) === ', opens in a new tab', 'UX-19 a link bubble says ", opens in a new tab"')
+  const handed = await p.evaluate((W) => { const el = document.querySelector(`${W} .chat-link`); return { tag: el?.tagName, says: el?.textContent, links: document.querySelectorAll(`${W} a.chat-link`).length } }, W)
+  say(handed.tag === 'BUTTON' && handed.says === 'Shrug one-pager' && handed.links === 0, 'UX-19 the bubble that hands over the one-pager is a button, and says nothing of a new tab', JSON.stringify(handed))
+  await p.click(`${W} .chat-link`)
+  await p.waitForSelector('.wf[data-app="preview"][data-open] .pv-pages .op', { timeout: 15000 })
+  say((await p.evaluate(() => document.querySelector('.wf[data-active]')?.dataset.app)) === 'preview', 'pressed, it opens the one-pager in Preview')
+  await p.click('.wf[data-app="preview"] button[aria-label^="Close"]')
+  await p.waitForTimeout(500)
   // The conversations beside the group: a founder by name, heard from in the small hours; no Mom, no verification code
   const eggs = await p.evaluate((W) => [...document.querySelectorAll(`${W} .conv`)].map((row) => ({ name: row.querySelector('.ss-row__title').textContent.replace(/, unread$/, ''), when: row.querySelector('.ss-row__meta')?.textContent.trim(), said: row.querySelector('.ss-row__preview')?.textContent.trim() })), W)
   say(eggs.map((e) => e.name).join(' | ') === 'Testimonials | Akash Nigam | +1 (555) 010-0142 | Drops', 'the list is Testimonials and three others: no Mom, no verification code', eggs.map((e) => e.name).join(' | '))

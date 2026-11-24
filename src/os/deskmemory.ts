@@ -3,6 +3,7 @@ import { finder, inbox, notes, openConversation, pickCompany, setFinderView, sho
 import { EGGS } from '../data/eggs'
 import { FAQS } from '../data/faqs'
 import { COMPANIES, VERTICALS } from '../data/portfolio'
+import { ONE_PAGER, paperKept, preview } from './papers'
 import { keptWins, restoreWins, wm, type KeptWins } from './wm'
 
 // The desktop, kept for the tab. A reload (or Back to the page from somewhere
@@ -17,6 +18,8 @@ interface Kept {
   finder: { vertical: number; view: string; picked: string | null }
   notes: { note: number }
   inbox: { open: string }
+  /** The document Preview has open, by what it goes by (os/papers.ts). */
+  paper?: string | null
 }
 
 const NAME = 'desk'
@@ -26,6 +29,7 @@ const now = (): Kept => ({
   finder: { vertical: finder.get().vertical, view: finder.get().view, picked: finder.get().picked },
   notes: { note: notes.get().note },
   inbox: { open: inbox.get().open },
+  paper: paperKept(),
 })
 
 /** Keeps the desk as it changes, from now on. Returns what stops it. */
@@ -43,7 +47,7 @@ export function keepDesk() {
     clearTimeout(timer)
     timer = setTimeout(save, 250)
   }
-  const stops = [wm, finder, notes, inbox].map((store) => store.subscribe(soon))
+  const stops = [wm, finder, notes, inbox, preview].map((store) => store.subscribe(soon))
   // A reload within that quarter of a second still finds the last move kept
   window.addEventListener('pagehide', save)
   soon()
@@ -80,6 +84,9 @@ export function restoreDesk(): boolean {
   if (typeof note === 'number' && Number.isInteger(note) && note >= 0 && note < FAQS.length) showNote(note)
   const open = kept.inbox?.open
   if (typeof open === 'string' && (open === 'group' || EGGS.some((egg) => egg.id === open))) openConversation(open)
+  // A document of someone's own that Preview had open is gone back to once it is known who is logged in
+  // (src/apps/Preview.tsx); with none kept, Preview has the one-pager
+  if (typeof kept.paper === 'string' && kept.paper !== ONE_PAGER && /^update:[\w-]+$/.test(kept.paper)) preview.set({ paper: null, wanted: kept.paper })
   // A desk with every window closed is a desk too: it comes back empty, not with the conversation opened again
   const had = kept.windows && typeof kept.windows === 'object'
   restoreWins(kept.windows)

@@ -59,7 +59,7 @@ async function terminal(browser) {
   check('y: asks for nothing and takes no request; says two are public and the rest are not (UX-3)', /two are public:/.test(text) && /the rest aren’t\. start with the one-pager:/.test(text) && !/by hand|request (sent|received|taken)|we’ll|email\?/i.test(text) && !/prototype/.test(text), text.slice(-260))
   const links = await p.$$eval('.wf[data-app="terminal"] .term__link', (as) => as.map((a) => [a.childNodes[0].textContent, a.getAttribute('href'), a.target, a.rel]))
   check('y: the two public case studies are links to their pages', links.some(([t, h]) => t === 'alt/' && /shrug\.notion\.site\/Alt-/.test(h)) && links.some(([t, h]) => t === 'lula/' && /shrug\.notion\.site\/Lula-/.test(h)), JSON.stringify(links))
-  check('y: then the way on: the one-pager, in a new tab', links.some(([t, h, target, rel]) => t === 'read the one-pager' && /docsend\.com/.test(h) && target === '_blank' && rel === 'noreferrer'), JSON.stringify(links))
+  check('y: then the way on: the one-pager, a line to press that goes nowhere else (on the desktop it opens in Preview: preview.cjs)', links.some(([t, h]) => t === 'read the one-pager' && h === null) && (await p.$$eval('.wf[data-app="terminal"] .term__link', (els) => els.filter((el) => /one-pager/.test(el.textContent)).every((el) => el.tagName === 'BUTTON'))), JSON.stringify(links))
   check('y: the line is still a plain text field', (await p.locator('.wf[data-app="terminal"] .term__input').getAttribute('type')) === 'text')
   await shot(p, 'term-desktop-y')
 
@@ -154,11 +154,11 @@ async function terminal(browser) {
   check('open portfolio: the Portfolio window comes to the front', (await front()) === 'finder', await front())
   await p.click('[data-dock-app="terminal"]')
   await p.waitForTimeout(500)
-  // everything `open` offers leads somewhere (asked what, it says which there are): four are windows, and
-  // VIP, which has none, is handed over as the one-pager is: a line to press, to the points site in a new tab
+  // everything `open` offers opens its window (asked what, it says which there are). VIP is the store, in a
+  // window of its own, as any of the others is
   await type('open')
   const offered = (await lines()).slice(-1)[0].replace(/^open: what\? /, '').replace(/\.$/, '').split(', ')
-  const windows = { portfolio: 'finder', faqs: 'notes', vip: 'terminal', chat: 'messages', about: 'about' }
+  const windows = { portfolio: 'finder', faqs: 'notes', vip: 'store', chat: 'messages', about: 'about' }
   const opened = []
   for (const name of offered) {
     await type(`open ${name}`)
@@ -167,13 +167,14 @@ async function terminal(browser) {
     await p.click('[data-dock-app="terminal"]')
     await p.waitForTimeout(500)
   }
-  check('open <app>: of the five it offers, four open their windows and VIP opens none (the terminal stays in front)', offered.join() === 'portfolio,faqs,vip,chat,about' && opened.join() === offered.map((name) => `${name}:${windows[name]}`).join(), opened.join())
+  check('open <app>: each of the five it offers opens its window, VIP the store’s', offered.join() === 'portfolio,faqs,vip,chat,about' && opened.join() === offered.map((name) => `${name}:${windows[name]}`).join(), opened.join())
+  const pagesBefore = t.ctx.pages().length
   await type('open vip')
-  const handed = { said: (await lines()).slice(-2), link: await p.locator('.wf[data-app="terminal"] .term__link').last().evaluate((a) => ({ words: a.childNodes[0].textContent, says: a.textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel })), wins: await p.evaluate(() => [...document.querySelectorAll('.wf[data-app]')].map((w) => w.dataset.app).sort().join()) }
-  check('open vip: says where VIP is, and hands over a link to the points site, in a new tab', handed.said[0] === 'vip is on the points site:' && handed.link.words === 'open vip' && /, in a new tab$/.test(handed.link.says) && handed.link.href === A.POINTS && handed.link.target === '_blank' && handed.link.rel === 'noopener noreferrer', JSON.stringify(handed))
-  const to = await A.tabFrom(t.ctx, () => p.locator('.wf[data-app="terminal"] .term__link').last().click())
+  await p.waitForTimeout(1200)
+  const handed = { said: (await lines()).slice(-1)[0], links: await p.locator('.wf[data-app="terminal"] .term__link', { hasText: 'open vip' }).count(), front: await front(), path: await p.evaluate(() => { try { return document.querySelector('.wf[data-app="store"] iframe')?.contentWindow?.location?.pathname ?? null } catch { return null } }) }
+  check('open vip: says it is opening, and opens the VIP Store window on the store: no link, and no tab', handed.said === 'opening vip.' && handed.links === 0 && handed.front === 'store' && handed.path === '/vip/store/' && t.ctx.pages().length === pagesBefore && (await p.locator('.wf[data-app="photos"]').count()) === 0, JSON.stringify(handed))
+  await p.click('[data-dock-app="terminal"]')
   await p.waitForTimeout(500)
-  check('open vip: the link opens the points site in a tab of its own, and no window on the desk', !!to && to.url === A.POINTS && to.alone === true && !/photos|vip/.test(handed.wins) && (await p.locator('.wf[data-app="photos"]').count()) === 0 && (await front()) === 'terminal', JSON.stringify({ to, wins: handed.wins }))
   await type('open photos')
   check('open photos: the name the VIP window had opens nothing, and says so', /^open: nothing called photos\. try portfolio, faqs, vip, chat, about\.$/.test((await lines()).slice(-1)[0]) && (await front()) === 'terminal', (await lines()).slice(-1)[0])
   // the rules the terminal printed are the FAQs' own, word for word

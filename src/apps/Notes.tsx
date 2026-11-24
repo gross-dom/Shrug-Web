@@ -4,6 +4,7 @@ import { ANSWER_PENDING, ANSWER_PENDING_LINE, ANSWER_PLACEHOLDER, answerOpening,
 import { DRAFT } from '../data/site'
 import { Row } from '../kit/parts/Row'
 import { Window } from '../kit/window'
+import { openOnePager } from '../os/papers'
 import { useStore } from '../os/store'
 import { isShowing, wm } from '../os/wm'
 import { Answer } from './answer'
@@ -23,6 +24,7 @@ const PREVIEW = [148, 132, 156, 120, 144, 136, 152]
 
 export function NotesApp() {
   const note = useStore(notes, (s) => s.note)
+  const compact = useStore(wm, (s) => s.compact)
   const query = useStore(notes, (s) => s.query)
   // Read as a search reads words: the answers are typeset, and a keyboard types plain apostrophes
   const q = folded(query.trim())
@@ -147,17 +149,24 @@ export function NotesApp() {
           <div className="faq__pending">
             <p>{ANSWER_PENDING}</p>
             <p className="faq__ways">
-              {waysOn(current.question).map((way) => (
-                <a key={way.label} className="faq__way" href={way.href} draggable={false} {...(way.leaves ? { target: '_blank', rel: 'noreferrer' } : null)}>
-                  {way.label}
-                  {way.leaves && (
-                    <>
-                      <ArrowUpRight size={13} strokeWidth={2.2} aria-hidden />
-                      <span className="sr-only">, opens in a new tab</span>
-                    </>
-                  )}
-                </a>
-              ))}
+              {waysOn(current.question).map((way) =>
+                // The one-pager is a file here, and opens in Preview: nothing leaves for a tab of its own
+                way.leaves && !compact ? (
+                  <button key={way.label} type="button" className="faq__way" onClick={openOnePager}>
+                    {way.label}
+                  </button>
+                ) : (
+                  <a key={way.label} className="faq__way" href={way.href} draggable={false} {...(way.leaves ? { target: '_blank', rel: 'noreferrer' } : null)}>
+                    {way.label}
+                    {way.leaves && (
+                      <>
+                        <ArrowUpRight size={13} strokeWidth={2.2} aria-hidden />
+                        <span className="sr-only">, opens in a new tab</span>
+                      </>
+                    )}
+                  </a>
+                ),
+              )}
             </p>
           </div>
         )}

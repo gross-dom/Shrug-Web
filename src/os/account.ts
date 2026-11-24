@@ -20,14 +20,27 @@ import { createStore } from './store'
 const LIVE = import.meta.env.VITE_ACCOUNT === 'live'
 export const ACCOUNT_DEMO = !LIVE
 
-/** A document in the Updates folder. */
+/** A document in the Updates folder, as the LP who is logged in is shown it (store/shared/rules.ts, `Update`):
+ *   open       theirs to read: it opens in Preview
+ *   locked     theirs, at a price in points: the VIP Store is where it is unlocked
+ *   request    written for the LPs of another fund: they may ask for it
+ *   requested  they have asked
+ *   soon       listed, with no file yet */
 export interface Doc {
   id: string
   name: string
-  /** It can be downloaded now. One that is not theirs yet (to be asked for, or with no file yet) is seen to on the points site. */
-  open: boolean
-  /** The groups it is kept to, for its label: empty where every member sees it. */
-  keptTo: string[]
+  /** The heading it is under: Funds, SPVs. */
+  group: string
+  /** Who it was written for, as its second line has it ("Shrug 4 LPs", "All LPs") and as its tag does ("Shrug 4", "All"). */
+  forWhom: string
+  tag: string
+  /** When it was added, as a date and time; or, in words, when one still to come is expected ("December"). Empty where neither is known. */
+  date: string
+  state: Update['state']
+  /** What it costs to unlock, in points, where it is locked. */
+  points: number
+  /** It may be saved as well as read. Shrug can switch that off for a document. */
+  download: boolean
 }
 
 export interface Member {
@@ -98,7 +111,22 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T 
 }
 
 /** The folder holds the same list as the server's updates, which is where it is said what each member is shown. */
-const docsOf = (updates: Update[]): Doc[] => updates.map((update) => ({ id: update.id, name: update.name, open: update.state === 'open', keptTo: update.forWhom === 'Everyone on the list' ? [] : [update.forWhom] }))
+const docsOf = (updates: (Update & { download?: boolean })[]): Doc[] =>
+  updates.map((update) => {
+    const all = update.forWhom === 'Everyone on the list'
+    return {
+      id: update.id,
+      name: update.name,
+      group: update.group,
+      forWhom: all ? 'All LPs' : update.forWhom,
+      // "Shrug 2 LPs, Shrug 4 LPs" is tagged "Shrug 2, Shrug 4"
+      tag: all ? 'All' : update.forWhom.replace(/ LPs\b/g, ''),
+      date: update.date ?? '',
+      state: update.state,
+      points: update.points,
+      download: update.download !== false,
+    }
+  })
 
 // ---- The stand-in, for the demo
 
@@ -125,13 +153,23 @@ interface Demo {
   /** Wrong guesses since the last code, and until when codes are paused. */
   wrong: number
   pausedUntil: number
+  /** The documents each address has asked for. */
+  asked?: Record<string, string[]>
 }
 
+/** What the demo's LP, who is in Shrug 2 and Shrug 4, is shown: each of the states a document can be in. */
+const paper = (id: string, name: string, tag: string, date: string, state: Doc['state'], more: Partial<Doc> = {}): Doc => ({ id, name, group: 'Funds', forWhom: `${tag} LPs`, tag, date, state, points: 0, download: true, ...more })
 const DEMO_DOCS: Doc[] = [
-  { id: 'update-4', name: 'Shrug 4 LP Update', open: true, keptTo: ['Shrug 4 LPs'] },
-  { id: 'update-2', name: 'Shrug 2 LP Update', open: true, keptTo: ['Shrug 2 LPs'] },
-  { id: 'update-capital', name: 'Shrug Capital Update', open: true, keptTo: [] },
+  paper('update-4', 'Shrug 4 update, Q3 2026', 'Shrug 4', '2026-11-14T17:00:00Z', 'open'),
+  // (one that Shrug has said is to be read here and not saved)
+  paper('update-2', 'Shrug 2 update, Q3 2026', 'Shrug 2', '2026-11-12T17:00:00Z', 'open', { download: false }),
+  paper('update-capital', 'Shrug Capital update, 2026', 'All', '2026-11-24T17:00:00Z', 'open'),
+  paper('update-3', 'Shrug 3 update, Q3 2026', 'Shrug 3', '2026-11-11T17:00:00Z', 'request'),
+  paper('letter-2', 'Shrug 2 annual letter', 'Shrug 2', 'December', 'soon'),
+  paper('update-spv', 'SPV update', 'SPV', '2026-10-03T17:00:00Z', 'request', { group: 'SPVs' }),
 ]
+/** How many pages each of the demo's documents has: a stand-in is drawn with that many. */
+const DEMO_PAGES: Record<string, number> = { 'update-4': 4, 'update-2': 6, 'update-capital': 14 }
 /** How long the demo pauses codes for after five wrong guesses: long enough to see, short enough to wait out. */
 const DEMO_PAUSE = 30
 const DEMO_AGAIN = 20
@@ -156,6 +194,53 @@ function keep() {
     window.localStorage.setItem(KEPT, JSON.stringify(state()))
   } catch {
     // No storage: logged in for as long as the page is open
+  }
+  toStore()
+}
+
+// The store's pages have a demo of their own (the card's page keeps who is signed in, and the store reads it
+// there: store/src/demo.ts). In the VIP Store window they are this site's own pages, so the two demos are
+// kept as one: whoever is logged in here is who the store's demo finds signed in, with the same points, and
+// what is spent or signed out of there is read back here.
+const STORE_DEMO = 'shrugdemo.v1'
+
+function toStore() {
+  const s = state()
+  const row = s.in ? s.rows[s.in] : null
+  const name = row ? row.name || row.shrugName : ''
+  const lp = !!row?.roles.includes('LP')
+  const session = row ? { member: { name, first: name.split(/\s+/)[0] ?? '', roles: row.roles, tier: lp ? 'gold' : row.listed ? 'silver' : 'standard', points: row.points, number: row.listed ? '003' : '', since: row.listed ? 2021 : 2026 }, seen: row.points, emails: true, email: row.email, ...(row.phone ? { phone: row.phone } : {}) } : null
+  try {
+    window.localStorage.setItem(STORE_DEMO, JSON.stringify({ pick: lp ? 'lp' : 'standard', session, wrong: 0, bumps: 0, phoned: true }))
+  } catch {
+    // No storage: the store's demo begins as nobody
+  }
+}
+
+/** What the store's demo has done since: points spent there are spent here, and signed out there is logged out here. */
+function fromStore() {
+  const s = state()
+  let row = s.in ? s.rows[s.in] : null
+  try {
+    const theirs = JSON.parse(window.localStorage.getItem(STORE_DEMO) ?? 'null') as { session?: { member?: { points?: number }; email?: string; phone?: string } | null } | null
+    if (!theirs) return
+    // A visitor who has just paid there: the payment made them an account, and they are logged in to it
+    if (!row && theirs.session?.member && theirs.session.email) {
+      const email = theirs.session.email
+      row = s.rows[email] ??= standardRow(email, null)
+      s.in = email
+      s.via = 'pay'
+    }
+    if (!row) return
+    if (!theirs.session) s.in = null
+    else {
+      if (typeof theirs.session.member?.points === 'number') row.points = theirs.session.member.points
+      // The number they gave after paying is theirs to log in with
+      if (theirs.session.phone && !row.phone) row.phone = phoneOf(theirs.session.phone) ?? row.phone
+    }
+    window.localStorage.setItem(KEPT, JSON.stringify(s))
+  } catch {
+    // Nothing to read back
   }
 }
 const listedRow = (email: string): DemoRow => ({ email, listed: true, confirmed: false, phone: null, shrugName: 'Jordan Avery', name: '', picture: null, points: 8400, roles: ['LP'], funds: ['Shrug 2', 'Shrug 4'] })
@@ -184,7 +269,7 @@ function demoAccount(): Account {
   const row = s.in ? s.rows[s.in] : null
   if (!row) return { status: 'anon' }
   const name = row.name || row.shrugName
-  return { status: 'member', first: name.split(/\s+/)[0] ?? '', name, email: row.email, points: row.points, roles: row.roles, funds: row.funds, picture: row.picture, needs: { phone: !row.phone, profile: !row.name }, via: s.via, docs: row.roles.includes('LP') ? DEMO_DOCS : [] }
+  return { status: 'member', first: name.split(/\s+/)[0] ?? '', name, email: row.email, points: row.points, roles: row.roles, funds: row.funds, picture: row.picture, needs: { phone: !row.phone, profile: !row.name }, via: s.via, docs: row.roles.includes('LP') ? DEMO_DOCS.map((doc) => (doc.state === 'request' && s.asked?.[row.email]?.includes(doc.id) ? { ...doc, state: 'requested' as const } : doc)) : [] }
 }
 
 // ---- Asking
@@ -192,8 +277,10 @@ function demoAccount(): Account {
 /** Asks who is logged in, and what is theirs. */
 export async function refreshAccount(): Promise<Account> {
   let next: Account
-  if (!LIVE) next = demoAccount()
-  else {
+  if (!LIVE) {
+    fromStore()
+    next = demoAccount()
+  } else {
     const answer = await call<StoreAnswer>('GET', '/api/store')
     next =
       'error' in answer
@@ -357,11 +444,59 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
 }
 
+/** What came back when a document was asked for and not handed over:
+ *   not-yours  it was written for others (the server says so to an LP it is listed to)
+ *   missing    it is not there: no file yet, or moved
+ *   anon       nobody is logged in
+ *   offline    the request did not get there */
+export type NotHere = { error: 'not-yours' | 'missing' | 'anon' | 'offline' }
+
+const samplePages = (doc: Doc) => samplePdf(doc.name, DEMO_PAGES[doc.id] ?? 3)
+const bytes = (text: string) => Uint8Array.from(text, (c) => c.charCodeAt(0) & 0xff)
+
+/** A document's file, to be read here (Preview). The server hands it over only to someone it is for, and
+ * notes that it was opened; nothing of it is in the page until then. */
+export async function readDoc(doc: Doc): Promise<Uint8Array | NotHere> {
+  if (!LIVE) {
+    await lag(500)
+    if (account.get().status !== 'member') return { error: 'anon' }
+    // (the demo's way to see a file that is gone: an address that says ?doc=missing)
+    if (/[?&]doc=missing\b/.test(window.location.search)) return { error: 'missing' }
+    return doc.state === 'open' ? bytes(samplePages(doc)) : { error: doc.state === 'soon' ? 'missing' : 'not-yours' }
+  }
+  try {
+    const res = await fetch(`/api/file?product=${encodeURIComponent(doc.id)}&view=1`, { credentials: 'same-origin', cache: 'no-store' })
+    if (res.ok) return new Uint8Array(await res.arrayBuffer())
+    return { error: res.status === 401 ? 'anon' : res.status === 403 ? 'not-yours' : 'missing' }
+  } catch {
+    return { error: 'offline' }
+  }
+}
+
+/** Asks Shrug for a document written for the LPs of another fund. Asked once: from then on it says Requested. */
+export async function requestDoc(doc: Doc): Promise<true | { error: string }> {
+  if (LIVE) {
+    const answer = await call<{ ok: true }>('POST', '/api/order', { product: doc.id })
+    // (asked already, from another window or another day: that is what they wanted)
+    if ('error' in answer && answer.error !== 'already') return answer
+  } else {
+    await lag(400)
+    const s = state()
+    if (!s.in) return { error: 'anon' }
+    const asked = ((s.asked ??= {})[s.in] ??= [])
+    if (!asked.includes(doc.id)) asked.push(doc.id)
+    keep()
+  }
+  await refreshAccount()
+  return true
+}
+
 /** Downloads a document. The server hands it over only to someone it is for. */
 export async function downloadDoc(doc: Doc): Promise<true | { error: string }> {
+  if (!doc.download) return { error: 'kept' }
   if (!LIVE) {
     await lag(300)
-    save(new Blob([samplePdf(doc.name)], { type: 'application/pdf' }), `${doc.name}.pdf`)
+    save(new Blob([samplePages(doc)], { type: 'application/pdf' }), `${doc.name}.pdf`)
     return true
   }
   try {
