@@ -29,11 +29,11 @@ There are three kinds of person, and one set of rules (`shared/rules.ts`) answer
 | Who | How | What they are shown |
 | --- | --- | --- |
 | A visitor | Nobody is signed in | The store: everything that is `Visible to` Everyone, at its price. No points, no orders, no updates. The button on a product is the way to the card |
-| A standard user | They signed in, and are not on Shrug's list | The same store, as a member: a row in Members with no `Role`, the tier Standard and 100 points to begin with (`STARTING_POINTS`, which is $10) |
+| A standard user | They signed in with a phone number, and are not on Shrug's list | The same store, as a member: a row in Members with no `Role`, the tier Standard and 100 points to begin with (`STARTING_POINTS`, which is $10) |
 | Someone on the list | A row in Members with a `Role` | What is for Everyone and for their groups; and, for an LP, the updates |
 
-- **Signing in makes the account.** The first time an address that is not in Members gives a right code, a
-  row is added for it (`welcome` in `api/_lib/members.ts`). Signing in again finds that row: there is no second
+- **Signing in makes the account.** The first time an address that is not in Members proves a phone number,
+  a row is added for it (`welcome` in `api/_lib/members.ts`). Signing in again finds that row: there is no second
   account and no more points. Applications is no longer written to.
 - **Updates are for LPs alone.** A document is never shown or handed to anyone whose `Role` does not include
   LP, whatever is ticked on it: on a document, Everyone means every LP (`mayHave`). Anyone can sign in now, so
@@ -44,6 +44,36 @@ There are three kinds of person, and one set of rules (`shared/rules.ts`) answer
   have given one ("Your name here" until then). It comes out of the pack as a metal card does. The card page
   (`standardCard`) and My VIP (`.mc.m-standard`) draw it; `stockOf` in `shared/rules.ts` says which card a
   tier is. The placeholder itself ("you're not on the list. yet.") is no longer anybody's.
+
+## Signing in
+
+An email comes first, and the server says what comes next (`api/start.ts`).
+
+| The email | Next | Then |
+| --- | --- | --- |
+| Nobody's yet | A phone number (`api/text.ts`), which is texted six digits | The right code makes the account, with the number on it (`api/verify.ts`) |
+| Has a number on file | Six digits are texted to that number. The page is told only its last two digits | The right code signs them in |
+| On the list, and its inbox not yet confirmed; or any account with no number | Six digits are emailed | The right code signs them in and notes `Email confirmed`. They are then asked for a number (`api/phone.ts`) |
+
+- **A number belongs to one account.** Someone who proves a number that already has an account is signed in
+  to that account, whatever email they typed: so the starting points are had once to a phone, not once to an
+  email address.
+- **Someone on the list confirms their inbox once before a number counts.** A number on their row from
+  before (someone can make a standard account with any address, and Shrug may list that address later) lets
+  nobody in until the email is proved. `wayIn` in `api/_lib/members.ts` is the whole rule.
+- **A lost or changed number** is got round by the inbox: `start` and `verify` with `by: 'inbox'`. Only
+  someone who has just proved their email (so, or by their personal link) may put a different number on an
+  account that has one.
+- **A personal link** (`api/link.ts`, made by `tools/link.mjs`) is what an update email carries for each LP.
+  Opening it proves the email, so the sheet asks only for a number. It works until the account has a number,
+  and until the day it says; after that it only brings up Log In.
+- **Codes.** A texted code is Twilio Verify's: made, sent, kept ten minutes and allowed five guesses there,
+  with nothing of it kept here (`api/_lib/texts.ts`). An emailed code is the store's own, as before
+  (`api/_lib/codes.ts`): out of guesses, no new one is sent until the old one would have run out.
+- **A name and a picture** (`api/profile.ts`) are asked for the first time someone signs in. The picture is
+  one of Shrug's faces, kept as a file named for it (`face-3.png`), or a photo of theirs.
+- A session says how it began (`via`: text, inbox, link or pay), and every answer about a member says what
+  their account still lacks (`needs`: a phone, a profile).
 
 In the demo a small **Demo** tab beside the name in the bar chooses who is looking, adds points, and brings
 on the states that cannot otherwise be got to (sold out, a payment that fails, an empty store, no answer).
@@ -175,7 +205,10 @@ is none), shown from then on, and changed in My VIP.
 The base is **Shrug**. The store reads it afresh on every visit, so a change there is live at once.
 
 - **Members**: one row each. `Points` is the balance. `Role` (Founder, LP, Investor) and `Funds`
-  (Shrug 1 to Shrug 5) decide what they are shown. `Ship to` is where their orders are sent.
+  (Shrug 1 to Shrug 5) decide what they are shown. `Ship to` is where their orders are sent. Four columns
+  are the app's own: `Phone` (the number they sign in with, written once they have proved it; clear it to
+  make them prove one again), `Email confirmed` (when they last proved the email; clear it to make someone
+  on the list confirm again), `Display name` and `Picture`.
 - **Products**: one row for each thing in the store.
   - `Visible to` is who sees it. **Everyone** is every member. Otherwise a member sees it if they are
     in any group ticked: Founders, LPs and Investors go by `Role`; "Shrug 1 LPs" is anyone with
@@ -209,7 +242,9 @@ Set on the Vercel project (Settings → Environment Variables). None is kept in 
 | --- | --- |
 | `AIRTABLE_TOKEN` | A personal access token for the Shrug base, with `data.records:read` and `data.records:write` |
 | `SESSION_SECRET` | Any long random string. Sessions are signed with it; changing it signs everyone out |
-| `RESEND_API_KEY` | Resend, which sends the sign-in code |
+| `RESEND_API_KEY` | Resend, which emails a sign-in code |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Twilio, which texts a sign-in code: the account's SID and auth token |
+| `TWILIO_VERIFY_SID` | The Verify service the texts go through (Twilio → Verify → Services): its SID begins `VA` |
 | `MAIL_FROM` | Who the code is from, at a domain verified in Resend: `Shrug VIP <vip@…>` |
 | `STRIPE_SECRET_KEY` | Stripe, for the dollars |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe's key for the page (not a secret) |
@@ -221,9 +256,13 @@ For Apple Pay, the site's domain has to be added in Stripe (Settings → Payment
 
 - **A visitor cannot buy.** They are shown everything, and the button sends them to the card. Buying without
   an account, with the account made from what the payment gives, waits on payments being set up.
-- **Signing in by text.** Every code is still emailed. A phone number tied to an account, and a code sent to
-  it, need two things this does not have yet: a column for the number in Members, and something to send texts.
-- **A display name and a picture** for an account, for the same reason: they need their columns.
+- **No text has been sent for real.** Signing in by text is built and checked against a stand-in for Twilio
+  Verify; it needs a Twilio account and its three settings before a real number is texted. Until bots are
+  kept off `api/text.ts` (a rate limit, or Vercel's BotID), anyone can have a code texted to any number at
+  Shrug's cost: Verify's own Fraud Guard is the only guard.
+- **The card page signs in by email only.** Its strip does not yet ask a new address for a phone number, so
+  someone new cannot make an account there. The desktop's Log In does.
+- **The faces** are stand-ins until the set that ships is chosen.
 
 - **Payments have not been run against Stripe.** The code follows Stripe's documented flow and the
   server's side of it is tested against a stand-in, but no real or test payment has been made.

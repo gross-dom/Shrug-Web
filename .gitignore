@@ -7,3 +7,8 @@ tests/audit
 .vercel
 .env*
 .ssr
+# Dom's reference screenshots for the v1 design. Kept beside the design and out of the repository: they
+# are screenshots of a real inbox, real addresses and real faces, and this repository is public. The index
+# of what each one governs is kept (design/v1/reference/README.md).
+design/v1/reference/*
+!design/v1/reference/README.md

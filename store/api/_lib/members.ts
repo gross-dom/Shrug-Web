@@ -1,5 +1,5 @@
-import { add, all, change, F, list, num, str, T, type Row } from './airtable.js'
-import { STANDARD_TIER, STARTING_POINTS, type Member } from '../../shared/rules.js'
+import { add, all, change, F, files, list, num, str, T, type Row } from './airtable.js'
+import { phoneOf, STANDARD_TIER, STARTING_POINTS, type Member, type Needs, type Picture, type Via } from '../../shared/rules.js'
 
 // The members, as Airtable has them, and as the card and the store are told of them.
 
@@ -14,19 +14,59 @@ export async function rowOf(email: string): Promise<Row | null> {
 /** Whether a member is on Shrug's list: someone Shrug has given a Role. Anyone else is a standard user. */
 export const listed = (row: Row) => list(row.fields[F.member.role]).length > 0
 
-/** A row for someone who has signed in and is not on the list: a standard user, with a few points to begin
- * with. They have no Role, so they are in no group, and are shown what is for Everyone and nothing else. */
-export const welcome = (email: string): Promise<Row> =>
+/** The phone number on a member's row, as it is texted (+14155550134), or null where there is none. */
+export const phoneOn = (row: Row): string | null => phoneOf(str(row.fields[F.member.phone]))
+
+/** The row a phone number is on, or null. A number belongs to one account. */
+export async function rowByPhone(phone: string): Promise<Row | null> {
+  const rows = await all(T.members)
+  return rows.find((row) => phoneOn(row) === phone) ?? null
+}
+
+/** Whether a member has proved their email is theirs: by a code sent to it, or by their personal link. */
+export const confirmed = (row: Row) => str(row.fields[F.member.confirmed]) !== ''
+
+/** Notes that a member has just proved their email. */
+export const confirm = (row: Row): Promise<Row> => change(T.members, row.id, { [F.member.confirmed]: new Date().toISOString() })
+
+/** How someone who has a row gets in. With a number on file, by a text to it. But a number only counts for
+ * someone on the list once they have confirmed their email: until then a number on their row may have been
+ * put there by whoever made an account with that address before Shrug listed it. Anyone else, and anyone
+ * with no number, gets in by a code to their inbox. */
+export const wayIn = (row: Row): 'text' | 'inbox' => (phoneOn(row) && (!listed(row) || confirmed(row)) ? 'text' : 'inbox')
+
+/** A row for someone who is not on the list: a standard user, with a few points to begin with. They have no
+ * Role, so they are in no group, and are shown what is for Everyone and nothing else. They are made by a
+ * proved phone number (signing in) or by a payment (buying as a visitor), never by an address alone. */
+export const welcome = (email: string, more: { phone?: string; shipTo?: string } = {}): Promise<Row> =>
   add(T.members, {
     [F.member.email]: email,
     [F.member.tier]: STANDARD_TIER[0]!.toUpperCase() + STANDARD_TIER.slice(1),
     [F.member.points]: STARTING_POINTS,
     [F.member.reason]: 'A welcome from Shrug',
     [F.member.since]: String(new Date().getUTCFullYear()),
+    ...(more.phone ? { [F.member.phone]: more.phone } : {}),
+    ...(more.shipTo ? { [F.member.shipTo]: more.shipTo } : {}),
   })
 
+/** A member's picture: one of Shrug's faces (kept as a file named for it, face-3.png) or a photo of theirs. */
+export function pictureOf(row: Row): Picture | null {
+  const file = files(row.fields[F.member.picture])[0]
+  if (!file?.url) return null
+  const face = /^(face-[a-z0-9-]+)\./i.exec(file.filename ?? '')
+  // Airtable's links to a photo last a couple of hours, which is longer than a page is looked at
+  return face ? { face: face[1]!.toLowerCase() } : { url: file.thumbnails?.large?.url ?? file.url! }
+}
+
+/** The name a member chose for themselves, or none. */
+export const displayNameOf = (row: Row) => str(row.fields[F.member.displayName]).trim()
+
+/** What an account still lacks: a number to sign in with, and a name of its own choosing (asked for once, with a picture). */
+export const needsOf = (row: Row): Needs => ({ phone: !phoneOn(row), profile: !displayNameOf(row) })
+
 export function memberOf(row: Row): Member {
-  const name = str(row.fields[F.member.name]).trim()
+  // The name they chose is the one shown; until they choose one, the name Shrug has for them
+  const name = displayNameOf(row) || str(row.fields[F.member.name]).trim()
   return {
     id: row.id,
     name,
@@ -56,6 +96,7 @@ export function cardOf(row: Row) {
     emails: row.fields[F.member.noEmails] !== true,
     email: str(row.fields[F.member.email]),
     shipTo: str(row.fields[F.member.shipTo]).trim(),
+    picture: pictureOf(row),
   }
 }
 
@@ -73,12 +114,13 @@ export const tidied = (shipTo: unknown) =>
 /** Keeps an address on a member's row, for their next order. */
 export const keepAddress = (row: Row, shipTo: string) => change(T.members, row.id, { [F.member.shipTo]: shipTo })
 
-/** The answer to "who am I", for a member: their card, and the balance they last saw. Looking counts as seeing. */
-export async function answerFor(row: Row) {
+/** The answer to "who am I", for a member: their card, the balance they last saw, what their account still
+ * lacks, and how they got in. Looking counts as seeing. */
+export async function answerFor(row: Row, via: Via) {
   const seen = num(row.fields[F.member.seenPoints])
   const member = cardOf(row)
   await change(T.members, row.id, { [F.member.seenPoints]: member.points, [F.member.lastSeen]: new Date().toISOString() }).catch(() => {})
   // The card is told what it always was: an address is the store's business, and is not sent to it
-  const { email: _email, shipTo: _shipTo, ...card } = member
-  return { status: 'member' as const, member: card, seenPoints: seen }
+  const { shipTo: _shipTo, ...card } = member
+  return { status: 'member' as const, member: card, seenPoints: seen, needs: needsOf(row), via }
 }

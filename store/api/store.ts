@@ -1,8 +1,8 @@
 import { ordersFor, shelvesFor, shelvesForAVisitor, updatesFor } from './_lib/catalogue.js'
 import { env } from './_lib/env.js'
 import { json } from './_lib/http.js'
-import { noSessionCookie, signedIn } from './_lib/session.js'
-import { cardOf, memberOf, rowOf } from './_lib/members.js'
+import { noSessionCookie, sessionOf } from './_lib/session.js'
+import { cardOf, memberOf, needsOf, rowOf } from './_lib/members.js'
 import { trouble } from './_lib/who.js'
 
 // Everything the pages are drawn from, for whoever is asking. A visitor (nobody signed in) is shown the
@@ -11,8 +11,8 @@ import { trouble } from './_lib/who.js'
 // are for LPs alone), what they have ordered, and their card, balance and address.
 export async function GET(request: Request) {
   try {
-    const email = signedIn(request)
-    const row = email ? await rowOf(email) : null
+    const session = sessionOf(request)
+    const row = session ? await rowOf(session.email) : null
     // Nobody signed in, or someone whose row has been taken out of Members: a visitor, with no session
     if (!row) return json({ status: 'visitor', products: await shelvesForAVisitor(), stripeKey: env.stripePublic }, { headers: { 'Set-Cookie': noSessionCookie() } })
     const member = memberOf(row)
@@ -21,7 +21,9 @@ export async function GET(request: Request) {
     const card = cardOf(row)
     return json({
       status: 'member',
-      member: { ...member, number: card.number, since: card.since, reason: card.reason, emails: card.emails, email: card.email, shipTo: card.shipTo },
+      member: { ...member, number: card.number, since: card.since, reason: card.reason, emails: card.emails, email: card.email, shipTo: card.shipTo, picture: card.picture },
+      needs: needsOf(row),
+      via: session!.via,
       products: products.filter((product) => product.kind !== 'Document'),
       updates: updatesFor(member, rows, orders),
       orders,

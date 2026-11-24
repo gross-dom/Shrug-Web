@@ -1,4 +1,4 @@
-// The server, checked end to end with nothing real behind it: Airtable, Stripe and Resend are stood in for
+// The server, checked end to end with nothing real behind it: Airtable, Stripe, Resend and Twilio are stood in for
 // here, in memory, and the store's own endpoints are run against them exactly as Vercel would run them.
 //   npm test
 import { build } from 'esbuild'
@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const out = mkdtempSync(join(tmpdir(), 'shrug-store-'))
-const NAMES = ['me', 'start', 'verify', 'signout', 'emails', 'store', 'order', 'pay', 'stripe', 'file', 'address']
+const NAMES = ['me', 'start', 'text', 'verify', 'phone', 'profile', 'link', 'signout', 'emails', 'store', 'order', 'pay', 'stripe', 'file', 'address']
 await build({ entryPoints: NAMES.map((name) => resolve(here, `../api/${name}.ts`)), outdir: out, bundle: true, format: 'esm', platform: 'node', logLevel: 'error', outExtension: { '.js': '.mjs' } })
 const api = Object.fromEntries(await Promise.all(NAMES.map(async (name) => [name, await import(pathToFileURL(join(out, `${name}.mjs`)).href)])))
 const { T, F } = await import(pathToFileURL(join(out, 'me.mjs')).href).then(async () => {
@@ -18,7 +18,7 @@ const { T, F } = await import(pathToFileURL(join(out, 'me.mjs')).href).then(asyn
   return import(pathToFileURL(join(out, 'airtable.mjs')).href)
 })
 
-Object.assign(process.env, { AIRTABLE_TOKEN: 'test', SESSION_SECRET: 'a-test-secret', RESEND_API_KEY: 'test', MAIL_FROM: 'Shrug <vip@example.test>', STRIPE_SECRET_KEY: 'sk_test_x', NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: 'pk_test_x', STRIPE_WEBHOOK_SECRET: 'whsec_test' })
+Object.assign(process.env, { AIRTABLE_TOKEN: 'test', SESSION_SECRET: 'a-test-secret', RESEND_API_KEY: 'test', MAIL_FROM: 'Shrug <vip@example.test>', STRIPE_SECRET_KEY: 'sk_test_x', NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: 'pk_test_x', STRIPE_WEBHOOK_SECRET: 'whsec_test', TWILIO_ACCOUNT_SID: 'AC_test', TWILIO_AUTH_TOKEN: 'test', TWILIO_VERIFY_SID: 'VA_test' })
 
 // ---- The stand-ins
 const tables = Object.fromEntries(Object.values(T).map((id) => [id, []]))
@@ -26,6 +26,9 @@ let made = 0
 const rec = (table, fields) => { const row = { id: `rec${String(++made).padStart(14, '0')}`, createdTime: new Date().toISOString(), fields: { ...fields } }; tables[table].push(row); return row }
 const mail = []
 const intents = new Map()
+// Twilio's Verify: every text it was asked to send, and the code waiting for each number (five guesses, as there)
+const texts = []
+const waiting = new Map()
 const answer = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(typeof input === 'string' ? input : input.url)
@@ -40,6 +43,32 @@ globalThis.fetch = async (input, init = {}) => {
     const body = JSON.parse(init.body)
     if (method === 'POST') return answer({ records: body.records.map((r) => rec(table, r.fields)) })
     if (method === 'PATCH') return answer({ records: body.records.map((r) => { const row = rows.find((x) => x.id === r.id); Object.assign(row.fields, r.fields); return row }) })
+  }
+  if (url.host === 'content.airtable.com') {
+    // A file put in an attachment column: /v0/<base>/<row>/<column>/uploadAttachment
+    const [, , , id, field] = url.pathname.split('/')
+    const row = Object.values(tables).flat().find((r) => r.id === id)
+    if (!row) return answer({ error: 'NOT_FOUND' }, 404)
+    const body = JSON.parse(init.body)
+    row.fields[field] = [...(row.fields[field] ?? []), { id: `att${(row.fields[field] ?? []).length + 1}`, url: `https://files.example.test/${body.filename}`, filename: body.filename, type: body.contentType, size: body.file.length }]
+    return answer({ id, fields: row.fields })
+  }
+  if (url.host === 'verify.twilio.com') {
+    const form = new URLSearchParams(init.body)
+    const to = form.get('To')
+    if (url.pathname.endsWith('/Verifications')) {
+      if (!/^\+\d{8,15}$/.test(to) || to.endsWith('0000000')) return answer({ code: 60200, status: 400 }, 400)
+      const code = String(100000 + ((texts.length * 7919 + 4242) % 900000))
+      waiting.set(to, { code, left: 5 })
+      texts.push({ to, code })
+      return answer({ status: 'pending', to }, 201)
+    }
+    const kept = waiting.get(to)
+    if (!kept) return answer({ code: 20404, status: 404 }, 404)
+    if (kept.left <= 0) return answer({ code: 60202, status: 429 }, 429)
+    if (form.get('Code') === kept.code) { waiting.delete(to); return answer({ status: 'approved', valid: true }) }
+    kept.left--
+    return answer({ status: 'pending', valid: false })
   }
   if (url.host === 'api.resend.com') { const body = JSON.parse(init.body); mail.push(body); return answer({ id: 'email_1' }) }
   if (url.host === 'api.stripe.com') {
@@ -88,8 +117,17 @@ async function call(who, name, method, body, query = '') {
   return { status: res.status, body: type.includes('json') ? await res.json() : await res.text(), headers: res.headers }
 }
 const codeIn = (email) => mail.filter((m) => m.to[0] === email).pop().text.match(/(\d{3}) (\d{3})/).slice(1).join('')
-async function signIn(who, email) {
-  await call(who, 'start', 'POST', { email })
+/** The six digits last texted to a number. */
+const textIn = (phone) => texts.filter((t) => t.to === phone).pop().code
+const rowFor = (email) => tables[T.members].find((r) => r.fields[M.email].toLowerCase() === email.toLowerCase())
+/** Signs someone in the way the server says to: someone new by the number given, anyone else by the text or the email their row calls for. */
+async function signIn(who, email, phone) {
+  const started = await call(who, 'start', 'POST', { email })
+  if (started.body.step === 'phone') {
+    await call(who, 'text', 'POST', { email, phone })
+    return call(who, 'verify', 'POST', { email, phone, code: textIn(phone) })
+  }
+  if (started.body.step === 'text') return call(who, 'verify', 'POST', { email, code: textIn(rowFor(email).fields[M.phone]) })
   return call(who, 'verify', 'POST', { email, code: codeIn(email) })
 }
 
@@ -117,13 +155,14 @@ check('a visitor can order nothing, pay for nothing and fetch no file', (await c
 
 // Someone not on the list: a standard user
 const members = tables[T.members].length
-const stranger = await signIn('sam', 'sam@elsewhere.test')
+const stranger = await signIn('sam', 'sam@elsewhere.test', '+14155550101')
 const samRow = tables[T.members].at(-1)
 check('someone not on the list is given an account: no Role, the standard tier, 100 points', stranger.body.status === 'member' && stranger.body.member.tier === 'standard' && stranger.body.member.points === 100 && stranger.body.member.roles.length === 0 && tables[T.members].length === members + 1 && samRow.fields[M.email] === 'sam@elsewhere.test' && samRow.fields[M.points] === 100 && !samRow.fields[M.role] && tables[T.applications].length === 0, JSON.stringify(stranger.body))
 await call('sam', 'signout', 'POST', {})
 await new Promise((done) => setTimeout(done, 5))
 tables[T.signIns].length = 0
 check('and signing in again makes no second account, and gives no more points', (await signIn('sam', 'sam@elsewhere.test')).body.member.points === 100 && tables[T.members].length === members + 1)
+check('it is their number they sign in with from then on: the code is texted, and nothing is emailed', texts.filter((t) => t.to === '+14155550101').length === 2 && !mail.some((m) => m.to[0] === 'sam@elsewhere.test'))
 const samStore = (await call('sam', 'store', 'GET')).body
 check('they are shown what a visitor is, and no update: not its name, and not that it can be asked for', samStore.status === 'member' && samStore.products.map((p) => p.name).join('|') === visitor.products.map((p) => p.name).join('|') && samStore.updates.length === 0 && !JSON.stringify(samStore).match(/Update/))
 check('nor handed one, for everyone or not, nor able to ask', (await call('sam', 'file', 'GET', null, `?product=${update4.id}`)).status === 404 && (await call('sam', 'file', 'GET', null, `?product=${update1.id}`)).status === 404 && (await call('sam', 'order', 'POST', { product: update4.id })).status === 404)
@@ -302,6 +341,88 @@ check('unlocking takes its points, and is an order', unlocked.body.ok && unlocke
 check('it is then open, and its file is theirs', (await stateOf('lee')).state === 'open' && (await call('lee', 'file', 'GET', null, `?product=${locked.id}`)).status === 200)
 check('and is not unlocked twice', (await call('lee', 'order', 'POST', { product: locked.id, points: 10 })).body.error === 'already' && lp.fields[M.points] === had - 10)
 locked.fields[P.status] = 'Hidden'
+
+// ---- Signing in: an email first, then a text or the inbox
+const si_before = { mail: mail.length, texts: texts.length, members: tables[T.members].length }
+const kitStart = await call('kit', 'start', 'POST', { email: 'kit@elsewhere.test' })
+check('an address nobody has is asked for a phone number, and nothing is sent', kitStart.body.step === 'phone' && mail.length === si_before.mail && texts.length === si_before.texts)
+check('a number that is not one is refused', (await call('kit', 'text', 'POST', { email: 'kit@elsewhere.test', phone: '12345' })).body.error === 'phone' && (await call('kit', 'text', 'POST', { email: 'kit@elsewhere.test', phone: '+1 415 000 0000' })).body.error === 'phone')
+const kitText = await call('kit', 'text', 'POST', { email: 'kit@elsewhere.test', phone: '(415) 555-0102' })
+check('a number typed as it is spoken is texted as it is dialed', kitText.body.ok && kitText.body.phone === '+14155550102' && texts.at(-1).to === '+14155550102')
+check('a wrong code is wrong, and makes no account', (await call('kit', 'verify', 'POST', { email: 'kit@elsewhere.test', phone: '(415) 555-0102', code: '000000' })).body.error === 'wrong' && tables[T.members].length === si_before.members)
+const kitIn = await call('kit', 'verify', 'POST', { email: 'kit@elsewhere.test', phone: '(415) 555-0102', code: textIn('+14155550102') })
+const kitRow = rowFor('kit@elsewhere.test')
+check('the right one makes their account, with the number on it', kitIn.body.status === 'member' && kitIn.body.member.tier === 'standard' && kitIn.body.member.points === 100 && kitRow?.fields[M.phone] === '+14155550102' && kitIn.body.via === 'text' && kitIn.body.existing === false, JSON.stringify(kitIn.body))
+check('it lacks a name of its own, and not a number', kitIn.body.needs.profile === true && kitIn.body.needs.phone === false)
+check('a number cannot be typed onto an account that exists', (await call('x', 'text', 'POST', { email: 'kit@elsewhere.test', phone: '+14155550177' })).body.error === 'start')
+await call('kit2', 'start', 'POST', { email: 'kit+two@elsewhere.test' })
+await call('kit2', 'text', 'POST', { email: 'kit+two@elsewhere.test', phone: '+14155550102' })
+const kitTwo = await call('kit2', 'verify', 'POST', { email: 'kit+two@elsewhere.test', phone: '+14155550102', code: textIn('+14155550102') })
+check('a number belongs to one account: another address with the same number is signed in to it, and given nothing', kitTwo.body.existing === true && kitTwo.body.member.email === 'kit@elsewhere.test' && kitTwo.body.member.points === 100 && tables[T.members].length === si_before.members + 1 && !rowFor('kit+two@elsewhere.test'), JSON.stringify(kitTwo.body))
+
+// Someone on the list: their inbox once, then a number
+const zoe = rec(T.members, { [M.name]: 'Zoe Example', [M.email]: 'zoe@example.test', [M.role]: ['LP'], [M.funds]: ['Shrug 2'], [M.points]: 500 })
+const zoeStart = await call('zoe', 'start', 'POST', { email: 'zoe@example.test' })
+check('someone on the list confirms their inbox first', zoeStart.body.step === 'inbox' && mail.at(-1).to[0] === 'zoe@example.test')
+const zoeIn = await call('zoe', 'verify', 'POST', { email: 'zoe@example.test', code: codeIn('zoe@example.test') })
+check('which is noted on their row, and they are in', zoeIn.body.status === 'member' && zoeIn.body.via === 'inbox' && !!zoe.fields[M.confirmed] && zoeIn.body.needs.phone === true, JSON.stringify(zoeIn.body))
+const zoeText = await call('zoe', 'phone', 'POST', { phone: '+14155550103' })
+check('then they add a number, which is texted', zoeText.body.ok && texts.at(-1).to === '+14155550103' && !zoe.fields[M.phone])
+check('and is theirs once they give its six digits', (await call('zoe', 'phone', 'POST', { phone: '+14155550103', code: '000000' })).body.error === 'wrong' && (await call('zoe', 'phone', 'POST', { phone: '+14155550103', code: textIn('+14155550103') })).body.needs?.phone === false && zoe.fields[M.phone] === '+14155550103')
+await call('zoe', 'signout', 'POST', {})
+const zoeAgain = await call('zoe', 'start', 'POST', { email: 'zoe@example.test' })
+check('from then on they are texted, and told only where the number ends', zoeAgain.body.step === 'text' && zoeAgain.body.to === '03' && !JSON.stringify(zoeAgain.body).includes('4155550103'), JSON.stringify(zoeAgain.body))
+check('and the text signs them in', (await call('zoe', 'verify', 'POST', { email: 'zoe@example.test', code: textIn('+14155550103') })).body.via === 'text')
+check('signed in by a text, the number cannot be moved: the email is proved first', (await call('zoe', 'phone', 'POST', { phone: '+14155550104' })).body.error === 'confirm')
+await call('zoe', 'signout', 'POST', {})
+const si_lost = await call('zoe', 'start', 'POST', { email: 'zoe@example.test', by: 'inbox' })
+const zoeBack = await call('zoe', 'verify', 'POST', { email: 'zoe@example.test', by: 'inbox', code: codeIn('zoe@example.test') })
+check('someone whose number is si_lost gets in by their inbox, and may then change it', si_lost.body.step === 'inbox' && zoeBack.body.via === 'inbox' && (await call('zoe', 'phone', 'POST', { phone: '+14155550104' })).body.ok && (await call('zoe', 'phone', 'POST', { phone: '+14155550104', code: textIn('+14155550104') })).body.ok && zoe.fields[M.phone] === '+14155550104')
+check('but not to a number that is somebody else\'s', (await call('zoe', 'phone', 'POST', { phone: '+14155550102' })).body.ok && (await call('zoe', 'phone', 'POST', { phone: '+14155550102', code: textIn('+14155550102') })).body.error === 'taken' && zoe.fields[M.phone] === '+14155550104')
+
+// A number that was on a row si_before Shrug listed it counts for nothing until its email is confirmed
+rec(T.members, { [M.email]: 'ivy@example.test', [M.role]: ['LP'], [M.funds]: ['Shrug 1'], [M.phone]: '+14155550199', [M.points]: 100 })
+const ivyStart = await call('thief', 'start', 'POST', { email: 'ivy@example.test' })
+check('a number put on a row si_before Shrug listed it lets nobody in: the inbox is asked, and nothing is texted', ivyStart.body.step === 'inbox' && !texts.some((t) => t.to === '+14155550199'))
+await call('thief', 'text', 'POST', { email: 'new@thief.test', phone: '+14155550199' })
+const theft = await call('thief', 'verify', 'POST', { email: 'new@thief.test', phone: '+14155550199', code: textIn('+14155550199') })
+check('nor does proving that number under another address', theft.body.error === 'taken' && (await call('thief', 'me', 'GET')).body.status === 'anon', JSON.stringify(theft.body))
+await call('thief', 'text', 'POST', { email: 'other@thief.test', phone: '+14155550199' })
+check('nor giving its texted code against the listed address', 'error' in (await call('thief', 'verify', 'POST', { email: 'ivy@example.test', code: textIn('+14155550199') })).body && (await call('thief', 'me', 'GET')).body.status === 'anon')
+
+// Out of guesses
+rec(T.members, { [M.name]: 'Ned Example', [M.email]: 'ned@example.test', [M.role]: ['Investor'] })
+await call('ned', 'start', 'POST', { email: 'ned@example.test' })
+let si_guess
+for (let i = 0; i < 5; i++) si_guess = await call('ned', 'verify', 'POST', { email: 'ned@example.test', code: codeIn('ned@example.test') === '999999' ? '999998' : '999999' })
+check('five wrong guesses and an emailed code is done, and says for how long', si_guess.body.error === 'locked' && si_guess.body.retryIn > 0 && si_guess.body.retryIn <= 600, JSON.stringify(si_guess.body))
+const nedKept = tables[T.signIns].find((r) => r.fields[F.signIn.email] === 'ned@example.test')
+nedKept.fields[F.signIn.state] = JSON.stringify({ ...JSON.parse(nedKept.fields[F.signIn.state]), sent: Date.now() - 60_000 })
+const nedAgain = await call('ned', 'start', 'POST', { email: 'ned@example.test' })
+check('and no new one is sent until the old one would have run out', nedAgain.body.error === 'wait' && nedAgain.body.retryIn > 500, JSON.stringify(nedAgain.body))
+await call('pat', 'text', 'POST', { email: 'pat@elsewhere.test', phone: '+14155550105' })
+let patGuess
+for (let i = 0; i < 6; i++) patGuess = await call('pat', 'verify', 'POST', { email: 'pat@elsewhere.test', phone: '+14155550105', code: '000000' })
+check('a texted code has five guesses too', patGuess.body.error === 'locked' && patGuess.body.retryIn === 600 && !rowFor('pat@elsewhere.test'), JSON.stringify(patGuess.body))
+
+// A name and a picture of their own
+const si_named = await call('kit', 'profile', 'POST', { name: '  Kit   Example ', face: 'face-3' })
+check('a display name and one of Shrug\'s faces', si_named.body.ok && si_named.body.member.name === 'Kit Example' && si_named.body.member.first === 'Kit' && si_named.body.member.picture?.face === 'face-3' && si_named.body.needs.profile === false && kitRow.fields[M.displayName] === 'Kit Example', JSON.stringify(si_named.body))
+const pictured = await call('kit', 'profile', 'POST', { photo: `data:image/jpeg;base64,${Buffer.from('a photo').toString('base64')}` })
+check('a photo of their own takes the face\'s place, and the name stays', pictured.body.member.picture?.url === 'https://files.example.test/photo.jpg' && kitRow.fields[M.picture].length === 1 && pictured.body.member.name === 'Kit Example', JSON.stringify(pictured.body))
+check('nothing that is not a name or a picture is kept', (await call('kit', 'profile', 'POST', { name: '   ' })).body.error === 'name' && (await call('kit', 'profile', 'POST', { face: '../etc' })).body.error === 'picture' && (await call('kit', 'profile', 'POST', { photo: 'data:text/html;base64,PGI+' })).body.error === 'picture' && (await call('kit', 'profile', 'POST', {})).body.error === 'nothing' && (await call('nobody', 'profile', 'POST', { name: 'X' })).body.error === 'anon')
+await call('zoe', 'profile', 'POST', { name: 'Zed' })
+check('the name they chose is the one the store shows, and Shrug\'s name for them is kept', (await call('zoe', 'store', 'GET')).body.member.name === 'Zed' && zoe.fields[M.name] === 'Zoe Example')
+
+// A personal link, as an update email carries
+const linkFor = (email, until = Date.now() + 864e5, secret = 'a-test-secret') => { const payload = Buffer.from(JSON.stringify({ email, until })).toString('base64url'); return `?t=${payload}.${createHmac('sha256', secret).update(`link:${payload}`).digest('base64url')}` }
+const una = rec(T.members, { [M.name]: 'Una Example', [M.email]: 'una@example.test', [M.role]: ['LP'], [M.funds]: ['Shrug 4'] })
+check('a link nobody at Shrug made, or one that has run out, opens nothing', !(await call('forged', 'link', 'GET', null, linkFor('una@example.test', undefined, 'another-secret'))).headers.get('set-cookie') && !(await call('late', 'link', 'GET', null, linkFor('una@example.test', Date.now() - 1000))).headers.get('set-cookie') && !una.fields[M.confirmed])
+const si_opened = await call('una', 'link', 'GET', null, linkFor('una@example.test'))
+const unaMe = (await call('una', 'me', 'GET')).body
+check('a personal link signs its LP in, with their email confirmed, and takes them to the desk', si_opened.status === 302 && si_opened.headers.get('location') === '/?login=1' && !!una.fields[M.confirmed] && unaMe.via === 'link' && unaMe.member.email === 'una@example.test' && unaMe.needs.phone === true, JSON.stringify(unaMe))
+check('they add their number with no code to their inbox', (await call('una', 'phone', 'POST', { phone: '+14155550106' })).body.ok && (await call('una', 'phone', 'POST', { phone: '+14155550106', code: textIn('+14155550106') })).body.ok && una.fields[M.phone] === '+14155550106' && !mail.some((m) => m.to[0] === 'una@example.test'))
+check('and the link is spent once the account has a number', !(await call('una2', 'link', 'GET', null, linkFor('una@example.test'))).headers.get('set-cookie') && (await call('una2', 'me', 'GET')).body.status === 'anon')
 
 // Emails, and out
 check('emails can be turned off', (await call('ada', 'emails', 'POST', { on: false })).body.emails === false && founder.fields[M.noEmails] === true && (await call('ada', 'me', 'GET')).body.member.emails === false)

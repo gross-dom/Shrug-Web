@@ -24,6 +24,17 @@ export const env = {
   get mailFrom() {
     return need('MAIL_FROM')
   },
+  /** Twilio, which texts the sign-in codes: the account's SID and its auth token. */
+  get twilioSid() {
+    return need('TWILIO_ACCOUNT_SID')
+  },
+  get twilioToken() {
+    return need('TWILIO_AUTH_TOKEN')
+  },
+  /** The Verify service the codes are sent through: its SID, which begins VA. */
+  get twilioVerify() {
+    return need('TWILIO_VERIFY_SID')
+  },
   get stripe() {
     return need('STRIPE_SECRET_KEY')
   },

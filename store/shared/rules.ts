@@ -31,6 +31,41 @@ export const VISITOR: Pick<Member, 'roles' | 'funds'> = { roles: [], funds: [] }
 
 export const isLP = (member: Pick<Member, 'roles'>): boolean => member.roles.includes('LP')
 
+// Signing in. An email comes first, and says which way someone gets in:
+//   nobody's yet     a phone number is asked for and texted six digits: that makes the account
+//   a number on file six digits are texted to it
+//   otherwise        six digits are emailed. Someone on the list always confirms their inbox once before a
+//                    number counts for them; and an account with no number is only ever opened by its inbox
+// A number belongs to one account. See api/start.ts, api/text.ts, api/verify.ts and api/phone.ts.
+
+/** A phone number as it is kept and texted: a plus, the country's code and the number, with nothing between
+ * them (+14155550134). A number typed with no country is taken to be an American one. Null: not a number. */
+export function phoneOf(typed: unknown): string | null {
+  if (typeof typed !== 'string') return null
+  const said = typed.trim()
+  const digits = said.replace(/\D/g, '')
+  const whole = said.startsWith('+') ? digits : said.startsWith('00') ? digits.slice(2) : digits.length === 10 ? `1${digits}` : digits.length === 11 && digits.startsWith('1') ? digits : ''
+  return whole.length >= 8 && whole.length <= 15 && !whole.startsWith('0') ? `+${whole}` : null
+}
+
+/** The end of a number, to say where a code went without saying the number. */
+export const endOf = (phone: string): string => phone.slice(-2)
+
+/** An email address with most of its name hidden: j•••••@example.com. */
+export const hidden = (email: string): string => email.replace(/^(.)[^@]*/, '$1•••••')
+
+/** A member's picture: one of Shrug's own faces, by its name, or a photo of theirs, by where it is. */
+export type Picture = { face: string } | { url: string }
+
+/** What an account still lacks: a phone number to sign in with, and a name and picture of its own. */
+export interface Needs {
+  phone: boolean
+  profile: boolean
+}
+
+/** How whoever is signed in proved who they are: a texted code, a code to their inbox, their personal link, or a payment. */
+export type Via = 'text' | 'inbox' | 'link' | 'pay'
+
 export interface Member {
   id: string
   name: string

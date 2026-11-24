@@ -38,6 +38,8 @@ export async function newCode(email: string): Promise<{ code: string } | { wait:
   const { row, state } = await kept(email)
   const now = Date.now()
   if (state && now - state.sent < RESEND_IN * 1000) return { wait: Math.ceil((RESEND_IN * 1000 - (now - state.sent)) / 1000) }
+  // Out of guesses: no new code until the old one would have run out, so that guessing cannot simply start again
+  if (state && state.left <= 0 && now < state.until) return { wait: Math.ceil((state.until - now) / 1000) }
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0')
   const next: State = { mark: markOf(email, code), sent: now, until: now + LASTS, left: GUESSES }
   const fields = { [F.signIn.email]: email.toLowerCase(), [F.signIn.state]: JSON.stringify(next) }
@@ -47,11 +49,12 @@ export async function newCode(email: string): Promise<{ code: string } | { wait:
 }
 
 /** Whether a code is the one that was sent. A right one is used up; a wrong one costs a guess. */
-export async function checkCode(email: string, code: string): Promise<{ ok: true } | { error: 'wrong'; left: number } | { error: 'locked' | 'expired' }> {
+export async function checkCode(email: string, code: string): Promise<{ ok: true } | { error: 'wrong'; left: number } | { error: 'locked'; retryIn: number } | { error: 'expired' }> {
   const { row, state } = await kept(email)
   if (!row || !state) return { error: 'expired' }
   if (Date.now() > state.until) return { error: 'expired' }
-  if (state.left <= 0) return { error: 'locked' }
+  const retryIn = Math.max(1, Math.ceil((state.until - Date.now()) / 1000))
+  if (state.left <= 0) return { error: 'locked', retryIn }
   const good = Buffer.from(state.mark)
   const given = Buffer.from(markOf(email, code))
   if (good.length === given.length && timingSafeEqual(good, given)) {
@@ -60,5 +63,5 @@ export async function checkCode(email: string, code: string): Promise<{ ok: true
   }
   const left = state.left - 1
   await change(T.signIns, row.id, { [F.signIn.state]: JSON.stringify({ ...state, left }) })
-  return left <= 0 ? { error: 'locked' } : { error: 'wrong', left }
+  return left <= 0 ? { error: 'locked', retryIn } : { error: 'wrong', left }
 }

@@ -31,6 +31,10 @@ export const F = {
     lastSeen: 'fldw1If6Q1JJxzhFt',
     funds: 'fldkEroVBB9NlXr5s',
     shipTo: 'fldLUYHJH76iYCXFX',
+    phone: 'fld5hd6oUjtDdVKZl',
+    displayName: 'fldBLn21tUgCQSlfF',
+    picture: 'fldVCBtgV8YYXquH8',
+    confirmed: 'fldhRhMl8swF5IBB3',
   },
   application: { email: 'fld9g8dpI4OvhZIgJ', applied: 'fld9cmamUhBgPMwAB' },
   signIn: { email: 'fld29paPsXRkNu1pL', state: 'fldb64o16mO357J5n' },
@@ -115,6 +119,16 @@ export async function add(table: string, fields: Fields): Promise<Row> {
 export async function change(table: string, id: string, fields: Fields): Promise<Row> {
   const made = await ask('PATCH', table, '', { records: [{ id, fields }], typecast: true, returnFieldsByFieldId: true })
   return made.records[0] as Row
+}
+
+/** Puts a file in an attachment column of a row, after whatever is there. (Airtable takes these at an address of their own, five megabytes at most.) */
+export async function attach(id: string, field: string, file: { name: string; type: string; base64: string }): Promise<void> {
+  const res = await fetch(`https://content.airtable.com/v0/${BASE}/${encodeURIComponent(id)}/${field}/uploadAttachment`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${env.airtable}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contentType: file.type, filename: file.name, file: file.base64 }),
+  })
+  if (!res.ok) throw new Error(`Airtable attach ${field}: ${res.status}`)
 }
 
 export async function remove(table: string, id: string): Promise<void> {
