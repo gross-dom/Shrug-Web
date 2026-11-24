@@ -1,0 +1,509 @@
+/* A message to Shrug, in Messages on the desktop (design/v1, screens/shrugos.css, "Messages: compose to
+   Shrug"): the pencil, the message as a conversation at the head of the list, who it is to, the subject to
+   pick, what each subject asks for, and the field it is written in. */
+
+.chat-side__top--write {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-side__top--write > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.im-pencil {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  color: #0a6de6;
+}
+
+.im-pencil[aria-pressed='true'] {
+  background: #0a6de6;
+  color: #fff;
+}
+
+.conv-write {
+  flex: none;
+  padding: 0 8px 2px;
+}
+
+.conv-write__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.conv-write__row[aria-current] {
+  background: #0a6de6;
+  color: #fff;
+}
+
+.conv-write__av {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0c0c0d;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.conv-write__row > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.conv-write__row b {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.conv-write__row span span {
+  overflow: hidden;
+  color: #63646b;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conv-write__row[aria-current] span span {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.im-pencil:focus-visible,
+.conv-write__row:focus-visible,
+.chat-write :where(button, input, textarea):focus-visible {
+  outline: 3px solid rgba(10, 109, 230, 0.5);
+  outline-offset: 2px;
+}
+
+.im-to {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #63646b;
+  font-size: 13px;
+}
+
+.im-tok {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(10, 109, 230, 0.14);
+  color: #0a56b8;
+  font-weight: 600;
+}
+
+.chat-write {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  color: #1d1d1f;
+}
+
+.chat-write :where(h3, p) {
+  margin: 0;
+}
+
+.im-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 16px 20px 10px;
+  overflow-y: auto;
+}
+
+.im-body > :first-child {
+  margin-top: auto;
+}
+
+.im-pick {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.im-pick[data-after] {
+  flex: none;
+  padding: 18px 0 8px;
+}
+
+.im-pick h3 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.im-opts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 172px));
+  gap: 12px;
+}
+
+.im-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #f4f5f7;
+  color: #63646b;
+  font-size: 12.5px;
+  line-height: 1.38;
+  text-align: left;
+}
+
+.im-opt svg {
+  color: #0a6de6;
+}
+
+.im-opt b {
+  color: #1d1d1f;
+  font-size: 14px;
+}
+
+@media (hover: hover) {
+  .im-opt:hover {
+    background: #fff;
+    box-shadow: 0 0 0 2px #0a6de6;
+  }
+}
+
+.im-form {
+  display: grid;
+  flex: none;
+  align-self: stretch;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f4f5f7;
+}
+
+.im-form header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.im-form header b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+}
+
+.im-form header svg {
+  color: #0a6de6;
+}
+
+.im-link {
+  color: #0a5bd0;
+  font-size: 12px;
+}
+
+.im-form .two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.im-lbl,
+.im-lbl__text {
+  display: block;
+  color: #63646b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.im-lbl > span,
+.im-lbl__text {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.im-lbl input {
+  display: block;
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.06);
+  color: #1d1d1f;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.im-check {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.im-check input {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+}
+
+.im-tick {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4.5px;
+  background: #fff;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3);
+  color: #fff;
+}
+
+.im-check input:checked + .im-tick {
+  background: #0a6de6;
+  box-shadow: none;
+}
+
+.im-check input:focus-visible + .im-tick {
+  outline: 3px solid rgba(10, 109, 230, 0.5);
+  outline-offset: 2px;
+}
+
+.im-form small {
+  color: #63646b;
+  font-size: 12px;
+}
+
+.im-form small.im-said {
+  color: #b3261e;
+}
+
+.im-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.im-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+}
+
+.im-file--add {
+  color: #0a5bd0;
+}
+
+.im-field {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 20px 14px;
+}
+
+.im-field .plus {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e9e9eb;
+  color: #63646b;
+}
+
+.im-field .plus[aria-disabled='true'],
+.im-field .send[aria-disabled='true'] {
+  opacity: 0.45;
+}
+
+.im-field .in {
+  flex: 1;
+  min-height: 32px;
+  max-height: 120px;
+  padding: 6px 12px;
+  border-radius: 17px;
+  box-shadow: inset 0 0 0 1px #d4d5da;
+  color: #1d1d1f;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: none;
+  field-sizing: content;
+}
+
+.im-field .in::placeholder {
+  color: #74757d;
+}
+
+.im-field .send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 2px;
+  border-radius: 50%;
+  background: #0a6de6;
+  color: #fff;
+}
+
+.im-stamp {
+  align-self: center;
+  color: #6b6c73;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.im-sub {
+  align-self: flex-end;
+  margin: 6px 6px 0 0;
+  color: #6b6c73;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.im-me {
+  align-self: flex-end;
+  max-width: 66%;
+  padding: 8px 13px;
+  border-radius: 18px;
+  background: #0a6de6;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.im-me.dim {
+  opacity: 0.6;
+}
+
+.im-att {
+  display: inline-flex;
+  align-self: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: #e9e9eb;
+  font-size: 13px;
+}
+
+.im-att small {
+  display: block;
+  color: #63646b;
+  font-size: 11.5px;
+}
+
+.im-stat {
+  display: inline-flex;
+  align-self: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-right: 4px;
+  color: #6b6c73;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.im-stat.bad {
+  color: #c4261f;
+}
+
+.im-stat.bad button {
+  color: #0a5bd0;
+  font-weight: 600;
+}
+
+.im-bang {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d6302a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.im-note {
+  align-self: center;
+  max-width: 46ch;
+  padding: 8px 0 4px;
+  color: #6b6c73;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.im-ring {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #c9cad0;
+  border-top-color: #8a8b92;
+  border-radius: 50%;
+  animation: im-ring 0.8s linear infinite;
+}
+
+@keyframes im-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .im-ring {
+    animation: none;
+  }
+}
+
+/* While the message to Shrug is what the window shows, it is the one that is picked: the conversation that
+   was open is in the list as any other is */
+.chat-side[data-writing] .conv[data-selected] {
+  background: none;
+  --ss-text-strong: inherit;
+  --ss-text: inherit;
+  --ss-ink-2: inherit;
+}
+
+.chat-side[data-writing] .conv[data-selected] .ss-row__dot {
+  background: var(--ss-accent);
+}

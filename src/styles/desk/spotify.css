@@ -1,0 +1,425 @@
+/* Spotify: the listening room (design/v1, screens/shrugos.css, "Spotify"; the look after Spotify's own
+   desktop app, from Dom's screenshots: near-black panels with round corners, a green for what is playing). */
+
+.ss-window.spwin {
+  --ss-lights-y: 26px;
+  --gr: #3bd671;
+  background: #101211;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 32px 70px -12px rgba(2, 4, 30, 0.7), 0 10px 24px rgba(2, 4, 30, 0.3);
+  color: #f2f3f2;
+  color-scheme: dark;
+}
+
+.ss-window.spwin > .ss-window__bar {
+  height: 52px;
+  padding-right: 14px;
+  border-bottom: 0;
+  background: #101211;
+  gap: 0;
+}
+
+.ss-window.spwin > .ss-window__bar > .ss-window__spacer {
+  display: none;
+}
+
+.spbar {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  margin-left: 14px;
+}
+
+.spbar__title {
+  color: #f5f5f7;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.spbar__grow {
+  flex: 1;
+}
+
+.sp-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 190px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #a6aba8;
+  font-size: 13px;
+}
+
+.sp-search input {
+  flex: 1;
+  min-width: 0;
+  color: #f2f3f2;
+}
+
+.sp-search input::placeholder {
+  color: #a6aba8;
+}
+
+.sp-search:focus-within {
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.spwin__body {
+  display: flex;
+  min-height: 0;
+  background: #101211;
+}
+
+.sp {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 216px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 8px 8px;
+  color: #f2f3f2;
+}
+
+.sp :where(ol, h1, h4, p) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp .num {
+  font-variant-numeric: tabular-nums;
+}
+
+.sp :where(button, a):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.sp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 8px;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: #181a19;
+  font-size: 13px;
+}
+
+.sp-side h4 {
+  padding: 10px 12px 6px;
+  color: #9a9f9c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sp-side h4 + button ~ h4 {
+  margin-top: 8px;
+}
+
+.sp-side button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 12px;
+  overflow: hidden;
+  border-radius: 8px;
+  color: #b9bdbb;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sp-side button.on {
+  background: #262928;
+  color: #fff;
+}
+
+.sp-side button.pl {
+  height: 30px;
+  font-size: 12.5px;
+}
+
+.sp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 22px 24px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: linear-gradient(#1f2622, #161817 180px);
+  outline: none;
+}
+
+.sp-main h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.sp-main h1 + p {
+  margin-top: -10px;
+  color: #a6aba8;
+  font-size: 13px;
+}
+
+.sp-none {
+  color: #a6aba8;
+  font-size: 13px;
+}
+
+.sp-rows {
+  padding-bottom: 12px;
+}
+
+.sp-row {
+  display: grid;
+  grid-template-columns: 24px 44px minmax(0, 1.5fr) minmax(0, 1fr) 78px 48px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 56px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: #a6aba8;
+  font-size: 13px;
+  text-align: left;
+}
+
+.sp-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-row.head {
+  height: 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sp-row b {
+  display: block;
+  overflow: hidden;
+  color: #f2f3f2;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-row.on {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.sp-row.on b {
+  color: var(--gr);
+}
+
+@media (hover: hover) {
+  button.sp-row:not(.on):hover,
+  .sp-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.sp-cov {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sp-cov--none {
+  width: 56px;
+  height: 56px;
+  background: #262928;
+}
+
+.sp-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.sp-eq i {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--gr);
+}
+
+.sp-eq i:nth-child(1) {
+  height: 8px;
+}
+
+.sp-eq i:nth-child(2) {
+  height: 14px;
+}
+
+.sp-eq i:nth-child(3) {
+  height: 5px;
+}
+
+.sp-bar {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  min-height: 84px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #181a19;
+  color: #a6aba8;
+  font-size: 13px;
+}
+
+.sp-bar.embed {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px) minmax(0, 1fr);
+  background: #23302a;
+  box-shadow: inset 0 0 0 1px rgba(59, 214, 113, 0.25);
+}
+
+.sp-now {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sp-now b {
+  display: block;
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-now--said {
+  color: #f2f3f2;
+}
+
+.sp-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.sp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #d7dbd9;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Spotify's own player: in the bar it is its small one, 80 tall; in the pane, as tall as the pane */
+.sp-frame {
+  display: block;
+  width: 100%;
+  height: 80px;
+  border: 0;
+  border-radius: 12px;
+  color-scheme: normal;
+}
+
+.sp-frame--tall {
+  flex: 1;
+  height: 100%;
+  min-height: 352px;
+}
+
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding-bottom: 16px;
+}
+
+.sp-card {
+  display: block;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #a6aba8;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.sp-card i {
+  display: block;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  aspect-ratio: 1 / 1;
+}
+
+.sp-card b {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sp-embed {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 200px;
+  margin-bottom: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #23302a;
+  box-shadow: inset 0 0 0 1px rgba(59, 214, 113, 0.25);
+  color: #b7c7bd;
+  font-size: 13px;
+  text-align: center;
+}
+
+.sp-embed--live {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.sp-embed b {
+  color: #fff;
+  font-size: 15px;
+}
+
+.sp-embed .sp-tag {
+  margin-top: 6px;
+}

@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Info } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Info, SquarePen } from 'lucide-react'
 import { Popover } from '../kit/motion/Popover'
 import { Window } from '../kit/window'
 import { useReturnFocus } from '../os/focus'
 import { useStore } from '../os/store'
+import { outbox } from '../phone/apps/outbox'
+import { stopWriting, writeToShrug, writing } from '../os/write'
 import { geometry, isShowing, wm, type WM } from '../os/wm'
 import { chat } from './chat'
 import { ConversationAvatar, ConversationList, conversationName, ConversationPane, ConversationSearch, Details, type ListControl } from './chat-ui'
 import { inbox, seeGroup } from './state'
 import { Tool } from './ui'
+import { Write, WriteTo } from './Write'
 
 // The group chat, as Messages on a Mac: the conversations down the sidebar
 // (the group, where every reply is, and then a handful of others to find,
@@ -20,13 +23,33 @@ import { Tool } from './ui'
 function Sidebar({ onPick }: { onPick: () => void }) {
   // The search field and the list under it: Return in the field opens the first thing found, the down arrow goes into the list
   const list = useRef<ListControl | null>(null)
+  const on = useStore(writing, (s) => s.on)
+  const last = useStore(outbox, (s) => s.sent[s.sent.length - 1] ?? null)
   return (
-    <div className="chat-side">
-      <div className="chat-side__top">
+    <div className="chat-side" data-writing={on || undefined}>
+      <div className="chat-side__top chat-side__top--write">
         <ConversationSearch control={list} />
+        {/* The pencil: a new message, whose only recipient is Shrug */}
+        <button type="button" className="im-pencil" aria-label="New message to Shrug" aria-pressed={on} onClick={() => (writeToShrug(), onPick())}>
+          <SquarePen size={15} strokeWidth={2} aria-hidden />
+        </button>
       </div>
+      {/* The message to Shrug is a conversation at the head of the list, once it has been started */}
+      {(on || last) && (
+        <div className="conv-write">
+          <button type="button" className="conv-write__row" aria-current={on || undefined} onClick={() => (writeToShrug(), onPick())}>
+            <span className="conv-write__av" aria-hidden>
+              S
+            </span>
+            <span>
+              <b>{last ? 'Shrug' : 'New Message'}</b>
+              <span>{last ? (last.state === 'failed' ? 'Not Delivered' : `${last.state === 'sent' ? 'You: ' : ''}${last.subject ?? last.text}`) : 'To: Shrug'}</span>
+            </span>
+          </button>
+        </div>
+      )}
       {/* Passed over with the arrow keys, a conversation is only being looked at: the list stays until one is pressed */}
-      <ConversationList control={list} onPick={(_, by) => by === 'press' && onPick()} />
+      <ConversationList control={list} onPick={(_, by) => (stopWriting(), by === 'press' && onPick())} />
     </div>
   )
 }
@@ -48,7 +71,8 @@ function inSight(s: WM) {
 
 export function MessagesApp() {
   const open = useStore(inbox, (s) => s.open)
-  const group = open === 'group'
+  const write = useStore(writing, (s) => s.on)
+  const group = open === 'group' && !write
   const [details, setDetails] = useState(false)
   /** A narrow window has one pane: this is whether it is showing the list (see the narrow rules in styles/apps.css). */
   const [listing, setListing] = useState(false)
@@ -84,6 +108,15 @@ export function MessagesApp() {
     }
   }, [details])
 
+  // A conversation asked for from anywhere (a row in the list, a reply's notification, a link to someone's
+  // words) is what the window shows: the message to Shrug gives way to it, and is kept as it was
+  const jump = useStore(inbox, (s) => s.jump)
+  const asked = useRef(false)
+  useEffect(() => {
+    if (asked.current) stopWriting()
+    asked.current = true
+  }, [open, jump])
+
   const name = conversationName(open)
 
   return (
@@ -101,7 +134,9 @@ export function MessagesApp() {
           <button type="button" className="chat-back" aria-label="Conversations" onClick={() => setListing(true)}>
             <ChevronLeft size={18} strokeWidth={2} aria-hidden />
           </button>
-          {group ? (
+          {write ? (
+            <WriteTo />
+          ) : group ? (
             <button type="button" className="chat-id" aria-haspopup="dialog" aria-expanded={details} aria-label={`${name}. Details`} onClick={() => setDetails((d) => !d)}>
               <ConversationAvatar conversation={open} size={32} />
               <span className="chat-id__name">
@@ -131,7 +166,7 @@ export function MessagesApp() {
       }
       body={{ className: 'chat__body' }}
     >
-      <ConversationPane key={open} conversation={open} shut={shut} />
+      {write ? <Write /> : <ConversationPane key={open} conversation={open} shut={shut} />}
       <Popover show={details && group} origin="top right" className="chat-details" role="dialog" aria-label={`${name} details`} {...(details && group ? null : ({ inert: '' } as object))}>
         <Details shown={details && group} onDone={() => setDetails(false)} />
       </Popover>

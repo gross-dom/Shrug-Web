@@ -4,10 +4,7 @@
 // The VIP Store is one of them (design/v1): the store's own pages, in a window, last in the Dock. (It was a
 // link to the points site, which opened in a tab of its own.) An address can ask for it by name: `?open=vip`.
 
-import { EXCHANGES } from '../data/mail'
-import { TEMPLATED } from '../data/site'
-
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube'
 
 export interface Size {
   w: number
@@ -178,15 +175,67 @@ export const APPS: Record<AppId, AppSpec> = {
     dock: null,
     guest: 1,
   },
+  // QuickTime Player: the old brushed-metal player (design/v1). A Film file on the desk opens it, and it is
+  // in the Dock, after the rule, only while it is open. Its window is as wide as its picture and no wider,
+  // and is not resized (src/apps/QuickTime.tsx)
+  quicktime: {
+    id: 'quicktime',
+    name: 'QuickTime Player',
+    blurb: 'Films',
+    size: () => ({ w: 748, h: 652 }),
+    min: { w: 748, h: 652 },
+    nudge: { x: 30, y: -10 },
+    resizable: false,
+    lightsY: 15,
+    dock: null,
+    guest: 2,
+  },
+  // Photo Booth, after the Mac's own: the camera, a photo taken through one of nine effects, and the wall
+  // of everyone's along its foot (src/apps/PhotoBooth.tsx). On the desk
+  photobooth: {
+    id: 'photobooth',
+    name: 'Photo Booth',
+    blurb: 'Take a photo for the wall',
+    size: fit({ w: 0.55, h: 0.84 }, { w: 620, h: 540 }, { w: 780, h: 660 }),
+    min: { w: 620, h: 540 },
+    nudge: { x: -20, y: 0 },
+    resizable: true,
+    lightsY: 20,
+    dock: null,
+  },
+  // Spotify: the listening room. Podcasts Shrug's network is on, and playlists from the team, played by
+  // Spotify's own player (src/apps/Spotify.tsx). On the desk
+  spotify: {
+    id: 'spotify',
+    name: 'Spotify',
+    blurb: 'The listening room',
+    size: fit({ w: 0.7, h: 0.84 }, { w: 780, h: 520 }, { w: 1000, h: 660 }),
+    min: { w: 780, h: 520 },
+    nudge: { x: -10, y: 10 },
+    resizable: true,
+    lightsY: 26,
+    dock: null,
+  },
+  // YouTube: one playlist, videos the team loves, played by YouTube's own player (src/apps/YouTube.tsx). On the desk
+  youtube: {
+    id: 'youtube',
+    name: 'YouTube',
+    blurb: 'Videos the team loves',
+    size: fit({ w: 0.77, h: 0.85 }, { w: 860, h: 540 }, { w: 1100, h: 664 }),
+    min: { w: 860, h: 540 },
+    nudge: { x: 10, y: 6 },
+    resizable: true,
+    lightsY: 26,
+    dock: null,
+  },
 }
 
 export const APP_IDS = Object.keys(APPS) as AppId[]
 
-/** An app whose rows are all still templated is left out of the live site until they are supplied
- * (data/site.ts, TEMPLATED): it is in the demo, and in the editor's view. */
-const HELD: Partial<Record<AppId, boolean>> = { mail: !TEMPLATED && EXCHANGES.every((exchange) => exchange.from.startsWith('[')) }
+export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
 
-export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null && !HELD[id]).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
+/** The windows that are the desktop's alone, with nothing of theirs on a phone: an address that names one names nothing there. */
+export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube']
 
 /** The apps that are in the Dock only while they have something open, after its rule. */
 export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
@@ -209,6 +258,11 @@ export const ALIASES: Record<string, AppId> = {
   shop: 'store',
   inbox: 'mail',
   email: 'mail',
+  film: 'quicktime',
+  films: 'quicktime',
+  'photo-booth': 'photobooth',
+  podcasts: 'spotify',
+  videos: 'youtube',
   // (the one-pager is a file that opens in Preview: asked for by its own name, that is what opens, on it)
   'one-pager': 'preview',
   onepager: 'preview',

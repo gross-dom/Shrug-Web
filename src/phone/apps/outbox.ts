@@ -35,6 +35,10 @@ export interface SentFile {
 
 export interface Sent {
   id: string
+  /** What it is about, where it was written under a subject (the desktop's compose): "Request a meeting". */
+  subject?: string
+  /** What the subject's form asked for, as it was filled in: who to meet, a name, an email. */
+  details?: Record<string, string>
   text: string
   files: SentFile[]
   state: 'sending' | 'sent' | 'failed'
@@ -74,8 +78,9 @@ function back(was: unknown): Sent | null {
   const files = m.files.filter((f): f is SentFile => !!f && isText(f.name) && typeof f.size === 'number').map((f) => ({ name: f.name, size: f.size, url: null }))
   if (!m.text && !files.length) return null
   const at = typeof m.at === 'number' ? m.at : Date.now()
-  if (m.state === 'sent') return { id: m.id, text: m.text, files, state: 'sent', part: 1, why: null, at }
-  return { id: m.id, text: m.text, files, state: 'failed', part: 0, why: SITE.contact.inbox ? 'failed' : 'closed', at }
+  const about = { ...(isText(m.subject) ? { subject: m.subject } : null), ...(m.details && typeof m.details === 'object' ? { details: m.details } : null) }
+  if (m.state === 'sent') return { id: m.id, ...about, text: m.text, files, state: 'sent', part: 1, why: null, at }
+  return { id: m.id, ...about, text: m.text, files, state: 'failed', part: 0, why: SITE.contact.inbox ? 'failed' : 'closed', at }
 }
 
 /** What was kept the last time this tab had the page, or nothing: a first visit, or a page that is
@@ -93,7 +98,7 @@ function kept(): Pick<Outbox, 'draft' | 'sent'> {
 export const outbox = createStore<Outbox>({ ...kept(), picked: [], refused: null })
 
 /** What is kept of the conversation, as it is written to the tab's storage. */
-const keeping = (s: Outbox) => JSON.stringify({ draft: s.draft, sent: s.sent.map(({ id, text, files, state, at }) => ({ id, text, files: files.map(({ name, size }) => ({ name, size })), state, at })) })
+const keeping = (s: Outbox) => JSON.stringify({ draft: s.draft, sent: s.sent.map(({ id, subject, details, text, files, state, at }) => ({ id, subject, details, text, files: files.map(({ name, size }) => ({ name, size })), state, at })) })
 
 // Every change is kept as it is made (how much of a file has gone is no change to what is kept, and is
 // not written). A page that may not keep anything carries on without
@@ -159,7 +164,7 @@ export function unpick(id: string) {
 
 const patch = (id: string, change: Partial<Sent>) => outbox.set((s) => ({ ...s, sent: s.sent.map((m) => (m.id === id ? { ...m, ...change } : m)) }))
 
-function deliver(id: string, text: string, files: File[]) {
+function deliver(id: string, text: string, files: File[], about: Pick<Sent, 'subject' | 'details'> = {}) {
   const inbox = SITE.contact.inbox
   if (!inbox) {
     // Nowhere to send it yet. It is said so after a moment, as a message that will not go is
@@ -168,6 +173,8 @@ function deliver(id: string, text: string, files: File[]) {
   }
   const body = new FormData()
   body.append('text', text)
+  if (about.subject) body.append('subject', about.subject)
+  for (const [name, value] of Object.entries(about.details ?? {})) body.append(name, value)
   for (const file of files) body.append('files', file, file.name)
   const request = new XMLHttpRequest()
   request.open('POST', inbox)
@@ -179,16 +186,16 @@ function deliver(id: string, text: string, files: File[]) {
   request.send(body)
 }
 
-/** Sends what has been written and picked. */
-export function sendToShrug() {
+/** Sends what has been written and picked. `about` is its subject and what the subject's form asked for, where it has one. */
+export function sendToShrug(about: Pick<Sent, 'subject' | 'details'> = {}) {
   const { draft, picked } = outbox.get()
   const text = draft.trim()
   if (!text && !picked.length) return
   const id = `out-${++count}`
   const files = picked.map((p) => p.file)
   held.set(id, files)
-  outbox.set((s) => ({ ...s, draft: '', picked: [], refused: null, sent: [...s.sent, { id, text, files: picked.map((p) => ({ name: p.file.name, size: p.file.size, url: p.url })), state: 'sending', part: 0, why: null, at: Date.now() }] }))
-  deliver(id, text, files)
+  outbox.set((s) => ({ ...s, draft: '', picked: [], refused: null, sent: [...s.sent, { id, ...about, text, files: picked.map((p) => ({ name: p.file.name, size: p.file.size, url: p.url })), state: 'sending', part: 0, why: null, at: Date.now() }] }))
+  deliver(id, text, files, about)
 }
 
 /** Tries a message that did not go again. One whose files went with the page it was written on (a
@@ -203,7 +210,7 @@ export function resend(id: string) {
     return saidBriefly()
   }
   patch(id, { state: 'sending', part: 0, why: null })
-  deliver(id, message.text, files ?? [])
+  deliver(id, message.text, files ?? [], { subject: message.subject, details: message.details })
 }
 
 /** A file's size as Files gives it: 840 KB, 3.2 MB. */

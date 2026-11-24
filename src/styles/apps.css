@@ -3339,3 +3339,71 @@
 html[data-wm-busy] .storewin__frame {
   pointer-events: none;
 }
+
+/* Wallpapers: its two sections, Colorways and Photographs (design/v1, "Wallpapers"), and a photograph large */
+.walls__head {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 22px 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.walls__head small {
+  color: var(--ss-text-3, #6b6c73);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.walls__grid--photos {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.walls-photo {
+  grid-row: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.walls-big {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.walls-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: 0 20px;
+  color: #f2f2f4;
+  font-size: 13px;
+}
+
+.walls-foot b {
+  display: block;
+  font-size: 15px;
+}
+
+.walls-foot small {
+  color: #a1a1a8;
+  font-size: 12.5px;
+}
+
+.walls-foot__grow {
+  flex: 1;
+}
+
+.walls-act[aria-disabled='true'] {
+  opacity: 0.45;
+}

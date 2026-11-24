@@ -5,7 +5,8 @@ import { finder, setFinderView, setNotesQuery, showNote, notes } from '../apps/s
 import { FAQS, WHATS_NEW } from '../data/faqs'
 import { SITE } from '../data/site'
 import { Popover } from '../kit/motion/Popover'
-import { APPS, DOCK_APPS, type AppId } from './apps'
+import { APPS, type AppId } from './apps'
+import { DOCK } from './held'
 import { formatter, shortDay } from './dates'
 import { dockPoint } from './dom'
 import { focusLost } from './focus'
@@ -79,7 +80,7 @@ function Mark() {
 
 function useMenus(): MenuDef[] {
   const active = useStore(wm, activeApp)
-  const open = useStore(wm, (s) => DOCK_APPS.concat('about', 'wallpapers', 'updates').filter((id) => s.wins[id].open).join(' '))
+  const open = useStore(wm, (s) => DOCK.concat('about', 'wallpapers', 'updates').filter((id) => s.wins[id].open).join(' '))
   const tile = useStore(wm, (s) => (active ? s.wins[active].tile : null))
   const compact = useStore(wm, (s) => s.compact)
   const paused = useStore(chat, (s) => s.paused)
@@ -138,7 +139,7 @@ function useMenus(): MenuDef[] {
       label: 'Go menu',
       title: 'Go',
       // The Dock's own row: its apps (the VIP Store last among them), then the one-pager, which opens in Preview
-      items: [...DOCK_APPS.map((id) => item(APPS[id].name, () => launch(id))), rule, item('One-pager', openOnePager)],
+      items: [...DOCK.map((id) => item(APPS[id].name, () => launch(id))), rule, item('One-pager', openOnePager)],
     },
   ]
   if (viewItems.length) menus.push({ id: 'view', label: 'View menu', title: 'View', items: viewItems })

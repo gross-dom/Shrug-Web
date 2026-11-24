@@ -1,0 +1,134 @@
+// Workspace: the chair, and the colors it is painted in (design/v1-workspace, WORKSPACE.md). Workspace is a
+// color picker for the chair with one button; chairs are still sold in the VIP Store.
+//
+// Each color is ONE value here, and everything that shows the color is drawn from it: the cove of the
+// studio, the slab on the first screen, the dot in the studio's dock, the Workspace icon in the desktop's
+// Dock, and the paint on the chair itself. The values are working values, not final (WORKSPACE.md, section
+// 3): Scuderia Red and Championship Green were sampled from the catalog; Solar Orange is approximate;
+// Alexandrite is a stand-in for a color-shifting paint; Supersonic and Pearl Lavender are guesses awaiting
+// swatches. To change one, change it here.
+//
+// Still Shrug's to supply (section 5): which colors are in stock, the prices, the one line about each color,
+// the product in the VIP Store that each color's Buy opens, and the owners who have agreed to be named.
+
+export interface Paint {
+  id: string
+  name: string
+  /** The color. A paint that shifts with the angle it is seen from has the colors it moves through, first to last. */
+  color: string
+  shift?: string[]
+  /** In stock: Buy in VIP Store. Otherwise it is made to order: Request. */
+  stock: 'now' | 'order'
+  /** What it costs, in dollars. */
+  price: number
+  /** One line about it. Null until it is written: nothing is drawn where it would be. */
+  line: string | null
+  /** The product in the VIP Store that Buy opens, where there is one for this color. */
+  product: string | null
+}
+
+export const PAINTS: Paint[] = [
+  { id: 'scuderia-red', name: 'Scuderia Red', color: '#d8141c', stock: 'order', price: 1500, line: null, product: 'chair-red' },
+  { id: 'solar-orange', name: 'Solar Orange', color: '#fb8a05', stock: 'now', price: 1450, line: null, product: 'chair' },
+  { id: 'alexandrite', name: 'Alexandrite', color: '#6b3f9c', shift: ['#27307d', '#6b3f9c', '#b0683a'], stock: 'order', price: 1500, line: null, product: null },
+  { id: 'championship-green', name: 'Championship Green', color: '#0f9a48', stock: 'order', price: 1500, line: null, product: null },
+  { id: 'supersonic', name: 'Supersonic', color: '#9db3c9', stock: 'order', price: 1500, line: null, product: null },
+  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', stock: 'order', price: 1500, line: null, product: null },
+  { id: 'mantis-green', name: 'Mantis Green', color: '#6fd12a', stock: 'order', price: 1500, line: null, product: null },
+]
+
+/** A color of the visitor's own: always a request, never charged for here. */
+export const OWN = { id: 'own', name: 'Your own', start: '#1f8a7a' }
+
+/** The ground the app stands on before a color is picked. */
+export const PAPER = '#f3f2ee'
+
+// ---- Reading a color someone types: a hex, a RAL code, or a name
+
+/** The RAL Classic colors people ask for by number, and what each is called. (A working table, to be checked against a fan deck.) */
+const RAL: Record<string, [string, string]> = {
+  '1003': ['#f9a800', 'Signal yellow'],
+  '1015': ['#e6d2b5', 'Light ivory'],
+  '1021': ['#eec900', 'Rape yellow'],
+  '1023': ['#f0ca00', 'Traffic yellow'],
+  '2004': ['#e25303', 'Pure orange'],
+  '2009': ['#de5307', 'Traffic orange'],
+  '3000': ['#a72920', 'Flame red'],
+  '3003': ['#8d1d2c', 'Ruby red'],
+  '3020': ['#c1121c', 'Traffic red'],
+  '4005': ['#76689a', 'Blue lilac'],
+  '4008': ['#844c82', 'Signal violet'],
+  '5002': ['#00387b', 'Ultramarine blue'],
+  '5005': ['#005387', 'Signal blue'],
+  '5010': ['#004f7c', 'Gentian blue'],
+  '5012': ['#0089b6', 'Light blue'],
+  '5015': ['#007cb0', 'Sky blue'],
+  '5018': ['#058b8c', 'Turquoise blue'],
+  '5024': ['#6093ac', 'Pastel blue'],
+  '6005': ['#0f4336', 'Moss green'],
+  '6018': ['#48a43f', 'Yellow green'],
+  '6019': ['#b7d9b1', 'Pastel green'],
+  '6029': ['#006f3d', 'Mint green'],
+  '6033': ['#1f8a7a', 'Mint turquoise'],
+  '7016': ['#383e42', 'Anthracite grey'],
+  '7035': ['#c5c7c4', 'Light grey'],
+  '7037': ['#7a7b7a', 'Dusty grey'],
+  '8017': ['#442f29', 'Chocolate brown'],
+  '9001': ['#e9e0d2', 'Cream'],
+  '9003': ['#ecece7', 'Signal white'],
+  '9005': ['#0e0e10', 'Jet black'],
+  '9010': ['#f1ece1', 'Pure white'],
+  '9016': ['#f1f0ea', 'Traffic white'],
+}
+
+/** What was typed, as a color: its value, and what to call it. Null where it names none (the studio stays as it was). */
+export function readColor(typed: string): { color: string; name: string } | null {
+  const text = typed.trim()
+  if (!text) return null
+  const hex = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text)
+  if (hex) {
+    const digits = hex[1]!.length === 3 ? hex[1]!.replace(/./g, '$&$&') : hex[1]!
+    return { color: `#${digits.toLowerCase()}`, name: `#${digits.toUpperCase()}` }
+  }
+  const ral = /^ral\s*-?\s*(\d{4})\b/i.exec(text)
+  if (ral) {
+    const found = RAL[ral[1]!]
+    return found ? { color: found[0], name: `RAL ${ral[1]} ${found[1]}` } : null
+  }
+  // A name: one of the RAL names, or anything a browser knows as a color ("teal", "hot pink")
+  const named = Object.entries(RAL).find(([, [, name]]) => name.toLowerCase() === text.toLowerCase())
+  if (named) return { color: named[1][0], name: `RAL ${named[0]} ${named[1][1]}` }
+  if (typeof document === 'undefined') return null
+  const probe = document.createElement('span')
+  probe.style.color = text.replace(/\s+/g, '')
+  if (!probe.style.color) return null
+  document.body.append(probe)
+  const rgb = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(probe).color)
+  probe.remove()
+  if (!rgb) return null
+  const color = `#${[1, 2, 3].map((i) => Number(rgb[i]).toString(16).padStart(2, '0')).join('')}`
+  return { color, name: text.replace(/\b\w/g, (letter) => letter.toUpperCase()) }
+}
+
+/** Words set on a color are near-black or white, whichever is read better on it. */
+export function inkOn(color: string): '#141414' | '#fff' {
+  const n = parseInt(color.slice(1), 16)
+  const lin = (c: number) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : Math.pow((c / 255 + 0.055) / 1.055, 2.4))
+  const light = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
+  // (which of the two has the greater contrast with it)
+  return (light + 0.05) / 0.057 >= 1.05 / (light + 0.05) ? '#141414' : '#fff'
+}
+
+// ---- Notable Owners: people who own one, with their words. Only owners who have agreed to be named appear.
+
+export interface Owner {
+  name: string
+  /** Their role, and where. */
+  of: string
+  words: string
+  /** The id of the color their chair is. */
+  paint: string
+}
+
+/** Templated for now, as the design has them: six cards whose names and words are in [square brackets]. */
+export const OWNERS: Owner[] = ['scuderia-red', 'alexandrite', 'solar-orange', 'mantis-green', 'pearl-lavender', 'championship-green'].map((paint) => ({ name: '[Owner name]', of: '[Role, Company]', words: '[Their words about the chair.]', paint }))

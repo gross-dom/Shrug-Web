@@ -28,7 +28,7 @@ const check = (name, ok, detail = '') => {
   let p = t.page
   await p.waitForTimeout(1600)
   check('a visitor: the bar says Log In, after the menus and before the clock', (await bar(p)) === 'Log In' && (await p.evaluate(() => { const s = document.querySelector('.menubar__status'); return s.firstElementChild.classList.contains('menubar__account') && s.lastElementChild.classList.contains('menubar__clock') })))
-  check('the desk has Updates, the one-pager and Wallpapers, in that order', (await desk(p)) === 'updates one-pager wallpapers', await desk(p))
+  check('the desk has Updates first, then the one-pager, Wallpapers and the rest, in their order', (await desk(p)) === A.DESK.map(([id]) => id).join(' '), await desk(p))
   let folder = await locked(p)
   check('the Updates folder is locked, and says so', folder.lock && folder.says === 'Updates, desktop icon, locked', JSON.stringify(folder))
   await p.locator('[data-desk="updates"]').click()

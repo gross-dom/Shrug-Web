@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useNewReplies } from '../apps/state'
-import { APPS, DOCK_APPS, GUEST_APPS, type AppId } from './apps'
+import { APPS, GUEST_APPS, type AppId } from './apps'
+import { DOCK } from './held'
 import { dockPoint, prefersReducedMotion } from './dom'
 import { AppIcon } from './icons'
 import { useStore } from './store'
@@ -25,7 +26,7 @@ const REACH = 150
 
 export function Dock() {
   const compact = useStore(wm, (s) => s.compact)
-  const openApps = useStore(wm, (s) => [...DOCK_APPS, ...GUEST_APPS].filter((id) => s.wins[id].open).join(' '))
+  const openApps = useStore(wm, (s) => [...DOCK, ...GUEST_APPS].filter((id) => s.wins[id].open).join(' '))
   const active = useStore(wm, activeApp)
   const unread = useNewReplies()
   const shelf = useRef<HTMLDivElement>(null)
@@ -125,7 +126,7 @@ export function Dock() {
           swell(null)
         }}
       >
-        {DOCK_APPS.map(tile)}
+        {DOCK.map(tile)}
         {guests.length > 0 && <span className="dock__rule" aria-hidden />}
         {guests.map(tile)}
       </div>

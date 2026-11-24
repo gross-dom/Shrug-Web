@@ -997,9 +997,12 @@
   position: absolute;
   top: 42px;
   right: 12px;
+  /* Down the right-hand side, and on a screen too short for them all in one line, a second line beside it */
+  bottom: 96px;
   z-index: 2;
   display: flex;
-  flex-direction: column;
+  flex-flow: column wrap-reverse;
+  align-content: flex-start;
   gap: 8px;
   /* Under the windows, in their layer, which takes no presses of its own */
   pointer-events: auto;

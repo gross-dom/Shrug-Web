@@ -69,6 +69,17 @@ exports.DOCK = [
 ]
 exports.DOCK_IDS = exports.DOCK.map(([id]) => id)
 
+/** What is out on the desk, down its right-hand side, in its order: each icon's own name, and what it says of itself. */
+exports.DESK = [
+  ['updates', 'Updates, desktop icon, locked'],
+  ['one-pager', 'One-pager, desktop icon'],
+  ['wallpapers', 'Wallpapers, desktop icon'],
+  ['quicktime', 'Film, desktop icon'],
+  ['photobooth', 'Photo Booth, desktop icon'],
+  ['spotify', 'Spotify, desktop icon'],
+  ['youtube', 'YouTube, desktop icon'],
+]
+
 /** Where VIP leads: the points site's address, as the site itself has it (`SITE.points` in src/data/site.ts). */
 exports.POINTS = /\bpoints: '([^']+)'/.exec(fs.readFileSync(path.join(S, '..', 'src', 'data', 'site.ts'), 'utf8'))[1]
 

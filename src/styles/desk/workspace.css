@@ -1,0 +1,621 @@
+/* Workspace: the studio (design/v1-workspace, screens/shrugos.css, "Workspace"). The window is the color:
+   its ground is the cove, and every word on it is near-black or white, whichever is read better there. A
+   change of color cross-fades. */
+
+.ss-window.wxwin {
+  --ss-lights-y: 24px;
+  font-family: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.ss-window.wxwin > .ss-window__bar {
+  position: relative;
+  z-index: 3;
+  height: 48px;
+  padding-right: 20px;
+  border-bottom: 0;
+  background: none;
+  gap: 0;
+}
+
+.ss-window.wxwin > .ss-window__bar > .ss-window__spacer {
+  display: none;
+}
+
+.wxbar {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-left: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: color 0.4s ease;
+}
+
+.wxbar__home {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.wxbar .mk {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.wxwin .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0 13px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.wxwin.dark .pill {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.wxwin .pill[aria-pressed='true'] {
+  background: #141414;
+  color: #fff;
+}
+
+.wxwin .pill--quiet {
+  margin: 0;
+  font-weight: 500;
+}
+
+.wxwin :where(button, [tabindex], input):focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.wxwin__body {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  background: none;
+}
+
+.wxwin :where(h1, h2, p) {
+  margin: 0;
+  padding: 0;
+}
+
+.wxwin .num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- First: eight slabs */
+
+.wx-first {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.fl-head {
+  position: absolute;
+  top: 16px;
+  left: 40px;
+  z-index: 2;
+  max-width: 420px;
+  transition: opacity 0.2s ease;
+}
+
+.wx-first[data-flood] .fl-head {
+  opacity: 0;
+}
+
+.fl-head h1 {
+  font-size: 54px;
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.fl-head p {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.fl-slabs {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  padding: 182px 20px 20px;
+  transition: padding 0.4s cubic-bezier(0.22, 1, 0.36, 1), gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fl-slab {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 18px;
+  overflow: hidden;
+  border-radius: 20px;
+  text-align: left;
+  transition: flex-grow 0.4s cubic-bezier(0.22, 1, 0.36, 1), padding 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.4s ease, opacity 0.25s ease;
+}
+
+.fl-slab.big {
+  flex-grow: 2.4;
+}
+
+.fl-slab b {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.fl-slab small {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.86;
+  white-space: nowrap;
+}
+
+.fl-slab svg.ch {
+  position: absolute;
+  bottom: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.fl-slab.own {
+  background: repeating-linear-gradient(135deg, #ebe9e3 0 14px, #dedbd3 14px 28px);
+  color: #141414;
+}
+
+/* Chosen, a slab floods the window: it grows to fill it, and the others give way */
+.wx-first[data-flood] .fl-slabs {
+  gap: 0;
+  padding: 0;
+}
+
+.wx-first[data-flood] .fl-slab {
+  flex-grow: 0.0001;
+  padding-right: 0;
+  padding-left: 0;
+  opacity: 0;
+}
+
+.wx-first[data-flood] .fl-slab.flood {
+  flex-grow: 1;
+  border-radius: 0;
+  opacity: 1;
+}
+
+.wx-first[data-flood] .fl-slab > * {
+  opacity: 0;
+}
+
+/* ---- The studio */
+
+.fl {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.st-light {
+  position: absolute;
+  inset: -48px 0 0;
+  background: radial-gradient(58% 62% at 50% 34%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 72%);
+  pointer-events: none;
+}
+
+.dark .st-light {
+  background: radial-gradient(58% 62% at 50% 34%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 72%);
+}
+
+.st-floor {
+  position: absolute;
+  right: -20%;
+  bottom: -46%;
+  left: -20%;
+  height: 78%;
+  border-radius: 50%;
+  background: linear-gradient(rgba(0, 0, 0, 0.13), rgba(0, 0, 0, 0.03) 60%);
+  pointer-events: none;
+}
+
+.fl-word {
+  position: absolute;
+  top: -34px;
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 176px;
+  font-weight: 800;
+  line-height: 0.86;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.fl.dark .fl-word {
+  opacity: 0.13;
+  mix-blend-mode: screen;
+}
+
+.st-stand {
+  position: absolute;
+  top: -6px;
+  left: 40px;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.72;
+}
+
+.st-ring {
+  position: absolute;
+  bottom: 136px;
+  left: 50%;
+  width: 400px;
+  height: 74px;
+  margin-left: -200px;
+  border: 1.5px dashed currentColor;
+  border-radius: 50%;
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+/* The chair's place: the drawing, and over it the 3D chair once it has been drawn */
+.st-table {
+  position: absolute;
+  bottom: 118px;
+  left: 50%;
+  width: 520px;
+  height: 470px;
+  margin-left: -260px;
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+}
+
+.st-table[data-held] {
+  cursor: grabbing;
+}
+
+.st-table:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -8px;
+  border-radius: 18px;
+}
+
+.st-table .st-still {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: opacity 0.3s ease;
+}
+
+.st-table canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.st-table[data-3d] canvas {
+  opacity: 1;
+}
+
+.st-table[data-3d] .st-still {
+  opacity: 0;
+}
+
+.st-turn {
+  position: absolute;
+  bottom: 106px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.26);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.dark .st-turn {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.fl-info {
+  position: absolute;
+  bottom: 36px;
+  left: 40px;
+  max-width: 300px;
+}
+
+.fl-info h2 {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.fl-info p {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0.86;
+}
+
+.st-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  margin-top: 10px;
+  margin-right: 4px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.dark .st-tag {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.st-own {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 290px;
+  height: 44px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #141414;
+  font-size: 14px;
+}
+
+.st-own i {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
+
+.st-own input {
+  flex: 1;
+  min-width: 0;
+  color: #141414;
+}
+
+.st-own input::placeholder {
+  color: #6b6a66;
+}
+
+.st-own:focus-within {
+  box-shadow: 0 0 0 2px #141414;
+}
+
+.wxwin .st-own input:focus-visible {
+  outline: none;
+}
+
+.fl-dock {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 60px;
+  padding: 0 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.6), 0 10px 30px -8px rgba(0, 0, 0, 0.3);
+  transform: translateX(-50%);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.fl-dot {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16), 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.fl-dot.on {
+  transform: translateY(-8px) scale(1.18);
+}
+
+.fl-dot.on::after {
+  content: '';
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.fl-dot.own {
+  background: conic-gradient(#f4640a, #f6c915, #3bbf6b, #2f7ee8, #8a4be0, #d42a22, #f4640a);
+}
+
+.fl-buy {
+  position: absolute;
+  right: 40px;
+  bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.fl-buy b {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.fl-buy small {
+  font-size: 12px;
+  opacity: 0.86;
+}
+
+.fl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 50px;
+  padding: 0 28px;
+  border-radius: 999px;
+  background: #141414;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fl.dark .fl-btn {
+  background: #fff;
+  color: #141414;
+}
+
+.fl-btn[aria-disabled='true'] {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-window.wxwin,
+  .wxbar,
+  .fl-slab,
+  .fl-slabs,
+  .fl-dot,
+  .st-table canvas,
+  .st-table .st-still {
+    transition: none;
+  }
+}
+
+/* ---- Notable Owners */
+
+.ow {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  padding: 6px 28px 24px;
+}
+
+.ow header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ow h1 {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.ow-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.ow-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.ow-card q {
+  position: relative;
+  z-index: 1;
+  max-width: 80%;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+  quotes: none;
+}
+
+.ow-card footer {
+  position: relative;
+  z-index: 1;
+  font-size: 12.5px;
+}
+
+.ow-card footer b {
+  display: block;
+  font-size: 14px;
+}
+
+.ow-card svg {
+  position: absolute;
+  right: -6px;
+  bottom: -14px;
+  opacity: 0.96;
+}
+
+.ow-note {
+  color: #5d5c58;
+  font-size: 12px;
+}

@@ -4,6 +4,7 @@ import { finder, inbox, notes, showInGroup } from '../apps/state'
 import { MY_CARD } from '../phone/apps/routes'
 import { arriveIn, onPhone, startSystem, unlock, watchHistory } from '../phone/system'
 import { asked, isOn, opens, says } from './address'
+import { DESK_ONLY } from './apps'
 import { Boundary } from './Boundary'
 import { cross, showOnDesk, spotOfDesk } from './crossing'
 import { keepDesk, restoreDesk, returning } from './deskmemory'
@@ -119,7 +120,7 @@ export function Desktop() {
     // (VIP Store and Preview are windows of the desktop's alone. On a phone VIP and the one-pager are links
     // out, and an address that names either names nothing here: the visit begins as any does, and beside other
     // names the others open)
-    const wanted = wm.get().compact ? extra.filter((id) => id !== 'store' && id !== 'preview' && id !== 'mail').pop() : named
+    const wanted = wm.get().compact ? extra.filter((id) => !DESK_ONLY.includes(id)).pop() : named
     if (wm.get().compact && !resumed && wanted) {
       if (onPhone(wanted)) {
         const { stack, sheet } = placeOfSpot({ app: wanted, at })

@@ -4,18 +4,24 @@ import { FinderApp } from '../apps/Finder'
 import { MailApp } from '../apps/Mail'
 import { MessagesApp } from '../apps/Messages'
 import { NotesApp } from '../apps/Notes'
+import { PhotoBoothApp } from '../apps/PhotoBooth'
 import { PreviewApp } from '../apps/Preview'
+import { QuickTimeApp, showFilm } from '../apps/QuickTime'
+import { SpotifyApp } from '../apps/Spotify'
 import { StoreApp } from '../apps/Store'
 import { TerminalApp } from '../apps/Terminal'
 import { UpdatesApp } from '../apps/Updates'
 import { WallpapersApp } from '../apps/Wallpapers'
+import { YouTubeApp } from '../apps/YouTube'
 import { account, askLogIn, unlocked } from './account'
 import { APPS, APP_IDS, type AppId } from './apps'
 import { Boundary } from './Boundary'
 import { Dock } from './Dock'
 import { dockPoint } from './dom'
 import { focusFirst } from './focus'
-import { FolderIcon, OnePagerIcon } from './icons'
+import { held } from './held'
+import { AppIcon, FolderIcon, OnePagerIcon } from './icons'
+import { FilmIcon } from './icons-v1'
 import { MenuBar } from './MenuBar'
 import { Notifications } from './Notifications'
 import { openOnePager } from './papers'
@@ -42,6 +48,10 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   store: StoreApp,
   preview: PreviewApp,
   mail: MailApp,
+  quicktime: QuickTimeApp,
+  photobooth: PhotoBoothApp,
+  spotify: SpotifyApp,
+  youtube: YouTubeApp,
 }
 
 interface DeskItem {
@@ -55,8 +65,10 @@ interface DeskItem {
   open: () => void
 }
 
-/** What is left out on the desk, down its right-hand side, in this order (design/v1/DESIGN.md, section 3). The
- * Updates folder is first: it is always there, locked to everyone but Shrug's LPs. Portfolio is in the Dock. */
+/** What is left out on the desk, down its right-hand side, in this order (design/v1/DESIGN.md, section 3):
+ * Updates, the one-pager, Wallpapers, the Film, Photo Booth, Spotify, YouTube. The Updates folder is first:
+ * it is always there, locked to everyone but Shrug's LPs. Portfolio is in the Dock. (One whose app has
+ * nothing real in it yet is left off the live site: os/held.ts.) */
 function useDesk(): DeskItem[] {
   const who = useStore(account, (s) => (s.status === 'member' ? (s.roles.includes('LP') ? 'lp' : 'member') : s.status === 'checking' ? 'checking' : 'nobody'))
   const locked = who !== 'lp'
@@ -88,7 +100,16 @@ function useDesk(): DeskItem[] {
         focusWindow('wallpapers')
       },
     },
-  ]
+    // A film is a file, and QuickTime Player is what opens it
+    { id: 'quicktime', name: 'Film', says: 'desktop icon', icon: <FilmIcon />, open: () => (showFilm(), launch('quicktime')) },
+    ...(['photobooth', 'spotify', 'youtube'] as const).map((id) => ({ id, name: APPS[id].name, says: 'desktop icon', icon: <AppIcon id={id} />, open: () => launch(id) })),
+  ].filter((item) => !(item.id in APPS) || !held(item.id as AppId))
+}
+
+/** Opens an app out of its icon on the desk, and to the front. */
+function launch(id: AppId) {
+  openApp(id, dockPoint(id))
+  focusWindow(id)
 }
 
 function DeskIcons() {
