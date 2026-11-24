@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Check, FileText, Rotate3d } from 'lucide-react'
-import { inkOn, OWN, OWNERS, PAINTS, PAPER, readColor, type Paint } from '../data/workspace'
+import { W_S } from '../data/lettering'
+import { inkOn, OWN, OWNERS, PAINTS, PAPER, readColor, shadedOn, type Paint } from '../data/workspace'
 import { TEMPLATED } from '../data/site'
 import { Window } from '../kit/window'
 import { account, askLogIn, logIn } from '../os/account'
@@ -118,13 +119,16 @@ export function WorkspaceApp() {
   const ink = view === 'owners' || !chosen || view === 'first' ? '#141414' : inkOn(chosen.color)
   const dark = ink === '#fff'
   const cove = view === 'studio' && chosen ? ground(chosen) : PAPER
+  // How the chips are set off from the ground: on paper a little darker; on a color a little lighter, as the
+  // design has them, unless white words could not then be read on one (data/workspace.ts)
+  const chips = view !== 'studio' || !chosen ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
 
   const bar = (
     <div className="wxbar" style={{ color: ink }}>
       <button type="button" className="wxbar__home" aria-label="Workspace: all the colors" onClick={() => setView('first')}>
-        <span className="mk" aria-hidden>
-          W/S
-        </span>
+        <svg className="mk" viewBox={`0 ${-W_S.rise} ${W_S.width} ${W_S.rise + W_S.fall}`} aria-hidden>
+          <path d={W_S.d} fill="currentColor" />
+        </svg>
         Workspace
       </button>
       {(OWNERS.length > 0 && TEMPLATED) || OWNERS.some((owner) => !owner.name.startsWith('[')) ? (
@@ -136,7 +140,7 @@ export function WorkspaceApp() {
   )
 
   return (
-    <Window className={`app wxwin${dark ? ' dark' : ''}`} lightsSize="large" lead={bar} body={{ className: 'wxwin__body' }} style={{ background: cove, color: ink }}>
+    <Window className={`app wxwin${chips}`} lightsSize="large" lead={bar} body={{ className: 'wxwin__body' }} style={{ background: cove, color: ink }}>
       {view === 'first' && (
         <div className="wx-first" data-flood={flood ? '' : undefined}>
           <div className="fl-head">
@@ -173,14 +177,10 @@ export function WorkspaceApp() {
         </div>
       )}
       {view === 'studio' && chosen && (
-        <div className={`fl st${dark ? ' dark' : ''}`}>
+        <div className={`fl st${chips}`}>
           <span className="st-light" aria-hidden />
           <span className="st-floor" aria-hidden />
-          <span className="fl-word" aria-hidden>
-            {chosen.name.split(' ').map((word, i) => (
-              <span key={i}>{word}</span>
-            ))}
-          </span>
+          <Word name={chosen.name} />
           {TEMPLATED && <span className="st-stand">Placeholder model. The licensed 3D chair goes here.</span>}
           <Turntable color={chosen.color} shift={chosen.shift} name={chosen.name} live={shown} />
           <div className="fl-info">
@@ -268,6 +268,44 @@ export function WorkspaceApp() {
 }
 
 /** The chair on its turntable: dragged to turn it. A drawing stands in for it until the 3D chair has been drawn, and stays where it cannot be. */
+/** How large the color's name is set behind the chair, at most; and how much of the studio's width its longest word may take. */
+const WORD = 176
+const WORD_ROOM = 0.868
+
+/** The color's name, huge behind the chair: a word to a line, as large as the design sets it where that
+ * fits, and smaller for a long word (Championship, Alexandrite), so that none runs off the window. */
+function Word({ name }: { name: string }) {
+  const word = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    const el = word.current
+    const room = el?.parentElement
+    if (!el || !room) return
+    const fit = () => {
+      el.style.fontSize = `${WORD}px`
+      const widest = Math.max(...[...el.children].map((line) => line.getBoundingClientRect().width))
+      const most = room.getBoundingClientRect().width * WORD_ROOM
+      if (widest > most) el.style.fontSize = `${Math.floor((WORD * most) / widest)}px`
+    }
+    fit()
+    // (measured again when the type it is set in has arrived, and when the window is another width)
+    let live = true
+    void document.fonts?.ready.then(() => live && fit())
+    const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit)
+    watch?.observe(room)
+    return () => {
+      live = false
+      watch?.disconnect()
+    }
+  }, [name])
+  return (
+    <span ref={word} className="fl-word" aria-hidden>
+      {name.split(' ').map((line, i) => (
+        <span key={i}>{line}</span>
+      ))}
+    </span>
+  )
+}
+
 function Turntable({ color, shift, name, live }: { color: string; shift?: string[]; name: string; live: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)

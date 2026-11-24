@@ -37,7 +37,8 @@ const hex = (color: string) => new THREE.Color(color)
 
 /** The paint: a gloss coat over a color. For a color-shifting paint the color is mixed from the angle it is seen at. */
 function paintOf() {
-  const material = new THREE.MeshPhysicalMaterial({ color: '#888', metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.1 })
+  // (hardly metal at all, and with little of the room in it: the color has to be read as the color it is)
+  const material = new THREE.MeshPhysicalMaterial({ color: '#888', metalness: 0, roughness: 0.42, clearcoat: 0.8, clearcoatRoughness: 0.15 })
   const shift = { uShift: { value: 0 }, uA: { value: hex('#000') }, uB: { value: hex('#000') }, uC: { value: hex('#000') } }
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, shift)
@@ -130,16 +131,20 @@ export function makeStage(canvas: HTMLCanvasElement, settle: boolean, drawn: () 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
   renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.05
+  // (the mapping made for showing a product in its true color: a filmic one washes a strong paint pale)
+  renderer.toneMapping = THREE.NeutralToneMapping
+  renderer.toneMappingExposure = 1
 
   const scene = new THREE.Scene()
   // What the gloss and the chrome have to reflect: a plain lit room, made here, so no picture is fetched for it
   const pmrem = new THREE.PMREMGenerator(renderer)
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+  // (dimmed here, on the scene: three reads the room's strength from the scene and not from a material. At its
+  // full strength the room lights a paint past white, and the mapping below then washes it pale)
+  scene.environmentIntensity = 0.35
   // Lit from above and in front, the same for every color
-  scene.add(new THREE.HemisphereLight('#ffffff', '#b9b9c2', 0.55))
-  const key = new THREE.DirectionalLight('#ffffff', 2.1)
+  scene.add(new THREE.HemisphereLight('#ffffff', '#b9b9c2', 0.9))
+  const key = new THREE.DirectionalLight('#ffffff', 2)
   key.position.set(1.4, 3.2, 2.6)
   scene.add(key)
   const fill = new THREE.DirectionalLight('#ffffff', 0.5)
@@ -156,7 +161,7 @@ export function makeStage(canvas: HTMLCanvasElement, settle: boolean, drawn: () 
   const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 20)
   let tilt = 0
   const look = () => {
-    const far = 4.1
+    const far = 3.7
     camera.position.set(0, 0.74 + Math.sin(0.1 + tilt) * far * 0.6, Math.cos(0.1 + tilt) * far)
     camera.lookAt(0, 0.7, 0)
   }

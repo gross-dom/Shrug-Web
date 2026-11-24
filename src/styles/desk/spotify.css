@@ -86,7 +86,7 @@
   color: #f2f3f2;
 }
 
-.sp :where(ol, h1, h4, p) {
+.sp :where(ol, h1, h2, p) {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -112,7 +112,7 @@
   font-size: 13px;
 }
 
-.sp-side h4 {
+.sp-side h2 {
   padding: 10px 12px 6px;
   color: #9a9f9c;
   font-size: 11px;
@@ -121,7 +121,7 @@
   text-transform: uppercase;
 }
 
-.sp-side h4 + button ~ h4 {
+.sp-side h2 + button ~ h2 {
   margin-top: 8px;
 }
 

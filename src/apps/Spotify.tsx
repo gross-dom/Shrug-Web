@@ -85,7 +85,7 @@ export function SpotifyApp() {
     <Window className="app spwin" lightsSize="large" lead={bar} body={{ className: 'spwin__body' }}>
       <div className="sp">
         <nav className="sp-side" aria-label="Listening Room">
-          <h4>Listening Room</h4>
+          <h2>Listening Room</h2>
           <button type="button" className={at.is === 'podcasts' ? 'on' : undefined} aria-current={at.is === 'podcasts' || undefined} onClick={() => go({ is: 'podcasts' })}>
             <Mic size={16} strokeWidth={1.9} aria-hidden />
             Podcasts
@@ -94,14 +94,14 @@ export function SpotifyApp() {
             <ListMusic size={16} strokeWidth={1.9} aria-hidden />
             Playlists
           </button>
-          <h4>Playlists</h4>
+          <h2>Playlists</h2>
           {PLAYLISTS.map((p) => (
             <button key={p.id} type="button" className={`pl${at.is === 'playlist' && at.id === p.id ? ' on' : ''}`} aria-current={(at.is === 'playlist' && at.id === p.id) || undefined} onClick={() => go({ is: 'playlist', id: p.id })}>
               {p.name}
             </button>
           ))}
         </nav>
-        <main className="sp-main" data-autofocus tabIndex={-1}>
+        <section className="sp-main" aria-label={at.is === 'podcasts' ? 'Podcasts' : (playlist?.name ?? 'Playlists')} data-autofocus tabIndex={-1}>
           {at.is === 'podcasts' && (
             <>
               <h1>Podcasts</h1>
@@ -117,7 +117,7 @@ export function SpotifyApp() {
                 </li>
                 {episodes.map((e, i) => (
                   <li key={e.id}>
-                    <button type="button" className={`sp-row${playing === e.id ? ' on' : ''}`} aria-pressed={playing === e.id} aria-label={`Play ${e.title}, ${e.show}, with ${e.guest}`} onClick={() => play(e)}>
+                    <button type="button" className={`sp-row${playing === e.id ? ' on' : ''}`} aria-pressed={playing === e.id} onClick={() => play(e)}>
                       <span className="num">
                         {playing === e.id ? (
                           <span className="sp-eq" aria-hidden>
@@ -178,7 +178,7 @@ export function SpotifyApp() {
               )}
             </>
           )}
-        </main>
+        </section>
         <footer className={`sp-bar${episode && embed && !failed ? ' embed' : ''}`}>
           {playlist ? (
             <>

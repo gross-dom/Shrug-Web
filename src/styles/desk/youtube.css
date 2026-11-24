@@ -59,7 +59,7 @@
   color: #f1f1f1;
 }
 
-.yt :where(ol, h1, h3, p) {
+.yt :where(ol, h1, h2, p) {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -250,12 +250,12 @@
   justify-content: center;
   gap: 10px;
   padding: 30px;
-  color: #d0d0d0;
+  color: #e4e4e4;
   font-size: 13px;
   text-align: center;
 }
 
-.yt-msg h3 {
+.yt-msg h2 {
   color: #fff;
   font-size: 18px;
   font-weight: 600;

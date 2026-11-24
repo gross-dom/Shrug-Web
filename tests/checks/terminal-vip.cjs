@@ -430,10 +430,10 @@ async function vip(browser) {
     if (!ONLY || ONLY === 'term') await terminal(browser)
     if (!ONLY || ONLY === 'vip') await vip(browser)
     if (!ONLY || ONLY === 'axe') {
-      const res = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'terminal-vip-axe.cjs'), BASE], { encoding: 'utf8', env: process.env, timeout: 400000 })
+      const res = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'terminal-vip-axe.cjs'), BASE], { encoding: 'utf8', env: process.env, timeout: 900000 })
       const lines = (res.stdout || '').trim().split('\n')
       for (const line of lines.filter((l) => /^FAIL/.test(l))) console.log(line.slice(0, 500))
-      check('axe: no violations on the terminal, on where VIP is, or on the windows laid out with its classes, either layout', res.status === 0, lines.slice(-1)[0] + (res.stderr || '').slice(0, 300))
+      check('axe: no violations on the terminal, on where VIP is, on the windows laid out with its classes, or on the windows of design/v1 and Workspace, either layout', res.status === 0, lines.slice(-1)[0] + (res.stderr || '').slice(0, 300))
     }
   } catch (e) {
     failed++

@@ -25,6 +25,10 @@ export interface AppSpec {
    * for its size there and too short to have it under them (wm.ts). Without
    * one a window opens at its size, on the icons if that is where it falls. */
   slim?: number
+  /** For a window that is drawn for one size: it opens at that size or as near as the desk has room for,
+   * and is not made shorter to keep clear of what is left out on the desk (wm.ts). On a desk with no clear
+   * place as wide as it, it lies over the widget's edge, as a window on a Mac would. */
+  whole?: boolean
   /** Where it opens, as an offset from centered. */
   nudge: { x: number; y: number }
   resizable: boolean
@@ -142,6 +146,9 @@ export const APPS: Record<AppId, AppSpec> = {
     blurb: 'Twenty exchanges that led to something',
     size: fit({ w: 0.82, h: 0.97 }, { w: 860, h: 560 }, { w: 1180, h: 740 }),
     min: { w: 860, h: 560 },
+    // (the widest window there is: with the desk's icons down one side and its widget at the other there is
+    // no clear place for it on a 1440 screen, and all twenty rows are only on the screen at its full height)
+    whole: true,
     nudge: { x: 0, y: -4 },
     resizable: true,
     lightsY: 25,

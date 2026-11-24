@@ -136,7 +136,7 @@ export function Write() {
         )}
         {!chosen ? (
           <div className="im-pick" data-after={sent.length > 0 || undefined}>
-            <h3>{sent.length ? 'Something else?' : 'What’s this about?'}</h3>
+            <h2>{sent.length ? 'Something else?' : 'What’s this about?'}</h2>
             <div className="im-opts">
               {SUBJECTS.map((s) => (
                 <button key={s.id} type="button" className="im-opt" onClick={() => (setSubject(s.id), setTimeout(() => field.current?.focus(), 0))}>

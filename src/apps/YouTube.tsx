@@ -60,7 +60,7 @@ export function YouTubeApp() {
             {refused ? (
               <div className="yt-msg" role="status">
                 <TriangleAlert size={30} strokeWidth={1.7} aria-hidden />
-                <h3>This one can’t play here</h3>
+                <h2>This one can’t play here</h2>
                 Its owner doesn’t allow it on other sites.
                 <a className="yt-link" href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer">
                   Watch on YouTube <ArrowUpRight size={14} strokeWidth={2.2} aria-hidden />
@@ -89,9 +89,9 @@ export function YouTubeApp() {
                 </span>
               </button>
             ) : (
-              <div className="yt-msg" style={{ background: video.tone }}>
+              <div className="yt-msg" style={{ background: `linear-gradient(rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.58)), ${video.tone}` }}>
                 <Clapperboard size={30} strokeWidth={1.7} aria-hidden />
-                <h3>YouTube’s embedded player</h3>
+                <h2>YouTube’s embedded player</h2>
                 With its own controls. This video has no link to YouTube yet.
               </div>
             )}

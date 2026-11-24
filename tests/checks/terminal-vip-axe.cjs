@@ -1,7 +1,9 @@
 // axe over fixer T's screens on both layouts: node terminal-vip-axe.cjs [base]
 // The terminal; where VIP is (a link in the phone's Dock and in its Drops conversation; on the desktop the VIP
 // Store's window, its bar and the store's own pages in its frame, and the ways to it); and the two windows laid
-// out with the classes VIP's old window had, Wallpapers and Updates, with Preview, where a document opens.
+// out with the classes VIP's old window had, Wallpapers and Updates, with Preview, where a document opens;
+// Mail; the desk's other apps (QuickTime Player, Spotify, YouTube, Photo Booth, Photographs, a message to Shrug);
+// and Workspace, in every one of its colors.
 const A = require('./lib.cjs')
 const path = require('path')
 const AXE = (() => {
@@ -128,6 +130,73 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
   await run(p, 'desktop Wallpapers', '.wf[data-app="wallpapers"]')
   await p.locator('.wf[data-app="wallpapers"] .walls-tile').first().click(); await p.waitForTimeout(700)
   await run(p, 'desktop Wallpapers, one open large', '.wf[data-app="wallpapers"]')
+  await t.ctx.close()
+  // The desk's other apps (design/v1): QuickTime Player, Spotify, YouTube, Photographs, a message to Shrug, Photo Booth
+  const W = (app) => `.wf[data-app="${app}"]`
+  const fresh = async (query) => {
+    t = await A.open(browser, { device: 'desktop', base: BASE, query: `still&empty${query}`, reducedMotion: true })
+    p = t.page
+    await arrived(p); await p.waitForTimeout(1500)
+  }
+  const fromDesk = async (id, app = id) => {
+    await p.locator(`[data-desk="${id}"]`).dblclick()
+    await p.waitForSelector(`${W(app)}[data-open]`, { timeout: 15000 }); await p.waitForTimeout(700)
+  }
+  await fresh('')
+  await run(p, 'desktop, the desk\'s icons', '.desk')
+  await fromDesk('quicktime')
+  await run(p, 'desktop QuickTime Player, on its poster', W('quicktime'))
+  await p.locator('.qt-big').click(); await p.waitForTimeout(1200)
+  await run(p, 'desktop QuickTime Player, playing', W('quicktime'))
+  await run(p, 'desktop Dock, QuickTime Player in it after the rule', '.dock')
+  await p.locator(`${W('quicktime')} button[aria-label^="Close"]`).click(); await p.waitForTimeout(400)
+  await fromDesk('spotify')
+  await run(p, 'desktop Spotify, its episodes', W('spotify'))
+  await p.locator(`${W('spotify')} button.sp-row`).first().click(); await p.waitForTimeout(400)
+  await run(p, 'desktop Spotify, an episode picked', W('spotify'))
+  await p.locator(`${W('spotify')} .sp-side button.pl`).first().click(); await p.waitForTimeout(400)
+  await run(p, 'desktop Spotify, a playlist', W('spotify'))
+  await p.locator(`${W('spotify')} button[aria-label^="Close"]`).click(); await p.waitForTimeout(400)
+  await fromDesk('youtube')
+  await run(p, 'desktop YouTube', W('youtube'))
+  await p.locator(`${W('youtube')} .yt-item`).nth(2).click(); await p.waitForTimeout(400)
+  await run(p, 'desktop YouTube, another video picked', W('youtube'))
+  await p.locator(`${W('youtube')} button[aria-label^="Close"]`).click(); await p.waitForTimeout(400)
+  await fromDesk('photobooth')
+  await run(p, 'desktop Photo Booth, asking for the camera', W('photobooth'))
+  await p.locator(`${W('photobooth')} button[aria-label^="Close"]`).click(); await p.waitForTimeout(400)
+  await fromDesk('wallpapers')
+  await run(p, 'desktop Wallpapers, with Photographs', W('wallpapers'))
+  await p.locator(`${W('wallpapers')} .walls-photo`).first().click(); await p.waitForTimeout(700)
+  await run(p, 'desktop Wallpapers, a photograph open large', W('wallpapers'))
+  await t.ctx.close()
+  await fresh('&open=messages')
+  await p.waitForSelector(`${W('messages')}[data-open] .im-pencil`, { timeout: 15000 })
+  await p.locator('.im-pencil').click(); await p.waitForTimeout(400)
+  await run(p, 'desktop Messages, a message to Shrug: its subjects', W('messages'))
+  await p.locator(`${W('messages')} .im-opt`).nth(2).click(); await p.waitForTimeout(400)
+  await run(p, 'desktop Messages, a message to Shrug: a meeting asked for', W('messages'))
+  await t.ctx.close()
+  // Workspace: its slabs, the studio in a pale color and in a dark one, a color of one's own, and its owners
+  await fresh('&open=workspace')
+  await p.waitForSelector(`${W('workspace')}[data-open] .fl-slab`, { timeout: 15000 }); await p.waitForTimeout(600)
+  await run(p, 'desktop Workspace, the slabs', W('workspace'))
+  await run(p, 'desktop Dock, Workspace in it', '.dock')
+  await p.locator(`${W('workspace')} .fl-slab`).nth(1).click()
+  await p.waitForSelector(`${W('workspace')} .fl.st`, { timeout: 8000 }); await p.waitForTimeout(2600)
+  await run(p, 'desktop Workspace, the studio in Solar Orange', W('workspace'))
+  for (const name of ['Scuderia Red', 'Alexandrite', 'Championship Green', 'Supersonic', 'Pearl Lavender', 'Mantis Green']) {
+    await p.locator(`${W('workspace')} .fl-dot[aria-label="${name}"]`).click(); await p.waitForTimeout(700)
+    await run(p, `desktop Workspace, the studio in ${name}`, W('workspace'))
+  }
+  await p.locator(`${W('workspace')} .fl-dot.own`).click(); await p.waitForTimeout(500)
+  await run(p, 'desktop Workspace, a color of one\'s own, before one is given', W('workspace'))
+  await p.locator(`${W('workspace')} .st-own input`).fill('RAL 5002'); await p.waitForTimeout(700)
+  await run(p, 'desktop Workspace, a color of one\'s own', W('workspace'))
+  if (await p.locator(`${W('workspace')} .wxbar .pill`).count()) {
+    await p.locator(`${W('workspace')} .wxbar .pill`).click(); await p.waitForTimeout(500)
+    await run(p, 'desktop Workspace, Notable Owners', W('workspace'))
+  }
   await t.ctx.close()
   t = await A.open(browser, { device: 'ipad-land', base: BASE, query: 'still&open=wallpapers,case-studies', reducedMotion: true })
   p = t.page

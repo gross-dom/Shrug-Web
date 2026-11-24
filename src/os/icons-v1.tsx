@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { MOV, W_S, set } from '../data/lettering'
 import { useStore } from './store'
 import { picked } from './workspace'
 
@@ -136,9 +137,7 @@ export function WorkspaceIcon() {
         )}
       </defs>
       <path d={squircle} fill={`url(#${id}-bg)`} />
-      <text x="50" y="62" textAnchor="middle" fontFamily="'Inter Variable', Inter, Helvetica, Arial, sans-serif" fontWeight="800" fontSize="31" letterSpacing="-1.5" fill={color?.shift ? '#fff' : ink}>
-        W/S
-      </text>
+      <path data-mark d={W_S.d} transform={set(W_S, 31, 50, 62)} fill={color?.shift ? '#fff' : ink} />
     </svg>
   )
 }
@@ -166,9 +165,7 @@ export function FilmIcon() {
         <rect x="67" y="71" width="6" height="5" rx="1" />
       </g>
       <rect x="52" y="85" width="24" height="10" rx="3" fill="#1657d6" />
-      <text x="64" y="92.8" textAnchor="middle" fontFamily="'Inter Variable', Inter, Arial, sans-serif" fontWeight="700" fontSize="7.5" fill="#fff">
-        MOV
-      </text>
+      <path d={MOV.d} transform={set(MOV, 7.5, 64, 92.8)} fill="#fff" />
     </svg>
   )
 }

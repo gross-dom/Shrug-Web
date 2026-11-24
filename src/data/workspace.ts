@@ -110,14 +110,32 @@ export function readColor(typed: string): { color: string; name: string } | null
   return { color, name: text.replace(/\b\w/g, (letter) => letter.toUpperCase()) }
 }
 
-/** Words set on a color are near-black or white, whichever is read better on it. */
-export function inkOn(color: string): '#141414' | '#fff' {
+/** How light a color is, as the contrast of words on it is reckoned (WCAG's relative luminance); `white` is how much white is laid over it first. */
+function lightOf(color: string, white = 0) {
   const n = parseInt(color.slice(1), 16)
-  const lin = (c: number) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : Math.pow((c / 255 + 0.055) / 1.055, 2.4))
-  const light = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
-  // (which of the two has the greater contrast with it)
-  return (light + 0.05) / 0.057 >= 1.05 / (light + 0.05) ? '#141414' : '#fff'
+  const lin = (c: number) => ((c = (c + (255 - c) * white) / 255), c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
 }
+
+/** What small words need of the color they are set on, to be read (WCAG AA). */
+const READ = 4.5
+
+/** Words set on a color are near-black or white, whichever is read better on it. Between the two is a narrow
+ * run of mid-tones on which neither is read well enough (a color typed into Your own can be anything, and
+ * the teal it starts on is one of them): there the words are black, which is. */
+export function inkOn(color: string): '#141414' | '#fff' | '#000' {
+  const light = lightOf(color) + 0.05
+  const dark = light / 0.057
+  const white = 1.05 / light
+  return Math.max(dark, white) < READ ? '#000' : dark >= white ? '#141414' : '#fff'
+}
+
+/** How much white the chips on a dark color are tinted with (the pill in the bar, a tag, the turntable's note). */
+export const CHIP = 0.14
+
+/** Whether the chips on a dark color are shaded and not tinted: white words on a color only just dark enough
+ * for them could not be read on a lighter chip, so there the chip is a little darker than its ground. */
+export const shadedOn = (color: string) => inkOn(color) === '#fff' && 1.05 / (lightOf(color, CHIP) + 0.05) < READ
 
 // ---- Notable Owners: people who own one, with their words. Only owners who have agreed to be named appear.
 

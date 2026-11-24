@@ -84,7 +84,7 @@
 }
 
 .conv-write__row[aria-current] span span {
-  color: rgba(255, 255, 255, 0.92);
+  color: #fff;
 }
 
 .im-pencil:focus-visible,
@@ -122,7 +122,7 @@
   color: #1d1d1f;
 }
 
-.chat-write :where(h3, p) {
+.chat-write :where(h2, p) {
   margin: 0;
 }
 
@@ -154,7 +154,7 @@
   padding: 18px 0 8px;
 }
 
-.im-pick h3 {
+.im-pick h2 {
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.015em;

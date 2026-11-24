@@ -46,7 +46,7 @@
   color: #f2f2f4;
 }
 
-.pb :where(ol, h3, p) {
+.pb :where(ol, h2, p) {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -100,7 +100,7 @@
   color: #8e8f96;
 }
 
-.pb-msg h3 {
+.pb-msg h2 {
   font-size: 20px;
   font-weight: 600;
 }

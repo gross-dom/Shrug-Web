@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { W_S, set } from '../../data/lettering'
 
 // The chair as a drawing: what the studio shows while the 3D chair is on its way, what stays where 3D
 // cannot run, and the chair on a slab and on an owner's card. It is drawn here, in the paint it is given: a
@@ -49,9 +50,7 @@ export function ChairStill({ paint, shift, width = 320, className, label }: { pa
       <path d="M150 262V196M150 196C150 150 104 152 100 92M150 196C150 150 196 152 200 92" stroke={fill} strokeWidth="16" strokeLinecap="round" fill="none" />
       <path d="M146 258V198C146 156 108 154 104 96" stroke="#fff" strokeOpacity=".28" strokeWidth="3" strokeLinecap="round" fill="none" />
       <rect x="100" y="170" width="100" height="26" rx="11" fill="#0d0e10" />
-      <text x="150" y="188" textAnchor="middle" fontFamily="'Inter Variable', Inter, Helvetica, Arial, sans-serif" fontWeight="800" fontSize="13" fill="#c9ccd2">
-        W/S
-      </text>
+      <path d={W_S.d} transform={set(W_S, 13, 150, 188)} fill="#c9ccd2" />
     </svg>
   )
 }

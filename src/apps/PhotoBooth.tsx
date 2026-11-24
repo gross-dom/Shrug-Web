@@ -220,7 +220,7 @@ export function PhotoBoothApp() {
           {(stage === 'ask' || stage === 'starting') && (
             <div className="pb-msg">
               <Camera size={40} strokeWidth={1.5} aria-hidden />
-              <h3>Photo Booth would like to use your camera</h3>
+              <h2>Photo Booth would like to use your camera</h2>
               <p>Your browser will ask next. Nothing is saved or posted until you choose to.</p>
               <button type="button" className="pb-btn blue pb-btn--tall" aria-disabled={stage === 'starting' || undefined} onClick={() => stage === 'ask' && void start()}>
                 {stage === 'starting' ? 'Asking…' : 'Allow Camera'}
@@ -230,7 +230,7 @@ export function PhotoBoothApp() {
           {stage === 'refused' && (
             <div className="pb-msg">
               <VideoOff size={40} strokeWidth={1.5} aria-hidden />
-              <h3>The camera is off</h3>
+              <h2>The camera is off</h2>
               <p>Turn it on for this site in your browser’s settings, then try again. The wall below still works without it.</p>
               <button type="button" className="pb-btn pb-btn--tall" onClick={() => void start()}>
                 Try Again

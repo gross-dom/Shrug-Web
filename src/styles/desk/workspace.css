@@ -42,10 +42,11 @@
   font-weight: 700;
 }
 
+/* The mark, W/S: an outline (data/lettering.ts), at the size 17px type would set it */
 .wxbar .mk {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  flex: none;
+  width: 32.6px;
+  height: 14.8px;
 }
 
 .wxwin .pill {
@@ -62,8 +63,21 @@
   white-space: nowrap;
 }
 
+/* On a color the chips are a little lighter than their ground (the design's); on a dark one, less so (the
+   amount is CHIP in data/workspace.ts); and on one only just dark enough for white words, a little darker,
+   where the words can still be read */
+.wxwin.hue .pill {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .wxwin.dark .pill {
   background: rgba(255, 255, 255, 0.14);
+}
+
+.wxwin.shade .pill,
+.shade .st-tag,
+.shade .st-turn {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .wxwin .pill[aria-pressed='true'] {
@@ -170,7 +184,6 @@
 .fl-slab small {
   margin-top: 4px;
   font-size: 12px;
-  opacity: 0.86;
   white-space: nowrap;
 }
 
@@ -223,7 +236,7 @@
 
 .st-light {
   position: absolute;
-  inset: -48px 0 0;
+  inset: 0;
   background: radial-gradient(58% 62% at 50% 34%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 72%);
   pointer-events: none;
 }
@@ -245,7 +258,7 @@
 
 .fl-word {
   position: absolute;
-  top: -34px;
+  top: 14px;
   right: 0;
   left: 0;
   display: flex;
@@ -269,7 +282,7 @@
 
 .st-stand {
   position: absolute;
-  top: -6px;
+  top: 10px;
   left: 40px;
   font-size: 11px;
   font-weight: 500;
@@ -396,7 +409,7 @@
 }
 
 .dark .st-tag {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .st-own {

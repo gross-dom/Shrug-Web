@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { PDF, set } from '../data/lettering'
 import { IN_DISC, ON_TILE, S, VIP_LETTERS } from '../data/logo'
 import type { AppId } from './apps'
 import { MailIcon, PhotoBoothIcon, QuickTimeIcon, SpotifyIcon, WorkspaceIcon, YouTubeIcon } from './icons-v1'
@@ -355,9 +356,7 @@ export function OnePagerIcon() {
         <path d="M30 66h40M30 73h40M30 80h26" stroke="#c4c7cf" strokeWidth="2.8" />
       </g>
       <rect x="52" y="85" width="24" height="10" rx="3" fill="#e5484d" />
-      <text x="64" y="92.8" textAnchor="middle" fontFamily="Inter,Arial,sans-serif" fontWeight="700" fontSize="7.5" fill="#fff">
-        PDF
-      </text>
+      <path d={PDF.d} transform={set(PDF, 7.5, 64, 92.8)} fill="#fff" />
     </svg>
   )
 }

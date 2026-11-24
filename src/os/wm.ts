@@ -242,7 +242,7 @@ function placed(id: AppId, s: WM): Rect {
     const y = Math.round(Math.max(...on.map((thing) => thing.y + thing.h)) + gap)
     const left = Math.min(h, box.y + box.h - y)
     if (left === h) whole.push({ ...spot, y })
-    else if (spec.resizable && left >= spec.min.h && left >= h * 0.75) shorter.push({ ...spot, y, h: left })
+    else if (spec.resizable && !spec.whole && left >= spec.min.h && left >= h * 0.75) shorter.push({ ...spot, y, h: left })
     const slim = Math.floor(icons.x - gap - box.x)
     if (on.includes(icons) && spec.slim && slim < w && slim >= spec.slim) narrower.push({ ...spot, x: box.x, w: slim })
     // Of the ways that do clear it, the one that covers least and goes least far
