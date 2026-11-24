@@ -265,7 +265,7 @@ npm run build:vc    # type-check, build into vc/dist, and write each page as HTM
 - **The way round** (`vc/src/Menu.tsx`) is one bar, at every width (the "header bar" layout, which
   replaced a rail down the left). It stays at the top of the window, 70px tall, in the page's own colour
   with a hairline under it: the wordmark on the left (to Quotes); on the right the four pages by name (the
-  current one at full strength and in square brackets) and two lines. Under 900px the names are not there and the two lines are the way round. The two lines open
+  current one at full strength and in DM Mono Medium, the face's heaviest cut) and two lines. Under 900px the names are not there and the two lines are the way round. The two lines open
   a panel from the right at any width; the panel has a cross of its own, which stands where the two lines
   are. It is a dialog (the keyboard goes into it and stays in it, Escape shuts it, the page behind does
   not scroll) and holds the case studies and the cross, Light / Dark on the row under, the four pages,
