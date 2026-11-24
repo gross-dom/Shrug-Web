@@ -75,9 +75,15 @@ body {
   display: none;
 }
 
-/* A list longer than the window scrolls in its place, under the bar */
+/* A list longer than the window scrolls in its place, under the bar. A row's surface reaches 12px past its
+   words on either side, so the box that scrolls is that much wider than the page's margin and padded back:
+   otherwise the surface is cut square where the box ends */
 .ui-page {
+  left: calc(var(--edge) - 12px);
+  right: calc(var(--edge) - 12px);
+  padding-right: 12px;
   padding-bottom: 28px;
+  padding-left: 12px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -168,8 +174,7 @@ body {
 
 .ui-prod-pic,
 .ui-row,
-.ui-rail ol a,
-.ui-round {
+.ui-rail ol a {
   transition: background-color 0.12s;
 }
 
@@ -187,9 +192,6 @@ body {
     transform: scale(1.03);
   }
 
-  .ui-media .ui-round:hover {
-    background: rgba(12, 12, 13, 0.8);
-  }
 
   a.ui-row:hover,
   .ui-rail ol a:hover {
@@ -214,6 +216,36 @@ body {
 /* A button that has been pressed dims while the answer comes */
 .ui-btn[data-busy] {
   opacity: 0.85;
+}
+
+/* Glass under the pointer catches a little more light, and gives a little when it is pressed */
+.ui-btn,
+.ui-round {
+  transition: filter 0.15s, transform 0.15s, background-color 0.12s;
+}
+
+@media (hover: hover) {
+  .ui-btn:not(.off):not(:disabled):hover,
+  .ui-round:hover {
+    filter: brightness(1.14);
+  }
+}
+
+.ui-btn:not(.off):not(:disabled):active {
+  transform: scale(0.985);
+}
+
+/* At checkout, while the points slider is still moving, the way to pay waits for the figure it comes to rest on */
+.ui-pay {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: opacity 0.15s;
+}
+
+.ui-pay[data-moving] {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* ---- How it moves: short, quiet, one easing ---- */

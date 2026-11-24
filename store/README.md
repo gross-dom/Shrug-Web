@@ -51,6 +51,10 @@ Whatever is bought goes through the same checkout. The button on a product says 
 where it is going, the sums, and one thing to press. With something to pay that is Apple Pay or the card;
 with nothing to pay it is **Confirm order**. The address is asked for there, not before.
 
+The **Use points** slider is on a product and again at checkout wherever points can be used, also where
+they would cover the whole price: every point is used to begin with, and a member who would sooner keep
+some eases it down and pays the rest by card.
+
 Besides buying:
 
 - Status **On request**: not sold. Its price is shown, the member presses Request, a row is written to
@@ -76,6 +80,10 @@ things move.
   (SHRUG VIP), printed on the pack, and on the member's card.
 - **Points** are shown with their mark (`PointsMark` in `src/brand.tsx`) wherever a number is a number of
   points. Dollars appear only as what is left to pay by card, and as postage.
+- **Buttons are glass**: a pane that what is behind shows through, lit along its top edge. The thing to do
+  next is the brightest one on the screen (`.ui-btn`), anything else that can be pressed a dimmer one
+  (`.sec`). The card page's labels and its "Go to the store" are the same; the links in its footer are the
+  footer's own small capitals.
 - **Photographs.** The ones Shrug has supplied are in `public/pictures/`, each whole, as WebP at two sizes,
   and are found by the product's name (`src/pictures.ts`). A product with none there shows what its row in
   Airtable has (`Picture`, which can hold several), and one with nothing shows a drawing of the sort of

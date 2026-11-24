@@ -14,7 +14,10 @@ has been dropped: the store is now a plain dark interface, and only the card pag
 > - **The name** is Shrug's wordmark from the brand kit (SHRUG VIP STORE in the bar, SHRUG VIP on the card
 >   page, SHRUG on the pack and the card), not type.
 > - **Prices are points**, shown with the points mark (a gold coin). Dollars are only what is left to pay
->   by card. "Your points" is "Use points".
+>   by card. "Your points" is "Use points", and its slider is there wherever points can be used, at
+>   checkout too. The balance in the bar is the mark and the figure, without the small card.
+> - **Buttons are glass**, not solid white and grey: the thing to do next is the brightest pane on the
+>   screen. Rule 3 holds, with "white" read as "bright".
 > - **The display** has no title or count, and its tiles are upright (4 by 5), filled by the photograph.
 >   The page scrolls. Rule 2's "fits six without scrolling" no longer holds.
 > - **A product** shows its own pictures, paged by the arrows; another product is reached from the foot.

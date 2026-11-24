@@ -123,8 +123,16 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
   const here = onFile(shop.member.shipTo) || onFile(typed)
   const number = way === 'buy' && !out ? numberOf(product) : ''
   const needsOption = product.options.length > 0 && !option
-  // Something to choose only where points do not cover it all: then the member says how many to use
-  const choosing = way === 'buy' && most > 0 && dueCents(product, fitPoints({ points: balance }, product, most)) > 0
+  // Wherever points can be used the member says how many, on the product and again at checkout: all of
+  // them to begin with, and fewer if they would sooner keep some and pay the rest by card
+  const choosing = way === 'buy' && most > 0 && price > 0
+  // At checkout the sums follow the slider at once; the way to pay is set up for the figure it comes to rest on
+  const [settled, setSettled] = useState(points)
+  useEffect(() => {
+    const rest = setTimeout(() => setSettled(points), 350)
+    return () => clearTimeout(rest)
+  }, [points])
+  const settledDue = way === 'buy' ? dueCents(product, settled) : 0
   const badge = badgeOf(product, shop.orders)
   const colors = product.options.map(swatchOf)
   const label = colors.length > 0 && colors.every((c) => c.color) ? 'Color' : 'Choice'
@@ -360,8 +368,8 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
     </>
   )
 
-  // Checkout: the same whether points cover it or not. With something left to pay, Apple Pay and the card;
-  // with nothing, one button that places the order
+  // Checkout: the same whether points cover it or not, with the slider again in case they would sooner not
+  // use them all. With something left to pay, Apple Pay and the card; with nothing, one button that places the order
   const checkout = (
     <>
       <div className="ui-item">
@@ -374,22 +382,30 @@ export function ProductView({ shop, product, phone, backend, go, onPlaced }: { s
         </div>
       </div>
       {ships && <ShipTo shop={shop} typed={typed} onType={setTyped} go={go} />}
-      {sums(false, true)}
+      {sums(true, true)}
       {said}
       {due > 0 ? (
-        <Pay
-          backend={backend}
-          product={product}
-          option={option}
-          points={points}
-          cents={due}
-          stripeKey={shop.stripeKey}
-          shipTo={onFile(typed) && !onFile(shop.member.shipTo) ? typed : ''}
-          wantsAddress={ships && !here}
-          askShipping={ships && !onFile(shop.member.shipTo)}
-          onDone={finish}
-          onError={setError}
-        />
+        settledDue > 0 ? (
+          <div className="ui-pay" data-moving={settled !== points || undefined}>
+            <Pay
+              backend={backend}
+              product={product}
+              option={option}
+              points={settled}
+              cents={settledDue}
+              stripeKey={shop.stripeKey}
+              shipTo={onFile(typed) && !onFile(shop.member.shipTo) ? typed : ''}
+              wantsAddress={ships && !here}
+              askShipping={ships && !onFile(shop.member.shipTo)}
+              onDone={finish}
+              onError={setError}
+            />
+          </div>
+        ) : (
+          <button type="button" className="ui-btn off" disabled>
+            Pay {fmtCents(due)}
+          </button>
+        )
       ) : (
         <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy || (ships && !here)} onClick={order}>
           {ships && !here ? 'Add where to send it' : 'Confirm order'}

@@ -64,14 +64,13 @@ function useCount(to: number) {
   return shown
 }
 
-/** The balance at the right of the bar: the member's card, small, in its metal, then their points. It goes to the card. */
+/** The balance at the right of the bar: the points mark, and their points. It goes to their card. */
 function Wallet({ shop, spent }: { shop: Shop; spent: number }) {
   const me = shop.member
   const metal = me.tier === 'gold' || me.tier === 'black' ? me.tier : 'silver'
   const points = useCount(me.points)
   return (
     <a className="ui-wallet" href="/" aria-label={`Your card: ${metal}${me.number ? `, number ${me.number}` : ''}, ${fmtPoints(me.points)} points`}>
-      <span className={`ui-chip m-${metal}`} />
       <span className="pts-n">
         <PointsMark size={16} />
         {fmtPoints(points)}
