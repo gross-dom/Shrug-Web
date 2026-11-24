@@ -53,7 +53,43 @@ export interface Product {
   limited: boolean
   needsAddress: boolean
   place: number
+  /** For a document: every member is shown it in Updates, and those it is not written for may ask for it. */
+  listed?: boolean
+  /** For a document: the heading it is listed under in Updates. */
+  group?: string
 }
+
+/** An update: a document, as one member is shown it. Not for sale, so not in the store.
+ *   open       theirs to read
+ *   request    listed to them, but written for others: they may ask
+ *   requested  they have asked
+ *   soon       listed, with no file yet */
+export type UpdateState = 'open' | 'request' | 'requested' | 'soon'
+
+export interface Update {
+  id: string
+  name: string
+  /** The heading it is under: Funds, SPVs. */
+  group: string
+  /** Who it was written for, as its second line says it: "Everyone on the list", "Shrug 1 LPs". */
+  forWhom: string
+  state: UpdateState
+}
+
+export const UPDATE_GROUPS = ['Funds', 'SPVs']
+
+/** A document as an update for one member, or null where they are not shown it at all. */
+export function updateOf(member: Pick<Member, 'roles' | 'funds'>, product: Product, orders: Pick<Order, 'productId' | 'status'>[]): Update | null {
+  if (product.kind !== 'Document') return null
+  const theirs = canSee(member, product)
+  if (!theirs && !product.listed) return null
+  // Theirs to read once it has a file (and, for one with a price, once they have it)
+  const state: UpdateState = !product.hasFile ? 'soon' : theirs && (free(product) || has(orders, product)) ? 'open' : has(orders, product) ? 'requested' : 'request'
+  return { id: product.id, name: product.name, group: product.group || UPDATE_GROUPS[0]!, forWhom: product.visibleTo.includes('Everyone') ? 'Everyone on the list' : product.visibleTo.join(', '), state }
+}
+
+/** An address kept on file is a few lines of text: a name, a street, a city. Two lines at least. */
+export const onFile = (shipTo: string | null | undefined): shipTo is string => !!shipTo && shipTo.split('\n').filter((line) => line.trim()).length >= 2
 
 export type OrderStatus = 'Paid' | 'Points' | 'Pre-order' | 'Requested' | 'Needs review' | 'Sent' | 'Refunded'
 
@@ -172,6 +208,8 @@ export interface Asking {
   option?: string
   points?: number
   address?: Address | null
+  /** The address the member has on file, which does as well. */
+  shipTo?: string | null
 }
 
 export function refusalOf(member: Member, product: Product, orders: Order[], asked: Asking): Refusal | null {
@@ -186,7 +224,7 @@ export function refusalOf(member: Member, product: Product, orders: Order[], ask
   const points = asked.points ?? 0
   if (!Number.isInteger(points) || points !== fitPoints(member, product, points)) return 'points'
   // Something to pay: Apple Pay or the card form gives the address, at the payment
-  if (dueCents(product, points) === 0 && asksAddress(product) && !complete(asked.address)) return 'address'
+  if (dueCents(product, points) === 0 && asksAddress(product) && !complete(asked.address) && !onFile(asked.shipTo)) return 'address'
   return null
 }
 

@@ -12,6 +12,7 @@ export const T = {
   signIns: 'tblxvVY5oQzLfKMJD',
   products: 'tblCKNmIKo1ILyqbA',
   orders: 'tblYKwwbauvFT3IiM',
+  opens: 'tblt5ocEIaPmBjxXM',
 } as const
 
 export const F = {
@@ -29,6 +30,7 @@ export const F = {
     seenPoints: 'fldXJxGGsGHydiXtX',
     lastSeen: 'fldw1If6Q1JJxzhFt',
     funds: 'fldkEroVBB9NlXr5s',
+    shipTo: 'fldLUYHJH76iYCXFX',
   },
   application: { email: 'fld9g8dpI4OvhZIgJ', applied: 'fld9cmamUhBgPMwAB' },
   signIn: { email: 'fld29paPsXRkNu1pL', state: 'fldb64o16mO357J5n' },
@@ -49,6 +51,8 @@ export const F = {
     limited: 'fldp2S6k2iRbBFAKn',
     needsAddress: 'fldu3m5SIHPJAIWoT',
     place: 'fld6yXcQRnqjkQc7w',
+    listed: 'fldxK7H44CRxDVOTy',
+    group: 'fldEo9R1TCFpL8GMz',
   },
   order: {
     reference: 'fldgPuTLwX6GcDsk1',
@@ -64,6 +68,7 @@ export const F = {
     payment: 'fldzCk31hrEH5VB6y',
     placed: 'fldAdydjtlAOXXigA',
   },
+  open: { what: 'fldazM3kVUOVJQ5SB', member: 'fldqPwDpBWIfvuI07', product: 'fldMkzqavs1XCWnEi', how: 'fldh7hLEDig37xDPa', when: 'fldIagwuxwzIlIwKY' },
 } as const
 
 export type Fields = Record<string, unknown>

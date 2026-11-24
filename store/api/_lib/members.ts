@@ -40,13 +40,31 @@ export function cardOf(row: Row) {
     since: Number.isFinite(since) ? since : null,
     reason: str(row.fields[F.member.reason]) || null,
     emails: row.fields[F.member.noEmails] !== true,
+    email: str(row.fields[F.member.email]),
+    shipTo: str(row.fields[F.member.shipTo]).trim(),
   }
 }
+
+/** An address as it is kept on file: a few lines, none of them long, nothing else. */
+export const tidied = (shipTo: unknown) =>
+  typeof shipTo === 'string'
+    ? shipTo
+        .split('\n')
+        .map((line) => line.trim().slice(0, 120))
+        .filter(Boolean)
+        .slice(0, 6)
+        .join('\n')
+    : ''
+
+/** Keeps an address on a member's row, for their next order. */
+export const keepAddress = (row: Row, shipTo: string) => change(T.members, row.id, { [F.member.shipTo]: shipTo })
 
 /** The answer to "who am I", for a member: their card, and the balance they last saw. Looking counts as seeing. */
 export async function answerFor(row: Row) {
   const seen = num(row.fields[F.member.seenPoints])
   const member = cardOf(row)
   await change(T.members, row.id, { [F.member.seenPoints]: member.points, [F.member.lastSeen]: new Date().toISOString() }).catch(() => {})
-  return { status: 'member' as const, member, seenPoints: seen }
+  // The card is told what it always was: an address is the store's business, and is not sent to it
+  const { email: _email, shipTo: _shipTo, ...card } = member
+  return { status: 'member' as const, member: card, seenPoints: seen }
 }

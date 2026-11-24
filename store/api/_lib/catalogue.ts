@@ -1,5 +1,5 @@
 import { all, F, files, list, num, str, T, type Row } from './airtable.js'
-import { canSee, type Kind, type Member, type Order, type OrderStatus, type Product, type Status } from '../../shared/rules.js'
+import { canSee, updateOf, type Kind, type Member, type Order, type OrderStatus, type Product, type Status, type Update } from '../../shared/rules.js'
 
 // The store's shelves and a member's orders, read from Airtable and put into the shapes the rules work with.
 
@@ -35,6 +35,8 @@ export function productOf(row: Row): Product | null {
     limited: f[F.product.limited] === true,
     needsAddress: f[F.product.needsAddress] === true,
     place: num(f[F.product.place]) ?? 9999,
+    listed: f[F.product.listed] === true,
+    group: str(f[F.product.group]),
   }
 }
 
@@ -46,6 +48,16 @@ export async function shelvesFor(member: Member): Promise<{ products: Product[];
     .filter((product): product is Product => !!product && canSee(member, product))
     .sort((a, b) => a.place - b.place || a.name.localeCompare(b.name))
   return { products, rows }
+}
+
+/** The updates a member is shown: every document that is theirs, or listed to everyone, in its order. */
+export function updatesFor(member: Member, rows: Row[], orders: Order[]): Update[] {
+  return rows
+    .map(productOf)
+    .filter((product): product is Product => !!product)
+    .sort((a, b) => a.place - b.place || a.name.localeCompare(b.name))
+    .map((product) => updateOf(member, product, orders))
+    .filter((update): update is Update => !!update)
 }
 
 export function orderOf(row: Row, names: Map<string, string>): Order {

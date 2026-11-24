@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto'
 import { add, all, change, F, num, one, remove, str, T, type Row } from './airtable.js'
+import { keepAddress } from './members.js'
 import { orderOf, productOf } from './catalogue.js'
 import { intentOf, type Intent } from './stripe.js'
 import { dueCents, fitPoints, numberOf, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
@@ -67,8 +68,8 @@ export const request = (member: Row, productRow: Row, product: Product, option: 
 export const reserve = (member: Row, productRow: Row, product: Product, option: string) => place({ member, productRow, product, status: 'Pre-order', option, shipTo: '', takes: false })
 
 /** Bought with nothing left to pay: the points cover it (or it costs nothing). */
-export const withPoints = (member: Row, productRow: Row, product: Product, option: string, points: number, address: Address | null) =>
-  place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Points', option, shipTo: address ? written(address) : '', points, takes: true })
+export const withPoints = (member: Row, productRow: Row, product: Product, option: string, points: number, address: Address | string | null) =>
+  place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Points', option, shipTo: !address ? '' : typeof address === 'string' ? address : written(address), points, takes: true })
 
 const shipToOf = (intent: Intent) => {
   const to = intent.shipping
@@ -90,6 +91,10 @@ export async function settle(paymentId: string, forMember?: string): Promise<{ o
   const already = (await all(T.orders)).find((row) => str(row.fields[F.order.payment]) === paymentId)
   if (already) return { order: orderOf(already, new Map([[productRow.id, str(productRow.fields[F.product.name])]])), points: balance }
   const product = productOf(productRow)
+  // It goes to the address on file. With none, the one the payment gave is used, and kept for next time
+  const kept = str(member.fields[F.member.shipTo]).trim()
+  const shipTo = kept || shipToOf(intent)
+  if (!kept && shipTo) await keepAddress(member, shipTo).catch(() => {})
   const paid = intent.amount_received / 100
   const option = intent.metadata.option ?? ''
   // The points that were to be used are said on the payment itself, as the store wrote them when it began
@@ -97,9 +102,9 @@ export async function settle(paymentId: string, forMember?: string): Promise<{ o
   const sound = !!product && wayOf(product) === 'buy' && !soldOut(product) && Number.isInteger(points) && points === fitPoints({ points: balance }, product, points) && dueCents(product, points) === intent.amount_received
   if (!product || !sound) {
     const shown = product ?? ({ ...EMPTY, id: productRow.id, name: str(productRow.fields[F.product.name]) } as Product)
-    return place({ member, productRow, product: shown, status: 'Needs review', option, shipTo: shipToOf(intent), paid, payment: paymentId, takes: false })
+    return place({ member, productRow, product: shown, status: 'Needs review', option, shipTo, paid, payment: paymentId, takes: false })
   }
-  return place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Paid', option, shipTo: shipToOf(intent), paid, payment: paymentId, points, takes: true })
+  return place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Paid', option, shipTo, paid, payment: paymentId, points, takes: true })
 }
 
 const EMPTY: Omit<Product, 'id' | 'name'> = {
