@@ -1,24 +1,33 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, CircleHelp, Clock, CornerDownLeft, Flame, Forward, Inbox, Keyboard, Lightbulb, Link2, Lock, Mail as MailGlyph, Menu, MessageCircle, Reply, Search, Sparkles, SquarePen, Undo2, X, Zap } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
 import { launchApp, showCompany } from '../os/launch'
+import { mail, markDone, markUnread, openExchange, star } from '../os/mail'
+import { linkTo } from '../os/place'
+import { useStore } from '../os/store'
 import { writeToShrug } from '../os/write'
 import '../styles/desk/mail.css'
 
-// Mail (design/v1, "Mail"): twenty email exchanges that led to something, in a window that looks and is
-// driven as Superhuman is. It is read-only. Every one of Superhuman's shortcuts is answered: the ones that
-// move about, open, search and ask for the command palette do what they do there; the ones that would send,
-// archive, star, snooze, label or delete say that nothing here changes. Reply opens a new message to Shrug
-// in Messages. Everything in Mail is public.
+// Mail (design/v1, "Mail", and Dom's notes after testing it): twenty email exchanges that led to something,
+// in a window that looks and is driven as Superhuman is. The emails cannot be changed and nothing is sent
+// from here; what a visitor can do is what is theirs to do with them: mark one done (it goes to Done, in the
+// bar), star it, mark it unread, share it (a link that opens it on this site), search, and compose (a new
+// message to Shrug, in Messages). Those are kept in their browser (src/os/mail.ts).
+//
+// Every one of Superhuman's shortcuts is answered. The ones that move about, open, search and ask for the
+// command palette do what they do there; so do the ones above; the ones that would send, snooze, label or
+// delete say that nothing of the kind happens here. Everything in Mail is public.
 //
 // The shortcuts are COMMANDS, below: each has its name, its keys as Superhuman has them, and what it does
-// here. The command palette (Cmd K) lists them, and so does the sheet that ? opens.
+// here. The sheet that ? opens lists them all; the command palette (Cmd K, or the lightning bolt) lists only
+// what can be done.
 
-type Split = 'all' | Led
+/** The splits along the bar: the inbox's five, then Done, and Starred once anything is. */
+type Split = 'all' | Led | 'done' | 'starred'
 
 /** What a command does here. A string is what a read-only one says instead of doing anything. */
-type Does = 'next' | 'previous' | 'open' | 'back' | 'next-split' | 'previous-split' | 'top' | 'bottom' | 'inbox' | 'search' | 'command' | 'shortcuts' | 'reply' | 'led' | 'next-message' | 'previous-message' | 'expand' | 'zero' | 'undo' | { says: string }
+type Does = 'next' | 'previous' | 'open' | 'back' | 'next-split' | 'previous-split' | 'top' | 'bottom' | 'inbox' | 'search' | 'command' | 'shortcuts' | 'reply' | 'led' | 'next-message' | 'previous-message' | 'expand' | 'zero' | 'undo' | 'done' | 'not-done' | 'star' | 'unread' | 'read' | 'share' | 'go-done' | 'go-starred' | { says: string }
 
 interface Command {
   id: string
@@ -27,12 +36,12 @@ interface Command {
   keys: string[]
   /** What a press must be to be it (see `pressed`): any of these. A pair after G is written "g i". */
   when: string[]
-  group: 'Move about' | 'In a conversation' | 'Find and ask' | 'Read-only here'
+  group: 'Move about' | 'In a conversation' | 'Yours to do' | 'Find and ask' | 'Not here'
   does: Does
 }
 
-const nothing = (done: string): Does => ({ says: `Read-only. Nothing is ${done}.` })
-const elsewhere: Does = { says: 'There is only the inbox here: twenty exchanges that led to something.' }
+const nothing = (done: string): Does => ({ says: `Not here. Nothing is ${done}.` })
+const elsewhere: Does = { says: 'There is the inbox, Done and Starred here: twenty exchanges that led to something.' }
 
 const COMMANDS: Command[] = [
   { id: 'zero', name: 'Achieve Inbox Zero', keys: ['⌘', '⇧', 'E'], when: ['mod+shift+e'], group: 'Find and ask', does: 'zero' },
@@ -56,42 +65,44 @@ const COMMANDS: Command[] = [
   { id: 'reply-all', name: 'Reply all', keys: ['↵'], when: [], group: 'In a conversation', does: 'reply' },
   { id: 'compose', name: 'Compose', keys: ['C'], when: ['c'], group: 'In a conversation', does: 'reply' },
   { id: 'undo', name: 'Undo', keys: ['Z'], when: ['z'], group: 'Find and ask', does: 'undo' },
-  // ---- what would change mail: said, and not done
-  { id: 'done', name: 'Mark done', keys: ['E'], when: ['e'], group: 'Read-only here', does: nothing('marked done') },
-  { id: 'not-done', name: 'Mark not done', keys: ['⇧', 'E'], when: ['shift+e'], group: 'Read-only here', does: nothing('moved back') },
-  { id: 'remind', name: 'Remind me', keys: ['H'], when: ['h'], group: 'Read-only here', does: nothing('snoozed') },
-  { id: 'star', name: 'Star', keys: ['S'], when: ['s'], group: 'Read-only here', does: nothing('starred') },
-  { id: 'unread', name: 'Mark unread', keys: ['U'], when: ['u'], group: 'Read-only here', does: nothing('marked unread') },
-  { id: 'read', name: 'Mark read', keys: ['⇧', 'U'], when: ['shift+u'], group: 'Read-only here', does: nothing('marked read') },
-  { id: 'trash', name: 'Trash', keys: ['#'], when: ['#'], group: 'Read-only here', does: nothing('deleted') },
-  { id: 'spam', name: 'Mark as spam', keys: ['!'], when: ['!'], group: 'Read-only here', does: nothing('marked as spam') },
-  { id: 'label', name: 'Add or remove label', keys: ['L'], when: ['l'], group: 'Read-only here', does: nothing('labeled') },
-  { id: 'unlabel', name: 'Remove label', keys: ['Y'], when: ['y'], group: 'Read-only here', does: nothing('unlabeled') },
-  { id: 'move', name: 'Move', keys: ['V'], when: ['v'], group: 'Read-only here', does: nothing('moved') },
-  { id: 'mute', name: 'Mute', keys: ['⇧', 'M'], when: ['shift+m'], group: 'Read-only here', does: nothing('muted') },
-  { id: 'unsubscribe', name: 'Unsubscribe', keys: ['⌘', 'U'], when: ['mod+u'], group: 'Read-only here', does: nothing('unsubscribed from') },
-  { id: 'select', name: 'Select conversation', keys: ['X'], when: ['x'], group: 'Read-only here', does: nothing('selected') },
-  { id: 'select-more', name: 'Add to selection', keys: ['⇧', 'J'], when: ['shift+j', 'shift+k', 'shift+ArrowDown', 'shift+ArrowUp'], group: 'Read-only here', does: nothing('selected') },
-  { id: 'forward', name: 'Forward', keys: ['F'], when: ['f'], group: 'Read-only here', does: nothing('forwarded') },
-  { id: 'send', name: 'Send', keys: ['⌘', '↵'], when: ['mod+Enter', 'mod+shift+Enter'], group: 'Read-only here', does: nothing('sent') },
-  { id: 'send-later', name: 'Send later', keys: ['⌘', '⇧', 'L'], when: ['mod+shift+l'], group: 'Read-only here', does: nothing('scheduled') },
-  { id: 'snippet', name: 'Use snippet', keys: [';'], when: [';', 'mod+;'], group: 'Read-only here', does: nothing('written') },
-  { id: 'intro', name: 'Instant intro', keys: ['⌘', '⇧', 'I'], when: ['mod+shift+i'], group: 'Read-only here', does: nothing('sent') },
-  { id: 'redo', name: 'Redo', keys: ['⇧', 'Z'], when: ['shift+z'], group: 'Read-only here', does: nothing('redone') },
-  { id: 'starred', name: 'Go to Starred', keys: ['G', 'S'], when: ['g s'], group: 'Read-only here', does: elsewhere },
-  { id: 'drafts', name: 'Go to Drafts', keys: ['G', 'D'], when: ['g d'], group: 'Read-only here', does: elsewhere },
-  { id: 'sent', name: 'Go to Sent', keys: ['G', 'T'], when: ['g t'], group: 'Read-only here', does: elsewhere },
-  { id: 'done-folder', name: 'Go to Done', keys: ['G', 'E'], when: ['g e'], group: 'Read-only here', does: elsewhere },
-  { id: 'reminders', name: 'Go to Reminders', keys: ['G', 'H'], when: ['g h'], group: 'Read-only here', does: elsewhere },
-  { id: 'all-mail', name: 'Go to All Mail', keys: ['G', 'A'], when: ['g a'], group: 'Read-only here', does: elsewhere },
-  { id: 'trash-folder', name: 'Go to Trash', keys: ['G', '#'], when: ['g #'], group: 'Read-only here', does: elsewhere },
-  { id: 'spam-folder', name: 'Go to Spam', keys: ['G', '!'], when: ['g !'], group: 'Read-only here', does: elsewhere },
-  { id: 'label-folder', name: 'Go to label', keys: ['G', 'L'], when: ['g l'], group: 'Read-only here', does: elsewhere },
+  // ---- what a visitor can do with the twenty: kept in their own browser
+  { id: 'done', name: 'Mark Done', keys: ['E'], when: ['e'], group: 'Yours to do', does: 'done' },
+  { id: 'not-done', name: 'Mark Not Done', keys: ['⇧', 'E'], when: ['shift+e'], group: 'Yours to do', does: 'not-done' },
+  { id: 'star', name: 'Star', keys: ['S'], when: ['s'], group: 'Yours to do', does: 'star' },
+  { id: 'unread', name: 'Mark Unread', keys: ['U'], when: ['u'], group: 'Yours to do', does: 'unread' },
+  { id: 'read', name: 'Mark Read', keys: ['⇧', 'U'], when: ['shift+u'], group: 'Yours to do', does: 'read' },
+  { id: 'share', name: 'Share Conversation', keys: ['⌘', 'S'], when: ['mod+s'], group: 'Yours to do', does: 'share' },
+  { id: 'done-folder', name: 'Go to Done', keys: ['G', 'E'], when: ['g e'], group: 'Move about', does: 'go-done' },
+  { id: 'starred', name: 'Go to Starred', keys: ['G', 'S'], when: ['g s'], group: 'Move about', does: 'go-starred' },
+  // ---- what would send, file or delete mail: said, and not done
+  { id: 'remind', name: 'Remind me', keys: ['H'], when: ['h'], group: 'Not here', does: nothing('snoozed') },
+  { id: 'trash', name: 'Trash', keys: ['#'], when: ['#'], group: 'Not here', does: nothing('deleted') },
+  { id: 'spam', name: 'Mark as spam', keys: ['!'], when: ['!'], group: 'Not here', does: nothing('marked as spam') },
+  { id: 'label', name: 'Add or remove label', keys: ['L'], when: ['l'], group: 'Not here', does: nothing('labeled') },
+  { id: 'unlabel', name: 'Remove label', keys: ['Y'], when: ['y'], group: 'Not here', does: nothing('unlabeled') },
+  { id: 'move', name: 'Move', keys: ['V'], when: ['v'], group: 'Not here', does: nothing('moved') },
+  { id: 'mute', name: 'Mute', keys: ['⇧', 'M'], when: ['shift+m'], group: 'Not here', does: nothing('muted') },
+  { id: 'unsubscribe', name: 'Unsubscribe', keys: ['⌘', 'U'], when: ['mod+u'], group: 'Not here', does: nothing('unsubscribed from') },
+  { id: 'select', name: 'Select conversation', keys: ['X'], when: ['x'], group: 'Not here', does: nothing('selected') },
+  { id: 'select-more', name: 'Add to selection', keys: ['⇧', 'J'], when: ['shift+j', 'shift+k', 'shift+ArrowDown', 'shift+ArrowUp'], group: 'Not here', does: nothing('selected') },
+  { id: 'forward', name: 'Forward', keys: ['F'], when: ['f'], group: 'Not here', does: nothing('forwarded') },
+  { id: 'send', name: 'Send', keys: ['⌘', '↵'], when: ['mod+Enter', 'mod+shift+Enter'], group: 'Not here', does: nothing('sent') },
+  { id: 'send-later', name: 'Send later', keys: ['⌘', '⇧', 'L'], when: ['mod+shift+l'], group: 'Not here', does: nothing('scheduled') },
+  { id: 'snippet', name: 'Use snippet', keys: [';'], when: [';', 'mod+;'], group: 'Not here', does: nothing('written') },
+  { id: 'intro', name: 'Instant intro', keys: ['⌘', '⇧', 'I'], when: ['mod+shift+i'], group: 'Not here', does: nothing('sent') },
+  { id: 'redo', name: 'Redo', keys: ['⇧', 'Z'], when: ['shift+z'], group: 'Not here', does: nothing('redone') },
+  { id: 'drafts', name: 'Go to Drafts', keys: ['G', 'D'], when: ['g d'], group: 'Not here', does: elsewhere },
+  { id: 'sent', name: 'Go to Sent', keys: ['G', 'T'], when: ['g t'], group: 'Not here', does: elsewhere },
+  { id: 'reminders', name: 'Go to Reminders', keys: ['G', 'H'], when: ['g h'], group: 'Not here', does: elsewhere },
+  { id: 'all-mail', name: 'Go to All Mail', keys: ['G', 'A'], when: ['g a'], group: 'Not here', does: elsewhere },
+  { id: 'trash-folder', name: 'Go to Trash', keys: ['G', '#'], when: ['g #'], group: 'Not here', does: elsewhere },
+  { id: 'spam-folder', name: 'Go to Spam', keys: ['G', '!'], when: ['g !'], group: 'Not here', does: elsewhere },
+  { id: 'label-folder', name: 'Go to label', keys: ['G', 'L'], when: ['g l'], group: 'Not here', does: elsewhere },
 ]
 
-/** The six the palette opens on, as the design lists them. */
-const FIRST = ['zero', 'inbox', 'reply', 'led', 'search', 'shortcuts']
-const GROUPS: Command['group'][] = ['Move about', 'In a conversation', 'Find and ask', 'Read-only here']
+/** What the palette opens on: the five things there are to do (Dom's list). */
+const FIRST = ['done', 'star', 'unread', 'search', 'compose']
+const GROUPS: Command['group'][] = ['Move about', 'In a conversation', 'Yours to do', 'Find and ask', 'Not here']
 
 /** A press, as COMMANDS write one: "j", "shift+o", "mod+k", "Escape". (Shift is said for a letter and a named
  * key; a sign that needs it to be typed, as ? and # do, is the sign alone.) */
@@ -135,6 +146,13 @@ const ICON: Partial<Record<string, ReactNode>> = {
   search: <Search size={16} strokeWidth={1.9} aria-hidden />,
   shortcuts: <Keyboard size={16} strokeWidth={1.9} aria-hidden />,
   undo: <Undo2 size={16} strokeWidth={1.9} aria-hidden />,
+  done: <Check size={16} strokeWidth={1.9} aria-hidden />,
+  'not-done': <Inbox size={16} strokeWidth={1.9} aria-hidden />,
+  star: <Star size={16} strokeWidth={1.9} aria-hidden />,
+  unread: <MailGlyph size={16} strokeWidth={1.9} aria-hidden />,
+  read: <MailOpen size={16} strokeWidth={1.9} aria-hidden />,
+  compose: <SquarePen size={16} strokeWidth={1.9} aria-hidden />,
+  share: <Share size={16} strokeWidth={1.9} aria-hidden />,
 }
 
 export function MailApp() {
@@ -142,12 +160,17 @@ export function MailApp() {
   const [split, setSplit] = useState<Split>('all')
   const [query, setQuery] = useState<string | null>(null)
   const [at, setAt] = useState(0)
-  const [open, setOpen] = useState<string | null>(null)
+  // Which conversation is open, and what has been done with the twenty, are kept where the desk can reach
+  // them (src/os/mail.ts): the address says which is open, and a link that names one opens it
+  const { open, done, starred, unread } = useStore(mail, (s) => s)
+  const setOpen = openExchange
   const [over, setOver] = useState<'command' | 'shortcuts' | null>(null)
   const [zero, setZero] = useState(false)
-  /** In a conversation: the message the keyboard is on, and the ones opened out of their one line. */
+  /** In a conversation: the message the keyboard is on, and the ones that are open (the rest are a line each). */
   const [message, setMessage] = useState(0)
   const [unfolded, setUnfolded] = useState<number[]>([])
+  /** The last thing marked done, which Z brings back. */
+  const undone = useRef<string | null>(null)
   const [lit, setLit] = useState(false)
   const [said, setSaid] = useState<{ text: string; n: number } | null>(null)
   /** The hint under a search opened with the pointer: there is a key for it. */
@@ -156,13 +179,19 @@ export function MailApp() {
   const g = useRef(0)
 
   const q = (query ?? '').trim().toLowerCase()
+  /** Which split an exchange is under: Done once it is marked done (it has left the inbox), Starred if it is starred, or its own. */
+  const under = (x: Exchange, id: Split) => (id === 'done' ? done.includes(x.id) : id === 'starred' ? starred.includes(x.id) : !done.includes(x.id) && (id === 'all' || x.led === id))
   const rows = useMemo(
-    () => EXCHANGES.filter((x) => (split === 'all' || x.led === split) && (!q || [x.from, x.subject, x.first, x.led, x.ledTo].some((text) => text.toLowerCase().includes(q)))),
-    [split, q],
+    // (a search looks through all twenty, wherever they are)
+    () => EXCHANGES.filter((x) => (q ? [x.from, x.subject, x.first, x.led, x.ledTo].some((text) => text.toLowerCase().includes(q)) : under(x, split))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [split, q, done, starred],
   )
   const cursor = Math.min(at, Math.max(0, rows.length - 1))
   const thread = open ? (EXCHANGES.find((x) => x.id === open) ?? null) : null
-  const count = (id: Split) => (id === 'all' ? EXCHANGES.length : EXCHANGES.filter((x) => x.led === id).length)
+  const count = (id: Split) => EXCHANGES.filter((x) => under(x, id)).length
+  /** The splits along the bar: Starred is there once something is. */
+  const splits: { id: Split; label: string }[] = [...SPLITS, { id: 'done', label: 'Done' }, ...(starred.length || split === 'starred' ? [{ id: 'starred' as const, label: 'Starred' }] : [])]
 
   const say = (text: string) => setSaid((s) => ({ text, n: (s?.n ?? 0) + 1 }))
   useEffect(() => {
@@ -180,13 +209,19 @@ export function MailApp() {
     root.current?.querySelector('.ml-row.on')?.scrollIntoView({ block: 'nearest' })
   }, [cursor, split, q, open])
 
-  const show = (x: Exchange) => {
-    setOpen(x.id)
-    // A conversation opens on its newest emails: the earlier ones are a line each until they are asked for
-    setUnfolded([])
-    setMessage(Math.max(0, x.emails.length - 2))
+  const show = (x: Exchange) => setOpen(x.id)
+  // A conversation opens on its newest email: the earlier ones are a line each until they are asked for.
+  // (Whatever opened it: a row, a key, or a link that named it)
+  useEffect(() => {
+    if (!thread) return
+    setUnfolded([thread.emails.length - 1])
+    setMessage(thread.emails.length - 1)
     setLit(false)
-  }
+    setZero(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+  /** What a command acts on: the conversation that is open, or the row the keyboard is on. */
+  const target = () => thread ?? rows[cursor] ?? null
   const stepThread = (by: number) => {
     const list = split === 'all' && !q ? EXCHANGES : rows
     const now = list.findIndex((x) => x.id === open)
@@ -210,10 +245,54 @@ export function MailApp() {
         return
       case 'next-split':
       case 'previous-split': {
-        const now = SPLITS.findIndex((s) => s.id === split)
-        setSplit(SPLITS[(now + (does === 'next-split' ? 1 : -1) + SPLITS.length) % SPLITS.length]!.id)
+        const now = splits.findIndex((s) => s.id === split)
+        setSplit(splits[(now + (does === 'next-split' ? 1 : -1) + splits.length) % splits.length]!.id)
         setOpen(null)
         return setAt(0)
+      }
+      case 'go-done':
+      case 'go-starred':
+        setZero(false)
+        setOpen(null)
+        setQuery(null)
+        setSplit(does === 'go-done' ? 'done' : 'starred')
+        return setAt(0)
+      case 'done':
+      case 'not-done': {
+        const x = target()
+        if (!x) return
+        const on = does === 'done'
+        if (on === done.includes(x.id)) return say(on ? 'It is in Done already.' : 'It is in the inbox already.')
+        markDone(x.id, on)
+        undone.current = on ? x.id : null
+        // Done with, it is put away: the list is what is left
+        if (thread) setOpen(null)
+        return say(on ? 'Marked Done. Z brings it back.' : 'Moved back to the inbox.')
+      }
+      case 'star': {
+        const x = target()
+        if (!x) return
+        const on = !starred.includes(x.id)
+        star(x.id, on)
+        return say(on ? 'Starred.' : 'Star removed.')
+      }
+      case 'unread':
+      case 'read': {
+        const x = target()
+        if (!x) return
+        markUnread(x.id, does === 'unread')
+        // (unread, it is back in the list as it was before it was opened)
+        if (does === 'unread' && thread) setOpen(null)
+        return say(does === 'unread' ? 'Marked Unread.' : 'Marked Read.')
+      }
+      case 'share': {
+        const x = target()
+        if (!x) return
+        // A link to this conversation on this site: whoever opens it lands in Mail, on it
+        const link = linkTo({ app: 'mail', at: x.id })
+        const copied = () => say('Link copied. It opens this conversation here.')
+        if (navigator.clipboard?.writeText) return void navigator.clipboard.writeText(link).then(copied, () => say(link))
+        return say(link)
       }
       case 'top':
         return thread ? setMessage(0) : setAt(0)
@@ -246,9 +325,12 @@ export function MailApp() {
         return setLit(true)
       }
       case 'next-message':
-        return void (thread && setMessage((m) => Math.min(thread.emails.length - 1, m + 1)))
-      case 'previous-message':
-        return void (thread && setMessage((m) => Math.max(0, m - 1)))
+      case 'previous-message': {
+        if (!thread) return
+        const to = Math.max(0, Math.min(thread.emails.length - 1, message + (does === 'next-message' ? 1 : -1)))
+        setMessage(to)
+        return setUnfolded((u) => (u.includes(to) ? u : [...u, to]))
+      }
       case 'expand':
         return void (thread && setUnfolded(thread.emails.map((_, i) => i)))
       case 'zero':
@@ -256,7 +338,13 @@ export function MailApp() {
         setQuery(null)
         return setZero(true)
       case 'undo':
-        return zero ? setZero(false) : say('Nothing to undo: nothing here changes.')
+        if (zero) return setZero(false)
+        if (undone.current) {
+          markDone(undone.current, false)
+          undone.current = null
+          return say('Moved back to the inbox.')
+        }
+        return say('Nothing to undo.')
     }
   }
 
@@ -296,10 +384,9 @@ export function MailApp() {
     root.current?.querySelector(`[data-email="${message}"]`)?.scrollIntoView({ block: 'nearest' })
   }, [message, thread])
 
-  const splitName = SPLITS.find((s) => s.id === split)!.label
+  const splitName = splits.find((s) => s.id === split)?.label ?? 'All'
   /** Who the pane at the right is about: whoever the conversation open, or the row the keyboard is on, is from. */
   const about = thread ?? rows[cursor] ?? null
-  const readOnly = (what: string) => say(`Read-only. Nothing is ${what}.`)
 
   // The title bar: one long pill, as a browser's tab would be, saying where this is
   const bar = (
@@ -316,9 +403,11 @@ export function MailApp() {
 
   const tabs = (
     <div className="ml-tabs" role="tablist" aria-label="Splits">
-      {SPLITS.map((s) => (
-        <button key={s.id} type="button" role="tab" aria-selected={split === s.id} className={split === s.id ? 'on' : undefined} onClick={() => (setSplit(s.id), setOpen(null), setZero(false), setAt(0), back())}>
-          {s.label} <small>{count(s.id)}</small>
+      {splits.map((s) => (
+        <button key={s.id} type="button" role="tab" aria-selected={split === s.id} aria-label={`${s.label}, ${count(s.id)}`} className={split === s.id ? 'on' : undefined} onClick={() => (setSplit(s.id), setOpen(null), setZero(false), setAt(0), back())}>
+          {/* (the count sits close against its split's name, as Superhuman sets it) */}
+          {s.label}
+          <small>{count(s.id)}</small>
         </button>
       ))}
     </div>
@@ -344,19 +433,36 @@ export function MailApp() {
           const head = group !== under
           under = group
           return (
-            <li key={x.id} id={`mail-${x.id}`} role="option" aria-selected={i === cursor} className={`ml-row${i === cursor ? ' on' : ''}`} data-group={head ? group : undefined} onPointerMove={(e) => e.pointerType === 'mouse' && i !== cursor && setAt(i)} onClick={() => (setAt(i), show(x))}>
-              <b>{x.from}</b>
+            <li
+              key={x.id}
+              id={`mail-${x.id}`}
+              role="option"
+              aria-selected={i === cursor}
+              className={`ml-row${i === cursor ? ' on' : ''}${unread.includes(x.id) ? ' unread' : ''}`}
+              data-group={head ? group : undefined}
+              onPointerMove={(e) => e.pointerType === 'mouse' && i !== cursor && setAt(i)}
+              onClick={() => (setAt(i), show(x))}
+            >
+              <b>
+                {unread.includes(x.id) && <i className="ml-dot" aria-label="Unread" role="img" />}
+                {x.from}
+              </b>
               <span className="s">
+                {starred.includes(x.id) && <Star className="ml-star" size={12} strokeWidth={0} fill="currentColor" aria-label="Starred" role="img" />}
                 <span className={`ml-chip ${x.led.toLowerCase()}`}>{x.led.toLowerCase()}</span>
                 <em>{x.subject}</em>
                 {x.first}
               </span>
               {i === cursor ? (
-                // (what Superhuman offers on the row it is on: each would change mail, and says so)
+                // (what there is to do with the row it is on, as Superhuman sets it there: done, and the command palette.
+                // The keys are E and Command K; these are the pointer's way to the same)
                 <span className="ml-acts" aria-hidden>
-                  <Check size={15} strokeWidth={1.7} onClick={(e) => (e.stopPropagation(), readOnly('marked done'))} />
-                  <Clock size={14} strokeWidth={1.7} onClick={(e) => (e.stopPropagation(), readOnly('snoozed'))} />
-                  <Zap size={14} strokeWidth={1.7} onClick={(e) => (e.stopPropagation(), readOnly('sent'))} />
+                  <span data-tip={done.includes(x.id) ? 'Mark Not Done' : 'Mark Done'} data-keys={done.includes(x.id) ? '⇧ E' : 'E'} onClick={(e) => (e.stopPropagation(), setAt(i), markDone(x.id, !done.includes(x.id)), (undone.current = done.includes(x.id) ? null : x.id), say(done.includes(x.id) ? 'Moved back to the inbox.' : 'Marked Done. Z brings it back.'))}>
+                    <Check size={15} strokeWidth={1.7} />
+                  </span>
+                  <span data-tip="Mail Command" data-keys="⌘ K" onClick={(e) => (e.stopPropagation(), setAt(i), setOver('command'))}>
+                    <Zap size={14} strokeWidth={1.7} />
+                  </span>
                 </span>
               ) : (
                 <span className="d">{dayOf(x.date)}</span>
@@ -451,10 +557,7 @@ export function MailApp() {
           </div>
         )}
         <p className="ml-readonly">
-          <span>
-            <Lock size={12} strokeWidth={2} aria-hidden />
-            Read-only
-          </span>
+          <span>Nothing sends from here</span>
           <button type="button" aria-label="Keyboard shortcuts" onClick={() => setOver('shortcuts')}>
             <CircleHelp size={14} strokeWidth={1.7} aria-hidden />
           </button>
@@ -465,21 +568,8 @@ export function MailApp() {
 
   return (
     <Window className={`app mailwin${zero ? ' zero' : ''}`} lightsSize="large" lead={bar} body={{ className: 'mailwin__body' }}>
-      <div ref={root} className="ml" data-zero={zero || undefined} data-autofocus tabIndex={0} role="application" aria-label="Mail: twenty exchanges that led to something. Read-only. Press ? for its keys." onKeyDown={onKey}>
+      <div ref={root} className="ml" data-zero={zero || undefined} data-autofocus tabIndex={0} role="application" aria-label="Mail: twenty exchanges that led to something. Press ? for its keys." onKeyDown={onKey}>
         {zero && <img className="ml-photo" src="/wallpapers/lagoon.webp" alt="" />}
-        <nav className="ml-rail" aria-label="Mail">
-          <button type="button" className="spark" aria-label="Command" onClick={() => setOver('command')}>
-            <Sparkles size={14} strokeWidth={1.7} aria-hidden />
-          </button>
-          <span className="ml-rail__set">
-            <button type="button" aria-label="Inbox" aria-current={!zero ? 'page' : undefined} onClick={() => run('inbox')}>
-              <MailGlyph size={14} strokeWidth={1.7} aria-hidden />
-            </button>
-            <button type="button" aria-label="Calendar" onClick={() => say('There is only the inbox here: twenty exchanges that led to something.')}>
-              <Calendar size={14} strokeWidth={1.7} aria-hidden />
-            </button>
-          </span>
-        </nav>
         {zero ? (
           <div className="ml-main ml-zero">
             <header className="ml-top">
@@ -509,11 +599,17 @@ export function MailApp() {
             message={message}
             unfolded={unfolded}
             lit={lit}
-            onUnfold={(i) => (setUnfolded((u) => (u.includes(i) ? u : [...u, i])), setMessage(i))}
+            done={done.includes(thread.id)}
+            starred={starred.includes(thread.id)}
+            onFold={(i) => {
+              // An email is opened, or closed back to its one line; the keyboard is on whichever was pressed
+              setUnfolded((u) => (u.includes(i) ? u.filter((n) => n !== i) : [...u, i]))
+              setMessage(i)
+            }}
             onBack={() => setOpen(null)}
             onReply={() => run('reply')}
             onStep={(by) => stepThread(by)}
-            onNo={readOnly}
+            onRun={run}
           />
         ) : query !== null ? (
           <div className="ml-main ml-finding">
@@ -566,7 +662,13 @@ export function MailApp() {
               {tabs}
               {tools}
             </header>
-            {list(rows)}
+            {rows.length ? (
+              list(rows)
+            ) : (
+              <div className="ml-none" role="status">
+                {split === 'done' ? 'Nothing is marked done. Press E on a conversation and it comes here.' : split === 'starred' ? 'Nothing is starred. Press S on a conversation and it is.' : 'Nothing here: every one of these is in Done.'}
+              </div>
+            )}
           </div>
         )}
         {!zero && pane}
@@ -582,9 +684,10 @@ export function MailApp() {
   )
 }
 
-function Thread({ x, message, unfolded, lit, onUnfold, onBack, onReply, onStep, onNo }: { x: Exchange; message: number; unfolded: number[]; lit: boolean; onUnfold: (i: number) => void; onBack: () => void; onReply: () => void; onStep: (by: number) => void; onNo: (what: string) => void }) {
-  // The newest two are open; the earlier ones are a line each until they are asked for
-  const folded = (i: number) => i < x.emails.length - 2 && !unfolded.includes(i)
+/** A conversation: its subject, what there is to do with it, one line on what it led to, and its emails. An
+ * email is a line (who, how it begins, the day) until it is opened; opened, it is a card of its own, and its
+ * head closes it again. The one the keyboard is on has a violet edge, as in Superhuman. */
+function Thread({ x, message, unfolded, lit, done, starred, onFold, onBack, onReply, onStep, onRun }: { x: Exchange; message: number; unfolded: number[]; lit: boolean; done: boolean; starred: boolean; onFold: (i: number) => void; onBack: () => void; onReply: () => void; onStep: (by: number) => void; onRun: (does: Does) => void }) {
   return (
     <div className="ml-main ml-thread">
       <button type="button" className="ml-back" aria-label="Back to inbox" onClick={onBack}>
@@ -592,24 +695,26 @@ function Thread({ x, message, unfolded, lit, onUnfold, onBack, onReply, onStep, 
       </button>
       <div className="ml-col">
         <header className="ml-head">
-          <h1>{x.subject}</h1>
+          <h1>
+            {x.subject}
+            {starred && <Star className="ml-star" size={14} strokeWidth={0} fill="currentColor" aria-label="Starred" role="img" />}
+          </h1>
+          {/* What there is to do with a conversation here: share it, mark it done, ask for the rest (the
+              command palette), and step to the one before or after */}
           <span className="ml-does">
-            <button type="button" className="t" onClick={() => onNo('shared')}>
+            <button type="button" className="t" data-tip="Share Conversation" data-keys="⌘ S" onClick={() => onRun('share')}>
               Share
             </button>
-            <button type="button" aria-label="Mark done" onClick={() => onNo('marked done')}>
-              <Check size={15} strokeWidth={1.7} aria-hidden />
+            <button type="button" aria-label={done ? 'Mark not done' : 'Mark done'} aria-pressed={done} data-tip={done ? 'Mark Not Done' : 'Mark Done'} data-keys={done ? '⇧ E' : 'E'} onClick={() => onRun(done ? 'not-done' : 'done')}>
+              <Check size={15} strokeWidth={done ? 2.6 : 1.7} aria-hidden />
             </button>
-            <button type="button" aria-label="Remind me" onClick={() => onNo('snoozed')}>
-              <Clock size={14} strokeWidth={1.7} aria-hidden />
-            </button>
-            <button type="button" aria-label="Instant reply" onClick={() => onNo('sent')}>
+            <button type="button" aria-label="Command" data-tip="Mail Command" data-keys="⌘ K" onClick={() => onRun('command')}>
               <Zap size={14} strokeWidth={1.7} aria-hidden />
             </button>
-            <button type="button" aria-label="Previous conversation" onClick={() => onStep(-1)}>
+            <button type="button" aria-label="Previous conversation" data-tip="Previous Conversation" data-keys="K" onClick={() => onStep(-1)}>
               <ChevronUp size={16} strokeWidth={1.6} aria-hidden />
             </button>
-            <button type="button" aria-label="Next conversation" onClick={() => onStep(1)}>
+            <button type="button" aria-label="Next conversation" data-tip="Next Conversation" data-keys="J" onClick={() => onStep(1)}>
               <ChevronDown size={16} strokeWidth={1.6} aria-hidden />
             </button>
           </span>
@@ -619,25 +724,29 @@ function Thread({ x, message, unfolded, lit, onUnfold, onBack, onReply, onStep, 
           <span className={`ml-chip ${x.led.toLowerCase()}`}>{x.led.toLowerCase()}</span>
           <span>{x.ledTo}</span>
         </p>
-        <div className="ml-card">
+        <div className="ml-msgs">
           {x.emails.map((email, i) =>
-            folded(i) ? (
-              <button key={i} type="button" className="ml-msg fold" data-email={i} data-at={i === message || undefined} onClick={() => onUnfold(i)}>
+            !unfolded.includes(i) ? (
+              <button key={i} type="button" className="ml-msg fold" data-email={i} data-at={i === message || undefined} aria-expanded={false} onClick={() => onFold(i)}>
                 <b>{email.from}</b>
                 <span>{email.body[0]}</span>
-                {dayOf(email.at)}
-                <i className="sr-only">. Show this email</i>
+                <time>{dayOf(email.at)}</time>
+                <i className="sr-only">. Open this email</i>
               </button>
             ) : (
               <article key={i} className="ml-msg" data-email={i} data-at={i === message || undefined}>
+                {/* (its head is the way to close it again: pressed, the email is its one line) */}
                 <header>
-                  <b>{email.from}</b>
-                  <span>to {email.to}</span>
-                  <span className="ml-mini" aria-hidden>
-                    <Reply size={14} strokeWidth={1.6} />
-                    <Forward size={14} strokeWidth={1.6} />
-                  </span>
-                  <small>{dayOf(email.at)}</small>
+                  <button type="button" className="ml-fold" aria-expanded onClick={() => onFold(i)}>
+                    <b>
+                      {email.from} to {email.to}
+                    </b>
+                    <i className="sr-only">. Close this email</i>
+                  </button>
+                  <button type="button" className="ml-mini" aria-label="Reply: a new message to Shrug, in Messages" data-tip="Reply in Messages" data-keys="R" onClick={onReply}>
+                    <Reply size={14} strokeWidth={1.6} aria-hidden />
+                  </button>
+                  <time>{dayOf(email.at)}</time>
                 </header>
                 {email.body.map((paragraph, n) => (
                   <p key={n}>{paragraph}</p>
@@ -658,14 +767,16 @@ function Thread({ x, message, unfolded, lit, onUnfold, onBack, onReply, onStep, 
   )
 }
 
-/** The command palette: every command by name, found as it is typed. Return runs the one it is on. */
+/** The command palette: what there is to do, by name, found as it is typed. It opens on the five things a
+ * visitor can do with the twenty (mark done, star, mark unread, search, compose); typed into, it finds any
+ * command that does something here. What would send, file or delete is not offered. Return runs the one it is on. */
 function Palette({ thread, onClose, onRun }: { thread: boolean; onClose: () => void; onRun: (does: Does) => void }) {
   const [typed, setTyped] = useState('')
   const [at, setAt] = useState(0)
   const q = typed.trim().toLowerCase()
   const found = useMemo(() => {
     // (Open conversation is the inbox's; Open what this led to and Reply all are a conversation's)
-    const all = COMMANDS.filter((c) => c.id !== 'command' && (thread ? c.id !== 'open' : c.id !== 'reply-all'))
+    const all = COMMANDS.filter((c) => typeof c.does === 'string' && c.id !== 'command' && (thread ? c.id !== 'open' : c.id !== 'reply-all'))
     if (!q) return FIRST.map((id) => all.find((c) => c.id === id)!).filter(Boolean)
     const words = q.split(/\s+/)
     return all.filter((c) => words.every((word) => c.name.toLowerCase().includes(word) || c.keys.join('').toLowerCase() === word)).slice(0, 9)
@@ -694,7 +805,7 @@ function Palette({ thread, onClose, onRun }: { thread: boolean; onClose: () => v
         <ul id="mail-commands" role="listbox" aria-label="Commands">
           {found.map((c, i) => (
             <li key={c.id} id={`mail-command-${c.id}`} role="option" aria-selected={i === on} className={i === on ? 'on' : undefined} onPointerMove={() => i !== on && setAt(i)} onClick={() => onRun(c.does)}>
-              {ICON[c.id] ?? (typeof c.does === 'string' ? <CornerDownLeft size={16} strokeWidth={1.7} aria-hidden /> : <Lock size={15} strokeWidth={1.7} aria-hidden />)}
+              {ICON[c.id] ?? <CornerDownLeft size={16} strokeWidth={1.7} aria-hidden />}
               <span>{c.name}</span>
               <Keys keys={c.keys} />
             </li>

@@ -5,6 +5,7 @@ import { arriveIn, onPhone, sys, topOf, unlock } from '../phone/system'
 import { APP_IDS } from './apps'
 import { dockPoint } from './dom'
 import { atCompany, atConversation, atQuestion, companyAt, conversationAt, personAt, questionAt, type Spot } from './place'
+import { exchangeAt, mail, openExchange } from './mail'
 import { activeApp, openApp, wm } from './wm'
 
 // The site changes layout under a visit that is already going: a tablet is
@@ -69,6 +70,8 @@ export function spotOfDesk(): Spot | null {
   if (front === 'finder') return { app: front, at: atCompany(finder.get().picked) }
   // The FAQs window always shows a question; the first is where it opens anyway
   if (front === 'notes') return { app: front, at: notes.get().note > 0 ? atQuestion(notes.get().note) : null }
+  // Mail, on a conversation: the address names it, which is the link Share hands on
+  if (front === 'mail') return { app: front, at: mail.get().open }
   return { app: front, at: null }
 }
 
@@ -82,6 +85,7 @@ export function showOnDesk(spot: Spot) {
   }
   if (spot.app === 'finder' && companyAt(spot.at)) pickCompany(companyAt(spot.at))
   if (spot.app === 'notes' && questionAt(spot.at) !== null) showNote(questionAt(spot.at)!)
+  if (spot.app === 'mail' && exchangeAt(spot.at)) openExchange(exchangeAt(spot.at))
 }
 
 /** The layout has just changed to the iPhone (`compact`) or to the desktop. */

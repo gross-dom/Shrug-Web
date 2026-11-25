@@ -1,10 +1,12 @@
 /* Mail (apps/Mail.tsx): twenty exchanges, in a window drawn after Superhuman as Dom's screenshots show it
    (design/v1/reference: the inbox, a conversation, search, Superhuman Command, Inbox Zero). A white window.
-   Its bar is one long pill, as a tab would be, saying where this is. Under it: a narrow rail of icons, the
-   list (splits as plain words, the one it is on darker; each exchange a line, under the heading its day
-   falls under; the line it is on tinted, with a violet edge), and a pane at the right about whoever it is
-   from. A conversation is a column in the middle of the list's place. The command palette is the one dark
-   thing, in a typewriter's letters. Inbox Zero is a photograph the whole window over. */
+   Its bar is one long pill, as a tab would be, saying where this is. Under it: the list (splits as plain
+   words, each with its count close against it, the one it is on darker; each exchange a line, under the
+   heading its day falls under; the line it is on tinted, with a violet edge), and a pane at the right about
+   whoever it is from. A conversation is a column in the middle of the list's place: an email is one line
+   until it is opened, and a card of its own once it is. The command palette is the one dark thing, in a
+   typewriter's letters. Inbox Zero is a photograph the whole window over. Whatever can be pressed shows the
+   pointing hand, and says what it is in a small dark label under it. */
 
 .ss-window.mailwin {
   --ss-lights-y: 21px;
@@ -117,43 +119,47 @@
   font: 600 10.5px/1 'Inter Variable', Inter, sans-serif;
 }
 
-/* ---- The rail */
+/* ---- What can be pressed: the pointing hand over it, and a small dark label under it saying what it is
+   and which key does the same (data-tip, data-keys), as Superhuman labels its own */
 
-.ml-rail {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  width: 36px;
-  padding-top: 26px;
-  border-right: 1px solid var(--ml-hair);
-  color: var(--ml-ink-2);
+.ml :where(button, [role='tab'], [role='option'], [data-tip], a[href]),
+.ml-pal :where(button, [role='option']) {
+  cursor: pointer;
 }
 
-.ml-rail button {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+.ml [data-tip] {
+  position: relative;
 }
 
-.ml-rail .spark {
-  background: #f1f1f3;
+.ml [data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 8;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #24242a;
+  color: #fff;
+  font: 500 11px/1.2 'Inter Variable', Inter, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
-.ml-rail__set {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 3px 0;
-  border-radius: 12px;
-  background: #f1f1f3;
+.ml [data-tip][data-keys]::after {
+  content: attr(data-tip) '   ' attr(data-keys);
 }
 
-.ml-rail [aria-current] {
-  color: var(--ml-ink);
+.ml [data-tip]:hover::after,
+.ml [data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.35s;
 }
 
 /* ---- The list */
@@ -186,7 +192,7 @@
 
 .ml-tabs {
   display: flex;
-  gap: 26px;
+  gap: 24px;
   min-width: 0;
 }
 
@@ -198,8 +204,10 @@
 }
 
 .ml-tabs button small {
-  font-size: 10px;
+  margin-left: 4px;
+  font-size: 10.5px;
   font-variant-numeric: tabular-nums;
+  vertical-align: 1px;
 }
 
 .ml-tabs button.on {
@@ -212,7 +220,7 @@
 
 .ml-tools {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   margin-left: auto;
   color: var(--ml-ink-3);
 }
@@ -220,8 +228,14 @@
 .ml-tools button {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.ml-tools button:hover,
+.ml-menu:hover {
+  color: var(--ml-ink);
 }
 
 .ml-list {
@@ -241,7 +255,34 @@
   align-items: center;
   height: 32px;
   padding: 0 28px 0 61px;
-  cursor: default;
+}
+
+/* One not read yet: its sender and subject heavier, and a violet dot before it */
+.ml-row.unread > b,
+.ml-row.unread .s em {
+  font-weight: 650;
+}
+
+.ml-dot {
+  position: absolute;
+  top: 13px;
+  left: 44px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ml-violet);
+}
+
+.ml-star {
+  flex: none;
+  margin-right: 7px;
+  color: #e3a008;
+  vertical-align: -1px;
+}
+
+.ml-head .ml-star {
+  margin: 0 0 0 10px;
+  vertical-align: 0;
 }
 
 /* The heading a day's exchanges are under, over the first of them */
@@ -342,9 +383,22 @@
   flex: none;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 6px;
   width: 92px;
   color: var(--ml-ink-3);
+}
+
+.ml-acts > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.ml-acts > span:hover {
+  background: rgba(106, 79, 217, 0.12);
+  color: var(--ml-violet);
 }
 
 .ml-none {
@@ -531,6 +585,25 @@
   gap: 7px;
 }
 
+.ml-readonly button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.ml-readonly button:hover,
+.ml-tip button:hover,
+.ml-more button:hover,
+.ml-outline:hover {
+  color: var(--ml-ink);
+}
+
+.ml-go:hover {
+  filter: brightness(1.08);
+}
+
 /* ---- A conversation: a column in the middle of the list's place */
 
 .ml-thread {
@@ -582,20 +655,37 @@
   display: flex;
   flex: none;
   align-items: center;
-  gap: 9px;
+  gap: 3px;
   color: var(--ml-ink-3);
 }
 
 .ml-does button {
   display: grid;
   place-items: center;
-  min-width: 16px;
-  height: 20px;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.ml-does button:hover {
+  background: #f1f0f5;
+  color: var(--ml-ink);
+}
+
+.ml-does button[aria-pressed='true'] {
+  color: var(--ml-violet);
 }
 
 .ml-does .t {
-  margin-right: 10px;
-  font-size: 10.5px;
+  margin-right: 8px;
+  padding: 0 8px;
+  font-size: 11.5px;
+}
+
+.ml-back:hover {
+  color: var(--ml-ink);
+  box-shadow: 0 0 0 1px #cfcfd6;
 }
 
 .ml-led {
@@ -615,58 +705,133 @@
   }
 }
 
-.ml-card {
-  margin-top: 16px;
-  background: #fff;
-  box-shadow: 0 1px 9px rgba(0, 0, 0, 0.09), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+/* The emails, the oldest first. Closed, one is a line: who, how it begins, the day. Open, it is a card of its
+   own, a little wider than the lines, and its head closes it again. The one the keyboard is on has a violet edge. */
+.ml-msgs {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
 }
 
 .ml-msg {
   display: block;
   width: 100%;
-  padding: 14px 30px 20px;
-  border-top: 1px solid var(--ml-hair);
-  box-shadow: inset 3px 0 0 transparent;
+  padding: 0 30px;
   text-align: left;
 }
 
-.ml-msg:first-child {
-  border-top: 0;
+.ml-msg.fold {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  height: 38px;
+  box-shadow: inset 3px 0 0 transparent;
+  color: var(--ml-ink-3);
+  white-space: nowrap;
+  transition: color 0.12s ease, background-color 0.12s ease;
 }
 
-.ml-msg[data-at] {
+.ml-msg.fold:hover {
+  background: rgba(106, 79, 217, 0.05);
+  color: var(--ml-ink);
+}
+
+.ml-msg.fold[data-at] {
   box-shadow: inset 3px 0 0 var(--ml-violet);
+}
+
+.ml-msg.fold b {
+  overflow: hidden;
+  color: var(--ml-ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.ml-msg.fold:hover b {
+  color: var(--ml-ink);
+}
+
+.ml-msg.fold span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+}
+
+.ml-msg time {
+  flex: none;
+  color: var(--ml-ink-3);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+article.ml-msg {
+  margin: 7px 0;
+  padding-bottom: 22px;
+  background: #fff;
+  box-shadow: inset 3px 0 0 transparent, 0 1px 9px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+}
+
+article.ml-msg[data-at] {
+  box-shadow: inset 3px 0 0 var(--ml-violet), 0 1px 9px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
 }
 
 .ml-msg header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 22px;
-  margin-bottom: 14px;
+  gap: 10px;
+  height: 44px;
+  margin-bottom: 4px;
 }
 
-.ml-msg header b {
+/* (the head of an open email, pressed, closes it) */
+.ml-fold {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  align-self: stretch;
+  min-width: 0;
+  text-align: left;
+}
+
+.ml-fold b {
+  overflow: hidden;
   font-size: 12.5px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ml-msg header span {
-  color: var(--ml-ink-3);
-  font-size: 11.5px;
+.ml-fold:hover b {
+  color: var(--ml-violet);
 }
 
 .ml-mini {
-  display: inline-flex;
-  gap: 12px;
-  margin-left: auto;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   color: #9a9ba2;
+  opacity: 0;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 
-.ml-msg header small {
-  color: var(--ml-ink-3);
-  font-size: 10.5px;
-  white-space: nowrap;
+article.ml-msg:hover .ml-mini,
+article.ml-msg[data-at] .ml-mini,
+.ml-mini:focus-visible {
+  opacity: 1;
+}
+
+.ml-mini:hover {
+  background: #f1f0f5;
+  color: var(--ml-ink);
 }
 
 .ml-msg p {
@@ -676,30 +841,8 @@
   line-height: 1.62;
 }
 
-.ml-msg.fold {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-top: 12px;
-  padding-bottom: 12px;
-  color: var(--ml-ink-3);
-  font-size: 10.5px;
-  white-space: nowrap;
-}
-
-.ml-msg.fold b {
-  flex: none;
-  color: var(--ml-ink);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-.ml-msg.fold span {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 12.5px;
-  text-overflow: ellipsis;
+.ml-msg header + p {
+  margin-top: 0;
 }
 
 .ml-reply {
@@ -1025,21 +1168,6 @@
 }
 
 .ml[data-zero] {
-  color: #fff;
-}
-
-.ml[data-zero] .ml-rail {
-  position: relative;
-  border-right-color: transparent;
-  color: rgba(255, 255, 255, 0.86);
-}
-
-.ml[data-zero] .ml-rail .spark,
-.ml[data-zero] .ml-rail__set {
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.ml[data-zero] .ml-rail [aria-current] {
   color: #fff;
 }
 

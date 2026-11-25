@@ -8,6 +8,7 @@ import { DESK_ONLY } from './apps'
 import { Boundary } from './Boundary'
 import { cross, showOnDesk, spotOfDesk } from './crossing'
 import { keepDesk, restoreDesk, returning } from './deskmemory'
+import { mail } from './mail'
 import { dockPoint } from './dom'
 import { addressable, addressOf, personAt, placeOfSpot } from './place'
 import { saver, startSaver } from './saver'
@@ -192,7 +193,7 @@ export function Desktop() {
         // An address the page may not write: it keeps the one it has
       }
     }
-    const stops = [wm, finder, notes, inbox].map((store) => store.subscribe(tell))
+    const stops = [wm, finder, notes, inbox, mail].map((store) => store.subscribe(tell))
     tell()
     return () => {
       stopKeeping()
