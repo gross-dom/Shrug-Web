@@ -2167,3 +2167,185 @@ html[data-wm-busy] .dock__item .dock__label {
   outline: 3px solid #fff;
   outline-offset: 3px;
 }
+
+/* ---- Dark glass, as a Mac draws what is let down from its menu bar.
+   Dom's screenshots (design/v1/reference: the Now Playing, Wi-Fi and app-menu sheets, and Notification
+   Centre) are the look for the desk's own: the menus, the Log In sheet in every state, a notification and
+   the note that Updates is unlocked. A dark, see-through pane with a light edge, white words, grey for
+   what is secondary, a blue row under the pointer, and a blue capsule for the one thing to press. These
+   rules recolor what is laid out above; nothing is moved. ---- */
+
+.os {
+  --glass: rgba(38, 38, 41, 0.74);
+  --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.13), 0 22px 54px -8px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.22);
+  --glass-ink: rgba(255, 255, 255, 0.94);
+  --glass-ink-2: rgba(235, 235, 245, 0.64);
+  --glass-rule: rgba(255, 255, 255, 0.13);
+  --glass-field: rgba(255, 255, 255, 0.09);
+  --glass-blue: #3478f6;
+  --glass-press: #0a84ff;
+}
+
+.menu {
+  border-radius: 13px;
+  color: var(--glass-ink);
+  --ss-popover-bg: var(--glass);
+  --ss-popover-shadow: var(--glass-edge);
+}
+
+.menu::before {
+  -webkit-backdrop-filter: blur(40px) saturate(1.7);
+  backdrop-filter: blur(40px) saturate(1.7);
+}
+
+.menu__item {
+  border-radius: 8px;
+}
+
+.menu__item:hover,
+.menu__item:focus-visible {
+  background: var(--glass-blue);
+  color: #fff;
+}
+
+.menu__item[aria-disabled='true'] {
+  background: none;
+  color: rgba(235, 235, 245, 0.34);
+}
+
+.menu__rule {
+  background: var(--glass-rule);
+}
+
+.menu__heading {
+  color: var(--glass-ink-2);
+}
+
+.account {
+  border-radius: 16px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(40px) saturate(1.7);
+  backdrop-filter: blur(40px) saturate(1.7);
+  box-shadow: var(--glass-edge);
+  color: var(--glass-ink);
+  color-scheme: dark;
+}
+
+.account__lead,
+.account__note,
+.account__label,
+.account__who small,
+.account__row small {
+  color: var(--glass-ink-2);
+}
+
+.account__note {
+  border-top-color: var(--glass-rule);
+  opacity: 1;
+}
+
+.account__field input,
+.account__boxes span {
+  background: var(--glass-field);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.account__field input::placeholder {
+  color: rgba(235, 235, 245, 0.36);
+}
+
+.account__field input:focus,
+.account__code:focus-within [data-cur] {
+  outline: 3px solid rgba(10, 132, 255, 0.6);
+}
+
+.account__code[data-bad] .account__boxes span {
+  outline: 2px solid rgba(255, 105, 97, 0.7);
+}
+
+/* The one thing to press: a blue capsule, as Done is in Contacts */
+.account__go {
+  height: 32px;
+  border-radius: 999px;
+  background: var(--glass-press);
+}
+
+.account__go:disabled {
+  opacity: 0.4;
+}
+
+.account :where(button, a):focus-visible {
+  outline: 3px solid rgba(10, 132, 255, 0.7);
+}
+
+.account__said {
+  color: #ff8a80;
+}
+
+.account__link,
+.account__wait {
+  color: #5eb0ff;
+}
+
+.account hr {
+  background: var(--glass-rule);
+}
+
+.account__row {
+  border-radius: 8px;
+}
+
+:where(a, button).account__row:hover {
+  background: var(--glass-blue);
+}
+
+:where(a, button).account__row:hover small {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.account__faces [data-on] {
+  box-shadow: 0 0 0 3px var(--glass-press);
+}
+
+.account__faces [data-upload] {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  color: rgba(235, 235, 245, 0.7);
+}
+
+/* A notification, and the desk's own note: a card of Notification Centre */
+.notify__card,
+.desk-note {
+  border-radius: 20px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(40px) saturate(1.7);
+  backdrop-filter: blur(40px) saturate(1.7);
+  box-shadow: var(--glass-edge);
+  color: var(--glass-ink);
+}
+
+.notify__time,
+.notify__from,
+.notify__said,
+.desk-note span {
+  color: var(--glass-ink-2);
+}
+
+.notify__said {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.notify__close {
+  background: rgba(70, 70, 74, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.desk__tip {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(30px) saturate(1.7);
+  backdrop-filter: blur(30px) saturate(1.7);
+  box-shadow: var(--glass-edge);
+  color: var(--glass-ink);
+}

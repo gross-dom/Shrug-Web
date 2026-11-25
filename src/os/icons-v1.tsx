@@ -41,71 +41,83 @@ function Tile({ fill, children }: { fill: [string, string] | string; children: R
   )
 }
 
-/** Mail: a pale envelope on deep violet, after Superhuman's. */
+/** Mail: Superhuman's, from Dom's picture of it in a Dock: a large pale envelope, white fading to lilac, its
+ * flap one soft violet line, on a tile that goes from indigo to plum. */
 export function MailIcon() {
+  const id = useId().replace(/:/g, '')
   return (
-    <Tile fill={['#5a3fa6', '#2d1c63']}>
-      <rect x="20" y="30" width="60" height="41" rx="7" fill="#efeaff" />
-      <path d="M24 36.5 46.2 54.800a6 6 0 0 0 7.6 0L76 36.5" fill="none" stroke="#4a2f99" strokeWidth="4.6" strokeLinecap="round" strokeLinejoin="round" />
+    <Tile fill={['#3d2c8a', '#5a2869']}>
+      <defs>
+        <linearGradient id={`${id}-env`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#f1daf6" />
+        </linearGradient>
+      </defs>
+      <rect x="14" y="27" width="72" height="46.5" rx="9" fill={`url(#${id}-env)`} />
+      <path d="M17.5 31.5Q33 44.5 44.2 55.3a8.3 8.3 0 0 0 11.6 0Q67 44.5 82.5 31.5" fill="none" stroke="#4a2a82" strokeWidth="4.4" strokeLinecap="round" strokeLinejoin="round" />
     </Tile>
   )
 }
 
-/** QuickTime Player: a blue Q on white, after the Mac's. */
+/** QuickTime Player: the Mac's, from Dom's picture of it: a thick blue ring, lighter at its top left, and a
+ * rounded tail from its middle out past it, a deeper blue where it lies over the ring. On white. */
 export function QuickTimeIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile fill={['#ffffff', '#e9ecf1']}>
+    <Tile fill={['#ffffff', '#eceef2']}>
       <defs>
-        <linearGradient id={`${id}-q`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#39b6ff" />
-          <stop offset="1" stopColor="#1566e8" />
+        <linearGradient id={`${id}-q`} x1="0.15" y1="0.1" x2="0.85" y2="0.9">
+          <stop offset="0" stopColor="#5cc6fa" />
+          <stop offset="1" stopColor="#2a8af4" />
         </linearGradient>
       </defs>
-      <circle cx="49" cy="48" r="26" fill="none" stroke={`url(#${id}-q)`} strokeWidth="13" />
-      <path d="M58 58 76 78" stroke="#1566e8" strokeWidth="12" strokeLinecap="round" />
+      <circle cx="47" cy="47" r="29" fill="none" stroke={`url(#${id}-q)`} strokeWidth="14.5" />
+      <path d="M51.5 51.5 78 80" stroke="#1f6ee6" strokeOpacity=".9" strokeWidth="13.5" strokeLinecap="round" />
     </Tile>
   )
 }
 
-/** Photo Booth: a strip of two portraits under a curtain, on red, after the Mac's. */
+/** Photo Booth: the Mac's, from Dom's picture of it: a strip of two grey portraits coming down out of a dark
+ * slot, on red. */
 export function PhotoBoothIcon() {
   return (
-    <Tile fill={['#e8453c', '#b8241f']}>
-      <rect x="27" y="20" width="46" height="64" rx="4" fill="#f4f1ec" />
-      <rect x="32" y="27" width="36" height="24" rx="2" fill="#c9c6c0" />
-      <rect x="32" y="55" width="36" height="24" rx="2" fill="#c9c6c0" />
-      <g fill="#4a4b50">
-        <circle cx="50" cy="35.5" r="5" />
-        <path d="M39 51c0-7 5-10 11-10s11 3 11 10z" />
-        <circle cx="50" cy="63.5" r="5" />
-        <path d="M39 79c0-7 5-10 11-10s11 3 11 10z" />
+    <Tile fill={['#e0453b', '#c32e25']}>
+      <rect x="26.5" y="21" width="47" height="74" rx="2.5" fill="#f4f4f2" />
+      <rect x="30.5" y="27.5" width="39" height="29.5" rx="1.5" fill="#c8c8c8" />
+      <rect x="30.5" y="61" width="39" height="29.5" rx="1.5" fill="#c8c8c8" />
+      <g fill="#787878">
+        <circle cx="50" cy="38" r="6.6" />
+        <path d="M35.5 57c0-8.2 6.3-11.8 14.5-11.8S64.5 48.8 64.5 57z" />
+        <circle cx="50" cy="71.5" r="6.6" />
+        <path d="M35.5 90.5c0-8.2 6.3-11.8 14.5-11.8s14.5 3.6 14.5 11.8z" />
       </g>
-      <rect x="23" y="16" width="54" height="9" rx="4.5" fill="#1b1b1e" />
+      <rect x="14" y="16.5" width="72" height="9.5" rx="4.75" fill="#27110f" />
     </Tile>
   )
 }
 
-/** Spotify: its green disc and three arcs, on black. */
+/** Spotify: its green disc and three arcs, large on black, as its own icon has them. */
 export function SpotifyIcon() {
   return (
-    <Tile fill={['#17191a', '#060707']}>
-      <circle cx="50" cy="50" r="31" fill="#1ed760" />
-      <g fill="none" stroke="#0a0b0b" strokeLinecap="round">
-        <path d="M32 40.500c12-3.6 26-2.4 37 3.8" strokeWidth="6" />
-        <path d="M34.5 51.500c10-2.8 21-1.8 30 3.4" strokeWidth="5" />
-        <path d="M37 61.500c8-2 16-1.2 23 2.8" strokeWidth="4.2" />
+    <Tile fill={['#141414', '#050505']}>
+      <g transform="translate(50 50) scale(1.2) translate(-50 -50)">
+        <circle cx="50" cy="50" r="31" fill="#1ed760" />
+        <g fill="none" stroke="#0a0b0b" strokeLinecap="round">
+          <path d="M32 40.5c12-3.6 26-2.4 37 3.8" strokeWidth="6" />
+          <path d="M34.5 51.5c10-2.8 21-1.8 30 3.4" strokeWidth="5" />
+          <path d="M37 61.5c8-2 16-1.2 23 2.8" strokeWidth="4.2" />
+        </g>
       </g>
     </Tile>
   )
 }
 
-/** YouTube: its red lozenge and white triangle, on white. */
+/** YouTube: its red shape, nearly the tile's width, and the white triangle, on white, as its own icon has them. */
 export function YouTubeIcon() {
   return (
-    <Tile fill={['#ffffff', '#f1f2f4']}>
-      <rect x="13" y="26" width="74" height="48" rx="15" fill="#e62c20" />
-      <path d="M42 38.5 62 50 42 61.500Z" fill="#fff" />
+    <Tile fill={['#ffffff', '#f4f4f5']}>
+      <path d="M50 18.5C75 18.5 88 19.3 91.8 23.3C95.5 27.2 96 39 96 50C96 61 95.5 72.8 91.8 76.7C88 80.7 75 81.5 50 81.5C25 81.5 12 80.7 8.2 76.7C4.5 72.8 4 61 4 50C4 39 4.5 27.2 8.2 23.3C12 19.3 25 18.5 50 18.5Z" fill="#e52d27" />
+      <path d="M40.5 35.5 65.5 50 40.5 64.5Z" fill="#fff" />
     </Tile>
   )
 }
