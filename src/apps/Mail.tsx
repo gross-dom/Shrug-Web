@@ -122,8 +122,7 @@ function pressed(e: KeyboardEvent | globalThis.KeyboardEvent) {
 const MONTH = new Intl.DateTimeFormat('en-US', { month: 'short' })
 const MONTH_LONG = new Intl.DateTimeFormat('en-US', { month: 'long' })
 const noon = (date: string) => new Date(`${date.slice(0, 10)}T12:00:00`)
-/** A day as Superhuman's list writes one: 18 NOV. */
-// (month first, as Superhuman writes a day on a Mac set to the United States: NOV 11)
+/** A day as Superhuman's list writes one on a Mac set to the United States, month first: NOV 18. */
 const dayOf = (date: string) => `${MONTH.format(noon(date)).toUpperCase()} ${noon(date).getDate()}`
 /** The heading a day's exchanges are listed under: the last week, the rest of this month, then a month at a time. */
 function groupOf(date: string, now = new Date()): string {

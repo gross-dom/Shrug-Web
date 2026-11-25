@@ -39,7 +39,7 @@ let dayFormat: Intl.DateTimeFormat | undefined
 const dayOf = (at: string) => {
   const parts = (dayFormat ??= formatter({ day: 'numeric', month: 'long', year: 'numeric' })).formatToParts(new Date(at))
   const of = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ''
-  return `${of('day')} ${of('month')} ${of('year')}`
+  return `${of('month')} ${of('day')}, ${of('year')}`
 }
 
 const fileName = () => `Photo Booth ${new Date().toISOString().slice(0, 10)}.jpg`

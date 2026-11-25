@@ -365,7 +365,7 @@ const check = (name, ok, detail = '') => {
   await k.locator('.ui-col .ui-btn').first().waitFor({ timeout: 20000 })
   await p.waitForTimeout(400)
   const pre = await words(k)
-  check('a book to come is a pre-order, priced in dollars with $5 shipping, which a visitor can place; it says to reserve a copy', /Reserve a copy and we’ll let you know when it’s ready\./.test(pre) && /\| Price \| \$45 \| Shipping \| \$5 \| Total \| \$50 \| Pre-order for \$50$/.test(pre), pre)
+  check('a book to come is a pre-order, priced in dollars with $5 shipping, which a visitor can place; it says when it is sent (and not that it is "reserved": it is paid for)', /\| Ships February 15, 2027\. \|/.test(pre) && !/Reserve a copy/.test(pre) && /\| Price \| \$45 \| Shipping \| \$5 \| Total \| \$50 \| Pre-order for \$50$/.test(pre), pre)
   await k.locator('.ui-link', { hasText: /View all|All/ }).first().click().catch(() => {})
   await p.waitForTimeout(600)
   const back = await p.evaluate((W) => !document.querySelector(`${W} .bk`).hidden, WIN('books'))
@@ -452,6 +452,8 @@ const check = (name, ok, detail = '') => {
   b = await bar(p, 'store')
   check('paid, they have an account: the store says so and asks for a number for order updates, with the receipt on its way either way', /You have an account now/.test(paid) && /It uses the email you just checked out with\. Please add your phone number for order updates\./.test(paid) && /casey@example\.test/.test(paid) && /Not now/.test(paid), paid.slice(0, 500))
   check('…and the desk knows them at once, by the name they gave: the menu bar is theirs, and the window\'s bar has their balance', /Casey/.test(deskBar) && b.wallet !== null, JSON.stringify({ deskBar, b }))
+  // (Apple Pay hands over the address saved in it, and the store keeps it: the demo's stand-in does the same)
+  check('paid with Apple Pay, the order has somewhere to go: the receipt says where it ships to', /Ship to \| Casey Morgan/.test(paid), paid.slice(paid.indexOf('Reference'), paid.indexOf('Reference') + 220))
   // what is wrong with a number or a code is said where it is typed, before anything is asked of the server
   const told = async () => (await f.locator('[role=alert]').allInnerTexts()).join(' / ')
   await f.locator('input.ui-in[type=tel]').fill('call me')

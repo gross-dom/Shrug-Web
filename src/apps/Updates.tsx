@@ -22,13 +22,13 @@ const LOCKED = 'This folder is for Shrug LPs only. Please log in with your LP em
 // The folder is always on the desk, with a lock. Nobody but an LP is shown what is in it, not even the names
 // of the files: someone logged in who is not an LP is told who it is for.
 
-/** The day a document is dated: 14 Nov 2026, day first, as the desk writes its days. One still to come says when in words. */
+/** The day a document is dated: Nov 14, 2026, as the desk writes its days. One still to come says when in words. */
 function dayOf(date: string) {
   const t = Date.parse(date)
   if (!date || Number.isNaN(t)) return date
   const parts = (day ??= formatter({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })).formatToParts(t)
   const of = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ''
-  return `${of('day')} ${of('month')} ${of('year')}`
+  return `${of('month')} ${of('day')}, ${of('year')}`
 }
 let day: Intl.DateTimeFormat | undefined
 
