@@ -7,7 +7,7 @@
 // or kept, so there is one checkout. An address can ask for each by name: `?open=artstore`, `books`,
 // `workspace`, `vip`.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace' | 'books' | 'myvip'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace' | 'books' | 'myvip' | 'weather'
 
 export interface Size {
   w: number
@@ -279,6 +279,20 @@ export const APPS: Record<AppId, AppSpec> = {
     lightsY: 28,
     dock: null,
   },
+  // Weather, after the Mac's own: the widget on the desk opens it (src/apps/Weather.tsx). Like Preview it
+  // has no icon of its own to open from: it is in the Dock, after the rule, while it is open
+  weather: {
+    id: 'weather',
+    name: 'Weather',
+    blurb: 'The forecast',
+    size: fit({ w: 0.7, h: 0.88 }, { w: 780, h: 540 }, { w: 1040, h: 700 }),
+    min: { w: 600, h: 440 },
+    nudge: { x: 30, y: 4 },
+    resizable: true,
+    lightsY: 26,
+    dock: null,
+    guest: 3,
+  },
 }
 
 export const APP_IDS = Object.keys(APPS) as AppId[]
@@ -286,7 +300,7 @@ export const APP_IDS = Object.keys(APPS) as AppId[]
 export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
 
 /** The windows that are the desktop's alone, with nothing of theirs on a phone: an address that names one names nothing there. */
-export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'workspace', 'books', 'myvip']
+export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'workspace', 'books', 'myvip', 'weather']
 
 /** The apps that are in the Dock only while they have something open, after its rule. */
 export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
@@ -322,6 +336,7 @@ export const ALIASES: Record<string, AppId> = {
   'photo-booth': 'photobooth',
   podcasts: 'spotify',
   videos: 'youtube',
+  forecast: 'weather',
   // (the one-pager is a file that opens in Preview: asked for by its own name, that is what opens, on it)
   'one-pager': 'preview',
   onepager: 'preview',

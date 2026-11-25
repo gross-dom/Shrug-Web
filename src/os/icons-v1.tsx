@@ -69,6 +69,23 @@ export function QuickTimeIcon() {
   )
 }
 
+/** Weather: the Mac's: a sun behind a white cloud, on a blue sky. */
+export function WeatherIcon() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <Tile fill={['#1e6fd9', '#5cb4f5']}>
+      <defs>
+        <linearGradient id={`${id}-sun`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffe066" />
+          <stop offset="1" stopColor="#ffb21f" />
+        </linearGradient>
+      </defs>
+      <circle cx="37" cy="40" r="17" fill={`url(#${id}-sun)`} />
+      <path d="M33 74a15 15 0 0 1 1.6-29.9A19 19 0 0 1 71 47.5 13.5 13.5 0 0 1 70.5 74z" fill="#fff" />
+    </Tile>
+  )
+}
+
 /** Photo Booth: the Mac's, from Dom's picture of it: a strip of two grey portraits coming down out of a dark
  * slot, on red. */
 export function PhotoBoothIcon() {

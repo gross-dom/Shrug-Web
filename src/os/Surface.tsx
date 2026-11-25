@@ -15,6 +15,7 @@ import { TerminalApp } from '../apps/Terminal'
 import { UpdatesApp } from '../apps/Updates'
 import { WallpapersApp } from '../apps/Wallpapers'
 import { WorkspaceApp } from '../apps/Workspace'
+import { WeatherApp } from '../apps/Weather'
 import { YouTubeApp } from '../apps/YouTube'
 import { account, askLogIn, unlocked } from './account'
 import { APPS, APP_IDS, type AppId } from './apps'
@@ -57,6 +58,7 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   photobooth: PhotoBoothApp,
   spotify: SpotifyApp,
   youtube: YouTubeApp,
+  weather: WeatherApp,
   workspace: WorkspaceApp,
 }
 

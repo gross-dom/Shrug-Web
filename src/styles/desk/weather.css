@@ -1,0 +1,523 @@
+/* Weather (apps/Weather.tsx), after the Mac's own as Dom's screenshots show it: a window that is the sky of
+   the place that is picked (blue by day, grey under cloud, deep blue at night), a dark sidebar of places, each
+   a card with a sky of its own, and the forecast in tiles of darker glass. White on every sky, at sizes and
+   weights that can be read on it. */
+
+.ss-window.wtwin {
+  --ss-lights-y: 26px;
+  --wt-ink: #fff;
+  --wt-ink-2: rgb(255 255 255 / 0.86);
+  --wt-tile: rgb(6 20 48 / 0.24);
+  --wt-edge: rgb(255 255 255 / 0.14);
+  background: linear-gradient(180deg, #1b549d 0%, #2c6cb6 60%, #3274bd 100%);
+  color: var(--wt-ink);
+  font-family: var(--font-ui);
+}
+
+.ss-window.wtwin[data-sky='gray'] {
+  background: linear-gradient(180deg, #3f5068 0%, #566b85 60%, #64798f 100%);
+}
+
+.ss-window.wtwin[data-sky='night'] {
+  --wt-tile: rgb(255 255 255 / 0.08);
+  background: linear-gradient(180deg, #080d22 0%, #18214a 60%, #232d5c 100%);
+}
+
+.ss-window.wtwin > .ss-window__side {
+  border-right: 1px solid rgb(0 0 0 / 0.28);
+  background: rgb(14 18 30 / 0.62);
+  -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  backdrop-filter: blur(30px) saturate(1.4);
+}
+
+.ss-window.wtwin > .ss-window__main,
+.ss-window.wtwin > .ss-window__main > .ss-window__bar,
+.wtwin__body {
+  border: 0;
+  background: none;
+}
+
+.ss-window.wtwin > .ss-window__main > .ss-window__bar {
+  height: 18px;
+  min-height: 0;
+}
+
+.wtwin__body {
+  display: flex;
+  min-height: 0;
+}
+
+.wtwin :where(h1, h2, p, ol, ul) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wtwin :where(button, a[href]) {
+  cursor: pointer;
+}
+
+.wtwin :where(button, a):focus-visible,
+.wt:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.wt:focus-visible {
+  outline-offset: -4px;
+}
+
+/* ---- The places */
+
+.wt-side {
+  flex: 1;
+  min-height: 0;
+  padding: 6px 10px 12px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.wt-side ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wt-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px 9px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1f5aa6, #3777c0);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.2);
+  color: #fff;
+  text-align: left;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.wt-card[data-sky='gray'] {
+  background: linear-gradient(180deg, #46586f, #647990);
+}
+
+.wt-card[data-sky='night'] {
+  background: linear-gradient(180deg, #0c1230, #283264);
+}
+
+.wt-card:hover {
+  transform: translateY(-1px);
+}
+
+.wt-card[aria-current] {
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.9), 0 6px 18px rgb(0 0 0 / 0.3);
+}
+
+.wt-card__top,
+.wt-card__foot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wt-card__top b,
+.wt-card__top small {
+  display: block;
+}
+
+.wt-card__top b {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 19px;
+}
+
+.wt-card__top small {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 15px;
+}
+
+.wt-card__temp {
+  font-size: 30px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 30px;
+}
+
+.wt-card__foot {
+  align-items: flex-end;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wt-card__foot > :last-child {
+  flex: none;
+}
+
+/* ---- The place that is picked */
+
+.wt {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  container: weather / inline-size;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.35) transparent;
+}
+
+.wt-col {
+  width: min(680px, 100% - 44px);
+  margin: 0 auto;
+  padding: 8px 0 20px;
+}
+
+.wt-head,
+.wt-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.wt-msg {
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 24px 40px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.wt-head h1,
+.wt-msg h1 {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 32px;
+}
+
+.wt-temp {
+  margin: -2px 0 0 12px !important;
+  font-size: 72px;
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  line-height: 76px;
+}
+
+.wt-says {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.wt-range {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wt-btn {
+  height: 30px;
+  margin-top: 6px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wt-btn:hover {
+  background: rgb(255 255 255 / 0.3);
+}
+
+.wt-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.wt-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 150px;
+  padding: 11px 13px 12px;
+  border-radius: 16px;
+  background: var(--wt-tile);
+  box-shadow: inset 0 0 0 0.5px var(--wt-edge);
+}
+
+.wt-tile--wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.wt-tile--tall {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.wt-tile h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--wt-ink-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+
+.wt-tile p {
+  margin-top: auto;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.wt-big {
+  margin-top: 8px;
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 36px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The hours: a row that runs on to the right */
+.wt-hours {
+  display: flex;
+  gap: 4px;
+  margin: 10px -4px 0 !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.wt-hours li {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  width: 52px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+  white-space: nowrap;
+}
+
+.wt-hours svg {
+  margin-top: 9px;
+}
+
+.wt-hours small {
+  height: 13px;
+  color: #9fe3ff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 13px;
+}
+
+.wt-hours b {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The week: each day a line, its low and high at the ends of a bar drawn against the week's own */
+.wt-days {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 6px !important;
+}
+
+.wt-days li {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 46px 44px 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  column-gap: 6px;
+  min-height: 34px;
+  border-top: 0.5px solid var(--wt-edge);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wt-days li:first-child {
+  border-top: 0;
+}
+
+.wt-days__sky {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.wt-days__sky small {
+  margin-top: 1px;
+  color: #9fe3ff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.wt-days__low {
+  color: var(--wt-ink-2);
+  text-align: right;
+}
+
+.wt-days li > b {
+  font-weight: 600;
+  text-align: right;
+}
+
+.wt-bar {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  background: rgb(0 0 0 / 0.22);
+}
+
+.wt-bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #7fd4f5, #f6d66a);
+}
+
+.wt-bar b {
+  position: absolute;
+  top: -1.5px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.28);
+}
+
+/* The wind: a compass, the speed in its middle, and a needle from where the wind is coming */
+.wt-compass {
+  position: relative;
+  align-self: center;
+  width: 84px;
+  height: 84px;
+  margin: 8px 0 6px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px rgb(255 255 255 / 0.14);
+}
+
+.wt-compass i {
+  position: absolute;
+  color: var(--wt-ink-2);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 10px;
+}
+
+.wt-compass i:nth-child(1) {
+  top: 8px;
+  left: calc(50% - 3.5px);
+}
+
+.wt-compass i:nth-child(2) {
+  top: calc(50% - 5px);
+  right: 9px;
+}
+
+.wt-compass i:nth-child(3) {
+  bottom: 8px;
+  left: calc(50% - 3px);
+}
+
+.wt-compass i:nth-child(4) {
+  top: calc(50% - 5px);
+  left: 9px;
+}
+
+.wt-needle {
+  position: absolute;
+  inset: 0;
+}
+
+.wt-needle::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.wt-compass b {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 19px;
+}
+
+.wt-compass small {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 12px;
+}
+
+.wt-foot {
+  margin-top: 16px !important;
+  color: var(--wt-ink-2);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.wt-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* A narrower window: two tiles to a row */
+@container weather (max-width: 600px) {
+  .wt-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wt-tile--tall {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-card {
+    transition: none;
+  }
+}

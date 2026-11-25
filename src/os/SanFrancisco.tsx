@@ -1,24 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, Moon, Sun, Wind, type LucideIcon } from 'lucide-react'
 import { formatter } from './dates'
+import { launchApp } from './launch'
+import { degrees as shown, FAHRENHEIT, isGray, readWeather } from './weather'
 
 // A widget on the desk, where a Mac keeps them: San Francisco. The time there,
 // how far that is from the visitor's own, and the weather.
 //
 // The time needs nothing but the visitor's own clock. The weather is asked of
-// the United States' National Weather Service (api.weather.gov: public, free
-// and needing no key), by the visitor's browser, when the desk is drawn and
-// every twenty minutes while it is looked at. If the answer does not come, or
-// is not what was expected, the widget says the day in its place: it is never
-// shown a weather it was not told.
+// the United States' National Weather Service (os/weather.ts), by the
+// visitor's browser, when the desk is drawn and every twenty minutes while it
+// is looked at. If the answer does not come, or is not what was expected, the
+// widget says the day in its place: it is never shown a weather it was not
+// told. Pressed, it opens the Weather window, as a Mac's own does.
 
 const ZONE = 'America/Los_Angeles'
-
-/** Where the service is asked what it has for the middle of the city: it answers with the address of its forecast, hour by hour. */
-const POINT = 'https://api.weather.gov/points/37.7749,-122.4194'
-
-/** The same service's page for the city, for a person to read: where a press on the widget goes. */
-const FORECAST = 'https://forecast.weather.gov/MapClick.php?lat=37.7749&lon=-122.4194'
 
 interface Weather {
   /** Degrees Fahrenheit, as the service gives them. */
@@ -28,39 +24,8 @@ interface Weather {
   day: boolean
 }
 
-const asJson = async (url: string) => {
-  const answer = await fetch(url, { headers: { Accept: 'application/geo+json' } })
-  if (!answer.ok) throw new Error(`weather: ${answer.status}`)
-  return (await answer.json()) as unknown
-}
-
-/** What the service says the sky is doing, without how likely it thinks that is: "Slight Chance Light
- * Rain" is Light Rain, "Rain Showers Likely" is Rain Showers. A widget this size has the room to say what,
- * not how sure. Its other words are the weather itself and are kept: Mostly Cloudy, Patchy Fog. */
-const plainly = (says: string) =>
-  says
-    .replace(/^(?:slight\s+)?chance\s+(?:of\s+)?/i, '')
-    .replace(/\s+likely$/i, '')
-    .trim() || says
-
-/** The weather now: the hour that is running, from the service's forecast by the hour. */
-async function readWeather(): Promise<Weather> {
-  const point = (await asJson(POINT)) as { properties?: { forecastHourly?: unknown } }
-  const hourly = point.properties?.forecastHourly
-  // Only ever its own address
-  if (typeof hourly !== 'string' || !hourly.startsWith('https://api.weather.gov/')) throw new Error('weather: no forecast')
-  const forecast = (await asJson(hourly)) as { properties?: { periods?: unknown } }
-  const periods = Array.isArray(forecast.properties?.periods) ? (forecast.properties!.periods as Record<string, unknown>[]) : []
-  const now = periods.find((p) => typeof p.endTime === 'string' && Date.parse(p.endTime) > Date.now()) ?? periods[0]
-  if (!now || typeof now.temperature !== 'number' || typeof now.shortForecast !== 'string') throw new Error('weather: unread')
-  const temp = now.temperatureUnit === 'C' ? (now.temperature * 9) / 5 + 32 : now.temperature
-  // "Slight Chance Light Rain then Mostly Cloudy": what it is doing now is the first of those, said plainly
-  const says = plainly(now.shortForecast.split(/\s+then\s+/i)[0]!.trim()).slice(0, 40)
-  return { temp, says, day: now.isDaytime !== false }
-}
-
 /** The picture for a sky, by what the service calls it. */
-function glyphOf(says: string, day: boolean): LucideIcon {
+export function glyphOf(says: string, day: boolean): LucideIcon {
   if (/thunder/i.test(says)) return CloudLightning
   if (/snow|sleet|ice|flurr/i.test(says)) return CloudSnow
   if (/drizzle|light rain|showers?/i.test(says)) return CloudDrizzle
@@ -71,15 +36,6 @@ function glyphOf(says: string, day: boolean): LucideIcon {
   if (/wind|breez/i.test(says)) return Wind
   return day ? Sun : Moon
 }
-
-/** Whether the visitor reads temperatures in Fahrenheit: those whose own English comes from where it is used. */
-const FAHRENHEIT = (() => {
-  try {
-    return /-(US|BS|BZ|KY|PW|LR|MH|FM|PR|GU|VI)\b/i.test(new Intl.Locale(navigator.language).maximize().baseName)
-  } catch {
-    return true
-  }
-})()
 
 const TIME = formatter({ hour: 'numeric', minute: '2-digit', timeZone: ZONE })
 const DAY = new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
@@ -121,7 +77,7 @@ export function SanFrancisco() {
       last = Date.now()
       readWeather().then(
         // (An answer that comes once the desk has gone is not used; the asking itself is left to finish)
-        (told) => here && setWeather(told),
+        (told) => here && setWeather(told.now),
         () => {
           // Not told: nothing is shown in its place but the time (below)
         },
@@ -140,17 +96,17 @@ export function SanFrancisco() {
   const { day, apart, hour } = there(now)
   const light = weather ? weather.day : hour >= 7 && hour < 18
   const Glyph = weather ? glyphOf(weather.says, weather.day) : light ? Sun : Moon
-  const degrees = weather ? Math.round(FAHRENHEIT ? weather.temp : ((weather.temp - 32) * 5) / 9) : null
-  const gray = !!weather && /cloud|overcast|fog|rain|drizzle|shower|haze|mist|snow|thunder/i.test(weather.says) && !/partly|mostly (sunny|clear)/i.test(weather.says)
+  const degrees = weather ? shown(weather.temp) : null
+  const gray = !!weather && isGray(weather.says)
   return (
-    // Pressed, it opens the forecast it is reading from: the Weather Service's own page for the city
-    <a className="sf" href={FORECAST} target="_blank" rel="noreferrer" aria-label="San Francisco: the time and the weather there. Opens the forecast in a new tab" draggable={false} data-sky={light ? (gray ? 'gray' : 'day') : 'night'}>
-      <p className="sf__head">
+    // Pressed, it opens Weather: the same forecast, at length
+    <button type="button" className="sf" aria-label="San Francisco: the time and the weather there. Opens Weather" data-sky={light ? (gray ? 'gray' : 'day') : 'night'} onClick={() => launchApp('weather')}>
+      <span className="sf__head">
         <span className="sf__city">San Francisco</span>
         {weather && <Glyph className="sf__glyph" size={19} strokeWidth={2.1} aria-hidden />}
-      </p>
+      </span>
       {/* As a Mac's clock widget says it (Today, -8HRS), and in words for whoever has it read to them */}
-      <p className="sf__apart">
+      <span className="sf__apart">
         {day}
         {apart !== 0 && (
           <>
@@ -164,20 +120,20 @@ export function SanFrancisco() {
             </span>
           </>
         )}
-      </p>
-      <p className="sf__time">
+      </span>
+      <span className="sf__time">
         <time dateTime={now.toISOString()}>{TIME.format(now)}</time>
-      </p>
+      </span>
       {weather ? (
-        <p className="sf__weather">
+        <span className="sf__weather">
           <b>
             {degrees}°<span className="sr-only">{FAHRENHEIT ? ' Fahrenheit' : ' Celsius'}</span>
           </b>{' '}
           {weather.says}
-        </p>
+        </span>
       ) : (
-        <p className="sf__weather">Pacific Time</p>
+        <span className="sf__weather">Pacific Time</span>
       )}
-    </a>
+    </button>
   )
 }
