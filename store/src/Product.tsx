@@ -7,7 +7,7 @@ import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
 import { shotsOf, tileSizes, wholeSizes } from './pictures'
 import { NAMES, nameIn, ROOM } from './room'
-import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shortOf } from './words'
+import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shipsOf, shortOf } from './words'
 
 // One product to a screen: its pictures, then what it is and what it costs this member. The arrows on the
 // picture (and the arrow keys, and a finger drawn across it) page through that product's own pictures; the
@@ -404,7 +404,12 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     </button>
   )
   const caption = way !== 'buy' && asked ? `${way === 'request' ? 'We’ll write to you about it.' : 'We’ll let you know when it’s ready.'} It is in My VIP.` : ''
-  const preorder = product.status === 'Pre-order' && !asked && !bought && <p className="t-words">Reserve a copy and we’ll let you know when it’s ready.</p>
+  // A pre-order says when it is sent, where Shrug has said. One with a price is paid for now, so it is not
+  // "reserved"; one with none yet is only kept for them
+  const sent = shipsOf(product)
+  const preorder = product.status === 'Pre-order' && !asked && !bought && (
+    <p className="t-words">{way === 'reserve' ? `Reserve a copy and we’ll let you know when it’s ready.${sent ? ` It ships ${sent}.` : ''}` : sent ? `Ships ${sent}.` : 'We’ll email you when it ships.'}</p>
+  )
   const said = error && (
     <p className="ui-note" role="alert">
       {error}
@@ -456,7 +461,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
       </span>
       <div style={{ display: 'flex', flexDirection: 'column', gap: phone ? 6 : 8 }}>
         <h1 className="t-title">{done.order.status === 'Requested' ? 'Requested.' : done.order.status === 'Pre-order' ? (done.order.points || done.order.paid ? 'Pre-ordered.' : 'Reserved.') : 'It’s yours.'}</h1>
-        <p className="t-words">{done.order.status === 'Requested' ? 'We’ll write to you about it.' : done.order.status === 'Pre-order' ? 'We’ll let you know when it’s ready.' : 'We’ll email you when it is on its way.'}</p>
+        <p className="t-words">{done.order.status === 'Requested' ? 'We’ll write to you about it.' : done.order.status === 'Pre-order' ? (sent ? `It ships ${sent}. We’ll email you when it is on its way.` : 'We’ll let you know when it’s ready.') : 'We’ll email you when it is on its way.'}</p>
       </div>
       <dl className="ui-card rows">
         <div>

@@ -88,7 +88,7 @@ async function terminal(browser) {
   // the time where the desk's widget keeps its clock
   const there = () => {
     const of = Object.fromEntries(new Intl.DateTimeFormat('en-US', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' }).formatToParts(new Date()).map((part) => [part.type, part.value]))
-    return `${of.weekday} ${of.day} ${of.month}, ${of.hour}:${of.minute} ${of.dayPeriod} in san francisco.`.toLowerCase()
+    return `${of.weekday} ${of.month} ${of.day}, ${of.hour}:${of.minute} ${of.dayPeriod} in san francisco.`.toLowerCase()
   }
   const around = [there()]
   await type('date')
@@ -241,7 +241,7 @@ async function terminal(browser) {
   check('fortune: never the same one twice running', (await lines()).slice(-3)[0] !== told[0])
   await type('neofetch')
   const counted = (await lines()).slice(-7)
-  check('neofetch: the site, counted from its own lists', /\(ツ\)/.test(counted[0]) && counted[1] === 'shrug capital' && /^people +89 in the group chat$/.test(counted[2]) && /^portfolio +79 companies, 13 verticals$/.test(counted[3]) && /^studies +6 private, 2 public$/.test(counted[5]), counted.join(' | '))
+  check('neofetch: the site, counted from its own lists', /\(ツ\)/.test(counted[0]) && counted[1] === 'shrug capital' && /^people +89 in the group chat$/.test(counted[2]) && /^portfolio +100\+ companies, 13 verticals$/.test(counted[3]) && /^studies +6 private, 2 public$/.test(counted[5]), counted.join(' | '))
   // a private case study that is of a portfolio company opens the company, and says why
   await type('open varda')
   await p.waitForTimeout(900)

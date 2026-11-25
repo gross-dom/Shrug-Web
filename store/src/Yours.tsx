@@ -5,7 +5,7 @@ import { Points, Wordmark } from './brand'
 import { DESK } from './desk'
 import { DocIcon } from './icons'
 import { Lines, Paid, Picture } from './Product'
-import { editionOf } from './words'
+import { editionOf, shipsOf } from './words'
 
 // My VIP (the section the address still calls "yours"): the member's card as the card page draws it (pressed,
 // it goes to the card page), their account at a glance (what kind of member they are, their balance, how
@@ -147,7 +147,9 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
         <ol className="ui-list">
           {list.map((order) => {
             const product = shop.products.find((p) => p.id === order.productId)
-            const facts = [editionOf(order.number), order.reference, when(order.placed)].filter(Boolean).join(' · ')
+            // (a pre-order that has not been sent says when it will be, where Shrug has said)
+            const ships = order.status === 'Pre-order' ? shipsOf(product, true) : null
+            const facts = [editionOf(order.number), order.reference, when(order.placed), ships && `Ships ${ships}`].filter(Boolean).join(' · ')
             const taken = order.points || order.paid ? <Paid order={order} size={13} /> : nothingOf(order)
             return (
               <li key={order.id} className="ui-row ui-ord">

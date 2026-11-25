@@ -105,7 +105,14 @@ export function CompanyLogo({ company, size = 56, eager }: { company: Company; s
   return (
     <span className="logo" data-empty={shown ? undefined : ''} style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }} aria-hidden>
       {shown ? (
-        <img src={`${import.meta.env.BASE_URL}logos/${logo}`} width={size} height={size} alt="" loading={eager ? 'eager' : 'lazy'} decoding={eager ? 'sync' : 'async'} draggable={false} onError={() => noteMissing(logo)} />
+        <img
+          src={`${import.meta.env.BASE_URL}logos/${logo}`}
+          // (drawn large on a sharp screen, the small file would be soft: the larger one is asked for there, where a logo has one)
+          srcSet={company.logoLarge && size >= 80 ? `${import.meta.env.BASE_URL}logos/${logo} 1x, ${import.meta.env.BASE_URL}logos/large/${company.logoLarge} 2x` : undefined}
+          width={size}
+          height={size}
+          alt=""
+          loading={eager ? 'eager' : 'lazy'} decoding={eager ? 'sync' : 'async'} draggable={false} onError={() => noteMissing(logo)} />
       ) : (
         company.name.trim()[0]?.toUpperCase()
       )}

@@ -211,7 +211,8 @@ const counts = (): Line[] => [
   out(SITE.mark),
   out(SITE.legalName.toLowerCase()),
   out('people     ' + `${PEOPLE.length} in the group chat`),
-  out('portfolio  ' + `${COMPANIES.length} companies, ${VERTICALS.length} verticals`),
+  // (as About says it: the fund has backed more than the portfolio here lists)
+  out('portfolio  ' + `100+ companies, ${VERTICALS.length} verticals`),
   out('faqs       ' + `${FAQS.length}`),
   out('studies    ' + `${CASE_STUDIES.length} private, ${PUBLIC_CASE_STUDIES.length} public`),
   out('shell      please'),
@@ -267,7 +268,7 @@ let sanFrancisco: Intl.DateTimeFormat | undefined
 function dateThere() {
   sanFrancisco ??= formatter({ weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })
   const of = Object.fromEntries(sanFrancisco.formatToParts(new Date()).map((part) => [part.type, part.value]))
-  return `${of.weekday} ${of.day} ${of.month}, ${of.hour}:${of.minute}${of.dayPeriod ? ` ${of.dayPeriod}` : ''} in san francisco.`.toLowerCase()
+  return `${of.weekday} ${of.month} ${of.day}, ${of.hour}:${of.minute}${of.dayPeriod ? ` ${of.dayPeriod}` : ''} in san francisco.`.toLowerCase()
 }
 
 /** What a line typed into the shell gets back, and what it does besides saying it. `lost` is a command

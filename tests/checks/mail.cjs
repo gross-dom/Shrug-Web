@@ -65,7 +65,7 @@ const check = (name, ok, detail = '') => {
     }
   }, M)
   check('its bar is one long pill that says where this is; under it the list, with no rail of icons beside it, and a pane about whoever the row is from', row.pill === 'All (20) - Mail' && row.rail === 0 && row.pane === 'About the sender' && row.who, JSON.stringify(row))
-  check('a row is one line: who, a label for what it led to before the subject and first line, and the day as Superhuman writes it', row.h >= 28 && row.h <= 40 && /^B s d$/.test(row.parts) && /^(investment|intro|hire|drop)$/.test(row.chip) && row.chipIn === 's' && /^\d{1,2} [A-Z]{3}$/.test(row.date) && row.wide <= 0, JSON.stringify(row))
+  check('a row is one line: who, a label for what it led to before the subject and first line, and the day as Superhuman writes it', row.h >= 28 && row.h <= 40 && /^B s d$/.test(row.parts) && /^(investment|intro|hire|drop)$/.test(row.chip) && row.chipIn === 's' && /^[A-Z]{3} \d{1,2}$/.test(row.date) && row.wide <= 0, JSON.stringify(row))
   check('the rows are under headings for when they came, and the row it is on offers Mark Done and the command palette (no clock)', row.groups.split(' | ').length >= 2 && row.acts === 2 && row.tips === 'Mark Done | Mail Command', JSON.stringify({ groups: row.groups, acts: row.acts, tips: row.tips }))
   check('a row shows the pointing hand', row.hand === 'pointer', row.hand)
   check('it is light, as Superhuman is, and its pane says which key writes to Shrug', /^rgb\(2[45]\d, 2[45]\d, 2[45]\d\)$/.test(row.light) && /^C\s*writes to Shrug$/.test(row.readonly), JSON.stringify({ light: row.light, readonly: row.readonly }))

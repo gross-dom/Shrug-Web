@@ -63,7 +63,9 @@ function DemoPay({ backend, product, option, points, cents, shipTo, needsAddress
     if (email !== undefined && !anEmail(email)) return onError(whyNot('email'))
     setBusy(true)
     onError('')
-    const placed = await backend.paid('demo', { product: product.id, option, points, shipTo: shipTo || undefined, ...(email !== undefined ? { email: email.trim(), name: (name ?? '').trim() } : {}) })
+    // (Apple Pay brings the address saved in it: the demo's stand-in for it says so, and the demo's store
+    // makes one up to keep, as the real one keeps Apple Pay's own)
+    const placed = await backend.paid('demo', { product: product.id, option, points, shipTo: shipTo || undefined, ...(!byCard ? { wallet: true } : {}), ...(email !== undefined ? { email: email.trim(), name: (name ?? '').trim() } : {}) })
     setBusy(false)
     if ('error' in placed) onError(whyNot(placed.error))
     else onDone(placed)

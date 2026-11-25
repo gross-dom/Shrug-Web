@@ -54,9 +54,10 @@ const art = (n: number, left = 50) => item(`art-${n}`, `Art No. ${n}`, { kind: '
  * samples: Shrug's own are in Airtable. */
 const SHELVES: Product[] = [
   book('chromatic', 'Chromatic', 40),
-  book('build-the-future', 'Build the Future', 45, { status: 'Pre-order' }),
+  // (the two pre-orders' sending dates are samples, as the prices are: Shrug's own go in the catalogue)
+  book('build-the-future', 'Build the Future', 45, { status: 'Pre-order', shipsOn: '2027-02-15' }),
   book('what-is-shrug', 'What is Shrug?', 25),
-  book('in-plain-sight', 'In Plain Sight', 55, { status: 'Pre-order' }),
+  book('in-plain-sight', 'In Plain Sight', 55, { status: 'Pre-order', shipsOn: '2027-04-05' }),
   book('catalog', 'WS Catalog', 100),
   art(1, 43),
   art(2),
@@ -148,7 +149,10 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   if (store.scene === 'offline') return { error: 'offline' }
   const me = accountOf(state)
   const mine = store.orders.filter((order) => order.who === me)
-  const typed = (asked.shipTo ?? '').trim()
+  // Apple Pay gives the address saved in it, where the account has none on file: the real store keeps that
+  // one (api/_lib/orders.ts). The demo has no Apple Pay to ask, so it keeps a stand-in under their own name
+  const fromWallet = asked.wallet && !(asked.shipTo ?? '').trim() && !store.shipTos[me] ? `${member.name.trim() || 'Your name'}\n1 Example St\nSan Francisco, CA 94110` : ''
+  const typed = (asked.shipTo ?? '').trim() || fromWallet
   const ask = (product: Product, status: OrderStatus, points: number, cents: number, takes: boolean): Placed => {
     const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: takes ? numberOf(product) : '', points, paid: cents / 100, placed: new Date().toISOString(), who: me }
     store.orders.unshift(order)

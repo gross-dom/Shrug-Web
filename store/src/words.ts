@@ -11,6 +11,17 @@ export interface Badge {
   tone?: 'gold' | 'on'
 }
 
+const SHIPS = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+const SHIPS_SHORT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+
+/** The day a pre-order is sent, as it is written: "February 15, 2027" (or, where there is little room, "Feb 15, 2027").
+ * Nothing where Shrug has not said. */
+export function shipsOf(product: Pick<Product, 'status' | 'shipsOn'> | null | undefined, short = false): string | null {
+  if (!product || product.status !== 'Pre-order' || !product.shipsOn) return null
+  const day = new Date(`${product.shipsOn}T12:00:00Z`)
+  return Number.isNaN(day.getTime()) ? null : (short ? SHIPS_SHORT : SHIPS).format(day)
+}
+
 /** Whether a member has bought it (a request or a reservation is not having it). */
 export const owned = (orders: Order[], product: Product) => orders.some((order) => order.productId === product.id && ['Paid', 'Points', 'Sent'].includes(order.status))
 

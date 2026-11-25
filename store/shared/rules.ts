@@ -126,6 +126,9 @@ export interface Product {
   limited: boolean
   needsAddress: boolean
   place: number
+  /** For a pre-order: the day it is sent (YYYY-MM-DD), where Shrug has said. It is written on the product, on
+   * its receipt and beside the order in My VIP. */
+  shipsOn?: string | null
   /** For a document: every member is shown it in Updates, and those it is not written for may ask for it. */
   listed?: boolean
   /** For a document: the heading it is listed under in Updates. */

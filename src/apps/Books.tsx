@@ -3,6 +3,7 @@ import { BookOpen, ChevronLeft, Library } from 'lucide-react'
 import { fmtCents, priceCents, soldOut, wayOf, type Order, type Product } from '../../store/shared/rules'
 import { editionOf, EDITIONS } from '../data/editions'
 import { shotsOf } from '../../store/src/pictures'
+import { shipsOf } from '../../store/src/words'
 import { Window } from '../kit/window'
 import { useShelf, wantShop } from '../os/shop'
 import { useStore } from '../os/store'
@@ -47,7 +48,9 @@ function getOf(book: Product, mine: Order | undefined): string {
 const TONES = ['#1f3a5f', '#5a2a3c', '#2f4a3a', '#4a3a6a', '#6a4a22']
 function Cover({ book, n }: { book: Product; n: number }) {
   const shot = shotsOf(book)[0]
-  if (shot) return <img src={shot.small} alt="" loading="lazy" decoding="async" draggable={false} style={shot.at ? { objectPosition: shot.at } : undefined} />
+  // (a cover is upright and a photograph may be wide: it is drawn as wide as fills the cover's height, and
+  // the file is chosen for that width, so that it is sharp on a sharp screen)
+  if (shot) return <img src={shot.small} srcSet={shot.set} sizes={shot.set && shot.aspect ? `${Math.round(Math.max(264, 352 * shot.aspect))}px` : undefined} alt="" loading="lazy" decoding="async" draggable={false} style={shot.at ? { objectPosition: shot.at } : undefined} />
   return (
     <span className="bk-drawn" aria-hidden style={{ background: `linear-gradient(160deg, ${TONES[n % TONES.length]}, #101114)` }}>
       <b>{book.name}</b>
@@ -202,6 +205,8 @@ export function BooksApp() {
                       </span>
                       <b>{b.name}</b>
                       <small>Made by Shrug</small>
+                      {/* (a pre-order says when it is sent, where Shrug has said) */}
+                      {shipsOf(b, true) && <small className="bk-ships">Ships {shipsOf(b, true)}</small>}
                       <span className="sr-only">
                         {n + 1} of {books.length}
                       </span>

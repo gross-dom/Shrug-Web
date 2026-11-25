@@ -48,7 +48,7 @@ export interface Asked {
   email?: string
   /** A visitor's: their name, which the account the payment makes is under (and their card is printed with). */
   name?: string
-  /** A visitor's: Apple Pay will give the address, so none is typed. */
+  /** Apple Pay will give the address (the one saved in it), so none is typed: it is kept on file, as a typed one is. */
   wallet?: boolean
 }
 

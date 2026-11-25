@@ -273,6 +273,12 @@ button.bkbar__back:hover {
   font-size: 12.5px;
 }
 
+/* (when a pre-order is sent: in the gold its tab is in) */
+.bk-open > small.bk-ships {
+  margin-top: 1px;
+  color: #d9b86a;
+}
+
 .bk-pill {
   display: inline-flex;
   align-items: center;
