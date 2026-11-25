@@ -582,14 +582,15 @@
   line-height: 18px;
 }
 
-/* (warmer than it is: the mark stands further back, and the chip is on its other side) */
+/* (warmer than it is: the mark stands further back, and the chip is on its other side, with room for it
+   inside the line however far apart the two are) */
 .wt-gap[data-way='up']::after {
-  right: 30%;
+  right: 56%;
 }
 
 .wt-gap[data-way='up'] i {
   right: auto;
-  left: calc(70% + 6px);
+  left: calc(44% + 6px);
   background: #f6c05c;
   color: #4a2c05;
 }
@@ -633,6 +634,10 @@
   font-style: normal;
   font-weight: 700;
   line-height: 10px;
+}
+
+.wt-dial i[data-off] {
+  visibility: hidden;
 }
 
 .wt-dial i:nth-child(1) {

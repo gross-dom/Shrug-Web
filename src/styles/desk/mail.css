@@ -192,8 +192,16 @@
 
 .ml-tabs {
   display: flex;
+  flex: 1;
   gap: 24px;
   min-width: 0;
+  /* (more splits than the bar is wide: they run on under its right edge, which fades them, and are
+     reached by scrolling the row, or by Tab, which goes to the next) */
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  mask: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  padding-right: 28px;
 }
 
 .ml-tabs button {
@@ -220,6 +228,7 @@
 
 .ml-tools {
   display: flex;
+  flex: none;
   gap: 8px;
   margin-left: auto;
   color: var(--ml-ink-3);
@@ -548,12 +557,18 @@
   font-size: 11.5px;
 }
 
+/* (one column of what to type and one of what it finds, each line on one line) */
 .ml-tips dt {
-  width: 152px;
+  flex: none;
+  width: 104px;
 }
 
 .ml-tips dd {
+  min-width: 0;
+  overflow: hidden;
   color: var(--ml-ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ml-end {
@@ -999,6 +1014,10 @@ article.ml-msg[data-at] .ml-mini,
   z-index: 5;
 }
 
+.ml[data-zero] .ml-pal {
+  left: 50%;
+}
+
 .ml-pal {
   position: absolute;
   top: 31%;
@@ -1117,6 +1136,12 @@ article.ml-msg[data-at] .ml-mini,
   bottom: 9%;
   display: flex;
   flex-direction: column;
+}
+
+/* (it holds the keyboard while it is up, and needs no ring to say so) */
+.ml-sheet:focus-visible,
+.ml-pal:focus-visible {
+  outline: none;
 }
 
 .ml-leave {
@@ -1318,9 +1343,11 @@ article.ml-msg[data-at] .ml-mini,
 }
 
 .ml-card textarea {
+  /* (its height is set to what is written in it: Mail.tsx. It does not scroll inside itself) */
   min-height: 180px;
   margin-top: 6px;
-  padding: 8px 0 12px;
+  padding: 8px 0 16px;
+  overflow: hidden;
   color: #3a3a3e;
   font: inherit;
   font-size: 13px;
@@ -1385,4 +1412,21 @@ article.ml-msg[data-at] .ml-mini,
   right: 0;
   left: auto;
   transform: none;
+}
+
+/* ---- A narrow window: the pane at the right is put away, as Superhuman puts its own away, so that the
+   subjects have the room; and what was laid out about the pane is laid out about the window */
+.ml {
+  container: mail / inline-size;
+}
+
+@container mail (max-width: 980px) {
+  .ml-pane {
+    display: none;
+  }
+
+  .ml-pal {
+    left: 50%;
+    width: min(566px, calc(100% - 80px));
+  }
 }

@@ -42,7 +42,9 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
-  margin-left: 10px;
+  /* (as much kept clear at its right as the window's lights take at its left, so that Home and the field
+     are in the middle of the window, as Spotify's are) */
+  margin: 0 72px 0 10px;
 }
 
 .spbar__nav {
@@ -115,6 +117,26 @@
 
 .sp-search input::placeholder {
   color: var(--sp-ink-2);
+}
+
+/* (the pill's own white edge says the field has the keyboard: no second ring inside it) */
+.spwin .sp-search input:focus-visible {
+  outline: none;
+}
+
+.sp-search__x {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-right: -6px;
+  border-radius: 50%;
+  color: var(--sp-ink-2);
+}
+
+.sp-search__x:hover {
+  color: var(--sp-ink);
 }
 
 .spwin :where(button, a, [tabindex]):focus-visible {
@@ -312,7 +334,10 @@
 
 .sp-tiles b {
   display: -webkit-box;
+  min-width: 0;
   overflow: hidden;
+  /* (a name that is one long word is broken rather than cut off at the tile's edge) */
+  overflow-wrap: anywhere;
   padding-right: 8px;
   font-size: 13.5px;
   font-weight: 700;
@@ -481,6 +506,13 @@
 /* (in a narrow pane the date gives its room to the title) */
 .sp-main {
   container: spmain / inline-size;
+}
+
+/* (and Home's tiles go two to a line, as Spotify's do, so that a name has room to be read) */
+@container spmain (max-width: 680px) {
+  .sp-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @container spmain (max-width: 540px) {
@@ -928,6 +960,8 @@ button.sp-play:hover {
   flex-direction: column;
   width: 276px;
   min-height: 0;
+  /* (measured, so that Spotify's player can be its shorter self where the view is short: below) */
+  container: spside / size;
   overflow-y: auto;
   border-radius: 8px;
   background: var(--sp-panel);
@@ -993,6 +1027,18 @@ button.sp-play:hover {
   width: 100%;
   border: 0;
   border-radius: 12px;
+}
+
+/* Where the view is too short for Spotify's tall player and what is written under it, the player is its
+   short self (Spotify's player lays itself out to the height it is given), and the words are in sight */
+@container spside (max-height: 520px) {
+  .sp-host:not([hidden]) {
+    min-height: 152px;
+  }
+
+  .sp-player iframe {
+    height: 152px !important;
+  }
 }
 
 .sp-lost {

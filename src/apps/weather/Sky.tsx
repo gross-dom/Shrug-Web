@@ -40,12 +40,13 @@ export function Sky({ kind, light, live = false, still = false }: { kind: SkyKin
     let flashAt = last + 4000 + Math.random() * 5000
     let flash = 0
     const scatter = () => {
-      const count = falls === 'rain' ? Math.round((w * h) / 5200) : falls === 'snow' ? Math.round((w * h) / 9000) : Math.round((w * h) / 7000)
+      const count = falls === 'rain' ? Math.round((w * h) / 5200) : falls === 'snow' ? Math.round((w * h) / 9000) : Math.round((w * h) / 9000)
       motes = Array.from({ length: Math.max(24, Math.min(count, 260)) }, () => ({
         x: Math.random() * w,
         y: Math.random() * (falls === 'stars' ? h * 0.75 : h),
         v: falls === 'rain' ? 620 + Math.random() * 380 : falls === 'snow' ? 26 + Math.random() * 42 : 0,
-        size: falls === 'rain' ? 10 + Math.random() * 14 : falls === 'snow' ? 1 + Math.random() * 2.2 : 0.5 + Math.random() * 1.1,
+        // (stars are points, a few of them a little brighter: any larger and they are taken for snow)
+        size: falls === 'rain' ? 10 + Math.random() * 14 : falls === 'snow' ? 1 + Math.random() * 2.2 : 0.35 + Math.random() * Math.random() * 0.75,
         at: Math.random() * Math.PI * 2,
       }))
     }
@@ -92,7 +93,7 @@ export function Sky({ kind, light, live = false, still = false }: { kind: SkyKin
         }
       } else {
         for (const m of motes) {
-          m.at += dt * (0.6 + m.size)
+          m.at += dt * (0.5 + m.size)
           ctx.fillStyle = `rgba(255, 255, 255, ${0.35 + 0.5 * (0.5 + 0.5 * Math.sin(m.at))})`
           ctx.beginPath()
           ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2)

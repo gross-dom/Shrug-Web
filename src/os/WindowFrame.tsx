@@ -312,7 +312,9 @@ export function WindowFrame({ id, children }: { id: AppId; children: ReactNode }
       }}
       {...(hidden ? ({ inert: '' } as object) : null)}
     >
-      <div className="wf__lights" data-nodrag>
+      {/* (pressed with the pointer, a light does what it does and leaves the keyboard where it was, in the
+          window, as a Mac's lights do: Tab still reaches them) */}
+      <div className="wf__lights" data-nodrag onMouseDown={(e) => e.preventDefault()}>
         <button type="button" className="wf__light" data-kind="close" aria-label={`Close ${spec.name}`} onClick={() => closeApp(id)}>
           <svg viewBox="0 0 12 12" aria-hidden>
             <path d="M3.6 3.6l4.8 4.8M8.4 3.6L3.6 8.4" />

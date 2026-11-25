@@ -317,6 +317,8 @@
   padding: 2px 9px;
   border-radius: 999px;
   background: rgba(20, 20, 24, 0.72);
+  /* (white on its own dark ground, whichever appearance the window is in) */
+  color: #f2f2f4;
   font-size: 11.5px;
   font-weight: 600;
 }
@@ -340,6 +342,7 @@
   padding: 7px 14px 7px 7px;
   border-radius: 999px;
   background: rgba(20, 20, 24, 0.72);
+  color: #f2f2f4;
   font-size: 13px;
 }
 
@@ -386,6 +389,7 @@
   padding: 0 14px;
   border-radius: 999px;
   background: rgba(20, 20, 24, 0.78);
+  color: #f2f2f4;
   font-size: 13px;
   white-space: nowrap;
   transform: translateX(-50%);
@@ -462,11 +466,18 @@
 
 .pb-strip {
   order: 0;
-  justify-content: flex-end;
+  /* (at the strip's right, as a Mac's booth keeps its photos: by a margin before the first of them and
+     not by packing them to the end, which would put whatever does not fit off the left where no scroll
+     reaches it) */
+  justify-content: flex-start;
   height: 66px;
   padding: 3px 22px 3px 16px;
   background: #3a3836;
   gap: 4px;
+}
+
+.pb-strip > .pb-th:first-child {
+  margin-left: auto;
 }
 
 .pb-strip--none {
@@ -670,7 +681,8 @@
 .pb-th__wait {
   position: absolute;
   top: 3px;
-  right: 3px;
+  /* (inside the picture, which is narrower than its button) */
+  right: 11px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -697,8 +709,9 @@
   font-weight: 600;
 }
 
-/* The x on the corner of the photo that is open, for its taker: it takes the photo away */
-.pb-th__x {
+/* The x on the corner of the photo that is open, for its taker: it takes the photo away. (It is a button
+   in a thumbnail, and must not be laid out as the thumbnail's own button is) */
+.pb-th button.pb-th__x {
   position: absolute;
   top: 3px;
   left: 3px;

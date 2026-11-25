@@ -235,7 +235,8 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'quicktime',
     name: 'QuickTime Player',
     blurb: 'Films',
-    size: () => ({ w: 748, h: 652 }),
+    // (as tall as gives the picture a well of its own shape, sixteen by nine, with no black above and below it)
+    size: () => ({ w: 748, h: 637 }),
     min: { w: 520, h: 470 },
     nudge: { x: 30, y: -10 },
     resizable: true,

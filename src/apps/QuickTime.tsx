@@ -109,7 +109,20 @@ export function QuickTimeApp() {
     // (a moment, so that a stand-in's clock begins from nothing)
     setTimeout(play, 0)
   }
-  const go = (to: Film | null) => to && showFilm(to.id)
+  /** The film before or after: a film that was playing gives way to one that plays, as the end of one does. */
+  const go = (to: Film | null) => {
+    if (!to) return
+    const was = playing
+    showFilm(to.id)
+    if (was) setTimeout(() => setStatus('playing'), 0)
+  }
+  // The keyboard stays with the player: the large Play is taken away as the film begins, and what had the
+  // keyboard with it. (Only when nothing has it, and this is the window in front)
+  const root = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = root.current
+    if (el && shown && document.activeElement === document.body && el.closest('.wf')?.hasAttribute('data-active')) el.focus({ preventScroll: true })
+  }, [status, shown])
 
   // Minimized or closed, it stops: nothing plays that cannot be seen
   useEffect(() => {
@@ -146,6 +159,8 @@ export function QuickTimeApp() {
       e.preventDefault()
       return playing ? pause() : status === 'ended' ? replay() : play()
     }
+    // (on the volume's own slider the arrows are the volume's, all four of them)
+    if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && (e.target as HTMLElement).closest('[aria-label="Volume"]')) return e.preventDefault(), setVolume((v) => Math.max(0, Math.min(1, v + (e.key === 'ArrowRight' ? 0.1 : -0.1))))
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') return e.preventDefault(), seek(time + (e.key === 'ArrowRight' ? 5 : -5))
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') return e.preventDefault(), setVolume((v) => Math.max(0, Math.min(1, v + (e.key === 'ArrowUp' ? 0.1 : -0.1))))
     if (e.key === 'f') return e.preventDefault(), full()
@@ -176,7 +191,7 @@ export function QuickTimeApp() {
 
   return (
     <Window className="app qtwin" lightsSize="large" lead={<b className="qt-name">{film.name}</b>} body={{ className: 'qtwin__body' }}>
-      <div className={`qt${off ? ' qt-off' : ''}`} data-autofocus tabIndex={0} role="group" aria-label={`QuickTime Player: ${film.name}`} data-status={status} onKeyDown={onKey}>
+      <div ref={root} className={`qt${off ? ' qt-off' : ''}`} data-autofocus tabIndex={0} role="group" aria-label={`QuickTime Player: ${film.name}`} data-status={status} onKeyDown={onKey}>
         <div ref={well} className="qt-well" onDoubleClick={full}>
           {film.src ? (
             <video

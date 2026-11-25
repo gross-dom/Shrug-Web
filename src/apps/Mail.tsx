@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Trash2, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
@@ -65,8 +65,7 @@ const COMMANDS: Command[] = [
   { id: 'next-message', name: 'Next message', keys: ['N'], when: ['n'], group: 'In a conversation', does: 'next-message' },
   { id: 'previous-message', name: 'Previous message', keys: ['P'], when: ['p'], group: 'In a conversation', does: 'previous-message' },
   { id: 'expand', name: 'Expand all messages', keys: ['⇧', 'O'], when: ['shift+o'], group: 'In a conversation', does: 'expand' },
-  { id: 'reply-all', name: 'Reply all', keys: ['↵'], when: [], group: 'In a conversation', does: 'reply' },
-  { id: 'compose', name: 'Compose', keys: ['C'], when: ['c'], group: 'In a conversation', does: 'compose' },
+  { id: 'reply-all', name: 'Reply to Shrug', keys: ['↵'], when: [], group: 'In a conversation', does: 'reply' },
   { id: 'undo', name: 'Undo', keys: ['Z'], when: ['z'], group: 'Find and ask', does: 'undo' },
   // ---- what a visitor can do with the twenty: kept in their own browser
   { id: 'done', name: 'Mark Done', keys: ['E'], when: ['e'], group: 'Yours to do', does: 'done' },
@@ -75,6 +74,9 @@ const COMMANDS: Command[] = [
   { id: 'unread', name: 'Mark Unread', keys: ['U'], when: ['u'], group: 'Yours to do', does: 'unread' },
   { id: 'read', name: 'Mark Read', keys: ['⇧', 'U'], when: ['shift+u'], group: 'Yours to do', does: 'read' },
   { id: 'share', name: 'Share Conversation', keys: ['⌘', 'S'], when: ['mod+s'], group: 'Yours to do', does: 'share' },
+  { id: 'compose', name: 'Write to Shrug', keys: ['C'], when: ['c'], group: 'Yours to do', does: 'compose' },
+  // (in a message being written, Command Return sends it; anywhere else there is nothing to send)
+  { id: 'send', name: 'Send, in a new message', keys: ['⌘', '↵'], when: ['mod+Enter', 'mod+shift+Enter'], group: 'Yours to do', does: { says: 'Nothing is being written. C starts a message to Shrug.' } },
   { id: 'done-folder', name: 'Go to Done', keys: ['G', 'E'], when: ['g e'], group: 'Move about', does: 'go-done' },
   { id: 'starred', name: 'Go to Starred', keys: ['G', 'S'], when: ['g s'], group: 'Move about', does: 'go-starred' },
   // ---- what would send, file or delete mail: said, and not done
@@ -89,7 +91,6 @@ const COMMANDS: Command[] = [
   { id: 'select', name: 'Select conversation', keys: ['X'], when: ['x'], group: 'Not here', does: nothing('selected') },
   { id: 'select-more', name: 'Add to selection', keys: ['⇧', 'J'], when: ['shift+j', 'shift+k', 'shift+ArrowDown', 'shift+ArrowUp'], group: 'Not here', does: nothing('selected') },
   { id: 'forward', name: 'Forward', keys: ['F'], when: ['f'], group: 'Not here', does: nothing('forwarded') },
-  { id: 'send', name: 'Send', keys: ['⌘', '↵'], when: ['mod+Enter', 'mod+shift+Enter'], group: 'Not here', does: nothing('sent') },
   { id: 'send-later', name: 'Send later', keys: ['⌘', '⇧', 'L'], when: ['mod+shift+l'], group: 'Not here', does: nothing('scheduled') },
   { id: 'snippet', name: 'Use snippet', keys: [';'], when: [';', 'mod+;'], group: 'Not here', does: nothing('written') },
   { id: 'intro', name: 'Instant intro', keys: ['⌘', '⇧', 'I'], when: ['mod+shift+i'], group: 'Not here', does: nothing('sent') },
@@ -170,8 +171,18 @@ export function MailApp() {
   const [over, setOver] = useState<'command' | 'shortcuts' | null>(null)
   const [zero, setZero] = useState(false)
   /** A new message to Shrug, being written here: what it has in it so far. It is kept while it is put by (Escape, the way back), and gone once it is sent or discarded. */
-  const [letter, setLetter] = useState<Letter>(BLANK)
+  const [letter, setLetter] = useState<Letter>(keptLetter)
   const [composing, setComposing] = useState(false)
+  /** The subject a reply was given by the conversation it answers: one the visitor has not written over. */
+  const given = useRef<string | null>(null)
+  useEffect(() => {
+    try {
+      if (letter.from || letter.subject || letter.text) window.sessionStorage.setItem(LETTER, JSON.stringify(letter))
+      else window.sessionStorage.removeItem(LETTER)
+    } catch {
+      // No storage: it is kept for as long as the window is
+    }
+  }, [letter])
   /** In a conversation: the message the keyboard is on, and the ones that are open (the rest are a line each). */
   const [message, setMessage] = useState(0)
   const [unfolded, setUnfolded] = useState<number[]>([])
@@ -212,12 +223,16 @@ export function MailApp() {
   // The keyboard is the window's own whenever nothing in it is being typed into
   const back = () => root.current?.focus()
   useEffect(() => {
-    if (!over && query === null) back()
-  }, [over, query, open, zero, unfolded])
+    if (!over && query === null && !composing) back()
+  }, [over, query, open, zero, unfolded, composing])
   // The row the keyboard is on is kept in sight
   useEffect(() => {
     root.current?.querySelector('.ml-row.on')?.scrollIntoView({ block: 'nearest' })
   }, [cursor, split, q, open])
+  // And so is the split that is picked, where there are more splits than the bar is wide
+  useEffect(() => {
+    root.current?.querySelector('.ml-tabs .on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [split, done.length, starred.length])
 
   const show = (x: Exchange) => setOpen(x.id)
   // A conversation opens on its newest email: the earlier ones are a line each until they are asked for.
@@ -233,14 +248,17 @@ export function MailApp() {
   /** What a command acts on: the conversation that is open, or the row the keyboard is on. */
   const target = () => thread ?? rows[cursor] ?? null
   const stepThread = (by: number) => {
-    const list = split === 'all' && !q ? EXCHANGES : rows
-    const now = list.findIndex((x) => x.id === open)
-    const to = list[Math.max(0, Math.min(list.length - 1, (now < 0 ? 0 : now) + by))]
+    // (the one that is open may have left the list, marked done from inside it: the row that took its place
+    // is then the next one, and the row before that the previous)
+    const now = rows.findIndex((x) => x.id === open)
+    const from = now >= 0 ? now : by > 0 ? cursor - 1 : cursor
+    const to = rows[Math.max(0, Math.min(rows.length - 1, from + by))]
     if (to) show(to), setAt(Math.max(0, rows.indexOf(to)))
   }
 
   const run = (does: Does) => {
     if (typeof does !== 'string') return say(does.says)
+    if (zero && ['done', 'not-done', 'star', 'unread', 'read', 'share', 'led', 'open', 'next', 'previous', 'next-message', 'previous-message', 'expand'].includes(does)) return say('Nothing is selected. Z brings the inbox back.')
     switch (does) {
       case 'next':
         return thread ? stepThread(1) : setAt(Math.min(rows.length - 1, cursor + 1))
@@ -319,7 +337,9 @@ export function MailApp() {
       case 'search':
         setZero(false)
         setOpen(null)
-        return setQuery((was) => was ?? '')
+        // (already searching, with the keyboard in what was found: back to the field)
+        if (query !== null) return root.current?.querySelector<HTMLInputElement>('.ml-search input')?.focus()
+        return setQuery('')
       case 'command':
         return setOver('command')
       case 'shortcuts':
@@ -327,8 +347,9 @@ export function MailApp() {
       case 'reply':
       case 'compose': {
         // A new message, written here, to Shrug: a reply to a conversation takes its subject
+        // (a subject the visitor has written themselves is left as they wrote it)
         const re = does === 'reply' && thread ? (/^re:/i.test(thread.subject) ? thread.subject : `Re: ${thread.subject}`) : null
-        if (re && letter.subject !== re) setLetter((was) => ({ ...was, subject: re }))
+        if (re && (!letter.subject.trim() || letter.subject === given.current)) setLetter((was) => ({ ...was, subject: re })), (given.current = re)
         setZero(false)
         return setComposing(true)
       }
@@ -387,7 +408,7 @@ export function MailApp() {
     else {
       does = COMMANDS.find((c) => c.when.includes(press))?.does
       // At Inbox Zero there is nothing to move through or act on: what answers is what leaves it, finds, or asks
-      if (zero && !(typeof does === 'string' && ['undo', 'back', 'inbox', 'search', 'command', 'shortcuts', 'reply'].includes(does))) does = undefined
+      if (zero && !(typeof does === 'string' && ['undo', 'back', 'inbox', 'search', 'command', 'shortcuts', 'reply', 'compose'].includes(does))) does = undefined
     }
     if (!does) return
     e.preventDefault()
@@ -829,6 +850,18 @@ interface Letter {
 }
 const BLANK: Letter = { from: '', subject: '', text: '' }
 
+/** Where a message that is being written is kept: the tab's own storage, which goes when the tab does. */
+const LETTER = 'shrug:mail.letter'
+function keptLetter(): Letter {
+  try {
+    const was = JSON.parse(window.sessionStorage.getItem(LETTER) ?? 'null') as Partial<Letter> | null
+    const text = (value: unknown) => (typeof value === 'string' ? value : '')
+    return was ? { from: text(was.from), subject: text(was.subject), text: text(was.text) } : BLANK
+  } catch {
+    return BLANK
+  }
+}
+
 /** A new message, as Superhuman sets one out (Dom's screenshot of it): the way back at the left, "New
  * Message", and a card: who it is to, who it is from, its subject, what it says, and along its foot Send
  * and the bin. It has one recipient, Shrug. ⌘ Return sends it; Escape puts it by, as it was, for later.
@@ -851,6 +884,13 @@ function Compose({ letter, onChange, onPutBy, onDiscard, onSent }: { letter: Let
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const set = (part: Partial<Letter>) => (setState('writing'), onChange({ ...letter, ...part }))
+  // The room for the words grows with them, as Superhuman's does, and the column scrolls
+  useLayoutEffect(() => {
+    const el = words.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [letter.text])
   const address = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from.trim())
   const ready = letter.text.trim().length > 0 && address
   const send = () => {
@@ -864,7 +904,13 @@ function Compose({ letter, onChange, onPutBy, onDiscard, onSent }: { letter: Let
       className="ml-main ml-thread ml-compose"
       onKeyDown={(e) => {
         if (e.key === 'Escape') return e.preventDefault(), e.stopPropagation(), onPutBy()
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) e.preventDefault(), e.stopPropagation(), send()
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) return e.preventDefault(), e.stopPropagation(), send()
+        // Return in a line of the head goes on to the next thing to fill in: it does not send
+        if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+          e.preventDefault()
+          const fields = [...e.currentTarget.querySelectorAll<HTMLElement>('input, textarea')]
+          fields[fields.indexOf(e.target) + 1]?.focus()
+        }
       }}
     >
       <button type="button" className="ml-back" aria-label="Back to inbox" onClick={onPutBy}>
@@ -914,7 +960,7 @@ function Compose({ letter, onChange, onPutBy, onDiscard, onSent }: { letter: Let
               </small>
             )}
             <span role="status" className="ml-says">
-              {state === 'failed' ? 'Not sent. Check your connection and try again.' : asked && !address ? 'Add your email, so Shrug can reply.' : asked && !letter.text.trim() ? 'Write something first.' : ''}
+              {state === 'failed' ? 'Not sent. Check your connection and try again.' : asked && !from.trim() ? 'Add your email, so Shrug can reply.' : asked && !address ? 'That email address doesn’t look right.' : asked && !letter.text.trim() ? 'Write something first.' : ''}
             </span>
             <button type="button" className="ml-bin" aria-label="Discard this message" data-tip="Discard" onClick={onDiscard}>
               <Trash2 size={15} strokeWidth={1.6} aria-hidden />

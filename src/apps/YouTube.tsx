@@ -129,6 +129,19 @@ export function YouTubeApp() {
     }
   }, [started, video.id])
 
+  // The keyboard stays in the window: when what held it is taken away (the list, in Theater mode; the
+  // field's own Clear), it goes to the page, so that T and the rest still answer
+  const root = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = root.current
+    // (only when nothing has it at all, and this is the window in front: never taken from another window)
+    if (el && shown && document.activeElement === document.body && el.closest('.wf')?.hasAttribute('data-active')) el.querySelector<HTMLElement>('.yt-col')?.focus({ preventScroll: true })
+  })
+  // The list follows the video that is playing
+  useEffect(() => {
+    root.current?.querySelector('.yt-item.on')?.scrollIntoView({ block: 'nearest' })
+  }, [at, theater])
+
   const place = `${at + 1} / ${VIDEOS.length}`
   const q = query.trim().toLowerCase()
   const found = VIDEOS.map((v, i) => ({ v, i })).filter(({ v, i }) => !q || [titleOf(v, i), channelOf(v)].some((text) => !!text && text.toLowerCase().includes(q)))
@@ -152,7 +165,7 @@ export function YouTubeApp() {
       <label className="yt-search">
         <input type="text" value={query} placeholder="Search this playlist" aria-label={`Search ${PLAYLIST.name}`} spellCheck={false} autoComplete="off" onChange={(e) => setQuery(e.target.value)} />
         {query && (
-          <button type="button" aria-label="Clear" onClick={() => setQuery('')}>
+          <button type="button" aria-label="Clear" onClick={(e) => (setQuery(''), e.currentTarget.parentElement?.querySelector('input')?.focus())}>
             <X size={18} strokeWidth={1.6} aria-hidden />
           </button>
         )}
@@ -166,6 +179,7 @@ export function YouTubeApp() {
   return (
     <Window className="app ytwin" lightsSize="large" lead={bar} body={{ className: 'ytwin__body' }}>
       <div
+        ref={root}
         className="yt"
         data-wide={wide || undefined}
         onKeyDown={(e) => {

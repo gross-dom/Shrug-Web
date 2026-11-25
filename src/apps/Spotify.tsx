@@ -106,7 +106,25 @@ export function SpotifyApp() {
   const [failed, setFailed] = useState(false)
   const [again, setAgain] = useState(0)
   const main = useRef<HTMLElement>(null)
+  const room = useRef<HTMLDivElement>(null)
   const host = useRef<HTMLDivElement>(null)
+  // A window made narrow gives the Now playing view's room to the pages (the bar's switch brings the view
+  // back): it is put away as the window goes under the width at which the pages have too little left
+  useEffect(() => {
+    const el = room.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const NARROW = 940
+    let was = el.clientWidth
+    const watch = new ResizeObserver(() => {
+      const now = el.clientWidth
+      // (a window out of sight has no width: that is not a narrow window)
+      if (!now) return
+      if (now < NARROW && was >= NARROW) setSide(false)
+      was = now
+    })
+    watch.observe(el)
+    return () => watch.disconnect()
+  }, [])
   const ctl = useRef<Controller | null>(null)
   /** What the controller has loaded, and whether it is to play as soon as it can. */
   const loaded = useRef<string | null>(null)
@@ -225,6 +243,9 @@ export function SpotifyApp() {
 
   const go = (to: At) => {
     setFailed(false)
+    // (a search is of the whole room, and is shown on Home: a page gone to from it is shown whole, not
+    // through what was being looked for)
+    if (to.is !== 'home') setQuery('')
     setTrail((t) => (same(t.at, to) ? t : { past: [...t.past, t.at], at: to, ahead: [] }))
     main.current?.scrollTo(0, 0)
   }
@@ -247,7 +268,24 @@ export function SpotifyApp() {
         </button>
         <label className="sp-search">
           <Search size={20} strokeWidth={1.8} aria-hidden />
-          <input type="text" value={query} placeholder="What do you want to play?" aria-label="Search the listening room" spellCheck={false} autoComplete="off" onChange={(e) => (setQuery(e.target.value), at.is !== 'home' && go({ is: 'home' }))} />
+          <input
+            type="text"
+            value={query}
+            placeholder="What do you want to play?"
+            aria-label="Search the listening room"
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(e) => (at.is !== 'home' && e.target.value && go({ is: 'home' }), setQuery(e.target.value))}
+            onKeyDown={(e) => {
+              // Escape empties the field, as it does Spotify's
+              if (e.key === 'Escape' && query) e.stopPropagation(), setQuery('')
+            }}
+          />
+          {query && (
+            <button type="button" className="sp-search__x" aria-label="Clear the search" onClick={(e) => (setQuery(''), e.currentTarget.parentElement?.querySelector('input')?.focus())}>
+              <X size={18} strokeWidth={1.9} aria-hidden />
+            </button>
+          )}
         </label>
       </span>
       <span className="spbar__end" />
@@ -257,7 +295,7 @@ export function SpotifyApp() {
   /** A row of the table: an episode, to be played. */
   const rowOf = (e: Episode, i: number) => (
     <li key={e.id}>
-      <button type="button" className={`sp-row${playing === e.id ? ' on' : ''}`} aria-pressed={playing === e.id} onClick={() => play(e)}>
+      <button type="button" className={`sp-row${playing === e.id ? ' on' : ''}`} aria-pressed={playing === e.id} onClick={(press) => press.detail < 2 && play(e)}>
         <span className="num">
           {playing === e.id && !beat.paused ? (
             <span className="sp-eq" aria-hidden>
@@ -306,7 +344,16 @@ export function SpotifyApp() {
 
   return (
     <Window className="app spwin" lightsSize="large" lead={bar} body={{ className: 'spwin__body' }}>
-      <div className="sp">
+      <div
+        ref={room}
+        className="sp"
+        onKeyDown={(e) => {
+          // Space plays and pauses, as it does in Spotify, wherever the keyboard is but in something of its own
+          if (e.key !== ' ' || e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest('input, textarea, button, a, [role="slider"]')) return
+          e.preventDefault()
+          toggle()
+        }}
+      >
         <nav className="sp-lib" aria-label="Your Library">
           <h2>Your Library</h2>
           {/* The chips filter this list, as Spotify's do: one kind at a time, and an x to have all of it back */}
@@ -381,7 +428,7 @@ export function SpotifyApp() {
                   ))}
                   {EPISODES.slice(0, Math.max(0, 8 - LISTS.length - PLAYLISTS.length)).map((e) => (
                     <li key={e.id}>
-                      <button type="button" onClick={() => play(e)}>
+                      <button type="button" onClick={(press) => press.detail < 2 && play(e)}>
                         <Cover tone={e.tone} size={48} src={coverOf(e)} />
                         <b>{titleOf(e)}</b>
                       </button>
@@ -389,10 +436,13 @@ export function SpotifyApp() {
                   ))}
                 </ul>
               )}
+              {q && !(only !== 'playlists' && episodes.length) && !(only !== 'podcasts' && playlists.length) && none}
               {only !== 'playlists' &&
                 (q
-                  ? // (a search looks through every list at once)
-                    [{ n: -1, found: episodes }]
+                  ? // (a search looks through every list at once, and has a section only for what it found)
+                    episodes.length
+                    ? [{ n: -1, found: episodes }]
+                    : []
                   : LISTS.map((_, n) => ({ n, found: episodes.filter((e) => e.list === n) }))
                 ).map(({ n, found }) => (
                   <div key={n}>
@@ -410,7 +460,7 @@ export function SpotifyApp() {
                     {found.length ? table(n < 0 || only === 'podcasts' ? found : found.slice(0, 4)) : none}
                   </div>
                 ))}
-              {only !== 'podcasts' && (
+              {only !== 'podcasts' && (!q || playlists.length > 0) && (
                 <>
                   <header className="sp-sect">
                     <span>

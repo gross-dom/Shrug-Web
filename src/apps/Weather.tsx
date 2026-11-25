@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowUpRight, CalendarDays, Cloud, CloudRain, Droplet, Droplets, Moon as MoonGlyph, PanelLeft, Search, Sunrise, Sunset, Thermometer, Wind } from 'lucide-react'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
-import { degrees, FAHRENHEIT, feelsLike, forecastPage, moonOf, PLACES, readWeather, skyKind, skyLight, sunOf, type Day, type Hour, type Moon, type Place, type SkyKind, type SkyLight, type Told } from '../os/weather'
+import { degrees, FAHRENHEIT, feelsLike, forecastPage, moonOf, PLACES, readWeather, skyKind, skyLight, speed, SPEED, SPOKEN, sunOf, TWELVE, type Day, type Hour, type Moon, type Place, type SkyKind, type SkyLight, type Told } from '../os/weather'
 import { wm } from '../os/wm'
 import { HorizonGlyph, SkyGlyph } from './weather/Glyph'
 import { Sky } from './weather/Sky'
@@ -23,16 +23,25 @@ import '../styles/desk/weather.css'
 
 type Got = { told: Told } | { failed: true } | null
 
-const clockIn = (zone: string, more: Intl.DateTimeFormatOptions = {}) => new Intl.DateTimeFormat(undefined, { timeZone: zone, hour: 'numeric', minute: '2-digit', ...more })
-const hourIn = (zone: string) => new Intl.DateTimeFormat(undefined, { timeZone: zone, hour: 'numeric' })
-const dayIn = (zone: string) => new Intl.DateTimeFormat(undefined, { timeZone: zone, weekday: 'short' })
+// (in English, as the window is, on the visitor's own kind of clock: os/weather.ts)
+const clockIn = (zone: string, more: Intl.DateTimeFormatOptions = {}) => new Intl.DateTimeFormat(SPOKEN, { timeZone: zone, hour: 'numeric', minute: '2-digit', ...more })
+const hourIn = (zone: string) => new Intl.DateTimeFormat(SPOKEN, { timeZone: zone, hour: 'numeric' })
+const dayIn = (zone: string) => new Intl.DateTimeFormat(SPOKEN, { timeZone: zone, weekday: 'short' })
+/** A time in a sentence: its parts are kept together on one line. */
+const unbroken = (time: string) => time.replace(/[\s\u202f]+/g, '\u00a0')
 const dateIn = (zone: string) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' })
 
 const COMPASS: Record<string, number> = { N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5, S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5 }
 const UNIT = FAHRENHEIT ? '°F' : '°C'
 
 /** The sky a place is under: what is in it, and the light it is in. Before its forecast has arrived, a clear day. */
-const skyOf = (place: Place, now: Hour | undefined): { kind: SkyKind; light: SkyLight } => (now ? { kind: skyKind(now.says), light: skyLight(place, Date.now(), now.day) } : { kind: 'clear', light: 'day' })
+const skyOf = (place: Place, now: Hour | undefined): { kind: SkyKind; light: SkyLight } => {
+  if (now) return { kind: skyKind(now.says), light: skyLight(place, Date.now(), now.day) }
+  // (nothing told yet, or the forecast did not arrive: an even grey, lit as the hour there is, and not a
+  // sunny day that nobody forecast)
+  const sun = sunOf(place, Date.now())
+  return { kind: 'cloud', light: skyLight(place, Date.now(), !sun || (Date.now() > sun.rise && Date.now() < sun.set)) }
+}
 
 /** Today's high and low for a place: the week's first day where it has them, and otherwise the day's own hours. */
 function rangeOf(told: Told, zone: string): { high: number; low: number } {
@@ -226,10 +235,12 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
             {/* The ring of ticks; and over it the letters, an arrow from where the wind is coming to where it is going, and the speed */}
             <div className="wt-compass" aria-hidden />
             <div className="wt-dial" aria-hidden>
-              <i>N</i>
-              <i>E</i>
-              <i>S</i>
-              <i>W</i>
+              {/* (a wind from due north, east, south or west has its arrow along two of the letters: those two are left out) */}
+              {(['N', 'E', 'S', 'W'] as const).map((letter) => (
+                <i key={letter} data-off={(/^[NS]$/.test(now.from ?? '') && /[NS]/.test(letter)) || (/^[EW]$/.test(now.from ?? '') && /[EW]/.test(letter)) || undefined}>
+                  {letter}
+                </i>
+              ))}
               {now.from && now.from in COMPASS && (
                 <svg viewBox="0 0 100 100" style={{ transform: `rotate(${COMPASS[now.from]!}deg)` }}>
                   {/* (from the ring's edge, outside the letters, to an arrowhead at the edge opposite) */}
@@ -238,18 +249,18 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
                 </svg>
               )}
               <b>
-                {now.wind}
-                <small>mph</small>
+                {speed(now.wind)}
+                <small>{SPEED}</small>
               </b>
             </div>
-            <p className="wt-centre">{now.from ? `From the ${now.from}` : `${now.wind} mph`}</p>
+            <p className="wt-centre">{now.from ? `From the ${now.from}` : `${speed(now.wind)} ${SPEED}`}</p>
           </section>
         )}
         <section className="wt-tile wt-tile--wide" aria-label="The hours ahead">
           <header className="wt-cond">
             <span>
               <b>Conditions</b>
-              <small>{reading === 'sky' ? `Temperature (${UNIT})` : reading === 'rain' ? 'Chance of rain' : 'Wind (mph)'}</small>
+              <small>{reading === 'sky' ? `Temperature (${UNIT})` : reading === 'rain' ? 'Chance of rain' : `Wind (${SPEED})`}</small>
             </span>
             {/* Read as the sky, as the rain, or as the wind */}
             <span className="wt-seg" role="group" aria-label="Show">
@@ -288,7 +299,7 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
                   ) : (
                     <SkyGlyph says={h.says} day={h.day} />
                   )}
-                  <b>{reading === 'wind' ? (h.wind !== null ? h.wind : '–') : reading === 'rain' ? (h.rain !== null ? `${Math.round(h.rain)}%` : '–') : `${degrees(h.temp)}°`}</b>
+                  <b>{reading === 'wind' ? (h.wind !== null ? speed(h.wind) : '–') : reading === 'rain' ? (h.rain !== null ? `${Math.round(h.rain)}%` : '–') : `${degrees(h.temp)}°`}</b>
                 </li>
               )
             })}
@@ -312,7 +323,7 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
             </h2>
             <b className="wt-big">{Math.round(now.rain)}%</b>
             <b className="wt-mid">this hour</b>
-            <p>{wettest && (wettest.rain ?? 0) > now.rain ? `Up to ${Math.round(wettest.rain!)}% by ${hour.format(wettest.at)}.` : 'No likelier in the hours to come.'}</p>
+            <p>{wettest && (wettest.rain ?? 0) > now.rain ? `Up to ${Math.round(wettest.rain!)}% by ${unbroken(TWELVE ? hour.format(wettest.at) : clock.format(new Date(wettest.at).setMinutes(0, 0, 0)))}.` : 'No likelier in the hours to come.'}</p>
           </section>
         )}
         {days.length > 1 && (
@@ -323,7 +334,7 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
             </h2>
             <ol className="wt-days">
               {days.map((d, i) => (
-                <Row key={d.at} d={d} name={i === 0 ? 'Today' : dayIn(place.zone).format(d.at)} along={along} now={i === 0 ? now.temp : null} />
+                <Row key={d.at} d={d} name={i === 0 ? 'Today' : dayIn(place.zone).format(d.at)} along={along} now={i === 0 ? now.temp : null} range={i === 0 ? range : null} />
               ))}
             </ol>
           </section>
@@ -365,9 +376,10 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
 }
 
 /** A day of the week: its name, its sky, how likely rain is, and its low and high on a bar drawn against the week's. */
-function Row({ d, name, along, now }: { d: Day; name: string; along: (temp: number) => number; now: number | null }) {
-  const low = d.low ?? d.high
-  const high = d.high ?? d.low
+function Row({ d, name, along, now, range }: { d: Day; name: string; along: (temp: number) => number; now: number | null; range: { high: number; low: number } | null }) {
+  // (today's low and high are the ones over the tiles, which take the day's own hours into account)
+  const low = range?.low ?? d.low ?? d.high
+  const high = range?.high ?? d.high ?? d.low
   return (
     <li>
       <span>{name}</span>
@@ -458,7 +470,8 @@ function SunPath({ sun, at }: { sun: { rise: number; set: number } | null; at: n
         <polyline points={points} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         <line x1="0" y1={HORIZON} x2="100" y2={HORIZON} stroke="rgba(255,255,255,0.45)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
       </svg>
-      <i style={{ left: `${((now - from) / (to - from)) * 100}%`, top: `${(y(now) / 44) * 100}%` }} />
+      {/* (the sun's own dot is kept whole inside the tile at either end of its day) */}
+      <i style={{ left: `${Math.max(5, Math.min(95, ((now - from) / (to - from)) * 100))}%`, top: `${(y(now) / 44) * 100}%` }} />
     </span>
   )
 }

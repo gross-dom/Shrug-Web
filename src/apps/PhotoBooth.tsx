@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Camera, ChevronLeft, ChevronRight, Flag, Grid2x2, Lock, RotateCcw, Share, SquareUserRound, Video, VideoOff, X } from 'lucide-react'
 import { Window } from '../kit/window'
 import { account, askLogIn, logIn } from '../os/account'
@@ -157,9 +157,17 @@ export function PhotoBoothApp() {
     }
     const el = video.current
     if (!el || !el.videoWidth) return setStage('live')
+    // The photo is what was framed: the view shows the middle of the camera's picture, cut to its own
+    // shape, and that is the part that is kept
+    const view = el.getBoundingClientRect()
+    const shape = view.width > 0 && view.height > 0 ? view.width / view.height : el.videoWidth / el.videoHeight
+    const sw = Math.round(Math.min(el.videoWidth, el.videoHeight * shape))
+    const sh = Math.round(Math.min(el.videoHeight, el.videoWidth / shape))
+    const sx = Math.round((el.videoWidth - sw) / 2)
+    const sy = Math.round((el.videoHeight - sh) / 2)
     const canvas = document.createElement('canvas')
-    canvas.width = el.videoWidth
-    canvas.height = el.videoHeight
+    canvas.width = sw
+    canvas.height = sh
     const ctx = canvas.getContext('2d')
     if (!ctx) return setStage('live')
     /** One frame, as it was seen (mirrored, and through the effect), into a part of the sheet. */
@@ -168,7 +176,7 @@ export function PhotoBoothApp() {
       ctx.filter = filter
       ctx.translate(x + w, y)
       ctx.scale(-1, 1)
-      ctx.drawImage(el, 0, 0, w, h)
+      ctx.drawImage(el, sx, sy, sw, sh, 0, 0, w, h)
       ctx.restore()
       setFlash(true)
       setTimeout(() => setFlash(false), 220)
@@ -224,8 +232,9 @@ export function PhotoBoothApp() {
   }, [who.status, sheet, send])
 
   const mine = (p: Post) => who.status === 'member' && p.by === who.email
-  // What the strip has: the wall. A photo that has been flagged is off it, but for whoever took it, who sees it marked
-  const strip = posts.filter((p) => !p.flagged || mine(p))
+  // What the strip has: the wall, oldest first, so that the newest is at its right end, where a Mac's booth
+  // puts a photo just taken. A photo that has been flagged is off it, but for whoever took it, who sees it marked
+  const strip = posts.filter((p) => !p.flagged || mine(p)).reverse()
   const shownLarge = large ? (strip.find((p) => p.id === large) ?? null) : null
   const at = shownLarge ? strip.indexOf(shownLarge) : -1
   // Back to the camera: for someone logged in. A visitor who was looking at the wall is back at the door
@@ -235,9 +244,24 @@ export function PhotoBoothApp() {
   const me = who.status === 'member' ? who.name || who.first : null
 
   const counting = stage === 'count'
+  // The strip is kept at its right end, where the newest is: more photos than fit run off its left, and
+  // are reached by scrolling it
+  const row = useRef<HTMLOListElement>(null)
+  const newest = strip[strip.length - 1]?.id
+  useEffect(() => {
+    const el = row.current
+    if (el) el.scrollLeft = el.scrollWidth
+  }, [newest, strip.length, shown])
+  /** In the viewer the arrows go to the photo before and after, and Escape goes back to the camera. */
+  const keys = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (stage !== 'large' || e.metaKey || e.ctrlKey || e.altKey) return
+    if (e.key === 'Escape') return e.preventDefault(), camera()
+    const to = e.key === 'ArrowLeft' ? strip[at - 1] : e.key === 'ArrowRight' ? strip[at + 1] : null
+    if (to) e.preventDefault(), setLarge(to.id)
+  }
   return (
     <Window className="app pbwin" lightsSize="large" lead={<b className="pb-name">Photo Booth</b>} body={{ className: 'pbwin__body' }}>
-      <div className="pb" data-stage={stage}>
+      <div className="pb" data-stage={stage} onKeyDown={keys}>
         <div className="pb-view">
           {(stage === 'live' || stage === 'count') && stream.current && <video ref={video} className="pb-cam" style={{ filter }} muted playsInline aria-label="The camera" />}
           {stage === 'effects' && (
@@ -316,12 +340,13 @@ export function PhotoBoothApp() {
             </span>
           )}
         </div>
-        {/* The strip: the wall, newest first, at the right of the strip as a Mac's booth keeps its own. A
-            photo of the taker's own that has been flagged is still in it for them, marked. The one that is
-            open has an x on its corner, for its taker to remove it */}
-        {!counting &&
+        {/* The strip: the wall, at the right of the strip as a Mac's booth keeps its own, the newest at its
+            end. It stays where it is through the count, so that the picture does not change shape under
+            whoever is posing. A photo of the taker's own that has been flagged is still in it for them,
+            marked. The one that is open has an x on its corner, for its taker to remove it */}
+        {
           (strip.length ? (
-            <ol className="pb-strip" aria-label="The wall: latest photos from everyone">
+            <ol ref={row} className="pb-strip" aria-label="The wall: latest photos from everyone">
               {strip.map((p) => (
                 <li key={p.id} className={`pb-th${large === p.id && stage === 'large' ? ' on' : ''}${fresh === p.id ? ' new' : ''}${p.flagged ? ' waiting' : ''}`}>
                   <button type="button" aria-label={`A photo by ${p.name}, ${dayOf(p.at)}${p.flagged ? ', flagged' : ''}`} onClick={() => open(p)}>

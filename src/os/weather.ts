@@ -181,6 +181,33 @@ export const FAHRENHEIT = (() => {
   }
 })()
 
+/** Whether the visitor reads a wind in miles an hour: those who read Fahrenheit, and Britain, which reads
+ * Celsius and miles. Everyone else reads kilometres an hour. */
+export const MILES =
+  FAHRENHEIT ||
+  (() => {
+    try {
+      return /-GB\b/i.test(new Intl.Locale(navigator.language).maximize().baseName)
+    } catch {
+      return true
+    }
+  })()
+
+/** A wind's speed as the visitor reads them, and what it is counted in. */
+export const speed = (mph: number) => Math.round(MILES ? mph : mph * 1.609344)
+export const SPEED = MILES ? 'mph' : 'km/h'
+
+/** Whether the visitor's clock is a twelve-hour one. The window is written in English whoever reads it,
+ * so its times and days are English too, on the visitor's own kind of clock. */
+export const TWELVE = (() => {
+  try {
+    return new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hour12 === true
+  } catch {
+    return true
+  }
+})()
+export const SPOKEN = TWELVE ? 'en-US' : 'en-GB'
+
 /** A temperature as the visitor reads them, to the degree. */
 export const degrees = (fahrenheit: number) => Math.round(FAHRENHEIT ? fahrenheit : ((fahrenheit - 32) * 5) / 9)
 
