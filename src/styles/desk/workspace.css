@@ -544,22 +544,23 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
-/* The foot: the color's name at the left, the tray of colors in the middle, the price and its button at the
-   right. In a narrow window they are two rows (the name and the button, then the tray), and the chair is
-   set that much higher, so that none of them lies over another */
+/* The foot, one row at every width: the color's name at the left, the price and its button at the right,
+   and between them the tray of colors, which has what room they leave it. It holds as many dots as fit
+   (Workspace.tsx counts them), so in a narrow window it is shorter, and never under or over the others.
+   Where there is room to spare it is moved to stand under the middle of the window (--nudge) */
 .st-foot {
   position: absolute;
   right: 40px;
   bottom: 22px;
   left: 40px;
   z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: end;
+  display: flex;
+  align-items: flex-end;
   gap: 18px;
 }
 
 .fl-info {
+  flex: none;
   min-width: 0;
   max-width: 300px;
   padding-bottom: 10px;
@@ -605,6 +606,7 @@
 /* The colors, and under them who owns one */
 .fl-pick {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
   gap: 8px;
@@ -615,12 +617,20 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
+  max-width: 100%;
   height: 30px;
   padding: 0 12px 0 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  transform: translateX(var(--nudge, 0px));
+}
+
+.fl-owners > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fl-owners b {
@@ -665,6 +675,7 @@
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.6), 0 10px 30px -8px rgba(0, 0, 0, 0.3);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
+  transform: translateX(var(--nudge, 0px));
 }
 
 .fl-dot {
@@ -700,49 +711,28 @@
   background: currentColor;
 }
 
-/* The sixteen more, in one dot: every color at once, until one of them is picked and it wears that one */
+/* The dot at the tray's end: every color at once. It lets down the grid of the sixteen more */
 .fl-dot.more {
   background: conic-gradient(#f4640a, #f6c915, #3bbf6b, #2f7ee8, #8a4be0, #d42a22, #f4640a);
 }
 
 .fl-buy {
   display: flex;
+  flex: none;
   flex-direction: column;
   align-items: flex-end;
-  justify-self: end;
   gap: 10px;
   padding-bottom: 10px;
 }
 
+/* (in a narrow window the name is set a little smaller and has less of the row, so the tray keeps more of its dots) */
 @container studio (max-width: 900px) {
-  .fl > * {
-    --st-foot: 214px;
-    --st-h: min(470px, calc(100cqh - 232px));
-  }
-
-  .st-foot {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 12px;
-  }
-
   .fl-info {
-    max-width: none;
-    padding-bottom: 0;
+    max-width: 230px;
   }
 
   .fl-info h2 {
     font-size: 28px;
-  }
-
-  .fl-buy {
-    flex-direction: row;
-    align-items: center;
-    padding-bottom: 0;
-  }
-
-  .fl-pick {
-    grid-column: 1 / -1;
-    grid-row: 2;
   }
 
   .st-shots {
@@ -1057,91 +1047,81 @@
 }
 
 .mc-sheet {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-  width: min(560px, 100%);
-  max-height: 100%;
-  padding: 20px 22px 22px;
-  overflow-y: auto;
-  border-radius: 22px;
-  background: rgba(250, 250, 250, 0.94);
+  width: min(760px, 100%);
+  height: min(600px, 100%);
+  padding: 12px;
+  border-radius: 24px;
+  background: rgba(250, 250, 250, 0.9);
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 30px 70px -14px rgba(0, 0, 0, 0.55);
-  color: #141414;
   -webkit-backdrop-filter: blur(30px) saturate(1.6);
   backdrop-filter: blur(30px) saturate(1.6);
 }
 
-.mc-sheet header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+/* (its way out: at the sheet's corner, clear of the colors) */
+.mc-sheet > .wx-x {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: #141414;
 }
 
-.mc-sheet h2 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.mc-sheet > .wx-x:hover {
+  background: #ececec;
 }
 
-.mc-sheet header p {
-  margin-top: 3px;
-  color: #5d5c58;
-  font-size: 13px;
-}
-
-.mc-sheet .wx-x {
-  background: rgba(120, 120, 128, 0.2);
-  color: #3c3c43;
-}
-
-.mc-sheet .wx-x:hover {
-  background: rgba(120, 120, 128, 0.34);
-}
-
+/* The colors fill the sheet: four across, in rows of one height, each a slab of its color with its name on it */
 .mc-grid {
   display: grid;
+  flex: 1;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-auto-rows: minmax(64px, 1fr);
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
 .mc-swatch {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 6px 9px;
+  align-items: flex-end;
+  min-width: 0;
+  padding: 10px 12px;
   border-radius: 14px;
-  color: #141414;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-align: center;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-align: left;
   cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
-.mc-swatch i {
-  width: 100%;
-  aspect-ratio: 1.5;
-  border-radius: 10px;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 6px 14px -8px rgba(0, 0, 0, 0.5);
-  transition: transform 0.16s ease;
+.mc-swatch span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 @media (hover: hover) {
   .mc-swatch:hover {
-    background: rgba(0, 0, 0, 0.06);
-  }
-
-  .mc-swatch:hover i {
-    transform: scale(1.04);
+    z-index: 1;
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 10px 22px -8px rgba(0, 0, 0, 0.5);
+    transform: scale(1.03);
   }
 }
 
 .mc-swatch[aria-pressed='true'] {
-  background: rgba(0, 0, 0, 0.08);
-  box-shadow: inset 0 0 0 2px #141414;
+  box-shadow: inset 0 0 0 3px currentColor;
+}
+
+.mc-swatch:focus-visible {
+  outline: 2px solid #141414;
+  outline-offset: 2px;
 }
 
 /* ---- Buying: the store's own page for the chair, in this window */

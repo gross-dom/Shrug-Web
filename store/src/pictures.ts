@@ -70,7 +70,7 @@ const KEPT: Record<string, Shot[]> = {
   'workspace, scuderia red': set('workspace-ferrari-red'),
   'workspace, solar orange': drawn('solar-orange'),
   'workspace, alexandrite': drawn('alexandrite'),
-  'workspace, championship green': drawn('championship-green'),
+  'workspace, illusion blue': drawn('illusion-blue'),
   'workspace, supersonic': drawn('supersonic'),
   'workspace, pearl lavender': drawn('pearl-lavender'),
   'workspace, mantis green': drawn('mantis-green'),

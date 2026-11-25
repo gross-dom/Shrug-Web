@@ -15,6 +15,9 @@
 // $1,200), and it is said only to someone logged in. Still Shrug's to supply: which colors are in stock, the
 // one line about each color, photographs of each, and the owners who have agreed to be named.
 //
+// (Illusion Blue is among the eight and Championship Green among the sixteen: Dom swapped the two after his
+// fourth round of testing.)
+//
 // Beyond the eight the studio opens on there are sixteen more, each made to order and each with a name of
 // its own (store/shared/colors.ts, which the store reads too: a chair in each is a product there). They are
 // picked from a grid, and from then on are a color like any other. (There is no "color of your own" any
@@ -40,18 +43,17 @@ export interface Paint {
   more?: boolean
 }
 
-/** A file of the real chair, if there is one: a scan or a modelled chair as a .glb, served by the site
- * (put it in public/workspace/ and name it here, "/workspace/chair.glb"). The studio loads it in place of
- * the chair it draws itself, stands it on the turntable at the drawn chair's height, and paints whichever
- * of its materials has "paint" in its name. Null: the drawn chair. */
-export const CHAIR_MODEL: string | null = null
+/** The chair itself: Dom's model of it, as a .glb the site serves (public/workspace/). The studio stands it
+ * on the turntable and paints its material named Paint (src/apps/workspace/stage.ts, which says how a newer
+ * file is put in its place). */
+export const CHAIR_MODEL: string | null = '/workspace/chair.glb'
 
 export const PAINTS: Paint[] = [
   { id: 'matte-black', name: 'Matte Black', color: '#141414', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
   { id: 'scuderia-red', name: 'Scuderia Red', color: '#ff302c', finish: 'gloss', stock: 'order', line: null, product: 'chair-scuderia-red' },
   { id: 'solar-orange', name: 'Solar Orange', color: '#ff7900', finish: 'gloss', stock: 'now', line: null, product: 'chair-solar-orange' },
   { id: 'alexandrite', name: 'Alexandrite', color: '#6e5e72', shift: ['#1c3146', '#6e5e72', '#b47e62'], finish: 'shift', stock: 'order', line: null, product: 'chair-alexandrite' },
-  { id: 'championship-green', name: 'Championship Green', color: '#0b9d6e', finish: 'metallic', stock: 'order', line: null, product: 'chair-championship-green' },
+  { id: 'illusion-blue', name: 'Illusion Blue', color: '#2386f7', finish: 'metallic', stock: 'order', line: null, product: 'chair-illusion-blue' },
   { id: 'supersonic', name: 'Supersonic', color: '#ffffff', finish: 'gloss', stock: 'order', line: null, product: 'chair-supersonic' },
   { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', finish: 'pearl', stock: 'order', line: null, product: 'chair-pearl-lavender' },
   { id: 'mantis-green', name: 'Mantis Green', color: '#13c334', finish: 'pearl', stock: 'order', line: null, product: 'chair-mantis-green' },

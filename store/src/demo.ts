@@ -68,7 +68,7 @@ const SHELVES: Product[] = [
   chair('chair-scuderia-red', 'Scuderia Red', 1200),
   chair('chair-solar-orange', 'Solar Orange', 1200),
   chair('chair-alexandrite', 'Alexandrite', 1200),
-  chair('chair-championship-green', 'Championship Green', 1200),
+  chair('chair-illusion-blue', 'Illusion Blue', 1200),
   chair('chair-supersonic', 'Supersonic', 1200),
   chair('chair-pearl-lavender', 'Pearl Lavender', 1200),
   chair('chair-mantis-green', 'Mantis Green', 1200),

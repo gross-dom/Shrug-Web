@@ -35,3 +35,31 @@ export function pick(next: Picked | null) {
     // No storage: the color is kept for as long as the page is open
   }
 }
+
+// The colors on the studio's bar beyond the eight it opens with: one of the sixteen more that has been picked
+// is added to the bar, and stays on it (Dom's fourth round: the bar grows by one, and the picker is still at
+// its end). Kept in this browser with the color that is picked.
+
+const BAR = 'shrug:workspace.bar.v1'
+
+function keptBar(): string[] {
+  try {
+    const was = JSON.parse(window.localStorage.getItem(BAR) ?? '[]') as unknown
+    return Array.isArray(was) ? was.filter((id): id is string => typeof id === 'string').slice(0, 24) : []
+  } catch {
+    return []
+  }
+}
+
+/** The ids of the colors added to the bar, in the order they were picked. */
+export const onBar = createStore<string[]>(typeof window === 'undefined' ? [] : keptBar())
+
+export function addToBar(id: string) {
+  if (onBar.get().includes(id)) return
+  onBar.set((was) => [...was, id])
+  try {
+    window.localStorage.setItem(BAR, JSON.stringify(onBar.get()))
+  } catch {
+    // No storage: it is on the bar for as long as the page is open
+  }
+}

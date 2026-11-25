@@ -39,7 +39,7 @@ export const MORE_COLORS: MoreColor[] = [
   { id: 'luxury-bronze', name: 'Luxury Bronze', color: '#968677', finish: 'metallic' },
   { id: 'smurf', name: 'Smurf', color: '#56aae3', finish: 'metallic' },
   { id: 'nuclear-pink', name: 'Nuclear Pink', color: '#fa9a9a', finish: 'uv' },
-  { id: 'illusion-blue', name: 'Illusion Blue', color: '#2386f7', finish: 'metallic' },
+  { id: 'championship-green', name: 'Championship Green', color: '#0b9d6e', finish: 'metallic' },
   { id: 'interstellar-black', name: 'Interstellar Black', color: '#2d3140', finish: 'holo', shift: ['#23242e', '#4f6488', '#6a5690', '#2d3140'] },
   { id: 'hulk-green', name: 'Hulk Green', color: '#42a549', finish: 'metallic' },
   { id: 'reserve-green', name: 'Reserve Green', color: '#978d47', finish: 'shift', shift: ['#15431d', '#3e7839', '#b98e44', '#f5c077'] },

@@ -18,7 +18,7 @@ const OUT = path.join(__dirname, '..', 'store', 'public', 'pictures')
 const COLORS = [
   ['Solar Orange', 'solar-orange'],
   ['Alexandrite', 'alexandrite'],
-  ['Championship Green', 'championship-green'],
+  ['Illusion Blue', 'illusion-blue'],
   ['Supersonic', 'supersonic'],
   ['Pearl Lavender', 'pearl-lavender'],
   ['Mantis Green', 'mantis-green'],

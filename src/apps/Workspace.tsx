@@ -9,9 +9,10 @@ import { TEMPLATED } from '../data/site'
 import { Window } from '../kit/window'
 import { account, askLogIn } from '../os/account'
 import { prefersReducedMotion } from '../os/dom'
-import { useShelf, wantShop } from '../os/shop'
+import { launchApp } from '../os/launch'
+import { loadShop, useShelf, wantShop } from '../os/shop'
 import { useStore } from '../os/store'
-import { pick, picked } from '../os/workspace'
+import { addToBar, onBar, pick, picked } from '../os/workspace'
 import { wm } from '../os/wm'
 import { addressOf, Balance, StoreFrame, type FrameHandle } from './storefront'
 import type { Stage } from './workspace/stage'
@@ -24,7 +25,10 @@ import '../styles/desk/workspace.css'
 // from edge to edge (the window's bar is laid over it), the color's name set huge behind the chair, the
 // chair itself on a turntable with photographs of it beside (one picked fills the window, under a shade the
 // controls can still be read on), the colors in a small glass tray of dots with who owns one under them,
-// and the price and one button. The price is said to someone logged in. Buy opens the store's own page for
+// and the price and one button. The tray is as wide as the window leaves it: it has the eight, then any of
+// the sixteen more that has been picked (each is added to it, and stays), and at its end the dot that lets
+// the sixteen down. In a narrower window it holds fewer dots, and those it has no room for are in the grid
+// with the sixteen. The price is said to someone logged in. Buy opens the store's own page for
 // that chair inside this window (storefront.tsx), in that chair's color: the same checkout as everywhere,
 // in dollars, with their points to bring it down and their address already on file.
 //
@@ -46,6 +50,8 @@ const chosenOf = (paint: Paint): Chosen => ({ id: paint.id, name: paint.name, co
 /** What a slab, a dot or the cove is painted with: the color, or for a shifting paint the colors it moves through. */
 const ground = (c: { color: string; shift?: string[] }) => (c.shift ? `linear-gradient(135deg, ${c.shift.join(', ')})` : c.color)
 const stockOf = (paint: Paint) => (paint.shift ? 'Color-shifting' : paint.stock === 'now' ? 'Available now' : 'Made to order')
+/** How a chair in a color is to be had, as the studio says it on the color's tag: every color can be bought; one that is not in stock is made, and takes its weeks. */
+const leadOf = (paint: Paint) => (paint.stock === 'now' ? 'Available now' : 'Made to order · 2–3 weeks')
 const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
 /** A visitor never reads a note written for Shrug: what is still templated is the demo's and the editor's. */
 const real = (text: string) => !text.startsWith('[')
@@ -64,6 +70,7 @@ export function WorkspaceApp() {
   }, [open])
   const who = useStore(account, (s) => s)
   const kept = useStore(picked, (s) => s)
+  const added = useStore(onBar, (s) => s)
   const shelf = useShelf('chairs')
   // It opens on the colors, every time it is opened: choosing one is what Workspace is for. (The color last
   // picked is still kept: it is the one the Dock's icon wears.)
@@ -96,12 +103,56 @@ export function WorkspaceApp() {
     setFlood(c.id)
     setTimeout(() => (setFlood(null), setView('studio')), 420)
   }
-  /** One of the sixteen more, picked from the grid: the studio is in it. */
+  /** A color picked from the grid: the studio is in it. One of the sixteen more is added to the tray, where it stays. */
   const pickMore = (c: Chosen) => {
     choose(c)
     setMore(false)
     setView('studio')
   }
+  // (however one of the sixteen came to be the color: from the grid, from the store's page, or kept from last time)
+  useEffect(() => {
+    if (chosen?.paint.more) addToBar(chosen.id)
+  }, [chosen?.id, chosen?.paint.more])
+
+  // ---- The tray: the eight, then what has been added, in as many dots as there is room for
+  const tray = [...PAINTS, ...added.map((id) => MORE.find((p) => p.id === id)).filter((p): p is Paint => !!p)].map(chosenOf)
+  const foot = useRef<HTMLDivElement>(null)
+  /** How many dots the tray has room for (the one that lets the grid down among them), and how far it is moved to stand under the middle of the window. */
+  const [room, setRoom] = useState({ dots: 99, nudge: 0 })
+  const all = tray.length + 1
+  useLayoutEffect(() => {
+    const el = foot.current
+    if (!el || view !== 'studio') return
+    const DOT = 36
+    const GAP = 10
+    const PAD = 32
+    const measure = () => {
+      const pick = el.querySelector<HTMLElement>('.fl-pick')
+      if (!pick) return
+      const info = el.querySelector<HTMLElement>('.fl-info')?.offsetWidth ?? 0
+      const buy = el.querySelector<HTMLElement>('.fl-buy')?.offsetWidth ?? 0
+      const wide = pick.clientWidth
+      const dots = Math.max(2, Math.min(all, Math.floor((wide - PAD + GAP) / (DOT + GAP))))
+      const slack = Math.max(0, wide - (dots * DOT + (dots - 1) * GAP + PAD))
+      const nudge = Math.round(Math.max(-slack / 2, Math.min(slack / 2, (buy - info) / 2)))
+      setRoom((was) => (was.dots === dots && was.nudge === nudge ? was : { dots, nudge }))
+    }
+    measure()
+    const watch = new ResizeObserver(measure)
+    watch.observe(el)
+    for (const part of el.children) watch.observe(part)
+    return () => watch.disconnect()
+  }, [view, all, chosen?.id])
+  /** The dots there is room for: the first of the tray, and always the color that is picked. */
+  const shownDots = (() => {
+    const n = Math.max(1, Math.min(tray.length, room.dots - 1))
+    const first = tray.slice(0, n)
+    if (!chosen || first.some((c) => c.id === chosen.id)) return first
+    const mine = tray.find((c) => c.id === chosen.id)
+    return mine ? [...first.slice(0, n - 1), mine] : first
+  })()
+  /** Those there is no room for: they are in the grid, ahead of the sixteen. */
+  const crowded = tray.filter((c) => !c.paint.more && !shownDots.some((d) => d.id === c.id))
 
   // ---- A chair in one of the colors: what the store says of it, and the way to its page
 
@@ -248,7 +299,7 @@ export function WorkspaceApp() {
               ))}
             </div>
           )}
-          <div className="st-foot">
+          <div className="st-foot" ref={foot}>
             <div className="fl-info">
               <h2>{chosen.name}</h2>
               {(chosen.paint.line || chosen.shift) && (
@@ -260,30 +311,23 @@ export function WorkspaceApp() {
               <div className="st-tags">
                 {/* How it is finished, as the catalog words it, and how it is to be had */}
                 <span className="st-tag">{FINISH_WORDS[chosen.paint.finish]}</span>
-                <span className="st-tag">{chosen.paint.stock === 'now' ? 'Available now' : 'Made to order'}</span>
+                <span className="st-tag">{leadOf(chosen.paint)}</span>
               </div>
             </div>
             <div className="fl-pick">
-              <div className="fl-dock" role="group" aria-label="Colors">
-                {PAINTS.map(chosenOf).map((c) => (
+              <div className="fl-dock" role="group" aria-label="Colors" style={{ ['--nudge' as string]: `${room.nudge}px` }}>
+                {shownDots.map((c) => (
                   <button key={c.id} type="button" className={`fl-dot${chosen.id === c.id ? ' on' : ''}`} style={{ background: ground(c), color: ink }} aria-label={c.name} aria-pressed={chosen.id === c.id} onClick={() => choose(c)} />
                 ))}
-                {/* The sixteen more, in one dot: it wears the one that is picked, when one of them is */}
-                <button
-                  type="button"
-                  className={`fl-dot more${chosen.paint.more ? ' on' : ''}`}
-                  style={chosen.paint.more ? { background: chosen.color, color: ink } : { color: ink }}
-                  aria-label={chosen.paint.more ? `More colors. ${chosen.name} is picked` : 'More colors'}
-                  aria-haspopup="dialog"
-                  onClick={() => setMore(true)}
-                />
+                {/* The sixteen more, and whatever of the tray there is no room for: the dot at its end lets the grid down */}
+                <button type="button" className="fl-dot more" style={{ color: ink }} aria-label="More colors" aria-haspopup="dialog" onClick={() => setMore(true)} />
               </div>
               {/* Who owns one, under the colors: on the way to buying it. (Nobody is said to own one of the sixteen more.) */}
               {owners.length > 0 && !chosen.paint.more && (
-                <button type="button" className="fl-owners" onClick={() => setView('owners')}>
+                <button type="button" className="fl-owners" style={{ ['--nudge' as string]: `${room.nudge}px` }} onClick={() => setView('owners')}>
                   <span className="fl-faces" aria-hidden>
                     {owners.slice(0, 4).map((owner, i) => {
-                      const paint = PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
+                      const paint = ALL_PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
                       return <i key={i} style={{ background: ground(paint) }} />
                     })}
                   </span>
@@ -293,6 +337,8 @@ export function WorkspaceApp() {
                   </span>
                 </button>
               )}
+              {/* (where nobody is said to own one, the line's room is kept, so the tray stands where it stood) */}
+              {!(owners.length > 0 && !chosen.paint.more) && <span className="fl-owners" aria-hidden />}
             </div>
             <div className="fl-buy">
               {!shelf ? (
@@ -306,10 +352,16 @@ export function WorkspaceApp() {
                     {chosen.paint.stock === 'now' ? 'Buy' : 'Order'}
                   </button>
                 </>
+              ) : member && shelf.down ? (
+                // Logged in, and the store did not answer: it is asked again
+                <button type="button" className="fl-btn" onClick={() => void loadShop()}>
+                  Try again
+                </button>
               ) : member ? (
-                // Logged in, and the store has no price for this one (or is not answering): it can be opened all the same
-                <button type="button" className="fl-btn" aria-disabled={!product || undefined} onClick={() => product && buy()}>
-                  {product ? 'See this chair' : 'Not available just now'}
+                // Logged in, and the store has no price for this one: its page can be opened all the same, and a
+                // color the store does not have yet can be asked for
+                <button type="button" className="fl-btn" onClick={() => (product ? buy() : launchApp('messages'))}>
+                  {product ? 'See this chair' : 'Ask us about this one'}
                 </button>
               ) : (
                 <button type="button" className="fl-btn" onClick={enquire}>
@@ -325,7 +377,7 @@ export function WorkspaceApp() {
           <h1 className="sr-only">Notable Owners</h1>
           <div className="ow-grid">
             {OWNERS_SHOWN.map((owner, i) => {
-              const paint = PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
+              const paint = ALL_PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
               return (
                 <article key={i} className="ow-card" style={{ background: ground(paint), color: inkOn(paint.color) }}>
                   <q>“{owner.words}”</q>
@@ -366,7 +418,7 @@ export function WorkspaceApp() {
           by its x, by a press anywhere off the picture, or by Escape */}
       {view === 'bts' && look && <Look piece={look} onClose={() => setLook(null)} />}
       {/* The sixteen more colors, to pick from */}
-      {more && <More picked={chosen?.id ?? null} onPick={pickMore} onClose={() => setMore(false)} />}
+      {more && <More picked={chosen?.id ?? null} ahead={view === 'studio' ? crowded : []} onPick={pickMore} onClose={() => setMore(false)} />}
       {/* Buying: the store's own page for this chair, in this window and in its color. The colors along its
           foot are the other chairs; "View all" comes back to the studio */}
       {framed && (
@@ -392,8 +444,9 @@ export function WorkspaceApp() {
   )
 }
 
-/** The sixteen more colors: a grid of four by four, each a swatch with its name. One picked is the studio's. */
-function More({ picked: on, onPick, onClose }: { picked: string | null; onPick: (c: Chosen) => void; onClose: () => void }) {
+/** The sixteen more colors: a grid of four by four that fills its sheet, each a slab of its color with its
+ * name on it. Ahead of them, any color of the tray that the tray had no room for. One picked is the studio's. */
+function More({ picked: on, ahead, onPick, onClose }: { picked: string | null; ahead: Chosen[]; onPick: (c: Chosen) => void; onClose: () => void }) {
   const sheet = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const first = sheet.current?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? sheet.current?.querySelector<HTMLElement>('.mc-swatch')
@@ -411,23 +464,16 @@ function More({ picked: on, onPick, onClose }: { picked: string | null; onPick: 
           if (e.key === 'Escape') e.stopPropagation(), onClose()
         }}
       >
-        <header>
-          <div>
-            <h2>More colors</h2>
-            <p>{MORE.length} more, each made to order.</p>
-          </div>
-          <button type="button" className="wx-x" aria-label="Close" onClick={onClose}>
-            <X size={14} strokeWidth={2.6} aria-hidden />
-          </button>
-        </header>
         <div className="mc-grid" role="group" aria-label="Colors">
-          {MORE.map(chosenOf).map((c) => (
-            <button key={c.id} type="button" className="mc-swatch" aria-pressed={on === c.id} onClick={() => onPick(c)}>
-              <i style={{ background: c.color }} aria-hidden />
+          {[...ahead, ...MORE.map(chosenOf)].map((c) => (
+            <button key={c.id} type="button" className="mc-swatch" style={{ background: ground(c), color: inkOn(c.color) }} aria-pressed={on === c.id} onClick={() => onPick(c)}>
               <span>{c.name}</span>
             </button>
           ))}
         </div>
+        <button type="button" className="wx-x" aria-label="Close" onClick={onClose}>
+          <X size={14} strokeWidth={2.6} aria-hidden />
+        </button>
       </div>
     </div>
   )
@@ -521,7 +567,16 @@ function Turntable({ color, shift, finish, name, live }: { color: string; shift?
     void import('./workspace/stage')
       .then(({ makeStage }) => {
         if (gone || !canvas.current || !box.current) return
-        const made = makeStage(canvas.current, !prefersReducedMotion(), () => setDrawn(true))
+        const made = makeStage(
+          canvas.current,
+          !prefersReducedMotion(),
+          () => setDrawn(true),
+          () => {
+            // The chair's file did not arrive: the drawing stays, and nothing is held for a chair that is not there
+            made.stop()
+            if (stage.current === made) stage.current = null
+          },
+        )
         stage.current = made
         made.size(box.current.clientWidth, box.current.clientHeight)
         made.paint(paint.current.color, paint.current.shift, paint.current.finish)
