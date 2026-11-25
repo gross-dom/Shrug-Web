@@ -569,13 +569,9 @@ button.bk-pill:hover,
   color: #fff;
 }
 
-.rd-turn[aria-disabled='true'] {
-  opacity: 0.25;
-  cursor: default;
-}
-
-.rd-turn[aria-disabled='true']:hover {
-  background: none;
+/* (there is no way back on the first page, and none on from the last: the arrow is simply not there) */
+.rd-turn[hidden] {
+  display: none;
 }
 
 .rd-prev {

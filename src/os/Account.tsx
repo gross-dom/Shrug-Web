@@ -44,6 +44,8 @@ const HEADS: Record<NonNullable<Why> | 'plain', { head: string; lead: string }> 
   post: { head: 'Log in to post', lead: 'Every photo on the wall has a name behind it. Yours is kept while you log in.' },
   price: { head: 'Log in to enquire', lead: 'Log in or sign up to get started.' },
   booth: { head: 'Log in to use Photo Booth', lead: 'Log in or sign up to get started.' },
+  // (let down for someone already logged in, to ask what they are called: nobody is shown these two)
+  name: { head: 'Welcome to Shrug VIP', lead: 'Log in or sign up to get started.' },
 }
 
 const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five']
@@ -142,10 +144,15 @@ type Stage =
   | { at: 'profile'; first: boolean }
   | { at: 'menu' }
 
-function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?: string; onDone: () => void }) {
-  const [at, setStage] = useState<Stage>(() => (who ? (who.via === 'link' && who.needs.phone ? { at: 'addphone' } : { at: 'menu' }) : { at: 'email' }))
+function Sheet({ who, why, says, hold, onDone }: { who: Member | null; why: Why; says?: string; hold: { current: boolean }; onDone: () => void }) {
+  // (someone logged in who has not yet said what they are called is asked that first, when it is let down for it)
+  const [at, setStage] = useState<Stage>(() => (who ? (who.via === 'link' && who.needs.phone ? { at: 'addphone' } : why === 'name' && who.needs.profile ? { at: 'profile', first: true } : { at: 'menu' }) : { at: 'email' }))
   // What is only for someone logged in is not shown to nobody: should they be logged out under it, it begins again
   const stage: Stage = !who && (at.at === 'menu' || at.at === 'profile' || at.at === 'addphone') ? { at: 'email' } : at
+  // What someone is called is the one thing the sheet waits for: while it is asking for it the first time,
+  // a press elsewhere or Escape does not put it away (a press that lands as the sheet changes would, and the
+  // card would then have no name on it)
+  hold.current = stage.at === 'profile' && stage.first
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -273,7 +280,7 @@ function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?
         <h2 className="account__head">{!adding ? 'What’s your number?' : linked ? `Welcome${who?.first ? `, ${who.first}` : ''}` : who?.needs.phone ? 'Email confirmed' : 'A new number'}</h2>
         <p className="account__lead">
           {!adding
-            ? 'We’ll text you a six-digit code. This number is how you’ll log in from now on.'
+            ? 'We’ll text you a code to use for logging in.'
             : linked
               ? `Your link confirmed ${who!.email}. Add a phone number to finish. It’s how you’ll log in next time.`
               : 'Add a phone number. It’s how you’ll log in next time, with a texted code.'}
@@ -474,9 +481,9 @@ function Profile({ who, first, onSaved }: { who: Member; first: boolean; onSaved
   const mine = 'url' in picture ? picture.url : null
   return (
     <form className="account__form" onSubmit={save} noValidate>
-      <h2 className="account__head">{first ? 'Make it yours' : 'Name and picture'}</h2>
+      <h2 className="account__head">{first ? 'What’s your name?' : 'Name and picture'}</h2>
       <label className="account__field">
-        <span className="account__label">Display name</span>
+        <span className="account__label">{first ? 'Your name' : 'Display name'}</span>
         <input ref={field} type="text" autoComplete="nickname" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
       </label>
       <p className="account__lead">Shown on your card and on anything you post.</p>
@@ -518,6 +525,8 @@ export function AccountItem() {
   const title = useRef<HTMLButtonElement>(null)
   /** Whether nobody was logged in when the sheet was let down: so that what it unlocks is said once they are. */
   const came = useRef(false)
+  /** Whether the sheet is asking, the first time, what someone is called: it stays until it is told (see Sheet). */
+  const hold = useRef(false)
 
   useEffect(() => {
     // Arriving by a personal link (the server sends them to ?login=1, with their email confirmed), or asked
@@ -535,10 +544,11 @@ export function AccountItem() {
   // Away from it, or Escape, puts the sheet away
   useEffect(() => {
     if (!sheet.open) return
-    const away = (e: PointerEvent) => !box.current?.contains(e.target as Node) && closeLogIn()
+    const away = (e: PointerEvent) => !box.current?.contains(e.target as Node) && !hold.current && closeLogIn()
     const keys = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       e.stopPropagation()
+      if (hold.current) return
       closeLogIn()
       title.current?.focus()
     }
@@ -567,7 +577,7 @@ export function AccountItem() {
 
   return (
     <div ref={box} className="menubar__account">
-      <button ref={title} type="button" className="menubar__title menubar__login" data-open={sheet.open || undefined} data-in={member ? '' : undefined} aria-haspopup="dialog" aria-expanded={sheet.open} onClick={() => (sheet.open ? closeLogIn() : askLogIn())}>
+      <button ref={title} type="button" className="menubar__title menubar__login" data-open={sheet.open || undefined} data-in={member ? '' : undefined} aria-haspopup="dialog" aria-expanded={sheet.open} onClick={() => (sheet.open ? !hold.current && closeLogIn() : askLogIn())}>
         {member ? (
           <>
             <Face picture={member.picture} name={member.name} size={18} />
@@ -579,7 +589,7 @@ export function AccountItem() {
       </button>
       {sheet.open && who.status !== 'checking' && (
         <div className="account" role="dialog" aria-label={member ? 'Your account' : 'Log in'}>
-          <Sheet who={member} why={sheet.why} says={sheet.says} onDone={done} />
+          <Sheet who={member} why={sheet.why} says={sheet.says} hold={hold} onDone={done} />
         </div>
       )}
     </div>

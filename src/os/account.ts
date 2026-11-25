@@ -70,7 +70,7 @@ export const isLP = (who: Account): boolean => who.status === 'member' && who.ro
 // ---- The sheet: let down by Log In itself, or by something locked that needs someone logged in
 
 /** What the sheet was opened for, where something locked opened it: it says so at its head. */
-export type Why = 'updates' | 'request' | 'post' | 'price' | 'booth' | null
+export type Why = 'updates' | 'request' | 'post' | 'price' | 'booth' | 'name' | null
 
 /** An LP has just logged in: when, and how many documents are theirs. The desk says so once (Surface.tsx). */
 export const unlocked = createStore<{ at: number; docs: number } | null>(null)
@@ -435,6 +435,12 @@ export async function logOut() {
   else {
     state().in = null
     keep()
+  }
+  // (the card's page keeps the card it last showed, to show it at once: that card was this person's)
+  try {
+    for (const kept of ['shrug.hint', 'shrug.card', 'shrug.pending']) window.localStorage.removeItem(kept)
+  } catch {
+    // Nothing kept, nothing to forget
   }
   account.set({ status: 'anon' })
 }

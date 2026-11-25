@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Wordmark } from '../../store/src/brand'
 import { Window } from '../kit/window'
-import { account } from '../os/account'
+import { account, askLogIn } from '../os/account'
 import { APPS, type AppId } from '../os/apps'
 import { AppIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
-import { addressOf, Balance, CARD, StoreFrame, type FrameHandle } from './storefront'
+import { addressOf, PACK, StoreFrame, type FrameHandle } from './storefront'
 
 // My VIP: what is a member's, in a window of its own.
 //
@@ -57,15 +56,18 @@ export function MyVipApp() {
   useEffect(() => {
     if (!open || made) return
     const now = account.get()
-    setFirst(now.status === 'member' && packDue(now.email) ? CARD : addressOf('yours'))
+    // (a pack has its owner's name in its window: someone who has not said what they are called yet is asked
+    // first, below, and their pack hangs once they have)
+    setFirst(now.status === 'member' && now.name.trim() && packDue(now.email) ? PACK : addressOf('yours'))
     setMade(true)
   }, [open, made])
   const frame = useRef<FrameHandle>(null)
-  const who = useStore(account, (s) => (s.status === 'member' ? s.email : s.status === 'anon' ? '' : null))
+  /** Who is logged in, and whether they have said what they are called: a change in either is looked at below. */
+  const who = useStore(account, (s) => (s.status === 'member' ? `${s.email}|${s.name.trim() ? 'named' : ''}` : s.status === 'anon' ? '' : null))
   const [page, setPage] = useState<'pack' | 'store'>('store')
 
-  // Someone who has just logged in, with My VIP's own page showing, gets their pack; someone who logs out
-  // while the pack is showing is taken off it
+  // Someone who has just logged in (and said what they are called), with My VIP's own page showing, gets
+  // their pack; someone who logs out while the pack is showing is taken off it
   const was = useRef(who)
   useEffect(() => {
     if (who === null || was.current === who) return
@@ -73,18 +75,22 @@ export function MyVipApp() {
     was.current = who
     if (before === null || !made) return
     const now = account.get()
-    if (now.status === 'member' && packDue(now.email) && page === 'store') frame.current?.to(CARD)
+    if (now.status === 'member' && now.name.trim() && packDue(now.email) && page === 'store') frame.current?.to(PACK)
     else if (now.status !== 'member' && page === 'pack') frame.current?.to(addressOf('yours'))
   }, [who, made, page])
 
+  // A card has a name on it: someone logged in who has not yet said what they are called is asked, as My VIP
+  // opens, before their pack or their card is anything to look at
+  const nameless = useStore(account, (s) => s.status === 'member' && !s.name.trim())
+  useEffect(() => {
+    if (open && nameless) askLogIn('name')
+  }, [open, nameless])
+
   const bar = (
     <div className="storebar">
-      {/* (the window's name is its mark: MY VIP, and nothing is said again in the middle of the bar) */}
-      <span className="storebar__mark">
-        <Wordmark lockup="my" height={14} />
-      </span>
+      {/* (its name, set as ArtStore's is in its own bar: the two windows are one family) */}
+      <span className="storebar__name">My VIP</span>
       <span className="storebar__says" />
-      <Balance />
     </div>
   )
   return (

@@ -239,29 +239,13 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
       </ol>
     </>
   )
-  // How points work, in the three things there are to know: how they come, what they do, and what the card shows
-  const chair = AWARDS.Chair ?? 0
+  // How points work, said in one line for now (Dom's fourth round: the details come later)
   const how = (
     <>
       <h2 className="ui-sect">How points work</h2>
-      <ol className="ui-how">
-        <li>
-          <b>Earn</b>
-          <span>
-            {fmtPoints(STARTING_POINTS)} points when you join{chair > 0 ? `, and ${fmtPoints(chair)} each time you buy a Workspace chair` : ''}.
-          </span>
-        </li>
-        <li>
-          <b>Spend</b>
-          <span>
-            {POINTS_PER_DOLLAR} points take $1 off anything in ArtStore, Books and Workspace. You choose how many to use at checkout.
-          </span>
-        </li>
-        <li>
-          <b>Total</b>
-          <span>Your card shows every point you’ve been awarded, so it only goes up. Your balance is what’s left to spend.</span>
-        </li>
-      </ol>
+      <div className="ui-card">
+        <p className="t-sm t-2">Earn points and use them across the Shrug VIP experience. More details soon!</p>
+      </div>
     </>
   )
   const emailsCard = (
@@ -354,19 +338,24 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
     )
 
   return (
-    <main className="ui-page" style={{ gridTemplateColumns: '223px minmax(0, 1fr) minmax(260px, 320px)' }}>
+    <main className={`ui-page mine${DESK ? ' in-window' : ''}`} style={{ gridTemplateColumns: '223px minmax(0, 1fr) minmax(260px, 320px)' }}>
       <div style={{ paddingTop: 6 }}>{card}</div>
       <div>
-        <div className="ui-head" style={{ paddingBottom: 14 }}>
-          <h1 className="t-title">My VIP</h1>
-        </div>
+        {/* (in My VIP's window the window's own bar says what this is, as ArtStore's does: the page says it to a reader only) */}
+        {DESK ? (
+          <h1 className="sr-only">My VIP</h1>
+        ) : (
+          <div className="ui-head" style={{ paddingBottom: 14 }}>
+            <h1 className="t-title">My VIP</h1>
+          </div>
+        )}
         {stats}
         {orders}
         {funds}
         {points}
         {how}
       </div>
-      <aside className="ui-side" style={{ paddingTop: 58 }}>
+      <aside className="ui-side" style={{ paddingTop: DESK ? 6 : 58 }}>
         <Address shop={shop} backend={backend} onChange={onChange} />
         {emailsCard}
         {account}

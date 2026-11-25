@@ -2998,7 +2998,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     // points, orders and address, and the ways in to the three stores (ArtStore, Books, Workspace)
     // (out of a pack, torn or skipped, it is the way on; from a card they came to look at, the way back:
     // `hadPack` says which, set when this page showed a pack)
-    const a = h('a', 'go' + (when ? ' ' + when : ''), DESK ? (hadPack ? 'Continue to My VIP' : 'Back to My VIP') : 'Go to the store');
+    const a = h('a', 'go' + (when ? ' ' + when : ''), DESK ? (hadPack ? 'Go to My VIP' : 'Back to My VIP') : 'Go to the store');
     a.insertAdjacentHTML('beforeend', '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>');
     a.href = DESK ? 'store/?k=yours' : 'store/';
     a.addEventListener('click', (e) => {
@@ -3395,9 +3395,19 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
    * why: 'code' (just typed it), 'printed' (added to the list since they applied), 'signed'
    * (signed in already). later: milliseconds to wait before the card goes in, for a pack still moving.
    */
+  /** What the pack's window says: the name of whoever it is for, once that is known, and until then that a name goes here. */
+  function engrave(who) {
+    const words = pack.querySelector('.pk-engrave');
+    if (!words) return;
+    const name = who && who.member && typeof who.member.name === 'string' ? who.member.name.trim() : '';
+    words.textContent = name || 'Your name here';
+    fitIn(words, words.parentNode, 7);
+  }
+
   function armTear(who, why, later) {
     S.who = who;
     S.armed = who;
+    engrave(who);
     S.busy = false;
     S.engaged = true;
     if (reduced) {
@@ -3649,6 +3659,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     delete page.dataset.house;
     rig.hidden = false;
     hadPack = true;
+    engrave(arm);
     setView('pack');
     paintTilt(false);
     bat.style.transform = '';
@@ -3785,6 +3796,10 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   async function boot() {
     fit();
     page.dataset.ready = 'on'; // fitted: the stage can be seen (see the curtain in app.css)
+    // In My VIP's window, asked for a pack (?pack: whoever is logged in on the desk has not had theirs in
+    // this browser): the card this browser kept, which may be someone else's who was logged in before, is
+    // forgotten, so that a pack hangs and the tear is theirs
+    if (DESK && new URLSearchParams(window.location.search).has('pack')) forget();
     const hint = keep.get('hint');
     const cached = hint ? recall() : null;
     const pending = hint ? null : keep.read('pending');

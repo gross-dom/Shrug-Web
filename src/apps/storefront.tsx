@@ -22,6 +22,8 @@ import { focusApp } from '../os/wm'
 // own window for every frame to ask of; each frame says which room it is when it speaks.
 
 export const CARD = '/vip/'
+/** The card's page, asked to hang a pack for whoever is logged in: it shows no card it kept from before (store/card/index.html, boot). */
+export const PACK = '/vip/?pack'
 export const SHELVES = '/vip/store/'
 export type Place = { section: 'store' | 'yours'; product: string | null }
 export type { Room }

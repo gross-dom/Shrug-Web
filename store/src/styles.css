@@ -290,3 +290,9 @@ a{color:inherit}
 .up .ui-ord{grid-template-columns:minmax(0,1fr) auto; min-height:68px}
 .up .ui-pts{min-height:52px}
 .up .ui-row{padding:8px 12px}
+
+/* ---- My VIP, in its window on the desk: set as ArtStore is (Dom's fourth round). Its tiles are ArtStore's
+   tiles, with the same round corners, and what is said only to a reader is not drawn */
+.sr-only{position:absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; clip-path:inset(50%) !important; white-space:nowrap !important}
+.ui-page.mine .ui-card, .ui-page.mine .ui-stats > div{border-radius:20px}
+.ui-page.mine.in-window{padding-top:8px}

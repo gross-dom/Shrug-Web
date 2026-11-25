@@ -190,7 +190,8 @@ export function ReaderPages({ reading, onBack }: { reading: Reading; onBack: () 
       aria-label={`${edition.title}: page ${first + 1}${two && first + 2 <= pages ? ` and ${first + 2}` : ''} of ${pages}`}
       style={{ ['--rd-size' as string]: `${SIZES[reading.size]}px` }}
     >
-      <button type="button" className="rd-turn rd-prev" aria-label="Previous page" aria-disabled={first === 0 || undefined} onClick={() => reading.turn(-1)}>
+      {/* (no way back on the first page, where it could be taken for the way out of the book; none on from the last) */}
+      <button type="button" className="rd-turn rd-prev" aria-label="Previous page" hidden={first === 0} onClick={() => reading.turn(-1)}>
         <ChevronLeft size={30} strokeWidth={1.4} aria-hidden />
       </button>
       <div ref={clip} className="rd-clip">
@@ -225,7 +226,7 @@ export function ReaderPages({ reading, onBack }: { reading: Reading; onBack: () 
           )}
         </div>
       </div>
-      <button type="button" className="rd-turn rd-next" aria-label="Next page" aria-disabled={lastPage >= pages || undefined} onClick={() => reading.turn(1)}>
+      <button type="button" className="rd-turn rd-next" aria-label="Next page" hidden={lastPage >= pages} onClick={() => reading.turn(1)}>
         <ChevronRight size={30} strokeWidth={1.4} aria-hidden />
       </button>
       <p className="rd-nums" aria-hidden data-two={two || undefined}>
