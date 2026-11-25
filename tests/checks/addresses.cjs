@@ -115,6 +115,39 @@ const check = (name, ok, detail = '') => {
     check('/vip/store/ is the store, with its own bar when it is not in a window', !shop.desk && shop.bar && shop.products >= 4 && /Store/.test(shop.title), JSON.stringify(shop))
     await ctx.close()
   }
+  // ?reset: the demo's first visit again. What this browser kept for the demo is forgotten (and nothing
+  // else of the visitor's), the address stops asking, and the rest of what it asked for still stands
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+    const page = await ctx.newPage()
+    const ready = () => page.waitForFunction(() => !document.getElementById('boot') && !!document.querySelector('.os[data-booted]'), null, { timeout: 20000 })
+    await page.goto(BASE, { waitUntil: 'load' })
+    await ready()
+    await page.evaluate(() => {
+      localStorage.setItem('shrug:appearance.v1', 'dark')
+      localStorage.setItem('shrugdemo.store.v3', '{"made":"before"}')
+      localStorage.setItem('shrug:kept-for-the-check', '1')
+      sessionStorage.setItem('shrug:kept-for-the-check', '1')
+      localStorage.setItem('someone-elses', 'kept')
+    })
+    await page.reload({ waitUntil: 'load' })
+    await ready()
+    const before = await page.evaluate(() => document.querySelector('.os').getAttribute('data-theme'))
+    await page.goto(BASE + '?RESET&open=about', { waitUntil: 'load' })
+    await ready()
+    await page.waitForTimeout(900)
+    const after = await page.evaluate(() => ({
+      theme: document.querySelector('.os').getAttribute('data-theme'),
+      mark: localStorage.getItem('shrug:kept-for-the-check'),
+      session: sessionStorage.getItem('shrug:kept-for-the-check'),
+      store: localStorage.getItem('shrugdemo.store.v3'),
+      other: localStorage.getItem('someone-elses'),
+      search: location.search,
+      about: !!document.querySelector('.wf[data-app="about"]'),
+    }))
+    check('?reset: the demo starts as new (what it kept is forgotten, nothing else is), and the address stops asking', before === 'dark' && after.theme === 'light' && after.mark === null && after.session === null && !/before/.test(after.store ?? '') && after.other === 'kept' && !/reset/i.test(after.search) && /open=about/.test(after.search) && after.about, JSON.stringify({ before, ...after }))
+    await ctx.close()
+  }
   await browser.close()
   console.log(failed ? `${failed} FAILED` : 'all ok')
   process.exit(failed ? 1 : 0)

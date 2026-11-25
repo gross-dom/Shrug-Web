@@ -239,8 +239,8 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
   await p.locator(`${W('messages')} .im-opt`).nth(2).click(); await p.waitForTimeout(400)
   await run(p, 'desktop Messages, a message to Shrug: a meeting asked for', W('messages'))
   await t.ctx.close()
-  // Workspace: its slabs; the studio in every color, to a visitor; a photograph on the stage; a color of one's
-  // own; BTS and a picture of it open large; Notable Owners; and, logged in, the price and the chair's own page
+  // Workspace: its slabs; the studio in every color, to a visitor; a photograph on the stage; the sixteen more
+  // colors and one of them; BTS and a picture of it open large; Notable Owners; and, logged in, the price and the chair's own page
   await fresh('&open=workspace')
   await p.waitForSelector(`${W('workspace')}[data-open] .fl-slab`, { timeout: 15000 }); await p.waitForTimeout(600)
   await run(p, 'desktop Workspace, the slabs', W('workspace'))
@@ -254,10 +254,10 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
     await p.locator(`${W('workspace')} .fl-dot[aria-label="${name}"]`).click(); await p.waitForTimeout(700)
     await run(p, `desktop Workspace, the studio in ${name}`, W('workspace'))
   }
-  await p.locator(`${W('workspace')} .fl-dot.own`).click(); await p.waitForTimeout(500)
-  await run(p, 'desktop Workspace, a color of one\'s own, before one is given', W('workspace'))
-  await p.locator(`${W('workspace')} .st-own input`).fill('RAL 5002'); await p.waitForTimeout(700)
-  await run(p, 'desktop Workspace, a color of one\'s own', W('workspace'))
+  await p.locator(`${W('workspace')} .fl-dot.more`).click(); await p.waitForSelector(`${W('workspace')} .mc-sheet`, { timeout: 8000 }); await p.waitForTimeout(500)
+  await run(p, 'desktop Workspace, the sixteen more colors, four by four', W('workspace'))
+  await p.locator(`${W('workspace')} .mc-swatch`, { hasText: 'Neutron Star' }).click(); await p.waitForTimeout(900)
+  await run(p, 'desktop Workspace, the studio in one of the sixteen (Neutron Star)', W('workspace'))
   await p.locator(`${W('workspace')} .wxbar .pill`, { hasText: 'BTS' }).click(); await p.waitForTimeout(900)
   await run(p, 'desktop Workspace, BTS', W('workspace'))
   await p.locator(`${W('workspace')} .bts-tile button`).first().click(); await p.waitForTimeout(500)

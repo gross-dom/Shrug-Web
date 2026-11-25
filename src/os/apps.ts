@@ -107,8 +107,8 @@ export const APPS: Record<AppId, AppSpec> = {
     name: 'About Shrug',
     blurb: 'About Shrug',
     // (as tall as what is in it: three facts, two rows that open windows, and the one-pager)
-    size: () => ({ w: 340, h: 446 }),
-    min: { w: 340, h: 446 },
+    size: () => ({ w: 340, h: 388 }),
+    min: { w: 340, h: 388 },
     nudge: { x: 0, y: -30 },
     resizable: false,
     lightsY: 19,

@@ -1,3 +1,4 @@
+import './os/fresh'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // The kit's tokens and looks live in the stage's stylesheet; the desktop is

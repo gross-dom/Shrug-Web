@@ -148,6 +148,7 @@ Whatever happens on the way in, there is something on screen and a way on.
 - `?phone` shows the iPhone whatever the size of the screen, drawn in its frame. `?phone=hand` draws it edge to edge instead, as a real phone gets it, for trying that layout in a browser on a computer.
 - `?saver` starts on the screen saver (desktop only). `?idle=20` sets how many seconds of stillness start it, and lock the phone.
 - `?draft` is the editor's view: what Shrug has still to supply (an FAQ's answer, should a question be added without one) is drawn as the note that says so. Without it a visitor is shown a line written for them (see Content).
+- `?reset` is the demo's first visit again (`src/os/fresh.ts`): what this browser kept for the demo is forgotten (the account that was made, its points and orders, the desk as it was left, light or dark, what was marked done in Mail), and the desk starts as new. The address then stops asking, so loading the page again keeps what is done from there. It is only in a demo build: in a live one what is kept is the visitor's own, and no link takes it from them.
 
 ## Content
 

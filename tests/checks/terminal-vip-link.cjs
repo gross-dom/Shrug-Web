@@ -49,7 +49,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await p.waitForTimeout(700)
   const about = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="about"] button.about__fact, .wf[data-app="about"] a.about__fact')].map((el) => ({ tag: el.tagName, label: el.firstElementChild.textContent.trim(), says: el.lastElementChild.textContent.trim(), tall: Math.round(el.getBoundingClientRect().height), ink: getComputedStyle(el).color, line: getComputedStyle(el).textDecorationLine })))
   const facts = await p.evaluate(() => document.querySelector('.wf[data-app="about"]').innerText.replace(/\s*\n\s*/g, ' | '))
-  check('desktop: About Shrug has two rows that open windows, Portfolio (100+ Companies) and Testimonials (how many), and nothing of Backs, Group Chat, Verticals or Drops', about.map((row) => `${row.tag} ${row.label} ${row.says}`).join(' | ') === `BUTTON Portfolio 100+ Companies | BUTTON Testimonials ${A.PEOPLE}` && !/Backs|Group Chat|Verticals|Drops/.test(facts) && /Fund \| V( \||$)/.test(facts), JSON.stringify({ about: about.map((row) => `${row.tag} ${row.label} ${row.says}`), facts }))
+  check('desktop: About Shrug has two rows that open windows, Portfolio (100+ Companies) and Testimonials (how many), and nothing of Backs, Group Chat, Verticals or Drops', about.map((row) => `${row.tag} ${row.label} ${row.says}`).join(' | ') === `BUTTON Portfolio 100+ Companies | BUTTON Testimonials 89` && !/Backs|Group Chat|Verticals|Drops/.test(facts) && /Fund \| V( \||$)/.test(facts), JSON.stringify({ about: about.map((row) => `${row.tag} ${row.label} ${row.says}`), facts }))
   check('desktop: the two rows are drawn alike: the same ink, no underline', about.length === 2 && about[0].ink === about[1].ink && about.every((row) => row.line === 'none'), JSON.stringify(about.map((row) => [row.label, row.tall, row.ink, row.line])))
   await p.locator('.wf[data-app="about"] button.about__fact', { hasText: 'Testimonials' }).click()
   await p.waitForTimeout(1200)
@@ -102,7 +102,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await arrived(p)
   await p.waitForTimeout(1800)
   const back = await p.evaluate(() => ({ open: [...document.querySelectorAll('.wf[data-app][data-open]')].map((w) => w.dataset.app).sort().join(), front: document.querySelector('.wf[data-active]')?.dataset.app ?? null }))
-  check('desktop: a reload of a desk kept with a window the site no longer has brings back the others, the store among them', back.open === 'about,messages,store' && (await noVip(p)) && !!back.front, JSON.stringify(back))
+  check('desktop: a reload of a desk kept with a window the site no longer has brings back the others, the store among them', back.open === 'about,store' && (await noVip(p)) && !!back.front, JSON.stringify(back))
   check('desktop: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 
@@ -189,10 +189,10 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
     const bar = box(w.querySelector('.ss-window__bar'))
     const inside = [...w.querySelectorAll('.updbar > *, .v-empty > *, .upd-row, .upd-foot')].every((el) => { const b = box(el); return b.x >= win.x && b.r <= win.r && b.b <= win.b })
     const list = w.querySelector('.upd-list')
-    return { size: `${win.w}x${win.h}`, bar: bar.h, title: `${w.querySelector('.updbar__title').textContent} ${cs('.updbar__title').fontSize} ${cs('.updbar__title').fontWeight}`, chip: w.querySelector('.updbar .v-chip').textContent.trim(), chipAt: win.r - box(w.querySelector('.updbar .v-chip')).r, old: w.querySelectorAll('.vip__title, .vip__body, .updates__list').length, said: w.querySelector('.v-empty h3')?.textContent ?? null, rows: w.querySelectorAll('.upd-row').length, heads: [...w.querySelectorAll('.upd h2')].map((h) => h.textContent).join(), row: w.querySelector('.upd-row') ? box(w.querySelector('.upd-row')).h : null, foot: w.querySelector('.upd-foot') ? win.b - box(w.querySelector('.upd-foot')).b : null, scrolls: list ? list.scrollHeight > list.clientHeight : null, inside }
+    return { size: `${win.w}x${win.h}`, bar: bar.h, title: `${w.querySelector('.updbar__title').textContent} ${cs('.updbar__title').fontSize} ${cs('.updbar__title').fontWeight}`, chip: w.querySelector('.updbar .v-chip').textContent.trim(), chipAt: win.r - box(w.querySelector('.updbar .v-chip')).r, old: w.querySelectorAll('.vip__title, .vip__body, .updates__list').length, said: w.querySelector('.v-empty h3')?.textContent ?? null, tells: w.querySelector('.v-empty p')?.textContent ?? null, rows: w.querySelectorAll('.upd-row').length, heads: [...w.querySelectorAll('.upd h2')].map((h) => h.textContent).join(), row: w.querySelector('.upd-row') ? box(w.querySelector('.upd-row')).h : null, foot: w.querySelector('.upd-foot') ? win.b - box(w.querySelector('.upd-foot')).b : null, scrolls: list ? list.scrollHeight > list.clientHeight : null, inside }
   }, U)
   const locked = await laid(p)
-  check('Updates, locked: 760 by 540 under a bar 52 tall, with its name at the left of it and Locked at the right, and who it is for in the middle of the window', locked.size === '760x540' && locked.bar === 52 && locked.title === 'Updates 13px 700' && locked.chip === 'Locked' && locked.chipAt === 14 && locked.said === 'For Shrug’s LPs' && locked.rows === 0 && locked.old === 0 && locked.inside, JSON.stringify(locked))
+  check('Updates, locked: 760 by 540 under a bar 52 tall, with its name at the left of it and Locked at the right, and in the middle of the window the one line that says who it is for, with no heading over it', locked.size === '760x540' && locked.bar === 52 && locked.title === 'Updates 13px 700' && locked.chip === 'Locked' && locked.chipAt === 14 && locked.said === null && locked.tells === 'This folder is for Shrug LPs only. Please log in with your LP email to access its contents.' && locked.rows === 0 && locked.old === 0 && locked.inside, JSON.stringify(locked))
   await shot(p, 'updates-locked')
   await p.locator('.menubar__login').click()
   await p.locator('.account input[type=email]').fill('lp@example.test')

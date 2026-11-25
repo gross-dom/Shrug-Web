@@ -404,9 +404,10 @@ export function MailApp() {
   const tabs = (
     <div className="ml-tabs" role="tablist" aria-label="Splits">
       {splits.map((s) => (
-        <button key={s.id} type="button" role="tab" aria-selected={split === s.id} aria-label={`${s.label}, ${count(s.id)}`} className={split === s.id ? 'on' : undefined} onClick={() => (setSplit(s.id), setOpen(null), setZero(false), setAt(0), back())}>
-          {/* (the count sits close against its split's name, as Superhuman sets it) */}
+        <button key={s.id} type="button" role="tab" aria-selected={split === s.id} className={split === s.id ? 'on' : undefined} onClick={() => (setSplit(s.id), setOpen(null), setZero(false), setAt(0), back())}>
+          {/* (the count sits close against its split's name, as Superhuman sets it; read aloud, a comma is between them) */}
           {s.label}
+          <span className="sr-only">, </span>
           <small>{count(s.id)}</small>
         </button>
       ))}

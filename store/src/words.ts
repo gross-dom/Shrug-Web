@@ -1,4 +1,4 @@
-import { floorCents, fmtCents, fmtPoints, has, keptTo, POINTS_PER_DOLLAR, priceCents, soldOut, wayOf, type Order, type Product } from '../shared/rules'
+import { fmtCents, fmtPoints, has, keptTo, POINTS_PER_DOLLAR, priceCents, soldOut, wayOf, type Order, type Product } from '../shared/rules'
 
 // What the store says about a product, in the design's own words: its badge, its price, and the short name
 // it goes by along the foot. A price is said in dollars everywhere. Points are a member's balance, and what
@@ -50,14 +50,6 @@ export const editionOf = (number: string) => (number ? `No. ${number.replace('/'
 
 /** What an order came to, in words: "$680 + 8,400 points", "$40", "1,000 points", or nothing. */
 export const paidOf = (order: Pick<Order, 'points' | 'paid'>) => [order.paid ? fmtCents(Math.round(order.paid * 100)) : '', order.points ? `${fmtPoints(order.points)} points` : ''].filter(Boolean).join(' + ')
-
-/** The small print under the button: how far points go on something that has a floor. */
-export function captionOf(product: Product): string {
-  const floor = floorCents(product)
-  const price = priceCents(product)
-  if (floor <= 0 || floor >= price) return ''
-  return `Points can take up to ${fmtCents(price - floor)} off this (${fmtPoints(Math.floor((price - floor) / (100 / POINTS_PER_DOLLAR)))} points).`
-}
 
 /** Who a product is kept to, as its panel says it: "Shrug 1 LPs only". */
 export const keptOf = (product: Product) => (keptTo(product).length ? `${keptTo(product).join(', ')} only` : '')

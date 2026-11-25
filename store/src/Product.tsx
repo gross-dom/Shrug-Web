@@ -382,7 +382,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     // what costs nothing need someone for the order to belong to, so those are the way in instead
     // (in a window of the desk, the desk's Log In, which says what it was opened for)
     // A chair's price is for someone logged in: the way to it is the way in
-    if (product.priceHidden) return DESK ? { text: 'Log in to see the price', act: () => DESK!.logIn('price') } : { text: 'Sign in to see the price', act: () => window.location.assign(`${CARD}?signin=store`) }
+    if (product.priceHidden) return DESK ? { text: 'Log in to enquire', act: () => DESK!.logIn('price') } : { text: 'Sign in to see the price', act: () => window.location.assign(`${CARD}?signin=store`) }
     if (visiting && !(way === 'buy' && due > 0)) {
       const what = way === 'request' ? 'request' : way === 'reserve' ? 'reserve' : 'claim'
       return DESK ? { text: `Log in to ${what}`, act: () => DESK!.logIn(way === 'request' ? 'request' : 'store') } : { text: `Open your pack to ${what}`, act: () => window.location.assign(CARD) }
