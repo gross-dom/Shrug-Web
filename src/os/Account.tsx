@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Plus } from 'lucide-react'
+import { Moon, Plus, Sun } from 'lucide-react'
 import { FACES } from '../../store/shared/faces'
 import { hidden, phoneOf, POINTS_PER_DOLLAR, type Picture } from '../../store/shared/rules'
 import { account, ACCOUNT_DEMO, addPhone, askLogIn, closeLogIn, demoLink, isLP, logIn, logOut, provePhone, refreshAccount, saveProfile, start, textTo, unlocked, verify, type Failed, type Member, type Why } from './account'
@@ -7,6 +7,7 @@ import { asked } from './address'
 import { Face } from './Face'
 import { launchApp } from './launch'
 import { useStore } from './store'
+import { setTheme, theme } from './theme'
 import { closeApp } from './wm'
 
 // Log In, at the right of the menu bar, and the one sheet it lets down (design/v1: SignIn-*, SignedIn-*).
@@ -258,6 +259,8 @@ function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?
           </p>
         )}
         <Note>Demo: nothing is sent. An address beginning “lp” is on the list; any other is new.</Note>
+        <hr />
+        <Appearance />
       </form>
     )
   }
@@ -357,6 +360,8 @@ function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?
         Edit Name and Picture…
       </button>
       <hr />
+      <Appearance />
+      <hr />
       <button
         type="button"
         className="account__row"
@@ -368,6 +373,26 @@ function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?
       >
         Log Out
       </button>
+    </div>
+  )
+}
+
+/** Light or dark (os/theme.ts): the desk's appearance, chosen here whoever is or is not logged in. */
+function Appearance() {
+  const is = useStore(theme, (t) => t.is)
+  return (
+    <div className="account__looks" role="group" aria-label="Appearance">
+      <span>Appearance</span>
+      <span className="account__seg">
+        <button type="button" aria-pressed={is === 'light'} onClick={() => setTheme('light')}>
+          <Sun size={13} strokeWidth={2.1} aria-hidden />
+          Light
+        </button>
+        <button type="button" aria-pressed={is === 'dark'} onClick={() => setTheme('dark')}>
+          <Moon size={13} strokeWidth={2.1} aria-hidden />
+          Dark
+        </button>
+      </span>
     </div>
   )
 }

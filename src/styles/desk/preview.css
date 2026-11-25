@@ -360,13 +360,13 @@ aside.pv-thumbs {
   transform: translateX(-50%);
 }
 
-/* ---- Preview in its dark dress, as Dom's screenshots of it are (design/v1/reference: Preview with one page,
+/* ---- Preview in its dark dress, for the desk's dark appearance (os/theme.ts), as Dom's screenshots of it are (design/v1/reference: Preview with one page,
    with its thumbnails, and with the sidebar's menu): a dark bar whose buttons sit in capsules a little
    lighter than it, the name in white over its page count in grey, a sidebar of small white pages each with
    its number under it and the one it is on lying on a blue-grey ground, and the pages themselves on a
    ground darker than the bar. These rules recolor what is laid out above. ---- */
 
-.ss-window.pvwin {
+.os[data-theme='dark'] .ss-window.pvwin {
   --v-ink: #f5f5f7;
   --v-ink-2: rgba(235, 235, 245, 0.72);
   --v-ink-3: rgba(235, 235, 245, 0.56);
@@ -378,89 +378,89 @@ aside.pv-thumbs {
   box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.16), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 32px 70px -12px rgba(2, 4, 30, 0.7), 0 10px 24px rgba(2, 4, 30, 0.3);
 }
 
-.ss-window.pvwin > .ss-window__bar,
-.pvwin__body {
+.os[data-theme='dark'] .ss-window.pvwin > .ss-window__bar,
+.os[data-theme='dark'] .pvwin__body {
   background: #2a2a2c;
 }
 
-.pvwin .v-tb {
+.os[data-theme='dark'] .pvwin .v-tb {
   background: rgba(255, 255, 255, 0.09);
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
   color: rgba(235, 235, 245, 0.86);
 }
 
-.pvwin .v-tb > [aria-pressed='true'] {
+.os[data-theme='dark'] .pvwin .v-tb > [aria-pressed='true'] {
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
 }
 
-.pvwin .v-tb > [aria-disabled='true'] {
+.os[data-theme='dark'] .pvwin .v-tb > [aria-disabled='true'] {
   color: rgba(235, 235, 245, 0.3);
 }
 
-.pvwin .v-tb > :focus-visible,
-.pvwin .pv-thumbcell:focus-visible {
+.os[data-theme='dark'] .pvwin .v-tb > :focus-visible,
+.os[data-theme='dark'] .pvwin .pv-thumbcell:focus-visible {
   outline-color: rgba(10, 132, 255, 0.7);
 }
 
 @media (hover: hover) {
-  .pvwin .v-tb > button:not([aria-disabled='true']):hover {
+  .os[data-theme='dark'] .pvwin .v-tb > button:not([aria-disabled='true']):hover {
     background: rgba(255, 255, 255, 0.12);
   }
 }
 
-.pvwin .v-chip {
+.os[data-theme='dark'] .pvwin .v-chip {
   background: rgba(255, 255, 255, 0.12);
   color: rgba(235, 235, 245, 0.86);
 }
 
-.pvwin .pv-thumbs {
+.os[data-theme='dark'] .pvwin .pv-thumbs {
   background: #262628;
   color: rgba(235, 235, 245, 0.6);
 }
 
-.pvwin .pv-thumbcell[aria-current] {
+.os[data-theme='dark'] .pvwin .pv-thumbcell[aria-current] {
   background: #3d4a66;
   color: #fff;
 }
 
-.pvwin .pv-main {
+.os[data-theme='dark'] .pvwin .pv-main {
   background: #1e1e20;
 }
 
-.pvwin .pv-main--said {
+.os[data-theme='dark'] .pvwin .pv-main--said {
   background: #232325;
 }
 
-.pvwin .pv-page {
+.os[data-theme='dark'] .pvwin .pv-page {
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.6), 0 8px 26px rgba(0, 0, 0, 0.5);
 }
 
-.pvwin .pv-for {
+.os[data-theme='dark'] .pvwin .pv-for {
   background: rgba(50, 50, 54, 0.9);
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
   color: rgba(235, 235, 245, 0.8);
 }
 
-.pvwin .pv-skel i {
+.os[data-theme='dark'] .pvwin .pv-skel i {
   background: #e9eaee;
 }
 
-.pvwin .v-empty h3 {
+.os[data-theme='dark'] .pvwin .v-empty h3 {
   color: #f5f5f7;
 }
 
-.pvwin .v-btn--grey {
+.os[data-theme='dark'] .pvwin .v-btn--grey {
   background: rgba(255, 255, 255, 0.14);
   color: #f5f5f7;
 }
 
-.pvwin .v-chip--lock {
+.os[data-theme='dark'] .pvwin .v-chip--lock {
   background: #f5f5f7;
   color: #1d1d1f;
 }
 
-.pvwin .v-chip--blue {
+.os[data-theme='dark'] .pvwin .v-chip--blue {
   background: rgba(10, 132, 255, 0.26);
   color: #8cc8ff;
 }

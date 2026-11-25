@@ -1819,7 +1819,7 @@
   padding: 6px 6px 6px 8px;
   border-radius: 9px;
   text-align: left;
-  cursor: default;
+  cursor: pointer;
 }
 
 .os .pf-preview__voice:hover {

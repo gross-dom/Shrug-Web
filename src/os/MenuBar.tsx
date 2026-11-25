@@ -14,6 +14,7 @@ import { openOnePager } from './papers'
 import { askedIdle, saver, setSaverNever, startSaver } from './saver'
 import { shrugs } from './shrug'
 import { useStore } from './store'
+import { setTheme, theme } from './theme'
 import { nextWallpaper, setWallpaperAuto, wallpaper } from './wallpaper'
 import { activeApp, bringAllToFront, closeApp, focusApp, focusWindow, minimizeApp, openApp, tileApp, toggleZoom, wm } from './wm'
 
@@ -105,6 +106,7 @@ function useMenus(): MenuDef[] {
             ? [item('Next Wallpaper', nextWallpaper), rule, item('Change Each Visit', () => setWallpaperAuto(!auto), { checked: auto })]
             : []
 
+  const appearance = useStore(theme, (t) => t.is)
   const menus: MenuDef[] = [
     {
       id: 'mark',
@@ -122,6 +124,10 @@ function useMenus(): MenuDef[] {
         { kind: 'heading', label: 'Screen Saver' },
         item(idle ? `After ${idle} Seconds` : 'After 2½ Minutes', () => setSaverNever(false), { checked: idle ? true : !never, says: `Screen Saver: ${idle ? `After ${idle} Seconds` : 'After 2½ Minutes'}` }),
         item('Never', () => setSaverNever(true), { checked: idle ? false : never, disabled: idle !== null, says: 'Screen Saver: Never' }),
+        rule,
+        { kind: 'heading', label: 'Appearance' },
+        item('Light', () => setTheme('light'), { checked: appearance === 'light', says: 'Appearance: Light' }),
+        item('Dark', () => setTheme('dark'), { checked: appearance === 'dark', says: 'Appearance: Dark' }),
         rule,
         item('One-pager', openOnePager),
       ],

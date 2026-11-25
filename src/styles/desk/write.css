@@ -2,6 +2,24 @@
    Shrug"): the pencil, the message as a conversation at the head of the list, who it is to, the subject to
    pick, what each subject asks for, and the field it is written in. */
 
+/* Its colours, by name, light as it was first drawn; the desk's dark appearance gives them their dark
+   counterparts (styles/theme.css) */
+.app.chat {
+  --im-field: #fff;
+  --im-card: #f4f5f7;
+  --im-chip: #e9e9eb;
+  --im-chip-2: #dfdfe3;
+  --im-ink: #1d1d1f;
+  --im-ink-2: #63646b;
+  --im-blue: #0a6de6;
+  --im-blue-text: #0a5bd0;
+  --im-blue-soft: rgba(10, 109, 230, 0.14);
+  --im-red: #c4261f;
+  --im-ring: #d4d5da;
+  --im-hair: rgba(0, 0, 0, 0.1);
+}
+
+
 /* The pencil: a round glass button at the head of the conversation's side, where Messages has it */
 .im-pencil {
   display: grid;
@@ -10,15 +28,15 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
-  color: #3a3a3e;
+  background: var(--im-field);
+  box-shadow: 0 0 0 0.5px var(--im-hair), 0 1px 3px var(--im-hair);
+  color: var(--im-ink);
   cursor: pointer;
   transition: background-color 0.14s ease, transform 0.14s ease;
 }
 
 .im-pencil:hover {
-  background: #f4f4f6;
+  background: var(--im-card);
 }
 
 .im-pencil:active {
@@ -26,7 +44,7 @@
 }
 
 .im-pencil[aria-pressed='true'] {
-  color: #0a6de6;
+  color: var(--im-blue-text);
 }
 
 /* The message to Shrug, at the head of the list: a row as the conversations under it are (the same face, the
@@ -74,7 +92,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #63646b;
+  color: var(--im-ink-2);
   font-size: 13px;
 }
 
@@ -84,8 +102,8 @@
   height: 24px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(10, 109, 230, 0.14);
-  color: #0a56b8;
+  background: var(--im-blue-soft);
+  color: var(--im-blue-text);
   font-weight: 600;
 }
 
@@ -95,7 +113,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  color: #1d1d1f;
+  color: var(--im-ink);
 }
 
 .chat-write :where(h2, p) {
@@ -148,25 +166,25 @@
   gap: 8px;
   padding: 16px;
   border-radius: 16px;
-  background: #f4f5f7;
-  color: #63646b;
+  background: var(--im-card);
+  color: var(--im-ink-2);
   font-size: 12.5px;
   line-height: 1.38;
   text-align: left;
 }
 
 .im-opt svg {
-  color: #0a6de6;
+  color: var(--im-blue-text);
 }
 
 .im-opt b {
-  color: #1d1d1f;
+  color: var(--im-ink);
   font-size: 14px;
 }
 
 @media (hover: hover) {
   .im-opt:hover {
-    background: #fff;
+    background: var(--im-field);
     box-shadow: 0 0 0 2px #0a6de6;
   }
 }
@@ -178,7 +196,7 @@
   gap: 10px;
   padding: 14px;
   border-radius: 16px;
-  background: #f4f5f7;
+  background: var(--im-card);
 }
 
 .im-form header {
@@ -195,11 +213,11 @@
 }
 
 .im-form header svg {
-  color: #0a6de6;
+  color: var(--im-blue-text);
 }
 
 .im-link {
-  color: #0a5bd0;
+  color: var(--im-blue-text);
   font-size: 12px;
 }
 
@@ -212,7 +230,7 @@
 .im-lbl,
 .im-lbl__text {
   display: block;
-  color: #63646b;
+  color: var(--im-ink-2);
   font-size: 12px;
   font-weight: 600;
 }
@@ -229,9 +247,9 @@
   height: 30px;
   padding: 0 9px;
   border-radius: 7px;
-  background: #fff;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.26), 0 0.5px 1px rgba(0, 0, 0, 0.06);
-  color: #1d1d1f;
+  background: var(--im-field);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.26), 0 0.5px 1px var(--im-hair);
+  color: var(--im-ink);
   font-size: 13px;
   font-weight: 400;
 }
@@ -258,13 +276,13 @@
   width: 16px;
   height: 16px;
   border-radius: 4.5px;
-  background: #fff;
+  background: var(--im-field);
   box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3);
   color: #fff;
 }
 
 .im-check input:checked + .im-tick {
-  background: #0a6de6;
+  background: var(--im-blue);
   box-shadow: none;
 }
 
@@ -274,12 +292,12 @@
 }
 
 .im-form small {
-  color: #63646b;
+  color: var(--im-ink-2);
   font-size: 12px;
 }
 
 .im-form small.im-said {
-  color: #b3261e;
+  color: var(--im-red);
 }
 
 .im-files {
@@ -295,13 +313,13 @@
   height: 28px;
   padding: 0 10px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--im-field);
   box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
   font-size: 12px;
 }
 
 .im-file--add {
-  color: #0a5bd0;
+  color: var(--im-blue-text);
 }
 
 .im-field {
@@ -319,8 +337,8 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: #e9e9eb;
-  color: #63646b;
+  background: var(--im-chip);
+  color: var(--im-ink-2);
 }
 
 .im-field .plus,
@@ -333,7 +351,7 @@
 }
 
 .im-field .plus:hover {
-  background: #dfdfe3;
+  background: var(--im-chip-2);
 }
 
 .im-field .send[aria-disabled='true'] {
@@ -347,8 +365,8 @@
   max-height: 120px;
   padding: 6px 12px;
   border-radius: 17px;
-  box-shadow: inset 0 0 0 1px #d4d5da;
-  color: #1d1d1f;
+  box-shadow: inset 0 0 0 1px var(--im-ring);
+  color: var(--im-ink);
   font-size: 14px;
   line-height: 1.4;
   resize: none;
@@ -356,7 +374,7 @@
 }
 
 .im-field .in::placeholder {
-  color: #74757d;
+  color: var(--im-ink-2);
 }
 
 .im-field .send {
@@ -367,13 +385,13 @@
   height: 28px;
   margin-bottom: 2px;
   border-radius: 50%;
-  background: #0a6de6;
+  background: var(--im-blue);
   color: #fff;
 }
 
 .im-stamp {
   align-self: center;
-  color: #6b6c73;
+  color: var(--im-ink-2);
   font-size: 11px;
   line-height: 1.4;
   text-align: center;
@@ -382,7 +400,7 @@
 .im-sub {
   align-self: flex-end;
   margin: 6px 6px 0 0;
-  color: #6b6c73;
+  color: var(--im-ink-2);
   font-size: 11px;
   font-weight: 600;
 }
@@ -392,7 +410,7 @@
   max-width: 66%;
   padding: 8px 13px;
   border-radius: 18px;
-  background: #0a6de6;
+  background: var(--im-blue);
   color: #fff;
   font-size: 14px;
   line-height: 1.38;
@@ -411,13 +429,13 @@
   gap: 10px;
   padding: 10px 14px;
   border-radius: 16px;
-  background: #e9e9eb;
+  background: var(--im-chip);
   font-size: 13px;
 }
 
 .im-att small {
   display: block;
-  color: #63646b;
+  color: var(--im-ink-2);
   font-size: 11.5px;
 }
 
@@ -427,17 +445,17 @@
   align-items: center;
   gap: 6px;
   margin-right: 4px;
-  color: #6b6c73;
+  color: var(--im-ink-2);
   font-size: 11px;
   font-weight: 600;
 }
 
 .im-stat.bad {
-  color: #c4261f;
+  color: var(--im-red);
 }
 
 .im-stat.bad button {
-  color: #0a5bd0;
+  color: var(--im-blue-text);
   font-weight: 600;
 }
 
@@ -457,7 +475,7 @@
   align-self: center;
   max-width: 46ch;
   padding: 8px 0 4px;
-  color: #6b6c73;
+  color: var(--im-ink-2);
   font-size: 12px;
   line-height: 1.4;
   text-align: center;
@@ -466,7 +484,7 @@
 .im-ring {
   width: 11px;
   height: 11px;
-  border: 2px solid #c9cad0;
+  border: 2px solid var(--im-ring);
   border-top-color: #8a8b92;
   border-radius: 50%;
   animation: im-ring 0.8s linear infinite;

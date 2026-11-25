@@ -1,0 +1,220 @@
+/* The desk's appearance: light or dark (os/theme.ts), on `.os[data-theme]`.
+ *
+ * Dark is the kit's own dark tokens (kit/stage.css), with the desk's look laid over them here as os.css lays
+ * it over the light ones. What follows the appearance: the menus, sheets and notifications (their glass is
+ * in os.css), the Dock, and the windows that are a Mac's own: Messages, Notes, Portfolio, About, Wallpapers,
+ * Updates and Preview. This file is their dark dress: each was drawn light first, with some of its colours
+ * written out, and those are given their dark counterparts here.
+ *
+ * The windows that are something else's keep that thing's look whichever appearance is chosen, so they are
+ * given back the light tokens they were drawn against: Mail (Superhuman's white), the old QuickTime (brushed
+ * metal), Spotify, YouTube and Photo Booth (dark, each with colours of its own), the Terminal, the stores and
+ * My VIP (Shrug's black), Workspace (a chair's own colour) and Weather (a sky). */
+
+/* ---- The desk's own tokens, dark (os.css sets the light ones on .os, over the kit's) */
+
+.os[data-theme='dark'] {
+  color-scheme: dark;
+  --ss-accent: #0a84ff;
+  --ss-accent-2: #0a84ff;
+  --ss-accent-soft: color-mix(in srgb, #0a84ff 24%, transparent);
+  --ss-canvas: #1e1e20;
+  --ss-surface: #1e1e20;
+  --ss-chrome: #262628;
+  --ss-raised: #2c2c2e;
+  --ss-text-strong: #f5f5f7;
+  --ss-text: #a1a1a8;
+  --ss-text-faint: #7d7d85;
+  --ss-icon: #c7c7cc;
+  --ss-icon-faint: #5a5a60;
+  --ss-line: rgba(255, 255, 255, 0.1);
+  --ss-line-faint: rgba(255, 255, 255, 0.06);
+  --glass: rgba(120, 120, 128, 0.28);
+  --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.5), inset 0 0.5px 0 rgba(255, 255, 255, 0.16), 0 1px 2px rgba(0, 0, 0, 0.3), 0 5px 16px rgba(0, 0, 0, 0.3);
+  --ring: #4c9bff;
+}
+
+/* ---- The windows that keep their own look: the light tokens they were drawn against, whatever the desk's
+   appearance. (:where keeps this as light as a rule can be, so a window's own tokens still win.) */
+
+:where(.os[data-theme='dark']) .ss-window:where(.mailwin, .qtwin, .spwin, .ytwin, .pbwin, .storewin, .bkwin, .wxwin, .wtwin, .term) {
+  color-scheme: light;
+  --ss-accent: #0a6de6;
+  --ss-accent-2: #0a6de6;
+  --ss-accent-soft: color-mix(in srgb, #0a6de6 13%, transparent);
+  --ss-canvas: #f4f5f8;
+  --ss-surface: #fff;
+  --ss-chrome: #fff;
+  --ss-raised: #fff;
+  --ss-well: #eceef2;
+  --ss-ink-1: rgba(0, 0, 0, 0.04);
+  --ss-ink-2: rgba(0, 0, 0, 0.06);
+  --ss-ink-3: rgba(0, 0, 0, 0.08);
+  --ss-fill: #ebebeb;
+  --ss-ink-4: rgba(0, 0, 0, 0.1);
+  --ss-ink-5: rgba(0, 0, 0, 0.15);
+  --ss-line: rgba(0, 0, 0, 0.06);
+  --ss-line-faint: rgba(0, 0, 0, 0.04);
+  --ss-text-strong: #1d1d1f;
+  --ss-text: #63646b;
+  --ss-text-faint: #8a8b92;
+  --ss-icon: #46474e;
+  --ss-icon-faint: #b3b4bb;
+  --ss-accent-text: color-mix(in srgb, var(--ss-accent) 82%, #000);
+  --ss-success-soft: rgba(34, 197, 94, 0.12);
+  --ss-success-text: #15803d;
+  --ss-danger-soft: rgba(239, 68, 68, 0.1);
+  --ss-danger-text: #b91c1c;
+  --ss-warning-soft: rgba(245, 158, 11, 0.14);
+  --ss-warning-text: #b45309;
+  --ss-shadow-window: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --ss-shadow-float: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --ss-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --glass: rgba(255, 255, 255, 0.86);
+  --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.09), inset 0 0.5px 0 rgba(255, 255, 255, 1), 0 1px 2px rgba(20, 30, 60, 0.06), 0 5px 16px rgba(20, 30, 60, 0.09);
+  --ring: #0a6de6;
+}
+
+/* ---- The Dock, and the names over its icons */
+
+.os[data-theme='dark'] .dock__shelf {
+  background: rgba(40, 40, 46, 0.42);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 0.5px rgba(0, 0, 0, 0.5),
+    0 14px 36px -8px rgba(0, 0, 0, 0.6);
+}
+
+.os[data-theme='dark'] .dock__label {
+  background: rgba(44, 44, 48, 0.86);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.16), 0 6px 18px rgba(0, 0, 0, 0.4);
+  color: #f5f5f7;
+}
+
+.os[data-theme='dark'] .dock__rule {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* ---- Every window that follows the appearance: its edge, on a dark desk */
+
+.os[data-theme='dark'] .ss-window:where(.chat, .faq, .pf, .about, .walls, .updwin) {
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.16), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 32px 70px -12px rgba(2, 4, 30, 0.7), 0 10px 24px rgba(2, 4, 30, 0.3);
+}
+
+/* The v1 controls (Updates, Preview) */
+.os[data-theme='dark'] .v1 {
+  --v-accent: #0a84ff;
+  --v-ink: #f5f5f7;
+  --v-ink-2: rgba(235, 235, 245, 0.72);
+  --v-ink-3: rgba(235, 235, 245, 0.6);
+  --v-hair: rgba(255, 255, 255, 0.1);
+}
+
+.os[data-theme='dark'] .v-btn--grey {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---- Messages, dark: two panes as on a Mac (the list's a shade lighter than the conversation's), grey
+   bubbles for what comes in, and the compose sheet's cards and fields as dark glass */
+
+.os[data-theme='dark'] .app.chat {
+  --im-field: rgba(255, 255, 255, 0.07);
+  --im-card: rgba(255, 255, 255, 0.06);
+  --im-chip: rgba(255, 255, 255, 0.13);
+  --im-chip-2: rgba(255, 255, 255, 0.2);
+  --im-ink: #f5f5f7;
+  --im-ink-2: #a1a1a8;
+  --im-blue: #0a84ff;
+  --im-blue-text: #5aa7ff;
+  --im-blue-soft: rgba(10, 132, 255, 0.26);
+  --im-red: #ff6961;
+  --im-ring: rgba(255, 255, 255, 0.18);
+  --im-hair: rgba(255, 255, 255, 0.1);
+}
+
+.os[data-theme='dark'] .app.chat > .ss-window__side {
+  background: #2a2928;
+  border-right-color: rgba(0, 0, 0, 0.5);
+}
+
+.os[data-theme='dark'] .app.chat > .ss-window__main,
+.os[data-theme='dark'] .app.chat > .ss-window__main > .ss-window__bar {
+  background: #1e1e1e;
+}
+
+.os[data-theme='dark'] .conv:not([data-selected]):hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.os[data-theme='dark'] .composer__field {
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.os[data-theme='dark'] .composer__plus {
+  background: rgba(255, 255, 255, 0.13);
+  color: #c7c7cc;
+}
+
+.os[data-theme='dark'] .composer__plus:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.os[data-theme='dark'] .composer__file {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---- Wallpapers, dark: a tile's name is on dark glass */
+
+.os[data-theme='dark'] .vip-tile__cap {
+  background: rgba(28, 28, 30, 0.82);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.16);
+}
+
+/* ---- Updates, dark: a Finder's list on a dark ground, every other row a shade lighter */
+
+.os[data-theme='dark'] .ss-window.updwin,
+.os[data-theme='dark'] .ss-window.updwin > .ss-window__bar,
+.os[data-theme='dark'] .updwin__body {
+  background: #262628;
+}
+
+.os[data-theme='dark'] .upd {
+  background: #1e1e20;
+}
+
+.os[data-theme='dark'] .upd-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.os[data-theme='dark'] .upd-row.on {
+  background: var(--v-accent);
+}
+
+.os[data-theme='dark'] .v-chip {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.os[data-theme='dark'] .v-chip--blue {
+  background: rgba(10, 132, 255, 0.24);
+  color: #7dbaff;
+}
+
+.os[data-theme='dark'] .v-chip--lock {
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+.os[data-theme='dark'] .upd-row.on .v-chip {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0a56b8;
+}
+
+/* ---- Whatever can be pressed shows the pointing hand, wherever it is on the desk (Dom's note after the
+   third round: a clicking finger over what can be clicked, throughout). What cannot be pressed just now
+   keeps the arrow. */
+
+.os :where(.wf, .account, .menu, .menubar, .notify, .dock, .desk, .desk-free, .desk-note) :where(button:not(:disabled):not([aria-disabled='true']), a[href], [role='button'], [role='tab'], [role='option'], [role='radio'], [role='menuitem'], [role='switch'], [role='slider']:not([aria-disabled='true']), summary, label:has(input[type='checkbox'], input[type='radio'])) {
+  cursor: pointer;
+}

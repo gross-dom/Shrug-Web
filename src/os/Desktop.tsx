@@ -14,6 +14,7 @@ import { addressable, addressOf, personAt, placeOfSpot } from './place'
 import { saver, startSaver } from './saver'
 import { Arriving, Stalled, unfetched } from './Stalled'
 import { useStore } from './store'
+import { theme } from './theme'
 import { WALLPAPERS } from '../data/wallpapers'
 import { DeskWallpaper } from './DeskWallpaper'
 import { wallpaper } from './wallpaper'
@@ -89,6 +90,8 @@ const styled = () => new Promise<void>((resolve) => (boot() ? boot()!.styled(res
 export function Desktop() {
   const saving = useStore(saver, (s) => s.on)
   const compact = useStore(wm, (s) => s.compact)
+  // Light or dark, as chosen (os/theme.ts): the desktop's alone
+  const appearance = useStore(theme, (t) => t.is)
   const showing = useStore(wallpaper, (s) => WALLPAPERS[s.at]!.id)
   const [booted, setBooted] = useState(false)
   const [part, setPart] = useState(parts)
@@ -210,7 +213,7 @@ export function Desktop() {
   }, [compact])
 
   return (
-    <div className="os ss-stage" data-theme="light" data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={compact || undefined} data-wallpaper={showing}>
+    <div className="os ss-stage" data-theme={compact ? 'light' : appearance} data-greys="cool" data-palette="accent" data-fidelity="standard" data-booted={booted || undefined} data-saving={saving || undefined} data-compact={compact || undefined} data-wallpaper={showing}>
       <div className="os__wallpaper" aria-hidden>
         <DeskWallpaper />
         <div className="os__grain" />

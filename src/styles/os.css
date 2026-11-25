@@ -1803,8 +1803,8 @@ html[data-wm-busy='se'] * {
   min-width: 176px;
   padding: 5px;
   border-radius: 13px;
-  background: var(--dark-glass);
-  box-shadow: var(--dark-glass-edge);
+  background: var(--sheet-glass);
+  box-shadow: var(--sheet-edge);
   -webkit-backdrop-filter: blur(40px) saturate(1.7);
   backdrop-filter: blur(40px) saturate(1.7);
   color: var(--glass-ink);
@@ -1829,7 +1829,7 @@ html[data-wm-busy='se'] * {
   width: 14px;
   height: 14px;
   border-radius: 0 0 3px 0;
-  background: var(--dark-glass);
+  background: var(--sheet-glass);
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
   transform: rotate(45deg);
 }
@@ -2241,29 +2241,55 @@ html[data-wm-busy] .dock__item .dock__label {
   outline-offset: 3px;
 }
 
-/* ---- Dark glass, as a Mac draws what is let down from its menu bar.
+/* ---- Glass, as a Mac draws what is let down from its menu bar.
    Dom's screenshots (design/v1/reference: the Now Playing, Wi-Fi and app-menu sheets, and Notification
-   Centre) are the look for the desk's own: the menus, the Log In sheet in every state, a notification and
-   the note that Updates is unlocked. A dark, see-through pane with a light edge, white words, grey for
-   what is secondary, a blue row under the pointer, and a blue capsule for the one thing to press. These
-   rules recolor what is laid out above; nothing is moved. ---- */
+   Centre) are the look for the desk's own: the menus, the Log In sheet in every state, a notification, the
+   note that Updates is unlocked and the Dock's menu. A see-through pane with a fine edge, a blue row under
+   the pointer, and a blue capsule for the one thing to press. It follows the desk's appearance
+   (os/theme.ts): dark glass with white words in dark, pale glass with dark words in light, as a Mac's own
+   menus do. These rules recolor what is laid out above; nothing is moved. ---- */
 
 .os {
-  --dark-glass: rgba(38, 38, 41, 0.74);
-  --dark-glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.13), 0 22px 54px -8px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.22);
+  --sheet-glass: rgba(38, 38, 41, 0.74);
+  --sheet-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.13), 0 22px 54px -8px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.22);
   --glass-ink: rgba(255, 255, 255, 0.94);
+  --glass-ink-1: rgba(255, 255, 255, 0.86);
   --glass-ink-2: rgba(235, 235, 245, 0.64);
+  --glass-ink-3: rgba(235, 235, 245, 0.36);
   --glass-rule: rgba(255, 255, 255, 0.13);
   --glass-field: rgba(255, 255, 255, 0.09);
+  --glass-ring: rgba(255, 255, 255, 0.14);
+  --glass-knob: rgba(70, 70, 74, 0.96);
   --glass-blue: #3478f6;
   --glass-press: #0a84ff;
+  --glass-link: #5eb0ff;
+  --glass-bad: #ff8a80;
+  --glass-scheme: dark;
+}
+
+.os[data-theme='light'] {
+  --sheet-glass: rgba(246, 247, 250, 0.84);
+  --sheet-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.7), 0 22px 54px -8px rgba(6, 14, 60, 0.36), 0 6px 16px rgba(6, 14, 60, 0.14);
+  --glass-ink: #1d1d1f;
+  --glass-ink-1: #2c2c2e;
+  --glass-ink-2: #55555c;
+  --glass-ink-3: rgba(60, 60, 67, 0.5);
+  --glass-rule: rgba(0, 0, 0, 0.1);
+  --glass-field: rgba(255, 255, 255, 0.7);
+  --glass-ring: rgba(0, 0, 0, 0.14);
+  --glass-knob: rgba(250, 250, 252, 0.96);
+  --glass-blue: #2f6fe8;
+  --glass-press: #0a6de6;
+  --glass-link: #0a5fd0;
+  --glass-bad: #c02a1d;
+  --glass-scheme: light;
 }
 
 .menu {
   border-radius: 13px;
   color: var(--glass-ink);
-  --ss-popover-bg: var(--dark-glass);
-  --ss-popover-shadow: var(--dark-glass-edge);
+  --ss-popover-bg: var(--sheet-glass);
+  --ss-popover-shadow: var(--sheet-edge);
 }
 
 .menu::before {
@@ -2283,7 +2309,7 @@ html[data-wm-busy] .dock__item .dock__label {
 
 .menu__item[aria-disabled='true'] {
   background: none;
-  color: rgba(235, 235, 245, 0.34);
+  color: var(--glass-ink-3);
 }
 
 .menu__rule {
@@ -2296,12 +2322,12 @@ html[data-wm-busy] .dock__item .dock__label {
 
 .account {
   border-radius: 16px;
-  background: var(--dark-glass);
+  background: var(--sheet-glass);
   -webkit-backdrop-filter: blur(40px) saturate(1.7);
   backdrop-filter: blur(40px) saturate(1.7);
-  box-shadow: var(--dark-glass-edge);
+  box-shadow: var(--sheet-edge);
   color: var(--glass-ink);
-  color-scheme: dark;
+  color-scheme: var(--glass-scheme);
 }
 
 .account__lead,
@@ -2320,12 +2346,12 @@ html[data-wm-busy] .dock__item .dock__label {
 .account__field input,
 .account__boxes span {
   background: var(--glass-field);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  color: #fff;
+  box-shadow: inset 0 0 0 1px var(--glass-ring);
+  color: var(--glass-ink);
 }
 
 .account__field input::placeholder {
-  color: rgba(235, 235, 245, 0.36);
+  color: var(--glass-ink-3);
 }
 
 .account__field input:focus,
@@ -2353,12 +2379,12 @@ html[data-wm-busy] .dock__item .dock__label {
 }
 
 .account__said {
-  color: #ff8a80;
+  color: var(--glass-bad);
 }
 
 .account__link,
 .account__wait {
-  color: #5eb0ff;
+  color: var(--glass-link);
 }
 
 .account hr {
@@ -2371,6 +2397,7 @@ html[data-wm-busy] .dock__item .dock__label {
 
 :where(a, button).account__row:hover {
   background: var(--glass-blue);
+  color: #fff;
 }
 
 :where(a, button).account__row:hover small {
@@ -2382,19 +2409,64 @@ html[data-wm-busy] .dock__item .dock__label {
 }
 
 .account__faces [data-upload] {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: none;
-  color: rgba(235, 235, 245, 0.7);
+  background: var(--glass-field);
+  box-shadow: inset 0 0 0 1px var(--glass-ring);
+  color: var(--glass-ink-2);
+}
+
+/* Appearance: light or dark, a switch of two in the sheet */
+.account__looks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.account__form > .account__looks {
+  padding: 0;
+}
+
+.account__seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--glass-field);
+  box-shadow: inset 0 0 0 1px var(--glass-ring);
+}
+
+.account__seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 7px;
+  color: var(--glass-ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account__seg button[aria-pressed='true'] {
+  background: var(--glass-press);
+  color: #fff;
+}
+
+.account__seg button:not([aria-pressed='true']):hover {
+  color: var(--glass-ink);
 }
 
 /* A notification, and the desk's own note: a card of Notification Centre */
 .notify__card,
 .desk-note {
   border-radius: 20px;
-  background: var(--dark-glass);
+  background: var(--sheet-glass);
   -webkit-backdrop-filter: blur(40px) saturate(1.7);
   backdrop-filter: blur(40px) saturate(1.7);
-  box-shadow: var(--dark-glass-edge);
+  box-shadow: var(--sheet-edge);
   color: var(--glass-ink);
 }
 
@@ -2406,20 +2478,20 @@ html[data-wm-busy] .dock__item .dock__label {
 }
 
 .notify__said {
-  color: rgba(255, 255, 255, 0.86);
+  color: var(--glass-ink-1);
 }
 
 .notify__close {
-  background: rgba(70, 70, 74, 0.96);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.86);
+  background: var(--glass-knob);
+  box-shadow: inset 0 0 0 1px var(--glass-ring);
+  color: var(--glass-ink-1);
 }
 
 .desk__tip {
-  background: var(--dark-glass);
+  background: var(--sheet-glass);
   -webkit-backdrop-filter: blur(30px) saturate(1.7);
   backdrop-filter: blur(30px) saturate(1.7);
-  box-shadow: var(--dark-glass-edge);
+  box-shadow: var(--sheet-edge);
   color: var(--glass-ink);
 }
 
