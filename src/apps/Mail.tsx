@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNod
 import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Trash2, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
+import { SITE } from '../data/site'
+import { LogoDisc } from '../os/icons'
 import { launchApp, showCompany } from '../os/launch'
 import { mail, markDone, markUnread, openExchange, star } from '../os/mail'
 import { linkTo } from '../os/place'
@@ -492,8 +494,29 @@ export function MailApp() {
 
   /** The pane at the right: who it is from, what else they wrote about, and where it led. */
   const pane = (
-    <aside className="ml-pane" aria-label={query !== null && !thread ? 'Search tips' : 'About the sender'}>
-      {query !== null && !thread ? (
+    <aside className="ml-pane" aria-label={composing ? `About ${SITE.name}` : query !== null && !thread ? 'Search tips' : 'About the sender'}>
+      {composing ? (
+        // A new message has one recipient, and the pane is about them, as Superhuman's is about whoever a
+        // message is to: Shrug, its address, what it is in its own line, and the one-pager
+        <>
+          <h2>{SITE.name}</h2>
+          <div className="ml-who">
+            <span className="ml-face ml-face--shrug" aria-hidden>
+              <LogoDisc size="100%" />
+            </span>
+            <span>
+              <b>{SHRUG_MAIL}</b>
+              <small>{SITE.line}</small>
+            </span>
+          </div>
+          <p className="ml-link">
+            <Link2 size={13} strokeWidth={1.7} aria-hidden />
+            <a href={SITE.onePager} target="_blank" rel="noopener noreferrer">
+              One-pager<span className="sr-only">, opens in a new tab</span>
+            </a>
+          </p>
+        </>
+      ) : query !== null && !thread ? (
         <>
           <h2>Tips</h2>
           <dl className="ml-tips">
@@ -702,7 +725,7 @@ export function MailApp() {
             )}
           </div>
         )}
-        {!zero && !composing && pane}
+        {!zero && pane}
         {said && (
           <div className="ml-said" role="status" key={said.n}>
             {said.text}

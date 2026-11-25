@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowUpRight, CalendarDays, CloudRain, Droplet, Droplets, Moon as MoonGlyph, PanelLeft, Search, Sunrise, Sunset, Thermometer, Wind } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, Cloud, CloudRain, Droplet, Droplets, Moon as MoonGlyph, PanelLeft, Search, Sunrise, Sunset, Thermometer, Wind } from 'lucide-react'
 import { Window } from '../kit/window'
-import { glyphOf } from '../os/SanFrancisco'
 import { useStore } from '../os/store'
 import { degrees, FAHRENHEIT, feelsLike, forecastPage, moonOf, PLACES, readWeather, skyKind, skyLight, sunOf, type Day, type Hour, type Moon, type Place, type SkyKind, type SkyLight, type Told } from '../os/weather'
 import { wm } from '../os/wm'
+import { HorizonGlyph, SkyGlyph } from './weather/Glyph'
 import { Sky } from './weather/Sky'
 import '../styles/desk/weather.css'
 
@@ -232,8 +232,9 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
               <i>W</i>
               {now.from && now.from in COMPASS && (
                 <svg viewBox="0 0 100 100" style={{ transform: `rotate(${COMPASS[now.from]!}deg)` }}>
-                  <circle cx="50" cy="9" r="4.5" fill="#fff" />
-                  <path d="M50 13.5V30M50 70V88M43.5 80.5 50 89l6.5-8.5" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* (from the ring's edge, outside the letters, to an arrowhead at the edge opposite) */}
+                  <circle cx="50" cy="6" r="4.2" fill="#fff" />
+                  <path d="M50 10V30M50 70V92M43.5 84 50 92.5l6.5-8.5" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
               <b>
@@ -254,7 +255,7 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
             <span className="wt-seg" role="group" aria-label="Show">
               {(
                 [
-                  ['sky', 'Conditions', <CloudRain key="sky" size={16} strokeWidth={2} aria-hidden />],
+                  ['sky', 'Conditions', <Cloud key="sky" size={17} strokeWidth={0} fill="currentColor" aria-hidden />],
                   ['rain', 'Chance of rain', <Droplet key="rain" size={15} strokeWidth={0} fill="currentColor" aria-hidden />],
                   ['wind', 'Wind', <Wind key="wind" size={16} strokeWidth={2} aria-hidden />],
                 ] as const
@@ -272,12 +273,11 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
                 return (
                   <li key={`sun-${entry.at}`}>
                     <span>{clock.format(entry.at)}</span>
-                    {entry.sun === 'set' ? <Sunset size={22} strokeWidth={2} aria-hidden /> : <Sunrise size={22} strokeWidth={2} aria-hidden />}
+                    <HorizonGlyph is={entry.sun} />
                     <b>{entry.sun === 'set' ? 'Sunset' : 'Sunrise'}</b>
                   </li>
                 )
               const h = entry.hour
-              const Glyph = glyphOf(h.says, h.day)
               return (
                 <li key={h.at}>
                   <span>{entry.first ? 'Now' : hour.format(h.at)}</span>
@@ -286,7 +286,7 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
                   ) : reading === 'rain' ? (
                     <Droplet size={20} strokeWidth={0} fill="currentColor" aria-hidden />
                   ) : (
-                    <Glyph size={22} strokeWidth={2} aria-label={h.says} role="img" />
+                    <SkyGlyph says={h.says} day={h.day} />
                   )}
                   <b>{reading === 'wind' ? (h.wind !== null ? h.wind : '–') : reading === 'rain' ? (h.rain !== null ? `${Math.round(h.rain)}%` : '–') : `${degrees(h.temp)}°`}</b>
                 </li>
@@ -366,14 +366,13 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
 
 /** A day of the week: its name, its sky, how likely rain is, and its low and high on a bar drawn against the week's. */
 function Row({ d, name, along, now }: { d: Day; name: string; along: (temp: number) => number; now: number | null }) {
-  const Glyph = glyphOf(d.says, d.day)
   const low = d.low ?? d.high
   const high = d.high ?? d.low
   return (
     <li>
       <span>{name}</span>
       <span className="wt-days__sky">
-        <Glyph size={20} strokeWidth={2} aria-label={d.says} role="img" />
+        <SkyGlyph says={d.says} day={d.day} size={21} />
         {d.rain !== null && d.rain >= 30 && <small>{Math.round(d.rain)}%</small>}
       </span>
       <span className="wt-days__low">{low !== null ? `${degrees(low)}°` : ''}</span>
@@ -394,26 +393,46 @@ function MoonFace({ moon }: { moon: Moon }) {
   const bulge = Math.abs(Math.cos(2 * Math.PI * moon.phase)) * 40
   const gibbous = moon.lit > 0.5
   const half = waxing ? 'M50 10a40 40 0 0 1 0 80Z' : 'M50 10a40 40 0 0 0 0 80Z'
+  // Its lit face: paler where the light falls full on it, with its seas, darker and soft at the edges
+  const face = (
+    <>
+      <circle cx="50" cy="50" r="40" fill="url(#wt-moon-light)" />
+      <g fill="#8f8c88" opacity="0.42" filter="url(#wt-moon-soft)">
+        <ellipse cx="36" cy="33" rx="11" ry="9" />
+        <ellipse cx="55" cy="30" rx="8" ry="6" />
+        <ellipse cx="62" cy="43" rx="9" ry="8" />
+        <ellipse cx="33" cy="52" rx="8" ry="11" />
+        <ellipse cx="50" cy="62" rx="7" ry="5" />
+        <ellipse cx="68" cy="58" rx="5" ry="6" />
+      </g>
+    </>
+  )
   return (
     <svg className="wt-moon" viewBox="0 0 100 100" aria-hidden>
       <defs>
         <clipPath id="wt-moon-disc">
           <circle cx="50" cy="50" r="40" />
         </clipPath>
+        {/* The lit part is the half and, for a gibbous moon, the bulge beside it */}
+        <clipPath id="wt-moon-half">
+          <path d={half} />
+        </clipPath>
+        <clipPath id="wt-moon-bulge">
+          <ellipse cx="50" cy="50" rx={bulge} ry="40" />
+        </clipPath>
+        <radialGradient id="wt-moon-light" cx="42%" cy="38%" r="70%">
+          <stop offset="0" stopColor="#f6f4ee" />
+          <stop offset="0.7" stopColor="#dedbd2" />
+          <stop offset="1" stopColor="#bdb9b0" />
+        </radialGradient>
+        <filter id="wt-moon-soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.2" />
+        </filter>
       </defs>
       <circle cx="50" cy="50" r="40" fill="rgba(10, 16, 40, 0.5)" />
-      <g clipPath="url(#wt-moon-disc)" fill="#e9e6de">
-        {gibbous ? (
-          <>
-            <path d={half} />
-            <ellipse cx="50" cy="50" rx={bulge} ry="40" />
-          </>
-        ) : (
-          <>
-            <path d={half} />
-            <ellipse cx="50" cy="50" rx={bulge} ry="40" fill="rgb(22, 28, 54)" />
-          </>
-        )}
+      <g clipPath="url(#wt-moon-disc)">
+        <g clipPath="url(#wt-moon-half)">{face}</g>
+        {gibbous ? <g clipPath="url(#wt-moon-bulge)">{face}</g> : <ellipse cx="50" cy="50" rx={bulge} ry="40" fill="rgb(22, 28, 54)" />}
       </g>
     </svg>
   )

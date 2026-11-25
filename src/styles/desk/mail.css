@@ -448,6 +448,19 @@
   fill: #f6f6f7;
 }
 
+/* (Shrug's own: its mark on its black disc, as Messages has it) */
+.ml-face--shrug {
+  background: #000;
+}
+
+.ml-link a {
+  font-weight: 600;
+}
+
+.ml-link a:hover {
+  text-decoration: underline;
+}
+
 .ml-who b {
   display: block;
   padding-top: 3px;
