@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Camera, ChevronLeft, ChevronRight, Grid2x2, Lock, RotateCcw, Share, SquareUserRound, Trash2, Video, VideoOff } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Clock, Grid2x2, Lock, RotateCcw, Share, SquareUserRound, Video, VideoOff, X } from 'lucide-react'
 import { Window } from '../kit/window'
 import { account, askLogIn, logIn } from '../os/account'
 import { formatter } from '../os/dates'
 import { Face } from '../os/Face'
 import { useStore } from '../os/store'
-import { post, readWall, remove, wall, type Post } from '../os/wall'
+import { approve, post, readWall, remove, wall, WALL_IS_DEMO, type Post } from '../os/wall'
 import { wm } from '../os/wm'
 import '../styles/desk/photobooth.css'
 
@@ -15,7 +15,9 @@ import '../styles/desk/photobooth.css'
 // for until they are in. Then the camera is asked for, and nothing is saved or posted until its taker
 // chooses to. A photo is taken after a count of three (the bar turns red and counts), through one of nine
 // effects, one at a time or four to a sheet. The strip is the wall: the latest photos from everyone, each
-// with a display name and picture. A photo on it opens large; its own taker can remove it.
+// with a display name and picture, and with them the taker's own that are still waiting for Shrug to approve
+// them, marked so. A photo on it opens large: the camera's button in the bar's middle goes back to the
+// camera, Share hands the photo on, and its own taker can remove it with the x on its corner in the strip.
 
 /** The nine effects, in the order their grid has them: Normal is in the middle. */
 const EFFECTS = [
@@ -39,12 +41,42 @@ const dayOf = (at: string) => {
   return `${of('day')} ${of('month')} ${of('year')}`
 }
 
+const fileName = () => `Photo Booth ${new Date().toISOString().slice(0, 10)}.jpg`
 function save(src: string) {
-  const link = Object.assign(document.createElement('a'), { href: src, download: `Photo Booth ${new Date().toISOString().slice(0, 10)}.jpg` })
+  const link = Object.assign(document.createElement('a'), { href: src, download: fileName() })
   document.body.append(link)
   link.click()
   link.remove()
 }
+
+/** Hands a photo on: the system's own share sheet where there is one, the clipboard where there is not, and
+ * failing both a file to keep. It says which it was, so the bar can say so. */
+async function share(src: string): Promise<'shared' | 'copied' | 'saved' | 'stopped'> {
+  try {
+    const blob = await (await fetch(src)).blob()
+    const file = new File([blob], fileName(), { type: blob.type || 'image/jpeg' })
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Photo Booth' })
+      return 'shared'
+    }
+    if (navigator.clipboard && 'ClipboardItem' in window) {
+      // (a clipboard takes a PNG: the photo is drawn into one)
+      const bitmap = await createImageBitmap(blob)
+      const canvas = Object.assign(document.createElement('canvas'), { width: bitmap.width, height: bitmap.height })
+      canvas.getContext('2d')?.drawImage(bitmap, 0, 0)
+      const png = await new Promise<Blob | null>((done) => canvas.toBlob(done, 'image/png'))
+      if (png) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
+        return 'copied'
+      }
+    }
+  } catch (e) {
+    if ((e as DOMException)?.name === 'AbortError') return 'stopped'
+  }
+  save(src)
+  return 'saved'
+}
+const SHARED = { shared: null, stopped: null, copied: 'Photo copied. Paste it anywhere.', saved: 'Saved to your downloads.' } as const
 
 export function PhotoBoothApp() {
   const shown = useStore(wm, (s) => s.wins.photobooth.open && !s.wins.photobooth.minimized)
@@ -179,7 +211,7 @@ export function PhotoBoothApp() {
     waiting.current = false
     setPhoto(null)
     setFresh(made.id)
-    setSaid('Posted. You can remove it any time.')
+    setSaid('Sent. It goes on the wall once Shrug has approved it.')
     setStage(stream.current ? 'live' : 'ask')
   }, [photo])
 
@@ -190,10 +222,14 @@ export function PhotoBoothApp() {
     else if (who.status !== 'member' && !sheet) waiting.current = false
   }, [who.status, sheet, send])
 
-  const shownLarge = large ? (posts.find((p) => p.id === large) ?? null) : null
-  const at = shownLarge ? posts.indexOf(shownLarge) : -1
   const mine = (p: Post) => who.status === 'member' && p.by === who.email
-  const camera = () => (setLarge(null), setStage(stream.current ? 'live' : 'ask'))
+  // What the strip has: the wall, and with it whoever is here's own photos that are still waiting to be approved
+  const strip = posts.filter((p) => !p.waiting || mine(p))
+  const shownLarge = large ? (strip.find((p) => p.id === large) ?? null) : null
+  const at = shownLarge ? strip.indexOf(shownLarge) : -1
+  // Back to the camera: for someone logged in. A visitor who was looking at the wall is back at the door
+  const camera = () => (setLarge(null), setStage(!member ? 'door' : stream.current ? 'live' : 'ask'))
+  const hand = (src: string) => void share(src).then((how) => SHARED[how] && setSaid(SHARED[how]))
   const open = (p: Post) => (setLarge(p.id), setStage('large'))
   const me = who.status === 'member' ? who.name || who.first : null
 
@@ -218,12 +254,12 @@ export function PhotoBoothApp() {
             <>
               <img className="pb-photo" src={shownLarge.src} alt={`A photo by ${shownLarge.name}`} />
               {at > 0 && (
-                <button type="button" className="pb-nav pb-nav--back" aria-label="Previous" onClick={() => setLarge(posts[at - 1]!.id)}>
+                <button type="button" className="pb-nav pb-nav--back" aria-label="Previous" onClick={() => setLarge(strip[at - 1]!.id)}>
                   <ChevronLeft size={18} strokeWidth={1.8} aria-hidden />
                 </button>
               )}
-              {at < posts.length - 1 && (
-                <button type="button" className="pb-nav pb-nav--on" aria-label="Next" onClick={() => setLarge(posts[at + 1]!.id)}>
+              {at < strip.length - 1 && (
+                <button type="button" className="pb-nav pb-nav--on" aria-label="Next" onClick={() => setLarge(strip[at + 1]!.id)}>
                   <ChevronRight size={18} strokeWidth={1.8} aria-hidden />
                 </button>
               )}
@@ -233,6 +269,12 @@ export function PhotoBoothApp() {
                   <b>{shownLarge.name}</b>
                   <small>{dayOf(shownLarge.at)}</small>
                 </span>
+                {shownLarge.waiting && (
+                  <span className="pb-wait">
+                    <Clock size={12} strokeWidth={2} aria-hidden />
+                    Waiting for approval
+                  </span>
+                )}
               </div>
             </>
           )}
@@ -241,7 +283,6 @@ export function PhotoBoothApp() {
             <div className="pb-msg">
               <Lock size={36} strokeWidth={1.5} aria-hidden />
               <h2>Log in to use Photo Booth</h2>
-              <p>Photo Booth is for members. Logging in makes your account, and the camera is asked for after.</p>
               <button type="button" className="pb-btn blue pb-btn--tall" onClick={() => askLogIn('booth')}>
                 Log In
               </button>
@@ -267,20 +308,22 @@ export function PhotoBoothApp() {
               </button>
             </div>
           )}
-          {stage === 'review' && me && <span className="pb-line">Posting shows this photo and your name, {me}, to everyone.</span>}
+          {stage === 'review' && me && <span className="pb-line">Posting sends this photo to Shrug. Once approved, it and your name, {me}, are on the wall for everyone.</span>}
           {said && (
             <span className="pb-toast" role="status">
               {said}
             </span>
           )}
         </div>
-        {/* The strip: the wall, newest first, at the right of the strip as a Mac's booth keeps its own */}
+        {/* The strip: the wall, newest first, at the right of the strip as a Mac's booth keeps its own. The
+            taker's own that are still waiting are in it too, marked. The one that is open has an x on its
+            corner, for its taker to remove it */}
         {!counting &&
-          (posts.length ? (
+          (strip.length ? (
             <ol className="pb-strip" aria-label="The wall: latest photos from everyone">
-              {posts.map((p) => (
-                <li key={p.id} className={`pb-th${large === p.id && stage === 'large' ? ' on' : ''}${fresh === p.id ? ' new' : ''}`}>
-                  <button type="button" aria-label={`A photo by ${p.name}, ${dayOf(p.at)}`} onClick={() => open(p)}>
+              {strip.map((p) => (
+                <li key={p.id} className={`pb-th${large === p.id && stage === 'large' ? ' on' : ''}${fresh === p.id ? ' new' : ''}${p.waiting ? ' waiting' : ''}`}>
+                  <button type="button" aria-label={`A photo by ${p.name}, ${dayOf(p.at)}${p.waiting ? ', waiting for approval' : ''}`} onClick={() => open(p)}>
                     <span>
                       <img src={p.src} alt="" />
                     </span>
@@ -288,7 +331,18 @@ export function PhotoBoothApp() {
                       <Face picture={p.picture} name={p.name} size={14} />
                       {p.name}
                     </small>
+                    {p.waiting && (
+                      <i className="pb-th__wait" aria-hidden>
+                        <Clock size={10} strokeWidth={2.4} />
+                        Waiting
+                      </i>
+                    )}
                   </button>
+                  {large === p.id && stage === 'large' && mine(p) && (
+                    <button type="button" className="pb-th__x" aria-label={p.waiting ? 'Remove this photo' : 'Remove this photo from the wall'} onClick={() => void remove(p.id).then((gone) => gone && (camera(), setSaid(p.waiting ? 'Removed.' : 'Removed from the wall.')))}>
+                      <X size={11} strokeWidth={2.6} aria-hidden />
+                    </button>
+                  )}
                 </li>
               ))}
             </ol>
@@ -331,10 +385,10 @@ export function PhotoBoothApp() {
                   Retake
                 </button>
               )}
-              {stage === 'large' && (
-                <button type="button" className="pb-btn" onClick={camera}>
-                  <Camera size={14} strokeWidth={1.8} aria-hidden />
-                  Camera
+              {/* (the demo's stand-in for Shrug's approval, so that both states can be seen; a live build has none) */}
+              {stage === 'large' && shownLarge?.waiting && WALL_IS_DEMO && (
+                <button type="button" className="pb-btn" onClick={() => (approve(shownLarge.id), setSaid('Approved, as Shrug would: it is on the wall.'))}>
+                  Approve (demo)
                 </button>
               )}
             </div>
@@ -343,9 +397,9 @@ export function PhotoBoothApp() {
                 Post to the Wall
               </button>
             ) : stage === 'large' && shownLarge ? (
-              <button type="button" className="pb-btn pb-btn--tall" onClick={() => save(shownLarge.src)}>
-                <Share size={14} strokeWidth={1.8} aria-hidden />
-                Save
+              // A photo is open: the camera's button, grey, goes back to the camera
+              <button type="button" className="pb-shutter back" aria-label="Back to the camera" onClick={camera}>
+                <Camera size={20} strokeWidth={2} aria-hidden />
               </button>
             ) : (
               <button type="button" className={`pb-shutter${stage === 'live' ? '' : ' off'}`} aria-label={stage === 'live' ? (four ? 'Take four photos' : 'Take photo') : 'Take photo, unavailable'} aria-disabled={stage !== 'live' || undefined} onClick={() => stage === 'live' && (setCount(3), setStage('count'))}>
@@ -359,15 +413,13 @@ export function PhotoBoothApp() {
                 </button>
               )}
               {stage === 'review' && photo && (
-                <button type="button" className="pb-btn" onClick={() => save(photo)}>
-                  <Share size={14} strokeWidth={1.8} aria-hidden />
-                  Save
+                <button type="button" className="pb-btn pb-share" aria-label="Share this photo" onClick={() => hand(photo)}>
+                  <Share size={15} strokeWidth={1.8} aria-hidden />
                 </button>
               )}
-              {stage === 'large' && shownLarge && mine(shownLarge) && (
-                <button type="button" className="pb-btn pb-btn--remove" onClick={() => void remove(shownLarge.id).then((gone) => gone && (camera(), setSaid('Removed from the wall.')))}>
-                  <Trash2 size={14} strokeWidth={1.8} aria-hidden />
-                  Remove
+              {stage === 'large' && shownLarge && (
+                <button type="button" className="pb-btn pb-share" aria-label="Share this photo" onClick={() => hand(shownLarge.src)}>
+                  <Share size={15} strokeWidth={1.8} aria-hidden />
                 </button>
               )}
             </div>

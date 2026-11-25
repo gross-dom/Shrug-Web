@@ -38,33 +38,15 @@
   margin-left: 10px;
 }
 
-.ytbar__menu {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-}
-
-.ytbar__menu:hover {
-  background: var(--yt-pill);
-}
-
 .ytbar__mark {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 4px;
+  margin-left: 4px;
 }
 
-.ytbar__mark b {
-  font-family: 'YouTube Sans', 'Roboto Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 21px;
-  font-stretch: 78%;
-  font-weight: 700;
-  letter-spacing: -0.07em;
-  line-height: 1;
+.ytbar__mark svg {
+  display: block;
 }
 
 .yt-search {
@@ -442,4 +424,18 @@
   padding: 14px 16px;
   color: var(--yt-ink-2);
   font-size: 14px;
+}
+
+/* Whatever can be pressed shows the pointing hand; a pill that is on (theater mode) is the lighter grey */
+.ytwin :where(button, a[href]) {
+  cursor: pointer;
+}
+
+.yt-pill[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Theater mode: the player has the window's width, as far as its shape lets it be seen whole */
+.yt:not([data-wide]) .yt-col {
+  max-width: none;
 }

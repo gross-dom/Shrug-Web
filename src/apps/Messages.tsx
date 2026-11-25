@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Info, SquarePen } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Info, SquarePen, UserRound, X } from 'lucide-react'
 import { Popover } from '../kit/motion/Popover'
+import { Avatar } from '../kit/parts/Avatar'
+import { Row } from '../kit/parts/Row'
 import { Window } from '../kit/window'
 import { useReturnFocus } from '../os/focus'
 import { useStore } from '../os/store'
@@ -8,12 +10,12 @@ import { outbox } from '../phone/apps/outbox'
 import { stopWriting, writeToShrug, writing } from '../os/write'
 import { geometry, isShowing, wm, type WM } from '../os/wm'
 import { chat } from './chat'
-import { ConversationAvatar, ConversationList, conversationName, ConversationPane, ConversationSearch, Details, type ListControl } from './chat-ui'
+import { ConversationAvatar, ConversationList, conversationName, ConversationPane, ConversationSearch, Details, GroupAvatar, type ListControl } from './chat-ui'
 import { inbox, seeGroup } from './state'
 import { Tool } from './ui'
 import { Write, WriteTo } from './Write'
 
-// The group chat, as Messages on a Mac: the conversations down the sidebar
+// The group chat, as Messages on a Mac: two panes side by side. The conversations down the sidebar
 // (the group, where every reply is, and then a handful of others to find,
 // from src/data/eggs.ts), the conversation that's open beside it, and the
 // group's details behind its name. This is Shrug's own Messages: Shrug's
@@ -25,27 +27,44 @@ function Sidebar({ onPick }: { onPick: () => void }) {
   const list = useRef<ListControl | null>(null)
   const on = useStore(writing, (s) => s.on)
   const last = useStore(outbox, (s) => s.sent[s.sent.length - 1] ?? null)
+  const start = () => (writeToShrug(), onPick())
   return (
     <div className="chat-side" data-writing={on || undefined}>
-      <div className="chat-side__top chat-side__top--write">
+      <div className="chat-side__top">
         <ConversationSearch control={list} />
-        {/* The pencil: a new message, whose only recipient is Shrug */}
-        <button type="button" className="im-pencil" aria-label="New message to Shrug" aria-pressed={on} onClick={() => (writeToShrug(), onPick())}>
-          <SquarePen size={15} strokeWidth={2} aria-hidden />
-        </button>
       </div>
-      {/* The message to Shrug is a conversation at the head of the list, once it has been started */}
+      {/* The message to Shrug is a conversation at the head of the list, once it has been started: a row as the
+          others are. Before anything has been sent it is "New Message", with the plain face Messages gives a
+          recipient it has no picture of, and a way to put it away again */}
       {(on || last) && (
         <div className="conv-write">
-          <button type="button" className="conv-write__row" aria-current={on || undefined} onClick={() => (writeToShrug(), onPick())}>
-            <span className="conv-write__av" aria-hidden>
-              S
-            </span>
-            <span>
-              <b>{last ? 'Shrug' : 'New Message'}</b>
-              <span>{last ? (last.state === 'failed' ? 'Not Delivered' : `${last.state === 'sent' ? 'You: ' : ''}${last.subject ?? last.text}`) : 'To: Shrug'}</span>
-            </span>
-          </button>
+          <Row
+            className="conv"
+            pad={8}
+            role="button"
+            tabIndex={0}
+            aria-current={on || undefined}
+            selected={on}
+            lead={
+              last ? (
+                <GroupAvatar size={40} />
+              ) : (
+                <span className="chat-face" style={{ width: 40, height: 40 }} aria-hidden>
+                  <Avatar tone="ios" size={40} />
+                  <UserRound className="chat-face__glyph" size={23} strokeWidth={0} fill="currentColor" aria-hidden />
+                </span>
+              )
+            }
+            title={last ? 'Shrug' : 'New Message'}
+            preview={last ? (last.state === 'failed' ? 'Not Delivered' : `${last.state === 'sent' ? 'You: ' : ''}${last.subject ?? last.text}`) : undefined}
+            onClick={start}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), start())}
+          />
+          {on && !last && (
+            <button type="button" className="conv-write__x" aria-label="Discard the new message" onClick={stopWriting}>
+              <X size={13} strokeWidth={2.2} aria-hidden />
+            </button>
+          )}
         </div>
       )}
       {/* Passed over with the arrow keys, a conversation is only being looked at: the list stays until one is pressed */}
@@ -125,7 +144,6 @@ export function MessagesApp() {
       data-listing={listing || undefined}
       sidebar={<Sidebar onPick={() => setListing(false)} />}
       sidebarWidth={292}
-      sidebarStyle="floating"
       lightsSize="large"
       barSize="tall"
       lead={
@@ -133,6 +151,11 @@ export function MessagesApp() {
           {/* With the sidebar folded away, this is the way to it: the list of conversations, in the conversation's place */}
           <button type="button" className="chat-back" aria-label="Conversations" onClick={() => setListing(true)}>
             <ChevronLeft size={18} strokeWidth={2} aria-hidden />
+          </button>
+          {/* The pencil: a new message, whose only recipient is Shrug. It is at the head of the conversation's
+              side, where Messages has it */}
+          <button type="button" className="im-pencil" aria-label="New message to Shrug" aria-pressed={write} onClick={() => (writeToShrug(), setListing(false))}>
+            <SquarePen size={15} strokeWidth={2} aria-hidden />
           </button>
           {write ? (
             <WriteTo />

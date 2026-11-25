@@ -915,6 +915,17 @@
   transform: scale(0.9);
 }
 
+/* Messages is two panes side by side, as it is on a Mac: the list's pane a shade greyer than the
+   conversation's, down the whole of the window's left, with a hair between them */
+.app.chat > .ss-window__side {
+  background: #f0f0f2;
+  border-right: 1px solid rgba(0, 0, 0, 0.09);
+}
+
+.app.chat > .ss-window__main {
+  background: #fff;
+}
+
 /* The sidebar: a search, then every conversation, newest first */
 .chat-side {
   display: flex;
@@ -1242,7 +1253,7 @@
     display: flex;
     flex: 1;
     width: auto !important;
-    margin-right: var(--ss-side-inset);
+    border-right: 0;
   }
 
   .app.chat[data-listing] > .ss-window__main {

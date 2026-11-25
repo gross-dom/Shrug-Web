@@ -1790,6 +1790,77 @@ html[data-wm-busy='se'] * {
   }
 }
 
+/* An icon's menu (a right click): a small sheet of glass over the icon, with a point at its foot, as the
+   Dock's own menus are on a Mac. While it is open the icons' names stay away */
+.dock-menu {
+  position: fixed;
+  bottom: 92px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 176px;
+  padding: 5px;
+  border-radius: 13px;
+  background: var(--dark-glass);
+  box-shadow: var(--dark-glass-edge);
+  -webkit-backdrop-filter: blur(40px) saturate(1.7);
+  backdrop-filter: blur(40px) saturate(1.7);
+  color: var(--glass-ink);
+  font-size: 13px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  animation: dock-menu-in 0.14s ease-out backwards;
+}
+
+@keyframes dock-menu-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.98);
+  }
+}
+
+.dock-menu::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: calc(50% + var(--point, 0px) - 7px);
+  width: 14px;
+  height: 14px;
+  border-radius: 0 0 3px 0;
+  background: var(--dark-glass);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  transform: rotate(45deg);
+}
+
+.dock-menu__item {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.dock-menu__item:hover,
+.dock-menu__item:focus-visible {
+  background: var(--glass-blue);
+  color: #fff;
+  outline: none;
+}
+
+.dock-menu__rule {
+  height: 1px;
+  margin: 5px 9px;
+  background: var(--glass-rule);
+}
+
+.dock[data-menu] .dock__item .dock__label {
+  opacity: 0;
+}
+
 /* Nor while a window is being carried or sized across the Dock: the pointer is
    over an icon then, and is not pointing at it */
 html[data-wm-busy] .dock__item .dock__label {

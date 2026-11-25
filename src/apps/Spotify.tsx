@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, Bookmark, ChevronLeft, ChevronRight, Clock, House, ListMusic, Mic, Music, Play, Search, Shuffle, SkipBack, SkipForward, TriangleAlert } from 'lucide-react'
+import { ArrowUpRight, Bookmark, ChevronLeft, ChevronRight, Clock, House, ListMusic, Mic, Music, Play, Search, Shuffle, SkipBack, SkipForward, TriangleAlert, X } from 'lucide-react'
 import { embedOf, EPISODES, PLAYLISTS, type Episode, type Playlist } from '../data/listening'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
@@ -16,6 +16,9 @@ import '../styles/desk/spotify.css'
 // the main pane for a playlist, since the embed brings its own track list. A listener who is not signed in
 // to Spotify may hear previews, and the window says so. If the player does not arrive the lists still work:
 // each row can be opened in Spotify.
+//
+// It opens with something chosen: the first episode is in the bar at the foot, ready to play. The chips over
+// Your Library filter that list, as Spotify's do; the chips over Home filter Home.
 
 type At = { is: 'home' } | { is: 'podcasts' } | { is: 'playlists' } | { is: 'playlist'; id: string }
 const same = (a: At, b: At) => a.is === b.is && (a.is !== 'playlist' || (b.is === 'playlist' && a.id === b.id))
@@ -51,7 +54,13 @@ export function SpotifyApp() {
   const at = trail.at
   const [query, setQuery] = useState('')
   const [only, setOnly] = useState<'all' | 'podcasts' | 'playlists'>('all')
-  const [playing, setPlaying] = useState<string | null>(null)
+  /** What Your Library is showing: all of it, or only one kind (its chips). */
+  const [lib, setLib] = useState<'all' | 'podcasts' | 'playlists'>('all')
+  /** What is in the bar at the foot. It opens on the first episode there is, so the bar is never empty. */
+  const FIRST = (EPISODES.find((e) => e.link) ?? EPISODES[0])?.id ?? null
+  const [playing, setPlaying] = useState<string | null>(FIRST)
+  /** Whether whoever is here chose it: an episode that was only set out for them says nothing about what it lacks. */
+  const [chose, setChose] = useState(false)
   const [failed, setFailed] = useState(false)
   const [again, setAgain] = useState(0)
   const main = useRef<HTMLElement>(null)
@@ -65,11 +74,14 @@ export function SpotifyApp() {
 
   // Nothing plays in a window that cannot be seen: closed or minimized, the player is taken away
   useEffect(() => {
-    if (!shown) setPlaying(null)
-  }, [shown])
+    if (shown) return setPlaying((was) => was ?? FIRST)
+    setPlaying(null)
+    setChose(false)
+  }, [shown, FIRST])
 
   const play = (e: Episode) => {
     setFailed(false)
+    setChose(true)
     setPlaying(e.id)
   }
   const go = (to: At) => {
@@ -160,39 +172,49 @@ export function SpotifyApp() {
       <div className="sp">
         <nav className="sp-lib" aria-label="Your Library">
           <h2>Your Library</h2>
-          <div className="sp-chips" role="group" aria-label="Show">
-            <button type="button" aria-pressed={at.is === 'podcasts'} onClick={() => go(at.is === 'podcasts' ? { is: 'home' } : { is: 'podcasts' })}>
-              Podcasts
-            </button>
-            <button type="button" aria-pressed={at.is === 'playlists'} onClick={() => go(at.is === 'playlists' ? { is: 'home' } : { is: 'playlists' })}>
-              Playlists
-            </button>
+          {/* The chips filter this list, as Spotify's do: one kind at a time, and an x to have all of it back */}
+          <div className="sp-chips" role="group" aria-label="Show in Your Library">
+            {lib !== 'all' && (
+              <button type="button" className="x" aria-label="Show everything" onClick={() => setLib('all')}>
+                <X size={16} strokeWidth={2} aria-hidden />
+              </button>
+            )}
+            {(['podcasts', 'playlists'] as const)
+              .filter((id) => lib === 'all' || lib === id)
+              .map((id) => (
+                <button key={id} type="button" aria-pressed={lib === id} onClick={() => setLib(lib === id ? 'all' : id)}>
+                  {id === 'podcasts' ? 'Podcasts' : 'Playlists'}
+                </button>
+              ))}
           </div>
           <ul>
-            <li>
-              <button type="button" className="sp-item" aria-current={at.is === 'podcasts' || undefined} onClick={() => go({ is: 'podcasts' })}>
-                <span className="sp-cov sp-cov--ep" aria-hidden>
-                  <Bookmark size={18} strokeWidth={0} fill="currentColor" />
-                </span>
-                <span>
-                  <b>Podcasts</b>
-                  <small>
-                    {EPISODES.length} episodes · Shrug’s network
-                  </small>
-                </span>
-              </button>
-            </li>
-            {PLAYLISTS.map((p) => (
-              <li key={p.id}>
-                <button type="button" className="sp-item" aria-current={(at.is === 'playlist' && at.id === p.id) || undefined} onClick={() => go({ is: 'playlist', id: p.id })}>
-                  <Cover tone={toneOf(p)} size={48} list />
+            {lib !== 'playlists' && (
+              <li>
+                <button type="button" className="sp-item" aria-current={at.is === 'podcasts' || undefined} onClick={() => go({ is: 'podcasts' })}>
+                  <span className="sp-cov sp-cov--ep" aria-hidden>
+                    <Bookmark size={18} strokeWidth={0} fill="currentColor" />
+                  </span>
                   <span>
-                    <b>{p.name}</b>
-                    <small>Playlist · Shrug</small>
+                    <b>Podcasts</b>
+                    <small>
+                      {EPISODES.length} episodes · Shrug’s network
+                    </small>
                   </span>
                 </button>
               </li>
-            ))}
+            )}
+            {lib !== 'podcasts' &&
+              PLAYLISTS.map((p) => (
+                <li key={p.id}>
+                  <button type="button" className="sp-item" aria-current={(at.is === 'playlist' && at.id === p.id) || undefined} onClick={() => go({ is: 'playlist', id: p.id })}>
+                    <Cover tone={toneOf(p)} size={48} list />
+                    <span>
+                      <b>{p.name}</b>
+                      <small>Playlist · Shrug</small>
+                    </span>
+                  </button>
+                </li>
+              ))}
           </ul>
         </nav>
         <section ref={main} className="sp-main" aria-label={at.is === 'home' ? 'Home' : at.is === 'podcasts' ? 'Podcasts' : (playlist?.name ?? 'Playlists')} data-autofocus tabIndex={-1}>
@@ -344,12 +366,12 @@ export function SpotifyApp() {
             <div className="sp-what">
               {episode ? <Cover tone={episode.tone} size={56} /> : <span className="sp-cov" style={{ width: 56, height: 56 }} aria-hidden><Music size={22} strokeWidth={1.7} /></span>}
               <span>
-                <b>{episode ? episode.title : 'Nothing playing'}</b>
-                <small>{episode ? episode.show : 'Pick an episode or a playlist to play.'}</small>
+                <b>{episode ? episode.title : 'Pick something to play'}</b>
+                <small>{episode ? episode.show : 'An episode, or a playlist.'}</small>
               </span>
             </div>
-            <div className="sp-ctl" aria-hidden={!episode || undefined}>
-              {episode ? (
+            <div className="sp-ctl" aria-hidden={!(episode && (chose || failed)) || undefined}>
+              {episode && (chose || failed) ? (
                 <p role="status">
                   <TriangleAlert size={14} strokeWidth={1.9} aria-hidden />
                   {episode.link ? 'Spotify’s player didn’t load. Open the episode in Spotify, or try again.' : 'This episode has no link to Spotify yet.'}
@@ -378,7 +400,7 @@ export function SpotifyApp() {
                 </>
               )}
             </div>
-            <span className="sp-tag">Plays through Spotify</span>
+            <span />
           </>
         )}
       </footer>

@@ -8,8 +8,8 @@ import { writing } from '../os/write'
 import '../styles/desk/write.css'
 
 // A message to Shrug, in Messages on the desktop (design/v1, "Group Chat: write to Shrug"). The pencil
-// starts it. Its only recipient is Shrug, and a subject is picked first: a testimonial to add, an intro or
-// a meeting to ask for. Each subject asks for a little of its own, and then it is written as a message is.
+// starts it. Its only recipient is Shrug. A subject can be picked first (a testimonial to add, an intro or a
+// meeting to ask for), and each asks for a little of its own; or it is simply typed and sent, as a message is.
 //
 // It goes where the phone's message to Shrug goes (src/phone/apps/outbox.ts), and delivery is honest: it
 // says Delivered only once Shrug's inbox has it, and otherwise Not Delivered, with a way to try again.
@@ -108,13 +108,15 @@ export function Write() {
     scroll.current?.scrollTo({ top: scroll.current.scrollHeight })
   }, [sent.length, subject])
 
-  const ready = !!chosen && (box.draft.trim().length > 0 || box.picked.length > 0) && (chosen.id !== 'intro' || meet.trim().length > 0)
+  // A subject is a help and not a gate: whoever starts typing has a message, and it can be sent as it is
+  const typed = box.draft.trim().length > 0 || box.picked.length > 0
+  const ready = typed && (chosen?.id !== 'intro' || meet.trim().length > 0)
   const send = () => {
-    if (!chosen || !ready) return
+    if (!ready) return
     const details: Record<string, string> =
-      chosen.id === 'testimonial' ? { name, role, publish: publish ? 'yes' : 'no' } : chosen.id === 'intro' ? { meet, name, email } : { name, email }
+      chosen?.id === 'testimonial' ? { name, role, publish: publish ? 'yes' : 'no' } : chosen?.id === 'intro' ? { meet, name, email } : { name, email }
     if (about?.subject) details.about = about.subject
-    sendToShrug({ subject: chosen.name, details: Object.fromEntries(Object.entries(details).filter(([, value]) => value.trim())) })
+    sendToShrug({ subject: chosen?.name, details: Object.fromEntries(Object.entries(details).filter(([, value]) => value.trim())) })
     setSubject(null)
   }
   const add = () => files.current?.click()
@@ -176,8 +178,11 @@ export function Write() {
             )}
             {chosen.id === 'intro' && (
               <>
-                <Field label="Who do you want to meet?" value={meet} onChange={setMeet} />
-                <small>Say why in your message. Shrug decides whether to pass it on.</small>
+                <div className="two">
+                  <Field label="Your name" value={name} onChange={setName} />
+                  <Field label="Who do you want to meet?" value={meet} onChange={setMeet} />
+                </div>
+                <small>Tell us why you want the intro in your message.</small>
               </>
             )}
             {chosen.id === 'meeting' && (
@@ -226,23 +231,26 @@ export function Write() {
             e.target.value = ''
           }}
         />
-        <button type="button" className="plus" aria-label="Add files" aria-disabled={!chosen || undefined} onClick={() => chosen && add()}>
-          <Plus size={16} strokeWidth={2.2} aria-hidden />
-        </button>
+        {/* (the plus is for a message that has been begun: there is nothing to add files to while the three
+            subjects are all there is) */}
+        {(chosen || typed) && (
+          <button type="button" className="plus" aria-label="Add files" onClick={add}>
+            <Plus size={16} strokeWidth={2.2} aria-hidden />
+          </button>
+        )}
         <textarea
           ref={field}
           className="in"
           rows={1}
           value={box.draft}
-          disabled={!chosen}
-          aria-label={chosen ? `Message to Shrug: ${chosen.name}` : 'Message to Shrug. Pick a subject to start'}
-          placeholder={chosen ? chosen.ask : sent.length ? 'Add to your message' : 'Pick a subject to start'}
+          aria-label={chosen ? `Message to Shrug: ${chosen.name}` : 'Message to Shrug. Pick a subject, or start typing'}
+          placeholder={chosen ? chosen.ask : sent.length ? 'Add to your message' : 'Pick a subject to chat, or start typing'}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) e.preventDefault(), send()
           }}
         />
-        {chosen && (
+        {(chosen || typed) && (
           <button type="button" className="send" aria-label="Send" aria-disabled={!ready || undefined} onClick={send}>
             <ArrowUp size={16} strokeWidth={2.6} aria-hidden />
           </button>

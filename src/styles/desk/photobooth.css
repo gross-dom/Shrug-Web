@@ -622,3 +622,102 @@
 .pb-ctl--count .pb-count b {
   min-height: 0;
 }
+
+/* ---- After Dom's third round of notes */
+
+/* (the bar's last child is laid out as a row of buttons; in the count's bar the last child is the round
+   button itself, and its camera belongs in its middle) */
+.pb-ctl--count .pb-shutter {
+  display: grid;
+  place-items: center;
+  justify-self: auto;
+}
+
+/* The window's name, level with the lights beside it */
+.ss-window.pbwin > .ss-window__bar {
+  align-items: center;
+}
+
+.pb-name {
+  display: block;
+  line-height: 16px;
+  transform: translateY(-0.5px);
+}
+
+/* A photo is open: the camera's button in the bar's middle is grey, and goes back to the camera; at the bar's
+   right, Share, as a Mac's booth has it */
+.pb-shutter.back {
+  background: #5b5957;
+  color: #ecebe9;
+}
+
+.pb-shutter.back:hover {
+  background: #6a6866;
+}
+
+.pb-ctl .pb-btn.pb-share {
+  width: 44px;
+  height: 28px;
+  padding: 0;
+  justify-content: center;
+}
+
+/* Waiting for Shrug's approval: said on the photo in the strip, and beside its taker's name when it is open */
+.pb-th.waiting button > span:first-child img {
+  opacity: 0.62;
+}
+
+.pb-th__wait {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px 1px 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.66);
+  color: #ffd60a;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 13px;
+}
+
+.pb-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 6px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ffd60a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* The x on the corner of the photo that is open, for its taker: it takes the photo away */
+.pb-th__x {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #6f6d6b;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.4);
+  color: #fff;
+}
+
+.pb-th__x:hover {
+  background: #8a8886;
+}
+
+/* Whatever can be pressed shows the pointing hand */
+.pbwin :where(button:not([aria-disabled='true'])) {
+  cursor: pointer;
+}

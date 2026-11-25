@@ -63,10 +63,11 @@
 .qt-well {
   position: relative;
   display: flex;
-  flex: none;
+  /* (the picture has whatever room the window leaves over the controls: 405px of it as the window opens) */
+  flex: 1;
   align-items: center;
   justify-content: center;
-  height: 405px;
+  min-height: 160px;
   overflow: hidden;
   background: #000;
   box-shadow: 0 0 0 1px #5d6168, 0 1px 0 1px rgba(255, 255, 255, 0.6);
@@ -83,22 +84,13 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* (shown whole, on the well's black, whatever shape the window has been pulled to) */
+  object-fit: contain;
 }
 
 .qt-well:fullscreen img,
 .qt-well:fullscreen video {
   object-fit: contain;
-}
-
-.qt-well .lab {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 11px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
 }
 
 .qt-big {
@@ -107,8 +99,10 @@
   place-items: center;
   width: 84px;
   height: 84px;
-  padding-left: 6px;
+  /* (the triangle's own outline has its weight in the middle of its box: no nudge is needed to centre it) */
+  padding: 0;
   border-radius: 50%;
+  cursor: pointer;
   background: rgba(20, 22, 26, 0.55);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
   color: #fff;
@@ -367,4 +361,9 @@
   .qt-spin {
     animation: none;
   }
+}
+
+/* Whatever can be pressed shows the pointing hand */
+.qtwin :where(button:not([aria-disabled='true']), [role='slider']:not([aria-disabled='true'])) {
+  cursor: pointer;
 }

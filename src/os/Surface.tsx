@@ -25,7 +25,6 @@ import { focusFirst } from './focus'
 import { held } from './held'
 import { dockable, layout, placeOnDesk, toDock, type Spot } from './layout'
 import { AppIcon, FolderIcon, OnePagerIcon } from './icons'
-import { FilmIcon } from './icons-v1'
 import { MenuBar } from './MenuBar'
 import { Notifications } from './Notifications'
 import { openOnePager } from './papers'
@@ -73,7 +72,7 @@ interface DeskItem {
 }
 
 /** What is left out on the desk, down its right-hand side, in this order (design/v1/DESIGN.md, section 3):
- * Updates, the one-pager, Wallpapers, the Film, Photo Booth, Spotify, YouTube. The Updates folder is first:
+ * Updates, the one-pager, Wallpapers, QuickTime Player, Photo Booth, Spotify, YouTube. The Updates folder is first:
  * it is always there, locked to everyone but Shrug's LPs. Portfolio is in the Dock. (One whose app has
  * nothing real in it yet is left off the live site: os/held.ts.) */
 /** What the desk has besides Updates, the one-pager and Wallpapers, where it is not left out for now (held.ts). */
@@ -114,8 +113,8 @@ function useDesk(): DeskItem[] {
         focusWindow('wallpapers')
       },
     },
-    // A film is a file, and QuickTime Player is what opens it
-    quicktime: { id: 'quicktime', name: 'Film', says: 'desktop icon', icon: <FilmIcon />, open: () => (showFilm(), launch('quicktime')) },
+    // QuickTime Player, under its own icon: it opens on the first film
+    quicktime: { id: 'quicktime', name: 'QuickTime Player', says: 'desktop icon', icon: <AppIcon id="quicktime" />, open: () => (showFilm(), launch('quicktime')) },
   }
   // What is out on the desk, in the order the layout has it (os/layout.ts): the files and folders it comes
   // with, the apps that live there, and any app that has been dragged out of the Dock

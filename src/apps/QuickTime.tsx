@@ -6,7 +6,7 @@ import { wm } from '../os/wm'
 import '../styles/desk/quicktime.css'
 
 // QuickTime Player (design/v1, "QuickTime Player"): the old brushed-metal player, with its controls drawn in
-// its own style. A Film file on the desk opens it. It plays the films in src/data/films.ts: a file, in a
+// its own style. Its icon on the desk opens it, and its window can be made larger: the picture grows with it. It plays the films in src/data/films.ts: a file, in a
 // <video> with none of a browser's own controls showing; or, for a film not yet supplied, a stand-in (its
 // poster, and the clock running). It pauses when its window is minimized or closed.
 
@@ -200,7 +200,6 @@ export function QuickTimeApp() {
           ) : (
             <img src={film.poster} alt="" onClick={() => (playing ? pause() : status !== 'ended' && play())} />
           )}
-          {!off && <span className="lab">{status === 'poster' ? 'Poster frame' : film.name}</span>}
           {status === 'poster' && (
             <button type="button" className="qt-big" aria-label={`Play ${film.name}`} onClick={play}>
               <Glyph d={PLAY} size={34} />

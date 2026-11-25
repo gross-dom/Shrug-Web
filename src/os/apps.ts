@@ -226,17 +226,17 @@ export const APPS: Record<AppId, AppSpec> = {
     dock: null,
     guest: 1,
   },
-  // QuickTime Player: the old brushed-metal player (design/v1). A Film file on the desk opens it, and it is
-  // in the Dock, after the rule, only while it is open. Its window is as wide as its picture and no wider,
-  // and is not resized (src/apps/QuickTime.tsx)
+  // QuickTime Player: the old brushed-metal player (design/v1). Its icon is on the desk, and it is in the
+  // Dock, after the rule, only while it is open (unless it is dragged in). Its window opens as wide as its
+  // picture, and can be made larger: the picture grows with it (src/apps/QuickTime.tsx)
   quicktime: {
     id: 'quicktime',
     name: 'QuickTime Player',
     blurb: 'Films',
     size: () => ({ w: 748, h: 652 }),
-    min: { w: 748, h: 652 },
+    min: { w: 520, h: 470 },
     nudge: { x: 30, y: -10 },
-    resizable: false,
+    resizable: true,
     lightsY: 15,
     dock: null,
     guest: 2,

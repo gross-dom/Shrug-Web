@@ -16,8 +16,8 @@ import { createStore } from './store'
 // Only the desktop reads this: a phone has neither a desk nor a Dock of this kind.
 
 /** What is on the desk as it comes: files and folders (which stay on the desk), then the apps that live there. */
-export const DESK_FILES = ['updates', 'one-pager', 'wallpapers', 'quicktime'] as const
-export const DESK_APPS: AppId[] = ['photobooth', 'spotify', 'youtube']
+export const DESK_FILES = ['updates', 'one-pager', 'wallpapers'] as const
+export const DESK_APPS: AppId[] = ['quicktime', 'photobooth', 'spotify', 'youtube']
 /** The one Dock icon that stays where it is, as the Finder's does on a Mac. */
 export const FIXED: AppId = 'finder'
 
@@ -117,6 +117,15 @@ export function toDock(id: AppId, index: number) {
   const at = { ...now.at }
   delete at[id]
   change({ dock, desk: now.desk.filter((item) => item !== id), at })
+}
+
+/** Takes an app out of the Dock (its menu's Remove from Dock): it is on the desk, at the end of the line down the right. */
+export function offDock(id: AppId) {
+  const now = layout.get()
+  if (id === FIXED || !now.dock.includes(id)) return
+  const at = { ...now.at }
+  delete at[id]
+  change({ dock: now.dock.filter((app) => app !== id), desk: [...now.desk.filter((item) => item !== id), id], at })
 }
 
 /** Everything back where it comes. */

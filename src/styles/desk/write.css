@@ -2,93 +2,69 @@
    Shrug"): the pencil, the message as a conversation at the head of the list, who it is to, the subject to
    pick, what each subject asks for, and the field it is written in. */
 
-.chat-side__top--write {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chat-side__top--write > :first-child {
-  flex: 1;
-  min-width: 0;
-}
-
+/* The pencil: a round glass button at the head of the conversation's side, where Messages has it */
 .im-pencil {
   display: grid;
   flex: none;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-  color: #0a6de6;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
+  color: #3a3a3e;
+  cursor: pointer;
+  transition: background-color 0.14s ease, transform 0.14s ease;
+}
+
+.im-pencil:hover {
+  background: #f4f4f6;
+}
+
+.im-pencil:active {
+  transform: scale(0.94);
 }
 
 .im-pencil[aria-pressed='true'] {
-  background: #0a6de6;
-  color: #fff;
+  color: #0a6de6;
 }
 
+/* The message to Shrug, at the head of the list: a row as the conversations under it are (the same face, the
+   same inset), and while it is new, a small x at its end to put it away */
 .conv-write {
+  position: relative;
   flex: none;
-  padding: 0 8px 2px;
+  padding: 0 8px;
 }
 
-.conv-write__row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 60px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  text-align: left;
+.conv-write .conv {
+  cursor: pointer;
 }
 
-.conv-write__row[aria-current] {
-  background: #0a6de6;
-  color: #fff;
+.conv-write .conv:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(10, 109, 230, 0.5);
 }
 
-.conv-write__av {
+.conv-write__x {
+  position: absolute;
+  top: calc(50% - 12px);
+  right: 20px;
   display: grid;
-  flex: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #0c0c0d;
   color: #fff;
-  font-size: 16px;
-  font-weight: 700;
+  cursor: pointer;
 }
 
-.conv-write__row > span:last-child {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.conv-write__row b {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.conv-write__row span span {
-  overflow: hidden;
-  color: #63646b;
-  font-size: 12.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.conv-write__row[aria-current] span span {
-  color: #fff;
+.conv-write__x:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .im-pencil:focus-visible,
-.conv-write__row:focus-visible,
+.conv-write__x:focus-visible,
 .chat-write :where(button, input, textarea):focus-visible {
   outline: 3px solid rgba(10, 109, 230, 0.5);
   outline-offset: 2px;
@@ -347,9 +323,22 @@
   color: #63646b;
 }
 
-.im-field .plus[aria-disabled='true'],
+.im-field .plus,
+.im-field .send,
+.im-opt,
+.im-link,
+.im-file button,
+.im-file--add {
+  cursor: pointer;
+}
+
+.im-field .plus:hover {
+  background: #dfdfe3;
+}
+
 .im-field .send[aria-disabled='true'] {
   opacity: 0.45;
+  cursor: default;
 }
 
 .im-field .in {
@@ -497,13 +486,13 @@
 
 /* While the message to Shrug is what the window shows, it is the one that is picked: the conversation that
    was open is in the list as any other is */
-.chat-side[data-writing] .conv[data-selected] {
+.chat-side[data-writing] .conv-list .conv[data-selected] {
   background: none;
   --ss-text-strong: inherit;
   --ss-text: inherit;
   --ss-ink-2: inherit;
 }
 
-.chat-side[data-writing] .conv[data-selected] .ss-row__dot {
+.chat-side[data-writing] .conv-list .conv[data-selected] .ss-row__dot {
   background: var(--ss-accent);
 }

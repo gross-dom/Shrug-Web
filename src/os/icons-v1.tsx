@@ -5,7 +5,7 @@ import { picked } from './workspace'
 
 // The icons of the v1 apps (design/v1). Each is drawn here, as every icon on the desktop is. Mail's,
 // QuickTime Player's, Photo Booth's, Spotify's and YouTube's are drawn after the icons Dom supplied for them
-// (design/v1/reference): the apps a visitor already knows them by. Film is a file, for the desk. Workspace's
+// (design/v1/reference): the apps a visitor already knows them by. Workspace's
 // is the color last picked in it, with its mark.
 
 /** A continuous-corner square, 100 units across (the same as os/icons.tsx draws its tiles on). */
@@ -59,21 +59,13 @@ export function MailIcon() {
   )
 }
 
-/** QuickTime Player: the Mac's, from Dom's picture of it: a thick blue ring, lighter at its top left, and a
- * rounded tail from its middle out past it, a deeper blue where it lies over the ring. On white. */
+/** QuickTime Player: the Mac's old one, and Dom's own picture of it (public/icons/quicktime.webp, with the white
+ * it stood on cut away): the blue Q, with no tile under it, as it was. */
 export function QuickTimeIcon() {
-  const id = useId().replace(/:/g, '')
   return (
-    <Tile fill={['#ffffff', '#eceef2']}>
-      <defs>
-        <linearGradient id={`${id}-q`} x1="0.15" y1="0.1" x2="0.85" y2="0.9">
-          <stop offset="0" stopColor="#5cc6fa" />
-          <stop offset="1" stopColor="#2a8af4" />
-        </linearGradient>
-      </defs>
-      <circle cx="47" cy="47" r="29" fill="none" stroke={`url(#${id}-q)`} strokeWidth="14.5" />
-      <path d="M51.5 51.5 78 80" stroke="#1f6ee6" strokeOpacity=".9" strokeWidth="13.5" strokeLinecap="round" />
-    </Tile>
+    <svg viewBox="0 0 100 100" className="app-icon" aria-hidden>
+      <image href="/icons/quicktime.webp" x="3" y="3" width="94" height="94" preserveAspectRatio="xMidYMid meet" />
+    </svg>
   )
 }
 
@@ -154,7 +146,6 @@ export function WorkspaceIcon() {
   )
 }
 
-/** A film, as a file on the desk: a page with a frame of it, its sprocket holes, and what kind of file it is. */
 export function FilmIcon() {
   const id = useId().replace(/:/g, '')
   return (

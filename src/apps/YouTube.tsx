@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, Clapperboard, Menu, Search, Share2, TriangleAlert, X } from 'lucide-react'
+import { ArrowUpRight, Check, Clapperboard, RectangleHorizontal, Search, Share2, TriangleAlert, X } from 'lucide-react'
 import { PLAYLIST, VIDEOS } from '../data/videos'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
+import { YouTubeMark } from './youtube-mark'
 import '../styles/desk/youtube.css'
 
 // YouTube (design/v1, "YouTube"): one playlist, the player with the list beside it, laid out as YouTube's
-// own watch page is in Dom's screenshot of it: its dark ground, its mark and one long search field along the
-// head, the player with rounded corners, the title under it, then the channel with one white button and
-// grey ones beside, and at the right the list, each video a still with its length on it. The player is
-// YouTube's own embed, with nothing drawn over it. A video whose owner does not allow it on other sites
-// says so, with a link to watch it on YouTube.
+// own watch page is in Dom's screenshot of it: its dark ground, its mark and one long field along the head
+// (which searches this playlist, and says so), the player with rounded corners, the title under it, then the
+// channel with one white button and grey ones beside, and at the right the list, each video a still with its
+// length on it. Theater mode puts the list away and gives the player the window's width, as YouTube's does.
+// The player is YouTube's own embed, with nothing drawn over it. A video whose owner does not allow it on
+// other sites says so, with a link to watch it on YouTube.
 
 /** Where YouTube's player is served from: the address it has for sites that set no cookies until it plays. */
 const HOST = 'https://www.youtube-nocookie.com'
@@ -25,7 +27,9 @@ export function YouTubeApp() {
   const [refused, setRefused] = useState(false)
   const [query, setQuery] = useState('')
   const [copied, setCopied] = useState(false)
-  const [wide, setWide] = useState(true)
+  /** Theater mode: the list is put away, and the player has the window's width. */
+  const [theater, setTheater] = useState(false)
+  const wide = !theater
   const frame = useRef<HTMLIFrameElement>(null)
   const video = VIDEOS[at]!
 
@@ -68,18 +72,11 @@ export function YouTubeApp() {
 
   const bar = (
     <div className="ytbar">
-      <button type="button" className="ytbar__menu" aria-label={wide ? 'Hide the list' : 'Show the list'} aria-pressed={wide} onClick={() => setWide((w) => !w)}>
-        <Menu size={20} strokeWidth={1.6} aria-hidden />
-      </button>
-      <span className="ytbar__mark" role="img" aria-label="YouTube">
-        <svg viewBox="0 0 30 21" width="30" height="21" aria-hidden>
-          <path d="M15 0C22 0 26.3.3 27.6 1.6C29.6 3.5 30 7 30 10.5C30 14 29.6 17.5 27.6 19.4C26.3 20.7 22 21 15 21C8 21 3.7 20.7 2.4 19.4C.4 17.5 0 14 0 10.5C0 7 .4 3.5 2.4 1.6C3.7.3 8 0 15 0Z" fill="#f03" />
-          <path d="M12 6l8 4.5-8 4.5z" fill="#fff" />
-        </svg>
-        <b aria-hidden>YouTube</b>
+      <span className="ytbar__mark">
+        <YouTubeMark height={20} />
       </span>
       <label className="yt-search">
-        <input type="text" value={query} placeholder="Search" aria-label={`Search ${PLAYLIST.name}`} spellCheck={false} autoComplete="off" onChange={(e) => setQuery(e.target.value)} />
+        <input type="text" value={query} placeholder="Search this playlist" aria-label={`Search ${PLAYLIST.name}`} spellCheck={false} autoComplete="off" onChange={(e) => setQuery(e.target.value)} />
         {query && (
           <button type="button" aria-label="Clear" onClick={() => setQuery('')}>
             <X size={18} strokeWidth={1.6} aria-hidden />
@@ -94,7 +91,14 @@ export function YouTubeApp() {
   )
   return (
     <Window className="app ytwin" lightsSize="large" lead={bar} body={{ className: 'ytwin__body' }}>
-      <div className="yt" data-wide={wide || undefined}>
+      <div
+        className="yt"
+        data-wide={wide || undefined}
+        onKeyDown={(e) => {
+          // T, as on YouTube: theater mode, and back
+          if (e.key.toLowerCase() === 't' && !e.metaKey && !e.ctrlKey && !e.altKey && !(e.target as HTMLElement).closest('input, textarea')) setTheater((t) => !t)
+        }}
+      >
         <div className="yt-col" data-autofocus tabIndex={-1}>
           <div className="yt-player">
             {refused ? (
@@ -157,6 +161,10 @@ export function YouTubeApp() {
               <span className="yt-pill yt-pill--off">No link yet</span>
             )}
             <span className="yt-grow" />
+            <button type="button" className="yt-pill" aria-pressed={theater} onClick={() => setTheater((t) => !t)}>
+              <RectangleHorizontal size={18} strokeWidth={1.6} aria-hidden />
+              {theater ? 'Default view' : 'Theater mode'}
+            </button>
             {link && (
               <button type="button" className="yt-pill" onClick={() => void share()}>
                 {copied ? <Check size={18} strokeWidth={1.8} aria-hidden /> : <Share2 size={18} strokeWidth={1.6} aria-hidden />}

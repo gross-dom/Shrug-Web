@@ -188,6 +188,18 @@
   color: #000;
 }
 
+.sp-chips button.x {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 0;
+}
+
+/* Whatever can be pressed shows the pointing hand */
+.spwin :where(button:not([aria-disabled='true']), a[href]) {
+  cursor: pointer;
+}
+
 .sp-item {
   display: flex;
   align-items: center;
