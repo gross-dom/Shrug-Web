@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { PDF, set } from '../data/lettering'
-import { IN_DISC, ON_TILE, S, VIP_LETTERS } from '../data/logo'
+import { MARK, MARK_TALL, MARK_WIDE, onGround, VIP_LETTERS } from '../data/logo'
 import type { AppId } from './apps'
 import { MailIcon, PhotoBoothIcon, QuickTimeIcon, SpotifyIcon, WorkspaceIcon, YouTubeIcon } from './icons-v1'
 
@@ -29,28 +29,21 @@ const superellipse = (cx: number, cy: number, rx: number, ry: number, n: number)
 /** A continuous-corner square, 100 units across: its corners as round as the Mac's own tiles measure. */
 const SQUIRCLE = superellipse(50, 50, 50, 50, 4.4)
 
-/** Shrug's logo: the s on its tile, cut by it (src/data/logo.ts). A white tile and a black s, unless told otherwise. */
-export function Logo({ size = 24, ground = '#fff', ink = '#000', className }: { size?: number | string; ground?: string; ink?: string; className?: string }) {
+/** Shrug's mark: the wordmark SHRUG (src/data/logo.ts), so tall, in whatever color the words round it are. */
+export function Logo({ size = 16, ink = 'currentColor', className }: { size?: number; ink?: string; className?: string }) {
   return (
-    <svg viewBox="0 0 180 180" width={size} height={size} className={className} aria-hidden>
-      <rect width="180" height="180" fill={ground} />
-      <path d={S} fill={ink} transform={ON_TILE} />
+    <svg viewBox={`0 0 ${MARK_WIDE} ${MARK_TALL}`} width={(MARK_WIDE / MARK_TALL) * size} height={size} className={className} aria-hidden>
+      <path d={MARK} fill={ink} />
     </svg>
   )
 }
 
-/** The logo in a disc, white on black: Shrug's face in a conversation. */
+/** The wordmark across a black disc: Shrug's face in a conversation. */
 export function LogoDisc({ size = 28, className }: { size?: number | string; className?: string }) {
-  const id = useId().replace(/:/g, '')
   return (
-    <svg viewBox="0 0 200 200" width={size} height={size} className={className} aria-hidden>
-      <defs>
-        <clipPath id={`${id}-disc`}>
-          <circle cx="100" cy="100" r="100" />
-        </clipPath>
-      </defs>
-      <circle cx="100" cy="100" r="100" fill="#000" />
-      <path d={S} fill="#fff" transform={IN_DISC} clipPath={`url(#${id}-disc)`} />
+    <svg viewBox="0 0 100 100" width={size} height={size} className={className} aria-hidden>
+      <circle cx="50" cy="50" r="50" fill="#000" />
+      <path d={MARK} fill="#fff" transform={onGround(0.7)} />
     </svg>
   )
 }
@@ -271,11 +264,11 @@ export function VipIcon() {
   )
 }
 
-/** Shrug's own: the logo, white on a black tile. The s sits on this tile as it does on the logo's (ON_TILE, at five ninths the size). */
+/** Shrug's own: the wordmark, white across a black tile. */
 function ShrugIcon() {
   return (
     <Tile from="#2a2a2e" to="#000000">
-      <path d={S} fill="#fff" transform="translate(-38.52 -19.63) scale(0.7963)" />
+      <path d={MARK} fill="#fff" transform={onGround(0.74)} />
     </Tile>
   )
 }
@@ -389,12 +382,7 @@ export function OnePagerIcon() {
       </defs>
       <path d="M22 13a7 7 0 0 1 7-7h29l21 21v60a7 7 0 0 1-7 7H29a7 7 0 0 1-7-7z" fill={`url(#${id}-page)`} stroke="rgba(0,0,0,0.16)" strokeWidth="1" />
       <path d="M58 6l21 21H65a7 7 0 0 1-7-7z" fill="#d3d6de" />
-      <rect x="30" y="34" width="14" height="14" rx="2" fill="#000" />
-      <path
-        d="M154.17 79.38H115.83Q115.42 74.06 110.78 70.99Q106.15 67.92 100 67.92Q94.58 67.92 90.83 69.84Q87.08 71.77 87.08 75.42Q87.08 78.02 89.32 80.31Q91.56 82.6 98.12 83.75L121.88 87.92Q139.69 91.04 148.49 98.75Q157.29 106.46 157.29 119.38Q157.29 131.88 150 140.99Q142.71 150.1 130.05 155.05Q117.4 160 101.25 160Q74.58 160 59.53 149.11Q44.48 138.23 42.71 120.42H84.17Q85.1 125.94 89.79 128.91Q94.48 131.88 101.46 131.88Q107.29 131.88 111.04 129.9Q114.79 127.92 114.79 124.38Q114.79 118.23 101.46 115.83L80.83 112.08Q63.12 108.85 54.27 100.26Q45.42 91.67 45.42 77.92Q45.42 65.73 51.93 57.29Q58.44 48.85 70.47 44.43Q82.5 40 99.17 40Q124.38 40 138.91 50.47Q153.44 60.94 154.17 79.38Z"
-        fill="#fff"
-        transform="translate(30 34) scale(.07) translate(-38 -20) scale(1.38)"
-      />
+      <path d={MARK} fill="#111" transform={`translate(30 37.5) scale(${(26 / MARK_WIDE).toFixed(5)})`} />
       <g fill="none" strokeLinecap="round">
         <path d="M30 57h40" stroke="#1d1d1f" strokeWidth="4.2" />
         <path d="M30 66h40M30 73h40M30 80h26" stroke="#c4c7cf" strokeWidth="2.8" />

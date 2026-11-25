@@ -1,6 +1,5 @@
 import { Wordmark } from '../../../store/src/brand'
 import { ONE_PAGER as P } from '../../data/onepager'
-import { Logo } from '../../os/icons'
 import type { Sheet } from '../../os/papers'
 import '../../styles/desk/onepager.css'
 
@@ -12,11 +11,9 @@ import '../../styles/desk/onepager.css'
 function Top({ page }: { page: number }) {
   return (
     <div className="op-top">
+      {/* The name in full, as an official document carries it */}
       <b>
-        <span>
-          <Logo size="100%" ground="#0c0c0d" ink="#fff" />
-        </span>
-        <Wordmark lockup="shrug" height={15} />
+        <Wordmark lockup="capital" height={13} />
       </b>
       <span>{['One-pager', P.dated, `${page} of 2`].filter(Boolean).join(' · ')}</span>
     </div>

@@ -1,7 +1,7 @@
 import type { Plugin } from 'vite'
 import { answerBlocks, FAQS, type Inline } from '../src/data/faqs'
 import { PEOPLE } from '../src/data/people'
-import { tileSvg } from '../src/data/logo'
+import { markSvg } from '../src/data/logo'
 import { COMPANIES, COMPANY_COUNT } from '../src/data/portfolio'
 import { SITE } from '../src/data/site'
 import { ALIASES, APP_IDS, type AppId } from '../src/os/apps'
@@ -101,7 +101,7 @@ function plain() {
   return [
     `<main class="plain">`,
     `<noscript><p class="plain-note">This is Shrug’s site in plain words. The site itself is drawn as a desktop, or as an iPhone on a phone, and needs JavaScript: turn it on and reload to see it.</p></noscript>`,
-    `<p class="plain-mark" aria-hidden="true">${tileSvg(40)}</p>`,
+    `<p class="plain-mark" aria-hidden="true">${markSvg(17, '#fff')}</p>`,
     `<h1>${esc(SITE.name)}</h1>`,
     `<p class="plain-line">${esc(SITE.line)}</p>`,
     `<p><a class="plain-go" href="${SITE.onePager}" rel="noopener">Read the one-pager</a></p>`,
@@ -182,7 +182,7 @@ function lost() {
     </script>
   </head>
   <body>
-    <div class="mark" aria-hidden="true">${tileSvg(44)}</div>
+    <div class="mark" aria-hidden="true">${markSvg(18)}</div>
     <h1>That page isn’t here</h1>
     <p>The site is one page. Everything is on it.</p>
     <a href="/">Go to ${esc(SITE.name)}</a>
@@ -199,7 +199,7 @@ export function page(): Plugin {
       handler(html) {
         for (const token of ['<!--tags-->', '<!--plain-->', '<!--mark-->']) if (!html.includes(token)) throw new Error(`index.html has lost its ${token} marker (tools/page.ts)`)
         // The logo over the loading bar: the same drawing the site has (src/data/logo.ts)
-        return html.replace('<!--tags-->', tags).replace('<!--plain-->', plain).replace('<!--mark-->', tileSvg(44))
+        return html.replace('<!--tags-->', tags).replace('<!--plain-->', plain).replace('<!--mark-->', markSvg(20, '#fff'))
       },
     },
     generateBundle() {

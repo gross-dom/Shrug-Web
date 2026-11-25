@@ -5,9 +5,9 @@
 //   node tools/og.cjs      (writes public/og.png, 1200x630)
 const fs = require('fs')
 const { chromium } = require('playwright')
-// The logo, as the site draws it (src/data/logo.ts): white on a black tile here, 13 points across
-const drawing = fs.readFileSync('src/data/logo.ts', 'utf8')
-const logo = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="13" height="13"><rect width="180" height="180" fill="#000"/><path fill="#fff" transform="${/export const ON_TILE = '([^']+)'/.exec(drawing)[1]}" d="${/export const S = '([^']+)'/.exec(drawing)[1]}"/></svg>`
+// The wordmark, as the site draws it (store/shared/wordmark.ts): in grey here, 9 points tall
+const drawing = fs.readFileSync('store/shared/wordmark.ts', 'utf8')
+const logo = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4379 782" width="50.4" height="9"><path fill="#8e8e93" d="${/export const SHRUG = '([^']+)'/.exec(drawing)[1]}"/></svg>`
 ;(async () => {
   const url = process.argv[2] || 'http://127.0.0.1:5173/'
   const browser = await chromium.launch()
@@ -26,9 +26,9 @@ const logo = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" widt
     flow.style.paddingTop = '0px'
     flow.style.paddingTop = `${Math.max(10, (room - document.querySelector('.msg-convo .chat__thread').offsetHeight) / 2)}px`
     document.querySelector('.msg-convo .chat__scroll').scrollTop = 0
-    // Whose conversation it is: the logo and the name in a corner, so the picture says so on its own
+    // Whose conversation it is: the wordmark in a corner, so the picture says so on its own
     const mark = document.createElement('div')
-    mark.innerHTML = `${logo}<span>Shrug</span>`
+    mark.innerHTML = logo
     mark.style.cssText = `position:fixed;left:14px;top:${room - 25}px;z-index:99;display:flex;align-items:center;gap:5px;font:600 11px/1 -apple-system,BlinkMacSystemFont,"Inter Variable",sans-serif;letter-spacing:0.01em;color:#8e8e93`
     document.body.append(mark)
   }, { room: 252, logo })

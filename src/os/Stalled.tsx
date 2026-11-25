@@ -75,7 +75,7 @@ export function Stalled({ kind, onRetry }: Props) {
   return (
     <div className="stalled" role="alert">
       <p className="stalled__mark" aria-hidden>
-        <Logo size={44} />
+        <Logo size={20} />
       </p>
       <h2 className="stalled__title">{words.title}</h2>
       <p className="stalled__say">{words.say}</p>

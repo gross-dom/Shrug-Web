@@ -1,5 +1,5 @@
 // Draws the icons a phone uses for the site when it is added to a Home Screen:
-// Shrug's logo, the s in white on its black tile, square and full to the edges
+// Shrug's wordmark, white across a black tile, square and full to the edges
 // (the phone rounds the corners itself). Needs Playwright.
 // And the tab's icon: public/favicon.svg, the same tile with its corners
 // rounded, and the pictures of it a browser asks for by name when it will not
@@ -7,18 +7,23 @@
 //   node tools/icons.cjs      (writes public/apple-touch-icon.png, icon-192.png, icon-512.png, favicon.svg, favicon.ico)
 const fs = require('fs')
 const { chromium } = require('playwright')
-// The one drawing of the logo (src/data/logo.ts): the s, and how it sits on its tile
-const logo = fs.readFileSync('src/data/logo.ts', 'utf8')
-const S = /export const S = '([^']+)'/.exec(logo)[1]
-const ON_TILE = /export const ON_TILE = '([^']+)'/.exec(logo)[1]
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" fill="#000"/><path fill="#fff" transform="${ON_TILE}" d="${S}"/></svg>`
+// The one drawing of the wordmark (store/shared/wordmark.ts), set across the tile's middle
+const drawing = fs.readFileSync('store/shared/wordmark.ts', 'utf8')
+const SHRUG = /export const SHRUG = '([^']+)'/.exec(drawing)[1]
+const WIDE = 4379
+const TALL = 782
+const across = (share) => {
+  const scale = (180 * share) / WIDE
+  return `translate(${(90 - (WIDE * scale) / 2).toFixed(2)} ${(90 - (TALL * scale) / 2).toFixed(2)}) scale(${scale.toFixed(5)})`
+}
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" fill="#000"/><path fill="#fff" transform="${across(0.78)}" d="${SHRUG}"/></svg>`
 fs.writeFileSync(
   'public/favicon.svg',
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
   <clipPath id="tile"><rect width="180" height="180" rx="40"/></clipPath>
   <g clip-path="url(#tile)">
     <rect width="180" height="180" fill="#000"/>
-    <path fill="#fff" transform="${ON_TILE}" d="${S}"/>
+    <path fill="#fff" transform="${across(0.84)}" d="${SHRUG}"/>
   </g>
 </svg>
 `,
