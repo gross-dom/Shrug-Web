@@ -1,5 +1,7 @@
-// Workspace: the chair, and the colors it is painted in (design/v1-workspace, WORKSPACE.md). Workspace is a
-// color picker for the chair with one button; chairs are still sold in the VIP Store.
+// Workspace: the chair, and the colors it is painted in (design/v1-workspace, WORKSPACE.md, and Dom's notes
+// after testing it). Workspace is where the chair is chosen and bought: the studio is its own, and the
+// buying is the store's (a chair in each color is a product there, bought on the store's own page inside
+// this window).
 //
 // Each color is ONE value here, and everything that shows the color is drawn from it: the cove of the
 // studio, the slab on the first screen, the dot in the studio's dock, the Workspace icon in the desktop's
@@ -8,8 +10,9 @@
 // Alexandrite is a stand-in for a color-shifting paint; Supersonic and Pearl Lavender are guesses awaiting
 // swatches. To change one, change it here.
 //
-// Still Shrug's to supply (section 5): which colors are in stock, the prices, the one line about each color,
-// the product in the VIP Store that each color's Buy opens, and the owners who have agreed to be named.
+// What a chair costs is not here: it is the store's to say (Matte Black from $1,100, a painted one from
+// $1,200), and it is said only to someone logged in. Still Shrug's to supply: which colors are in stock, the
+// one line about each color, photographs of each, and the owners who have agreed to be named.
 
 export interface Paint {
   id: string
@@ -17,24 +20,31 @@ export interface Paint {
   /** The color. A paint that shifts with the angle it is seen from has the colors it moves through, first to last. */
   color: string
   shift?: string[]
-  /** In stock: Buy in VIP Store. Otherwise it is made to order: Request. */
+  /** Matte Black is not a gloss paint: the chair as it comes, with no shine on it. */
+  finish?: 'matte'
+  /** In stock, or made to order. Either is bought here. */
   stock: 'now' | 'order'
-  /** What it costs, in dollars. */
-  price: number
   /** One line about it. Null until it is written: nothing is drawn where it would be. */
   line: string | null
-  /** The product in the VIP Store that Buy opens, where there is one for this color. */
-  product: string | null
+  /** The chair in this color, in the store: what Buy opens. */
+  product: string
 }
 
+/** A file of the real chair, if there is one: a scan or a modelled chair as a .glb, served by the site
+ * (put it in public/workspace/ and name it here, "/workspace/chair.glb"). The studio loads it in place of
+ * the chair it draws itself, stands it on the turntable at the drawn chair's height, and paints whichever
+ * of its materials has "paint" in its name. Null: the drawn chair. */
+export const CHAIR_MODEL: string | null = null
+
 export const PAINTS: Paint[] = [
-  { id: 'scuderia-red', name: 'Scuderia Red', color: '#d8141c', stock: 'order', price: 1500, line: null, product: 'chair-red' },
-  { id: 'solar-orange', name: 'Solar Orange', color: '#fb8a05', stock: 'now', price: 1450, line: null, product: 'chair' },
-  { id: 'alexandrite', name: 'Alexandrite', color: '#6b3f9c', shift: ['#27307d', '#6b3f9c', '#b0683a'], stock: 'order', price: 1500, line: null, product: null },
-  { id: 'championship-green', name: 'Championship Green', color: '#0f9a48', stock: 'order', price: 1500, line: null, product: null },
-  { id: 'supersonic', name: 'Supersonic', color: '#9db3c9', stock: 'order', price: 1500, line: null, product: null },
-  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', stock: 'order', price: 1500, line: null, product: null },
-  { id: 'mantis-green', name: 'Mantis Green', color: '#6fd12a', stock: 'order', price: 1500, line: null, product: null },
+  { id: 'matte-black', name: 'Matte Black', color: '#1b1c1f', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
+  { id: 'scuderia-red', name: 'Scuderia Red', color: '#d8141c', stock: 'order', line: null, product: 'chair-scuderia-red' },
+  { id: 'solar-orange', name: 'Solar Orange', color: '#fb8a05', stock: 'now', line: null, product: 'chair-solar-orange' },
+  { id: 'alexandrite', name: 'Alexandrite', color: '#6b3f9c', shift: ['#27307d', '#6b3f9c', '#b0683a'], stock: 'order', line: null, product: 'chair-alexandrite' },
+  { id: 'championship-green', name: 'Championship Green', color: '#0f9a48', stock: 'order', line: null, product: 'chair-championship-green' },
+  { id: 'supersonic', name: 'Supersonic', color: '#9db3c9', stock: 'order', line: null, product: 'chair-supersonic' },
+  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', stock: 'order', line: null, product: 'chair-pearl-lavender' },
+  { id: 'mantis-green', name: 'Mantis Green', color: '#6fd12a', stock: 'order', line: null, product: 'chair-mantis-green' },
 ]
 
 /** A color of the visitor's own: always a request, never charged for here. */
@@ -150,3 +160,35 @@ export interface Owner {
 
 /** Templated for now, as the design has them: six cards whose names and words are in [square brackets]. */
 export const OWNERS: Owner[] = ['scuderia-red', 'alexandrite', 'solar-orange', 'mantis-green', 'pearl-lavender', 'championship-green'].map((paint) => ({ name: '[Owner name]', of: '[Role, Company]', words: '[Their words about the chair.]', paint }))
+
+// ---- BTS: how a chair is made, as a wall. Photographs and films of the making, each with a line under it.
+// (Laid out differently from Notable Owners on purpose: that is cards of words; this is a wall of pictures.)
+
+export interface Making {
+  id: string
+  kind: 'photo' | 'video'
+  /** The photograph, or the film's file. Null until it is supplied. */
+  src: string | null
+  /** For a film: the still it shows before it plays. */
+  poster?: string | null
+  /** One line under it. */
+  says: string
+  /** How it sits on the wall. */
+  shape: 'wide' | 'tall' | 'square'
+  /** The tone that stands where a picture will be, until it is supplied. */
+  tone?: string
+}
+
+const SHOT = '/vip/store/pictures/'
+/** The four photographs are Shrug's own, already in the store's pictures. The films have not been supplied:
+ * their tiles are templated, as the design's are, and are left out of the live site until they are in. */
+export const MAKING: Making[] = [
+  { id: 'booth', kind: 'photo', src: `${SHOT}ws-catalog-2.webp`, says: 'A base in the paint booth.', shape: 'wide' },
+  { id: 'film-paint', kind: 'video', src: null, says: '[Film: the paint going on. 0:45]', shape: 'tall', tone: '#3a1d1f' },
+  { id: 'hung', kind: 'photo', src: `${SHOT}ws-catalog-4.webp`, says: 'Painted parts, hung in the booth.', shape: 'wide' },
+  { id: 'set', kind: 'photo', src: `${SHOT}workspace-ferrari-red-1.webp`, says: 'Scuderia Red, on set.', shape: 'tall' },
+  { id: 'film-build', kind: 'video', src: null, says: '[Film: a chair built up from its parts. 1:20]', shape: 'wide', tone: '#1d2a3a' },
+  { id: 'green', kind: 'photo', src: `${SHOT}ws-catalog-3.webp`, says: 'Championship Green.', shape: 'wide' },
+  { id: 'film-match', kind: 'video', src: null, says: '[Film: matching a color to a swatch. 0:30]', shape: 'square', tone: '#2a2440' },
+  { id: 'film-pack', kind: 'video', src: null, says: '[Film: packed and sent. 0:25]', shape: 'tall', tone: '#27301f' },
+]

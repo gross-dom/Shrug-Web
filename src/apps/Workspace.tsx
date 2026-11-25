@@ -1,30 +1,36 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { Check, FileText, Rotate3d } from 'lucide-react'
+import { Check, ChevronLeft, FileText, Play, Rotate3d } from 'lucide-react'
+import { fmtCents, priceCents } from '../../store/shared/rules'
+import { shotsOf } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
-import { inkOn, OWN, OWNERS, PAINTS, PAPER, readColor, shadedOn, type Paint } from '../data/workspace'
+import { inkOn, MAKING, OWN, OWNERS, PAINTS, PAPER, readColor, shadedOn, type Making, type Paint } from '../data/workspace'
 import { TEMPLATED } from '../data/site'
 import { Window } from '../kit/window'
 import { account, askLogIn, logIn } from '../os/account'
 import { prefersReducedMotion } from '../os/dom'
-import { launchApp } from '../os/launch'
+import { useShelf, wantShop } from '../os/shop'
 import { useStore } from '../os/store'
 import { pick, picked } from '../os/workspace'
 import { wm } from '../os/wm'
-import { openProduct } from './Store'
+import { Balance, StoreFrame, type FrameHandle } from './storefront'
 import type { Stage } from './workspace/stage'
 import { ChairStill } from './workspace/Still'
 import '../styles/desk/workspace.css'
 
-// Workspace: the studio (design/v1-workspace). A color picker for the chair with one button. It opens on
-// eight slabs, seven colors and Your own. Pick one and the whole window becomes a studio in that color: a
-// lit cove, the color's name set huge behind the chair, the chair itself on a turntable, the colors in a
-// small glass dock of dots, the price and one button. Chairs are still sold in the VIP Store: a color in
-// stock is bought there, and one made to order is asked for.
+// Workspace: the studio (design/v1-workspace, and Dom's notes after testing it). The chair is chosen here
+// and bought here. It opens on a slab for each color and one for a color of your own. Pick one and the
+// whole window becomes a studio in that color: a lit cove, the color's name set huge behind the chair, the
+// chair itself on a turntable with photographs of it beside, the colors in a small glass dock of dots with
+// who owns one under them, and the price and one button. The price is said to someone logged in. Buy opens
+// the store's own page for that chair inside this window (storefront.tsx): the same checkout as everywhere,
+// in dollars, with their points to bring it down and their address already on file.
+//
+// Two more things are in its bar: BTS, a wall of how a chair is made, and Notable Owners. Each has a way back.
 //
 // The chair is a 3D model, turned by dragging (workspace/stage.ts). Until it has loaded, and wherever a
 // browser cannot draw in 3D, a drawing of the chair in the same paint stands where it will be.
 
-/** A color as the studio holds it: one of the seven, or the visitor's own. */
+/** A color as the studio holds it: one of the paints, or the visitor's own. */
 interface Chosen {
   id: string
   name: string
@@ -34,12 +40,16 @@ interface Chosen {
 }
 
 const chosenOf = (paint: Paint): Chosen => ({ id: paint.id, name: paint.name, color: paint.color, shift: paint.shift, paint })
-const dollars = (n: number) => `$${n.toLocaleString('en-US')}`
 /** What a slab, a dot or the cove is painted with: the color, or for a shifting paint the colors it moves through. */
 const ground = (c: { color: string; shift?: string[] }) => (c.shift ? `linear-gradient(135deg, ${c.shift.join(', ')})` : c.color)
 const stockOf = (paint: Paint) => (paint.shift ? 'Color-shifting' : paint.stock === 'now' ? 'Available now' : 'Made to order')
+const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
+/** A visitor never reads a note written for Shrug: what is still templated is the demo's and the editor's. */
+const real = (text: string) => !text.startsWith('[')
+const OWNERS_SHOWN = TEMPLATED ? OWNERS : OWNERS.filter((owner) => real(owner.name))
+const MAKING_SHOWN = TEMPLATED ? MAKING : MAKING.filter((piece) => piece.src && real(piece.says))
 
-// ---- What has been asked for, in the demo: kept in this browser, by who asked
+// ---- What has been asked for (a color of their own), in the demo: kept in this browser, by who asked
 
 const ASKED = 'shrug:workspace-asked.v1'
 function asked(email: string): string[] {
@@ -59,22 +69,38 @@ function ask(email: string, what: string) {
   }
 }
 
+type View = 'first' | 'studio' | 'owners' | 'bts' | 'buy'
+
 export function WorkspaceApp() {
+  const open = useStore(wm, (s) => s.wins.workspace.open)
   const shown = useStore(wm, (s) => s.wins.workspace.open && !s.wins.workspace.minimized)
+  useEffect(() => {
+    if (open) wantShop()
+  }, [open])
   const who = useStore(account, (s) => s)
   const sheet = useStore(logIn, (s) => s.open)
   const kept = useStore(picked, (s) => s)
-  const [view, setView] = useState<'first' | 'studio' | 'owners'>(kept ? 'studio' : 'first')
+  const shelf = useShelf('chairs')
+  const [view, setView] = useState<View>(kept ? 'studio' : 'first')
   const [own, setOwn] = useState(() => ({ typed: kept?.id === OWN.id ? (kept.typed ?? '') : '', color: kept?.id === OWN.id ? kept.color : OWN.start }))
   const [flood, setFlood] = useState<string | null>(null)
   const [hover, setHover] = useState<string | null>(null)
   const [requested, setRequested] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
-  const waiting = useRef(false)
+  /** Which of the chair's pictures is on the stage: the 3D chair (null), or one of its photographs. */
+  const [shot, setShot] = useState<number | null>(null)
+  /** A film or photograph of the wall, opened large. */
+  const [look, setLook] = useState<Making | null>(null)
+  const waiting = useRef<'request' | 'price' | null>(null)
+  const frame = useRef<FrameHandle>(null)
+  const [framed, setFramed] = useState(false)
 
   const chosen: Chosen | null = !kept ? null : kept.id === OWN.id ? { id: OWN.id, name: OWN.name, color: own.color, paint: null } : (PAINTS.map(chosenOf).find((c) => c.id === kept.id) ?? null)
   const email = who.status === 'member' ? who.email : null
   useEffect(() => setRequested(email ? asked(email) : []), [email])
+  useEffect(() => setShot(null), [chosen?.id])
+  /** Where the bar's way back leads, and what from: the studio if a color is picked, or the slabs. */
+  const home: View = chosen ? 'studio' : 'first'
 
   const choose = (c: Chosen) => pick({ id: c.id, color: c.color, shift: c.shift, typed: c.id === OWN.id ? own.typed : undefined })
   /** From a slab: the slab grows to fill the window, and the studio is there when it has. A cut, for a visitor who has asked for less motion. */
@@ -91,17 +117,37 @@ export function WorkspaceApp() {
     pick({ id: OWN.id, color, typed })
   }
 
-  /** The one thing each color is asked for by: the paint's id, or for a color of their own, the color itself. */
-  const what = chosen ? (chosen.id === OWN.id ? `own:${own.color}` : chosen.id) : ''
-  const isAsked = requested.includes(what)
+  // ---- A chair in one of the colors: what the store says of it, and the way to its page
+
+  const product = chosen?.paint ? (shelf?.products.find((p) => p.id === chosen.paint!.product) ?? null) : null
+  /** Its price, as it is said: only to someone logged in, and never one the store has not given. */
+  const price = product && !product.priceHidden && product.points ? `From ${fmtCents(priceCents(product))}` : null
+  const shots = product ? shotsOf(product) : []
+  const buy = () => {
+    if (!chosen?.paint) return
+    setView('buy')
+    if (framed) frame.current?.go(chosen.paint.product)
+    else setFramed(true)
+  }
+  const seePrice = () => {
+    if (!chosen) return
+    waiting.current = 'price'
+    askLogIn('price', `${chosen.name} is kept while you log in. Start with your email.`)
+  }
+
+  // ---- A color of their own: asked for
+
+  /** The one thing a color of their own is asked for by: the color itself. */
+  const what = chosen?.id === OWN.id ? `own:${own.color}` : ''
+  const isAsked = !!what && requested.includes(what)
   const request = async () => {
-    if (!chosen || isAsked || busy) return
+    if (!chosen || !what || isAsked || busy) return
     if (!email) {
       // The color is kept while they log in, and the request is sent when they have
-      waiting.current = true
-      return askLogIn('request', `${chosen.id === OWN.id ? 'Your color' : chosen.name} is kept while you log in. Start with your email.`)
+      waiting.current = 'request'
+      return askLogIn('request', 'Your color is kept while you log in. Start with your email.')
     }
-    waiting.current = false
+    waiting.current = null
     setBusy(true)
     await new Promise((done) => setTimeout(done, 400))
     ask(email, what)
@@ -111,17 +157,20 @@ export function WorkspaceApp() {
   // Logged in with a request waiting: it is sent, as they asked. The sheet put away without logging in: it waits no longer
   useEffect(() => {
     if (!waiting.current || sheet) return
-    if (email) void request()
-    else waiting.current = false
+    if (email && waiting.current === 'request') void request()
+    else waiting.current = null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email, sheet])
 
-  const ink = view === 'owners' || !chosen || view === 'first' ? '#141414' : inkOn(chosen.color)
+  const coloured = view === 'studio' && !!chosen
+  const ink = view === 'buy' ? '#f5f5f7' : coloured ? inkOn(chosen.color) : '#141414'
   const dark = ink === '#fff'
-  const cove = view === 'studio' && chosen ? ground(chosen) : PAPER
+  const cove = view === 'buy' ? '#0c0c0d' : coloured ? ground(chosen) : PAPER
   // How the chips are set off from the ground: on paper a little darker; on a color a little lighter, as the
   // design has them, unless white words could not then be read on one (data/workspace.ts)
-  const chips = view !== 'studio' || !chosen ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
+  const chips = view === 'buy' ? ' dark buying' : !coloured ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
+  /** Who owns one, as the studio says it under the colors: owners of this color first. */
+  const owners = chosen ? [...OWNERS_SHOWN.filter((o) => o.paint === chosen.id), ...OWNERS_SHOWN.filter((o) => o.paint !== chosen.id)] : OWNERS_SHOWN
 
   const bar = (
     <div className="wxbar" style={{ color: ink }}>
@@ -131,11 +180,30 @@ export function WorkspaceApp() {
         </svg>
         Workspace
       </button>
-      {(OWNERS.length > 0 && TEMPLATED) || OWNERS.some((owner) => !owner.name.startsWith('[')) ? (
-        <button type="button" className="pill" aria-pressed={view === 'owners'} onClick={() => setView(view === 'owners' ? (chosen ? 'studio' : 'first') : 'owners')}>
-          Notable Owners
+      {(view === 'owners' || view === 'bts' || view === 'buy') && (
+        <button type="button" className="wxbar__back" onClick={() => setView(home)}>
+          <ChevronLeft size={16} strokeWidth={2.4} aria-hidden />
+          {chosen ? `Back to ${chosen.name}` : 'Back to the colors'}
         </button>
-      ) : null}
+      )}
+      <span className="wxbar__end">
+        {view === 'buy' ? (
+          <Balance className="storebar__wallet wxbar__wallet" />
+        ) : (
+          <>
+            {MAKING_SHOWN.length > 0 && (
+              <button type="button" className="pill" aria-pressed={view === 'bts'} onClick={() => setView(view === 'bts' ? home : 'bts')}>
+                BTS
+              </button>
+            )}
+            {OWNERS_SHOWN.length > 0 && (
+              <button type="button" className="pill" aria-pressed={view === 'owners'} onClick={() => setView(view === 'owners' ? home : 'owners')}>
+                Notable Owners
+              </button>
+            )}
+          </>
+        )}
+      </span>
     </div>
   )
 
@@ -147,7 +215,7 @@ export function WorkspaceApp() {
             <h1>
               One chair.
               <br />
-              Seven colors.
+              {COUNT[PAINTS.length] ?? PAINTS.length} colors.
             </h1>
             <p>Pick one and the studio changes with you.</p>
           </div>
@@ -181,8 +249,25 @@ export function WorkspaceApp() {
           <span className="st-light" aria-hidden />
           <span className="st-floor" aria-hidden />
           <Word name={chosen.name} />
-          {TEMPLATED && <span className="st-stand">Placeholder model. The licensed 3D chair goes here.</span>}
-          <Turntable color={chosen.color} shift={chosen.shift} name={chosen.name} live={shown} />
+          {TEMPLATED && <span className="st-stand">A drawn model of the chair. A scan of the real one can take its place.</span>}
+          <div className="st-stage" data-shot={shot !== null || undefined}>
+            <Turntable color={chosen.color} shift={chosen.shift} matte={chosen.paint?.finish === 'matte'} name={chosen.name} live={shown && shot === null} />
+            {shot !== null && shots[shot] && <img className="st-photo" src={shots[shot]!.full} srcSet={shots[shot]!.set} sizes="520px" alt={`${chosen.name}: photograph ${shot + 1} of ${shots.length}`} draggable={false} />}
+          </div>
+          {/* The chair's pictures, beside it: the 3D chair, and each photograph there is of it in this color */}
+          {shots.length > 0 && (
+            <div className="st-shots" role="group" aria-label={`Pictures of the chair in ${chosen.name}`}>
+              <button type="button" className="st-shot" aria-pressed={shot === null} aria-label="The chair in 3D" onClick={() => setShot(null)}>
+                <Rotate3d size={18} strokeWidth={1.9} aria-hidden />
+                <span>3D</span>
+              </button>
+              {shots.map((s, n) => (
+                <button key={s.full} type="button" className="st-shot" aria-pressed={shot === n} aria-label={`Photograph ${n + 1} of ${shots.length}`} onClick={() => setShot(n)}>
+                  <img src={s.small} alt="" loading="lazy" draggable={false} />
+                </button>
+              ))}
+            </div>
+          )}
           <div className="fl-info">
             <h2>{chosen.name}</h2>
             {chosen.id === OWN.id ? (
@@ -206,33 +291,81 @@ export function WorkspaceApp() {
               </>
             )}
           </div>
-          <div className="fl-dock" role="group" aria-label="Colors">
-            {PAINTS.map(chosenOf).map((c) => (
-              <button key={c.id} type="button" className={`fl-dot${chosen.id === c.id ? ' on' : ''}`} style={{ background: ground(c), color: ink }} aria-label={c.name} aria-pressed={chosen.id === c.id} onClick={() => choose(c)} />
-            ))}
-            <button type="button" className={`fl-dot own${chosen.id === OWN.id ? ' on' : ''}`} style={{ color: ink }} aria-label="Your own color" aria-pressed={chosen.id === OWN.id} onClick={() => choose({ id: OWN.id, name: OWN.name, color: own.color, paint: null })} />
-          </div>
-          <div className="fl-buy">
-            <b className="num">{chosen.paint ? dollars(chosen.paint.price) : 'On request'}</b>
-            {chosen.paint?.stock === 'now' ? (
-              <button type="button" className="fl-btn" onClick={() => (chosen.paint?.product && openProduct(chosen.paint.product), launchApp('store'))}>
-                Buy in VIP Store
-              </button>
-            ) : (
-              <button type="button" className="fl-btn" aria-disabled={isAsked || busy || undefined} onClick={() => void request()}>
-                {isAsked ? (
-                  <>
-                    <Check size={16} strokeWidth={2.4} aria-hidden />
-                    Requested
-                  </>
-                ) : busy ? (
-                  'Requesting…'
-                ) : (
-                  'Request'
-                )}
+          <div className="fl-pick">
+            <div className="fl-dock" role="group" aria-label="Colors">
+              {PAINTS.map(chosenOf).map((c) => (
+                <button key={c.id} type="button" className={`fl-dot${chosen.id === c.id ? ' on' : ''}`} style={{ background: ground(c), color: ink }} aria-label={c.name} aria-pressed={chosen.id === c.id} onClick={() => choose(c)} />
+              ))}
+              <button type="button" className={`fl-dot own${chosen.id === OWN.id ? ' on' : ''}`} style={{ color: ink }} aria-label="Your own color" aria-pressed={chosen.id === OWN.id} onClick={() => choose({ id: OWN.id, name: OWN.name, color: own.color, paint: null })} />
+            </div>
+            {/* Who owns one, under the colors: on the way to buying it */}
+            {owners.length > 0 && (
+              <button type="button" className="fl-owners" onClick={() => setView('owners')}>
+                <span className="fl-faces" aria-hidden>
+                  {owners.slice(0, 4).map((owner, i) => {
+                    const paint = PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
+                    return <i key={i} style={{ background: ground(paint) }} />
+                  })}
+                </span>
+                <span>
+                  Owned by <b>{owners.slice(0, 2).map((owner) => owner.name).join(', ')}</b>
+                  {owners.length > 2 ? ` and ${owners.length - 2} more` : ''}
+                </span>
               </button>
             )}
-            <small>{chosen.paint?.stock === 'now' ? 'Available now. Paid for in the VIP Store.' : isAsked ? 'Requested today. We’ll email you.' : !email && waiting.current ? 'Log in to send this request.' : chosen.paint ? 'Made to order. No charge now.' : 'Always made to order. No charge now.'}</small>
+          </div>
+          <div className="fl-buy">
+            {chosen.id === OWN.id ? (
+              <>
+                <b className="num">On request</b>
+                <button type="button" className="fl-btn" aria-disabled={isAsked || busy || undefined} onClick={() => void request()}>
+                  {isAsked ? (
+                    <>
+                      <Check size={16} strokeWidth={2.4} aria-hidden />
+                      Requested
+                    </>
+                  ) : busy ? (
+                    'Requesting…'
+                  ) : (
+                    'Request'
+                  )}
+                </button>
+                <small>{isAsked ? 'Requested today. We’ll email you.' : 'Always made to order. No charge now.'}</small>
+              </>
+            ) : !shelf ? (
+              <>
+                <b className="num" aria-hidden>
+                   
+                </b>
+                <button type="button" className="fl-btn" aria-disabled="true">
+                  One moment…
+                </button>
+                <small> </small>
+              </>
+            ) : price ? (
+              <>
+                <b className="num">{price}</b>
+                <button type="button" className="fl-btn" onClick={buy}>
+                  {chosen.paint?.stock === 'now' ? 'Buy' : 'Order'}
+                </button>
+                <small>{chosen.paint?.stock === 'now' ? 'Available now.' : 'Made to order.'} Your points bring it down.</small>
+              </>
+            ) : email ? (
+              // Logged in, and the store has no price for this one (or is not answering): it can be opened all the same
+              <>
+                <button type="button" className="fl-btn" aria-disabled={!product || undefined} onClick={() => product && buy()}>
+                  {product ? 'See this chair' : 'Not available just now'}
+                </button>
+                <small>{chosen.paint?.stock === 'now' ? 'Available now.' : 'Made to order.'}</small>
+              </>
+            ) : (
+              <>
+                <button type="button" className="fl-btn" onClick={seePrice}>
+                  Log in to see the price
+                </button>
+                <small>The chair’s price is for members. Logging in is free.</small>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -246,7 +379,7 @@ export function WorkspaceApp() {
             </span>
           </header>
           <div className="ow-grid">
-            {OWNERS.map((owner, i) => {
+            {OWNERS_SHOWN.map((owner, i) => {
               const paint = PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
               return (
                 <article key={i} className="ow-card" style={{ background: ground(paint), color: inkOn(paint.color) }}>
@@ -261,6 +394,70 @@ export function WorkspaceApp() {
             })}
           </div>
           <p className="ow-note">Only owners who have agreed to be named appear. Each card takes its owner’s color.</p>
+        </div>
+      )}
+      {view === 'bts' && (
+        <div className="bts" data-autofocus tabIndex={-1}>
+          <header>
+            <h1>BTS</h1>
+            <p>How a chair is made, in pictures and film.</p>
+          </header>
+          <ol className="bts-wall">
+            {MAKING_SHOWN.map((piece) => (
+              <li key={piece.id} className={`bts-tile ${piece.shape}`}>
+                <button type="button" aria-label={`${piece.kind === 'video' ? 'Play' : 'Open'}: ${piece.says}`} onClick={() => setLook(piece)}>
+                  <span className="bts-pic" style={piece.src && piece.kind === 'photo' ? undefined : { background: `linear-gradient(150deg, ${piece.tone ?? '#26272b'}, #0f1012)` }}>
+                    {piece.kind === 'photo' && piece.src ? <img src={piece.src} alt="" loading="lazy" draggable={false} /> : piece.poster ? <img src={piece.poster} alt="" loading="lazy" draggable={false} /> : null}
+                    {piece.kind === 'video' && (
+                      <span className="bts-play" aria-hidden>
+                        <Play size={20} strokeWidth={0} fill="currentColor" />
+                      </span>
+                    )}
+                  </span>
+                  <span className="bts-says">{piece.says}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          {look && (
+            <div className="bts-look" role="dialog" aria-label={look.says} onClick={(e) => e.target === e.currentTarget && setLook(null)} onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), setLook(null))}>
+              <figure>
+                {look.kind === 'video' && look.src ? (
+                  <video src={look.src} poster={look.poster ?? undefined} controls autoPlay playsInline />
+                ) : look.src ? (
+                  <img src={look.src} alt={look.says} draggable={false} />
+                ) : (
+                  <span className="bts-none" style={{ background: `linear-gradient(150deg, ${look.tone ?? '#26272b'}, #0f1012)` }}>
+                    This film has not been supplied yet.
+                  </span>
+                )}
+                <figcaption>
+                  {look.says}
+                  <button type="button" className="pill" autoFocus onClick={() => setLook(null)}>
+                    Done
+                  </button>
+                </figcaption>
+              </figure>
+            </div>
+          )}
+        </div>
+      )}
+      {/* Buying: the store's own page for this chair, in this window. The colors along its foot are the other
+          chairs; "View all" comes back to the studio */}
+      {framed && (
+        <div className="wx-buy" hidden={view !== 'buy'}>
+          <StoreFrame
+            ref={frame}
+            room="chairs"
+            title="Workspace: buying a chair"
+            first={`/vip/store/?k=chairs&p=${encodeURIComponent(chosen?.paint?.product ?? '')}`}
+            onAt={(place) => {
+              if (!place.product) return setView((now) => (now === 'buy' ? 'studio' : now))
+              // Another color picked along the foot of the store's page: the studio follows
+              const paint = PAINTS.find((p) => p.product === place.product)
+              if (paint && paint.id !== picked.get()?.id) choose(chosenOf(paint))
+            }}
+          />
         </div>
       )}
     </Window>
@@ -306,14 +503,14 @@ function Word({ name }: { name: string }) {
   )
 }
 
-function Turntable({ color, shift, name, live }: { color: string; shift?: string[]; name: string; live: boolean }) {
+function Turntable({ color, shift, matte, name, live }: { color: string; shift?: string[]; matte?: boolean; name: string; live: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const stage = useRef<Stage | null>(null)
   const [drawn, setDrawn] = useState(false)
   const [angle, setAngle] = useState(0)
-  const paint = useRef({ color, shift })
-  paint.current = { color, shift }
+  const paint = useRef({ color, shift, matte })
+  paint.current = { color, shift, matte }
 
   // The stage is made when the studio is first seen, and three.js is fetched then and not before
   useEffect(() => {
@@ -325,7 +522,7 @@ function Turntable({ color, shift, name, live }: { color: string; shift?: string
         const made = makeStage(canvas.current, !prefersReducedMotion(), () => setDrawn(true))
         stage.current = made
         made.size(box.current.clientWidth, box.current.clientHeight)
-        made.paint(paint.current.color, paint.current.shift)
+        made.paint(paint.current.color, paint.current.shift, paint.current.matte)
       })
       .catch(() => {
         // No 3D here: the drawing stays, and the app works without turning
@@ -342,7 +539,7 @@ function Turntable({ color, shift, name, live }: { color: string; shift?: string
     [],
   )
   // A new color: the paint fades to it, as the cove does
-  useEffect(() => stage.current?.paint(color, shift), [color, shift])
+  useEffect(() => stage.current?.paint(color, shift, matte), [color, shift, matte])
   useEffect(() => {
     const el = box.current
     if (!el) return
