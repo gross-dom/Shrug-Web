@@ -470,6 +470,23 @@
   text-align: left;
 }
 
+/* (a table with nothing to say in a column has no such column: the title has its room) */
+.sp-rows[data-cols='title'] .sp-row {
+  grid-template-columns: 28px 40px minmax(0, 1fr);
+}
+
+/* Spotify's own cover, where it has told of one */
+.sp-cov {
+  overflow: hidden;
+}
+
+.sp-cov img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .sp-row > span {
   overflow: hidden;
   text-overflow: ellipsis;

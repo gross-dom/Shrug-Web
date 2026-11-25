@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpRight, Bookmark, ChevronLeft, ChevronRight, Clock, House, ListMusic, Mic, Music, Play, Search, Shuffle, SkipBack, SkipForward, TriangleAlert, X } from 'lucide-react'
-import { embedOf, EPISODES, PLAYLISTS, type Episode, type Playlist } from '../data/listening'
+import { embedOf, EPISODES, LISTS, PLAYLISTS, type Episode, type Playlist } from '../data/listening'
 import { Window } from '../kit/window'
+import { askSpotify, told as spotifySays } from '../os/listening'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
 import '../styles/desk/spotify.css'
@@ -20,8 +21,10 @@ import '../styles/desk/spotify.css'
 // It opens with something chosen: the first episode is in the bar at the foot, ready to play. The chips over
 // Your Library filter that list, as Spotify's do; the chips over Home filter Home.
 
-type At = { is: 'home' } | { is: 'podcasts' } | { is: 'playlists' } | { is: 'playlist'; id: string }
-const same = (a: At, b: At) => a.is === b.is && (a.is !== 'playlist' || (b.is === 'playlist' && a.id === b.id))
+type At = { is: 'home' } | { is: 'podcasts'; list: number } | { is: 'playlists' } | { is: 'playlist'; id: string }
+const same = (a: At, b: At) => a.is === b.is && (a.is !== 'playlist' || (b.is === 'playlist' && a.id === b.id)) && (a.is !== 'podcasts' || (b.is === 'podcasts' && a.list === b.list))
+/** What a list of episodes is called: its own name, or until it has one its number (or plain Podcasts, where there is only one). */
+const listName = (n: number) => LISTS[n]?.name ?? (LISTS.length > 1 ? `Podcasts ${n + 1}` : 'Podcasts')
 
 /** How long Spotify's player is waited for before the window says it did not load. */
 const WAIT = 12_000
@@ -38,10 +41,10 @@ function Player({ src, title, tall, onFailed }: { src: string; title: string; ta
   return <iframe className={`sp-frame${tall ? ' sp-frame--tall' : ''}`} src={src} title={title} loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" onLoad={() => clearTimeout(timer.current)} />
 }
 
-/** A cover: the tone it stands on until Spotify's own is shown, with what it is drawn on it. */
-const Cover = ({ tone, size, list }: { tone: string; size?: number; list?: boolean }) => (
+/** A cover: Spotify's own picture where it has told of one, and until then the tone it stands on, with what it is drawn on it. */
+const Cover = ({ tone, size, list, src }: { tone: string; size?: number; list?: boolean; src?: string | null }) => (
   <span className="sp-cov" style={{ background: `linear-gradient(145deg, ${tone}, #1a1a1a)`, ...(size ? { width: size, height: size } : {}) }} aria-hidden>
-    {list ? <ListMusic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} /> : <Mic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} />}
+    {src ? <img src={src} alt="" loading="lazy" draggable={false} /> : list ? <ListMusic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} /> : <Mic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} />}
   </span>
 )
 const PLAYLIST_TONES = ['#7a5cc4', '#c4573f', '#3f8f8a', '#b08a2a']
@@ -65,9 +68,22 @@ export function SpotifyApp() {
   const [again, setAgain] = useState(0)
   const main = useRef<HTMLElement>(null)
 
+  // What each is called, and its cover: written on its row, or as Spotify says (asked when the window opens)
+  const says = useStore(spotifySays, (all) => all)
+  useEffect(() => {
+    if (shown) askSpotify()
+  }, [shown])
+  const titleOf = (e: Episode) => e.title ?? (e.link ? says[e.link]?.title : undefined) ?? `Episode ${EPISODES.filter((other) => other.list === e.list).indexOf(e) + 1}`
+  const nameOf = (p: Playlist) => p.name ?? (p.link ? says[p.link]?.title : undefined) ?? `Playlist ${PLAYLISTS.indexOf(p) + 1}`
+  const coverOf = (row: { link: string | null }) => (row.link ? (says[row.link]?.cover ?? null) : null)
+  /** The columns the table has: only those some episode has something for. */
+  const cols = { guest: EPISODES.some((e) => e.guest), date: EPISODES.some((e) => e.date), length: EPISODES.some((e) => e.length) }
+
   const q = query.trim().toLowerCase()
-  const episodes = useMemo(() => EPISODES.filter((e) => !q || [e.title, e.show, e.guest].some((text) => text.toLowerCase().includes(q))), [q])
-  const playlists = useMemo(() => PLAYLISTS.filter((p) => !q || p.name.toLowerCase().includes(q)), [q])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const episodes = useMemo(() => EPISODES.filter((e) => !q || [titleOf(e), e.show, e.guest].some((text) => !!text && text.toLowerCase().includes(q))), [q, says])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const playlists = useMemo(() => PLAYLISTS.filter((p) => !q || nameOf(p).toLowerCase().includes(q)), [q, says])
   const episode = playing ? (EPISODES.find((e) => e.id === playing) ?? null) : null
   const playlist = at.is === 'playlist' ? (PLAYLISTS.find((p) => p.id === at.id) ?? null) : null
   const embed = episode ? embedOf(episode.link) : null
@@ -108,7 +124,7 @@ export function SpotifyApp() {
         </button>
         <label className="sp-search">
           <Search size={20} strokeWidth={1.8} aria-hidden />
-          <input type="text" value={query} placeholder="What do you want to play?" aria-label="Search the listening room" spellCheck={false} autoComplete="off" onChange={(e) => (setQuery(e.target.value), at.is === 'playlist' && go({ is: 'home' }))} />
+          <input type="text" value={query} placeholder="What do you want to play?" aria-label="Search the listening room" spellCheck={false} autoComplete="off" onChange={(e) => (setQuery(e.target.value), at.is !== 'home' && go({ is: 'home' }))} />
         </label>
       </span>
       <span className="spbar__end" />
@@ -130,28 +146,30 @@ export function SpotifyApp() {
             i + 1
           )}
         </span>
-        <Cover tone={e.tone} size={40} />
+        <Cover tone={e.tone} size={40} src={coverOf(e)} />
         <span className="t">
-          <b>{e.title}</b>
-          {e.show}
+          <b>{titleOf(e)}</b>
+          {e.show ?? 'Podcast episode'}
         </span>
-        <span>{e.guest}</span>
-        <span>{e.date}</span>
-        <span className="num">{e.length}</span>
+        {cols.guest && <span>{e.guest}</span>}
+        {cols.date && <span>{e.date}</span>}
+        {cols.length && <span className="num">{e.length}</span>}
       </button>
     </li>
   )
   const table = (list: Episode[]) => (
-    <ol className="sp-rows">
+    <ol className="sp-rows" data-cols={[cols.guest && 'guest', cols.date && 'date', cols.length && 'length'].filter(Boolean).join(' ') || 'title'}>
       <li className="sp-row head" aria-hidden>
         <span>#</span>
         <span />
         <span>Title</span>
-        <span>Who’s on it</span>
-        <span>Date</span>
-        <span>
-          <Clock size={14} strokeWidth={1.8} />
-        </span>
+        {cols.guest && <span>Who’s on it</span>}
+        {cols.date && <span>Date</span>}
+        {cols.length && (
+          <span>
+            <Clock size={14} strokeWidth={1.8} />
+          </span>
+        )}
       </li>
       {list.map(rowOf)}
     </ol>
@@ -159,9 +177,9 @@ export function SpotifyApp() {
   const cardOf = (p: Playlist) => (
     <li key={p.id}>
       <button type="button" className="sp-card" onClick={() => go({ is: 'playlist', id: p.id })}>
-        <Cover tone={toneOf(p)} list />
-        <b>{p.name}</b>
-        <span>{p.line}</span>
+        <Cover tone={toneOf(p)} list src={coverOf(p)} />
+        <b>{nameOf(p)}</b>
+        <span>{p.line ?? 'Playlist'}</span>
       </button>
     </li>
   )
@@ -188,36 +206,37 @@ export function SpotifyApp() {
               ))}
           </div>
           <ul>
-            {lib !== 'playlists' && (
-              <li>
-                <button type="button" className="sp-item" aria-current={at.is === 'podcasts' || undefined} onClick={() => go({ is: 'podcasts' })}>
-                  <span className="sp-cov sp-cov--ep" aria-hidden>
-                    <Bookmark size={18} strokeWidth={0} fill="currentColor" />
-                  </span>
-                  <span>
-                    <b>Podcasts</b>
-                    <small>
-                      {EPISODES.length} episodes · Shrug’s network
-                    </small>
-                  </span>
-                </button>
-              </li>
-            )}
+            {lib !== 'playlists' &&
+              LISTS.map((list, n) => (
+                <li key={list.id}>
+                  <button type="button" className="sp-item" aria-current={(at.is === 'podcasts' && at.list === n) || undefined} onClick={() => go({ is: 'podcasts', list: n })}>
+                    <span className="sp-cov sp-cov--ep" aria-hidden>
+                      <Bookmark size={18} strokeWidth={0} fill="currentColor" />
+                    </span>
+                    <span>
+                      <b>{listName(n)}</b>
+                      <small>
+                        {EPISODES.filter((e) => e.list === n).length} episodes · Shrug’s network
+                      </small>
+                    </span>
+                  </button>
+                </li>
+              ))}
             {lib !== 'podcasts' &&
               PLAYLISTS.map((p) => (
                 <li key={p.id}>
                   <button type="button" className="sp-item" aria-current={(at.is === 'playlist' && at.id === p.id) || undefined} onClick={() => go({ is: 'playlist', id: p.id })}>
-                    <Cover tone={toneOf(p)} size={48} list />
+                    <Cover tone={toneOf(p)} size={48} list src={coverOf(p)} />
                     <span>
-                      <b>{p.name}</b>
-                      <small>Playlist · Shrug</small>
+                      <b>{nameOf(p)}</b>
+                      <small>Playlist</small>
                     </span>
                   </button>
                 </li>
               ))}
           </ul>
         </nav>
-        <section ref={main} className="sp-main" aria-label={at.is === 'home' ? 'Home' : at.is === 'podcasts' ? 'Podcasts' : (playlist?.name ?? 'Playlists')} data-autofocus tabIndex={-1}>
+        <section ref={main} className="sp-main" aria-label={at.is === 'home' ? 'Home' : at.is === 'podcasts' ? listName(at.list) : playlist ? nameOf(playlist) : 'Playlists'} data-autofocus tabIndex={-1}>
           {at.is === 'home' && (
             <div className="sp-home">
               <div className="sp-chips" role="group" aria-label="Filter">
@@ -232,35 +251,42 @@ export function SpotifyApp() {
                   {PLAYLISTS.map((p) => (
                     <li key={p.id}>
                       <button type="button" onClick={() => go({ is: 'playlist', id: p.id })}>
-                        <Cover tone={toneOf(p)} size={48} list />
-                        <b>{p.name}</b>
+                        <Cover tone={toneOf(p)} size={48} list src={coverOf(p)} />
+                        <b>{nameOf(p)}</b>
                       </button>
                     </li>
                   ))}
                   {EPISODES.slice(0, 4).map((e) => (
                     <li key={e.id}>
                       <button type="button" onClick={() => play(e)}>
-                        <Cover tone={e.tone} size={48} />
-                        <b>{e.title}</b>
+                        <Cover tone={e.tone} size={48} src={coverOf(e)} />
+                        <b>{titleOf(e)}</b>
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
-              {only !== 'playlists' && (
-                <>
-                  <header className="sp-sect">
-                    <span>
-                      <small>Shrug’s network, on air</small>
-                      <h1>Podcasts</h1>
-                    </span>
-                    <button type="button" onClick={() => go({ is: 'podcasts' })}>
-                      Show all
-                    </button>
-                  </header>
-                  {episodes.length ? table(q || only === 'podcasts' ? episodes : episodes.slice(0, 4)) : none}
-                </>
-              )}
+              {only !== 'playlists' &&
+                (q
+                  ? // (a search looks through every list at once)
+                    [{ n: -1, found: episodes }]
+                  : LISTS.map((_, n) => ({ n, found: episodes.filter((e) => e.list === n) }))
+                ).map(({ n, found }) => (
+                  <div key={n}>
+                    <header className="sp-sect">
+                      <span>
+                        <small>Shrug’s network, on air</small>
+                        <h1>{n < 0 ? 'Podcasts' : listName(n)}</h1>
+                      </span>
+                      {n >= 0 && (
+                        <button type="button" onClick={() => go({ is: 'podcasts', list: n })}>
+                          Show all
+                        </button>
+                      )}
+                    </header>
+                    {found.length ? table(n < 0 || only === 'podcasts' ? found : found.slice(0, 4)) : none}
+                  </div>
+                ))}
               {only !== 'podcasts' && (
                 <>
                   <header className="sp-sect">
@@ -285,13 +311,13 @@ export function SpotifyApp() {
                 </span>
                 <span>
                   <small>Podcasts</small>
-                  <h1>Shrug’s network, on air</h1>
+                  <h1>{LISTS[at.list]?.name ?? 'Shrug’s network, on air'}</h1>
                   <p>
-                    <b>Shrug</b> · {EPISODES.length} episodes
+                    <b>{listName(at.list)}</b> · {EPISODES.filter((e) => e.list === at.list).length} episodes
                   </p>
                 </span>
               </header>
-              <div className="sp-under">{episodes.length ? table(episodes) : none}</div>
+              <div className="sp-under">{episodes.some((e) => e.list === at.list) ? table(episodes.filter((e) => e.list === at.list)) : none}</div>
             </>
           )}
           {at.is === 'playlists' && (
@@ -308,19 +334,17 @@ export function SpotifyApp() {
           {playlist && (
             <>
               <header className="sp-hero" style={{ ['--tone' as string]: toneOf(playlist) }}>
-                <Cover tone={toneOf(playlist)} list />
+                <Cover tone={toneOf(playlist)} list src={coverOf(playlist)} />
                 <span>
                   <small>Public Playlist</small>
-                  <h1>{playlist.name}</h1>
-                  <p>
-                    <b>Shrug</b> · {playlist.line}
-                  </p>
+                  <h1>{nameOf(playlist)}</h1>
+                  {playlist.line && <p>{playlist.line}</p>}
                 </span>
               </header>
               <div className="sp-under">
                 {embedOf(playlist.link) && !failed ? (
                   <>
-                    <Player key={`${playlist.id}-${again}`} src={embedOf(playlist.link)!} title={`${playlist.name}, in Spotify’s player`} tall onFailed={() => setFailed(true)} />
+                    <Player key={`${playlist.id}-${again}`} src={embedOf(playlist.link)!} title={`${nameOf(playlist)}, in Spotify’s player`} tall onFailed={() => setFailed(true)} />
                     <p className="sp-tag">Previews, unless you’re signed in to Spotify</p>
                   </>
                 ) : (
@@ -350,24 +374,24 @@ export function SpotifyApp() {
         {episode && embed && !failed ? (
           <>
             <div className="sp-what">
-              <Cover tone={episode.tone} size={56} />
+              <Cover tone={episode.tone} size={56} src={coverOf(episode)} />
               <span>
-                <b>{episode.title}</b>
-                <small>{episode.show}</small>
+                <b>{titleOf(episode)}</b>
+                <small>{episode.show ?? 'Podcast episode'}</small>
               </span>
             </div>
             <div className="sp-in">
-              <Player key={`${episode.id}-${again}`} src={embed} title={`${episode.title}, in Spotify’s player`} onFailed={() => setFailed(true)} />
+              <Player key={`${episode.id}-${again}`} src={embed} title={`${titleOf(episode)}, in Spotify’s player`} onFailed={() => setFailed(true)} />
             </div>
             <span className="sp-tag">Previews, unless you’re signed in to Spotify</span>
           </>
         ) : (
           <>
             <div className="sp-what">
-              {episode ? <Cover tone={episode.tone} size={56} /> : <span className="sp-cov" style={{ width: 56, height: 56 }} aria-hidden><Music size={22} strokeWidth={1.7} /></span>}
+              {episode ? <Cover tone={episode.tone} size={56} src={coverOf(episode)} /> : <span className="sp-cov" style={{ width: 56, height: 56 }} aria-hidden><Music size={22} strokeWidth={1.7} /></span>}
               <span>
-                <b>{episode ? episode.title : 'Pick something to play'}</b>
-                <small>{episode ? episode.show : 'An episode, or a playlist.'}</small>
+                <b>{episode ? titleOf(episode) : 'Pick something to play'}</b>
+                <small>{episode ? (episode.show ?? 'Podcast episode') : 'An episode, or a playlist.'}</small>
               </span>
             </div>
             <div className="sp-ctl" aria-hidden={!(episode && (chose || failed)) || undefined}>

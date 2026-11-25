@@ -1,24 +1,29 @@
 // YouTube: one playlist, "Videos the team loves" (design/v1, "YouTube"). Each is played by YouTube's own
 // embedded player.
 //
-// The list is templated for now, as the design has it: twelve rows whose titles and channels are in [square
-// brackets], none with a video behind it yet. To put one in: `id` is the video's id on YouTube (the part
-// after watch?v=), with its title, its channel, its length, and one line from whoever picked it on why.
+// A row is its video's id on YouTube (the part after watch?v=). These are the twenty-two Dom supplied on
+// 25 Nov, in his order. A video's still is YouTube's own, by its id. What it is called and whose it is are
+// YouTube's to say: the player says so once a video is played, and the window keeps what it is told for the
+// visit (src/apps/YouTube.tsx). Written here, a title or a channel is used from the start, before anything is
+// played, and so is its length and the line from whoever picked it: none of those is written yet.
 
 export interface Video {
-  /** Its id on YouTube. Null until it is supplied: a row with none cannot be played. */
+  /** Its id on YouTube. Null: a row with none cannot be played. */
   id: string | null
-  title: string
-  channel: string
-  length: string
+  /** Written here, it is shown from the start; otherwise it is as YouTube's player says, once played. */
+  title: string | null
+  channel: string | null
+  length: string | null
   /** One line from whoever on the team picked it. */
-  why: string
+  why: string | null
   /** The color its thumbnail stands on until YouTube's own is shown. */
   tone: string
 }
 
 export const PLAYLIST = { name: 'Videos the team loves', by: 'Shrug' }
 
-const TONES = ['#8a6a2a', '#35508f', '#7a3f2f', '#3f7a4a', '#4a3b8f', '#2f6f7a', '#8f3b55', '#5a5f6a', '#8a6a2a', '#35508f', '#7a3f2f', '#3f7a4a']
+const TONES = ['#8a6a2a', '#35508f', '#7a3f2f', '#3f7a4a', '#4a3b8f', '#2f6f7a', '#8f3b55', '#5a5f6a']
 
-export const VIDEOS: Video[] = TONES.map((tone) => ({ id: null, title: '[Video title]', channel: '[Channel]', length: '[0:00]', why: '[One line from whoever on the team picked it.]', tone }))
+const IDS = ['MnrJzXM7a6o', 'yU3GUHDf0mk', 'kRNLVUqkzg0', 'oXsQ4NMQ6B8', 'aayZ9ybDTBw', '--APdD6vejI', 'PUv66718DII', 'LK5M0_Blhzc', 'GGa_tbspGpU', 'u404SLJj7ig', 'wKiIroiCvZ0', 'NLlGopyXT_g', 'SuTcavAzopg', 'D7TB8b2t3QE', 'WXuK6gekU1Y', 'qie5VITX6eQ', 'UZHTNBMAfAA', 'LaHcOs7mhfU', 'oz49vQwSoTE', 'eU7V4GyEuXA', 'aNSepdhwnm8', 'qV_t9oyvxG0']
+
+export const VIDEOS: Video[] = IDS.map((id, i) => ({ id, title: null, channel: null, length: null, why: null, tone: TONES[i % TONES.length]! }))

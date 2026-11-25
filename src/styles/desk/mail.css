@@ -1225,3 +1225,15 @@ article.ml-msg[data-at] .ml-mini,
     animation: none;
   }
 }
+
+/* (a label under a row's own buttons hangs from their right edge, so that it never reaches past the list's
+   side and gives the list something to scroll to) */
+.ml .ml-acts > [data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: translateY(-3px);
+}
+
+.ml .ml-acts > [data-tip]:hover::after {
+  transform: none;
+}

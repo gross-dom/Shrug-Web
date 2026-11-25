@@ -23,7 +23,7 @@ const COLORS = [
   ['Pearl Lavender', 'pearl-lavender'],
   ['Mantis Green', 'mantis-green'],
 ]
-const MORE = [...fs.readFileSync(path.join(__dirname, '..', 'store', 'shared', 'colors.ts'), 'utf8').matchAll(/\{ id: '([^']+)', name: '([^']+)', color: '#[0-9a-f]{6}' \}/g)].map((m) => [m[2], m[1]])
+const MORE = [...fs.readFileSync(path.join(__dirname, '..', 'store', 'shared', 'colors.ts'), 'utf8').matchAll(/\{ id: '([^']+)', name: '([^']+)', color: '#[0-9a-f]{6}'/g)].map((m) => [m[2], m[1]])
 // Nothing but the chair on its ground: the name behind it, the note, the strip and the words are left out
 const BARE = '.fl-word, .st-turn, .st-shots, .st-foot, .wxbar > *, .st-ring { visibility: hidden !important } .notify, .desk-note, .wx-more { display: none !important }'
 

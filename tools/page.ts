@@ -246,7 +246,9 @@ export function arrival(): Plugin {
         const chunks = Object.values(ctx.bundle ?? {}).flatMap((file) => (file.type === 'chunk' ? [file] : []))
         const named = new Map(chunks.map((chunk) => [chunk.fileName, chunk]))
         const filesOf = (source: string) => {
-          const start = chunks.find((chunk) => chunk.isDynamicEntry && chunk.facadeModuleId?.endsWith(source))
+          // (found by the module it was made for, or, where the chunk also hands something to another chunk and
+          // so is no module's own face any more, by having that module in it)
+          const start = chunks.find((chunk) => chunk.isDynamicEntry && chunk.facadeModuleId?.endsWith(source)) ?? chunks.find((chunk) => chunk.isDynamicEntry && Object.keys(chunk.modules).some((id) => id.endsWith(source)))
           if (!start) return null
           const seen = new Set<string>()
           const files: string[] = []

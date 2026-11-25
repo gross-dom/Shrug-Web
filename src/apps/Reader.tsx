@@ -7,7 +7,7 @@ import type { Edition } from '../data/editions'
 // show it. A black window; the book's name in the middle of its bar, with the way back and the contents at
 // its left and the size of the letters at its right; two pages side by side (one, in a narrow window), white
 // serif on the black; each page's number under it; and a chevron at either side to turn. The arrow keys turn
-// too, and Escape closes the book.
+// too, and Escape closes the book, wherever in the window the keyboard is.
 //
 // The pages are the browser's own columns: the book's leaves are flowed into columns one page wide, and
 // turning slides them along. So the words fall into pages by the size of the window and of the letters, as
@@ -159,6 +159,26 @@ export function ReaderPages({ reading, onBack }: { reading: Reading; onBack: () 
   }, [clip, measure, edition.of])
   useEffect(() => root.current?.focus({ preventScroll: true }), [edition.of])
 
+  // The keys that turn the pages and close the book are the window's while a book is open, wherever in it the
+  // keyboard is (on the pages, or on a button in the bar that was just pressed)
+  const keys = useRef({ reading, onBack })
+  keys.current = { reading, onBack }
+  useEffect(() => {
+    const win = root.current?.closest<HTMLElement>('.wf')
+    if (!win) return
+    const onKey = (e: KeyboardEvent) => {
+      const { reading, onBack } = keys.current
+      if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest('input, textarea, select')) return
+      // (Space and Return on a button are that button's)
+      const onButton = !!(e.target as HTMLElement).closest('button, a')
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey && !onButton)) e.preventDefault(), reading.turn(1)
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey && !onButton)) e.preventDefault(), reading.turn(-1)
+      else if (e.key === 'Escape') e.preventDefault(), e.stopPropagation(), reading.toc ? reading.setToc(false) : onBack()
+    }
+    win.addEventListener('keydown', onKey)
+    return () => win.removeEventListener('keydown', onKey)
+  }, [])
+
   const chapters = edition.leaves.filter((leaf) => leaf.kind === 'chapter')
   const lastPage = Math.min(pages, first + (two ? 2 : 1))
   return (
@@ -169,12 +189,6 @@ export function ReaderPages({ reading, onBack }: { reading: Reading; onBack: () 
       role="group"
       aria-label={`${edition.title}: page ${first + 1}${two && first + 2 <= pages ? ` and ${first + 2}` : ''} of ${pages}`}
       style={{ ['--rd-size' as string]: `${SIZES[reading.size]}px` }}
-      onKeyDown={(e) => {
-        if (e.metaKey || e.ctrlKey || e.altKey) return
-        if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) e.preventDefault(), reading.turn(1)
-        else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) e.preventDefault(), reading.turn(-1)
-        else if (e.key === 'Escape') e.preventDefault(), e.stopPropagation(), reading.toc ? reading.setToc(false) : onBack()
-      }}
     >
       <button type="button" className="rd-turn rd-prev" aria-label="Previous page" aria-disabled={first === 0 || undefined} onClick={() => reading.turn(-1)}>
         <ChevronLeft size={30} strokeWidth={1.4} aria-hidden />

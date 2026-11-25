@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { Finish } from '../../../store/shared/colors'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { CHAIR_MODEL } from '../../data/workspace'
@@ -19,8 +20,8 @@ import { CHAIR_MODEL } from '../../data/workspace'
 
 export interface Stage {
   /** Paints the chair: a color, or for a color-shifting paint the colors it moves through. It cross-fades from what it was. */
-  /** `matte`: not a gloss paint (Matte Black, the chair as it comes). */
-  paint(color: string, shift?: string[], matte?: boolean): void
+  /** `finish`: how the paint is lit (store/shared/colors.ts): matte, high gloss, pearl, metallic and the rest. */
+  paint(color: string, shift?: string[], finish?: Finish): void
   /** Turns the chair by a drag: so far across, and so far up or down. */
   turn(dx: number, dy: number): void
   /** How far round the chair is, in whole degrees from where it opens. */
@@ -38,6 +39,18 @@ const TILT = 0.16
 const FADE = 400
 
 const hex = (color: string) => new THREE.Color(color)
+
+/** How each finish is lit: its clear coat and how rough that is, how rough and how metallic the paint under
+ * it is, and how much of a pearl's sheen it has. */
+const LIT: Record<Finish, { coat: number; coatRough: number; rough: number; metal: number; pearl: number }> = {
+  matte: { coat: 0, coatRough: 0.15, rough: 0.78, metal: 0, pearl: 0 },
+  gloss: { coat: 1, coatRough: 0.06, rough: 0.36, metal: 0, pearl: 0 },
+  pearl: { coat: 0.9, coatRough: 0.1, rough: 0.34, metal: 0.18, pearl: 0.55 },
+  metallic: { coat: 0.85, coatRough: 0.1, rough: 0.3, metal: 0.62, pearl: 0 },
+  shift: { coat: 0.9, coatRough: 0.1, rough: 0.34, metal: 0.35, pearl: 0.2 },
+  holo: { coat: 1, coatRough: 0.05, rough: 0.28, metal: 0.55, pearl: 1 },
+  uv: { coat: 0.9, coatRough: 0.1, rough: 0.4, metal: 0, pearl: 0 },
+}
 
 /** The paint: a gloss coat over a color. For a color-shifting paint the color is mixed from the angle it is seen at. */
 function paintOf() {
@@ -429,11 +442,17 @@ export function makeStage(canvas: HTMLCanvasElement, settle: boolean, drawn: () 
 
   let first = true
   return {
-    paint(color, moving, matte) {
+    paint(color, moving, finish = 'gloss') {
       const to = hex(color)
-      // (a gloss paint has a clear coat over it; Matte Black has none, and scatters what light it gets)
-      material.clearcoat = matte ? 0 : 0.8
-      material.roughness = matte ? 0.78 : 0.42
+      // One paint material, in a setting for each finish: a gloss paint has a clear coat over it; Matte Black
+      // has none, and scatters what light it gets; a metallic one takes its color into what it mirrors; a
+      // pearl has a soft sheen; a shifting or holographic one is mixed from the angle it is seen at (below)
+      const lit = LIT[finish]
+      material.clearcoat = lit.coat
+      material.clearcoatRoughness = lit.coatRough
+      material.roughness = lit.rough
+      material.metalness = lit.metal
+      material.iridescence = lit.pearl
       const toShift = moving ? 1 : 0
       if (moving) {
         shift.uA.value = hex(moving[0] ?? color)

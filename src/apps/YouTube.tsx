@@ -20,6 +20,21 @@ const HOST = 'https://www.youtube-nocookie.com'
 /** What YouTube's player says when a video may not be played off its own site (or is gone). */
 const REFUSED = [100, 101, 150, 153]
 
+/** What YouTube's player has said each video is called, and whose it is: kept for the visit, by the video's id. */
+interface Said {
+  title: string
+  channel: string
+}
+const KEPT = 'shrug:videos.v1'
+function kept(): Record<string, Said> {
+  try {
+    const was = JSON.parse(window.sessionStorage.getItem(KEPT) ?? '{}') as Record<string, Said>
+    return was && typeof was === 'object' ? was : {}
+  } catch {
+    return {}
+  }
+}
+
 export function YouTubeApp() {
   const shown = useStore(wm, (s) => s.wins.youtube.open && !s.wins.youtube.minimized)
   const [at, setAt] = useState(0)
@@ -32,6 +47,10 @@ export function YouTubeApp() {
   const wide = !theater
   const frame = useRef<HTMLIFrameElement>(null)
   const video = VIDEOS[at]!
+  const [said, setSaid] = useState<Record<string, Said>>(kept)
+  /** A video's title and channel: as written on its row, or as YouTube's player has said, or its place in the list. */
+  const titleOf = (v: (typeof VIDEOS)[number], i: number) => v.title ?? (v.id ? said[v.id]?.title : undefined) ?? `Video ${i + 1}`
+  const channelOf = (v: (typeof VIDEOS)[number]) => v.channel ?? (v.id ? said[v.id]?.channel : undefined) ?? null
 
   useEffect(() => setRefused(false), [at])
   // Nothing plays in a window that cannot be seen: closed or minimized, the player is taken away
@@ -45,8 +64,23 @@ export function YouTubeApp() {
     const heard = (e: MessageEvent) => {
       if (e.origin !== HOST || e.source !== frame.current?.contentWindow || typeof e.data !== 'string') return
       try {
-        const said = JSON.parse(e.data) as { event?: string; info?: unknown }
-        if (said.event === 'onError' && REFUSED.includes(Number(said.info))) setRefused(true)
+        const told = JSON.parse(e.data) as { event?: string; info?: unknown }
+        if (told.event === 'onError' && REFUSED.includes(Number(told.info))) setRefused(true)
+        // The player says what it is playing: its title, and whose it is. That is what the window calls it from then on
+        const data = (told.info as { videoData?: { video_id?: unknown; title?: unknown; author?: unknown } } | null)?.videoData
+        if (data && data.video_id === video.id && typeof data.title === 'string' && data.title.trim()) {
+          const now = { title: data.title.trim().slice(0, 200), channel: typeof data.author === 'string' ? data.author.trim().slice(0, 120) : '' }
+          setSaid((all) => {
+            if (all[video.id!]?.title === now.title && all[video.id!]?.channel === now.channel) return all
+            const next = { ...all, [video.id!]: now }
+            try {
+              window.sessionStorage.setItem(KEPT, JSON.stringify(next))
+            } catch {
+              // No storage: it is told again the next time it is played
+            }
+            return next
+          })
+        }
       } catch {
         // Not something of the player's
       }
@@ -57,7 +91,7 @@ export function YouTubeApp() {
 
   const place = `${at + 1} / ${VIDEOS.length}`
   const q = query.trim().toLowerCase()
-  const found = VIDEOS.map((v, i) => ({ v, i })).filter(({ v }) => !q || [v.title, v.channel].some((text) => text.toLowerCase().includes(q)))
+  const found = VIDEOS.map((v, i) => ({ v, i })).filter(({ v, i }) => !q || [titleOf(v, i), channelOf(v)].some((text) => !!text && text.toLowerCase().includes(q)))
   const link = video.id ? `https://www.youtube.com/watch?v=${video.id}` : null
   const share = async () => {
     if (!link) return
@@ -116,7 +150,7 @@ export function YouTubeApp() {
                 ref={frame}
                 key={video.id}
                 src={`${HOST}/embed/${video.id}?autoplay=1&rel=0&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
-                title={`${video.title}, in YouTube’s player`}
+                title={`${titleOf(video, at)}, in YouTube’s player`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 referrerPolicy="strict-origin-when-cross-origin"
@@ -124,7 +158,7 @@ export function YouTubeApp() {
               />
             ) : video.id ? (
               // Nothing of YouTube's is fetched until a video is asked for: its still, and a button
-              <button type="button" className="yt-start" aria-label={`Play ${video.title}`} onClick={() => setStarted(true)}>
+              <button type="button" className="yt-start" aria-label={`Play ${titleOf(video, at)}`} onClick={() => setStarted(true)}>
                 <img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt="" />
                 <span className="yt-pbtn" aria-hidden>
                   <svg viewBox="0 0 68 48" width="68" height="48">
@@ -141,13 +175,13 @@ export function YouTubeApp() {
               </div>
             )}
           </div>
-          <h1>{video.title}</h1>
+          <h1>{titleOf(video, at)}</h1>
           <div className="yt-under">
             <span className="yt-face" aria-hidden>
-              {video.channel.replace(/^\[/, '').charAt(0).toUpperCase()}
+              {(channelOf(video) ?? PLAYLIST.by).charAt(0).toUpperCase()}
             </span>
             <span className="yt-chan">
-              <b>{video.channel}</b>
+              <b>{channelOf(video) ?? PLAYLIST.by}</b>
               <small>
                 {PLAYLIST.name} · {place}
               </small>
@@ -172,10 +206,12 @@ export function YouTubeApp() {
               </button>
             )}
           </div>
-          <div className="yt-why">
-            <b>Why it’s here</b>
-            {video.why}
-          </div>
+          {video.why && (
+            <div className="yt-why">
+              <b>Why it’s here</b>
+              {video.why}
+            </div>
+          )}
         </div>
         {wide && (
           <aside className="yt-list" aria-label={PLAYLIST.name}>
@@ -194,11 +230,11 @@ export function YouTubeApp() {
                     </span>
                     <span className="yt-th" style={{ background: v.tone }}>
                       {v.id && <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" />}
-                      <small>{v.length}</small>
+                      {v.length && <small>{v.length}</small>}
                     </span>
                     <span className="w">
-                      <b>{v.title}</b>
-                      {v.channel}
+                      <b>{titleOf(v, i)}</b>
+                      {channelOf(v)}
                     </span>
                   </button>
                 </li>

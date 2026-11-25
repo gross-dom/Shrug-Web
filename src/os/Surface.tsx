@@ -115,8 +115,9 @@ function useDesk(): DeskItem[] {
         focusWindow('wallpapers')
       },
     },
-    // QuickTime Player, under its own icon: it opens on the first film
-    quicktime: { id: 'quicktime', name: 'QuickTime Player', says: 'desktop icon', icon: <AppIcon id="quicktime" />, open: () => (showFilm(), launch('quicktime')) },
+    // QuickTime Player, under its own icon: it opens on the first film. (On the desk it is "QuickTime": the
+    // icons' line is spaced for names of one line, and the longer one takes two)
+    quicktime: { id: 'quicktime', name: 'QuickTime', says: 'desktop icon', icon: <AppIcon id="quicktime" />, open: () => (showFilm(), launch('quicktime')) },
   }
   // What is out on the desk, in the order the layout has it (os/layout.ts): the files and folders it comes
   // with, the apps that live there, and any app that has been dragged out of the Dock

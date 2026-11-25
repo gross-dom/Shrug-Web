@@ -41,20 +41,26 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   check('desktop: pressed, it opens ArtStore’s window, in front, on the store, and no tab', now.open && now.front === 'store' && now.path === '/vip/store/' && tabs() === before && (await noVip(p)), JSON.stringify(now))
   await shut(p)
 
-  // About Shrug counts the drops with the rest; that row is VIP's, and opens the store as VIP does
+  // About Shrug has two rows that open windows, Portfolio and Testimonials (Dom's third round took Backs,
+  // Group Chat, Verticals and Drops out of it); neither is a link
   await p.click('[data-menu-title="mark"]')
   await p.locator('[data-menu="mark"] .menu__item', { hasText: 'About Shrug' }).click()
   await p.waitForSelector('.wf[data-app="about"] .about__fact', { timeout: 8000 })
   await p.waitForTimeout(700)
-  const about = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="about"] button.about__fact, .wf[data-app="about"] a.about__fact')].map((el) => ({ tag: el.tagName, label: el.firstElementChild.textContent.trim(), tall: Math.round(el.getBoundingClientRect().height), ink: getComputedStyle(el).color, line: getComputedStyle(el).textDecorationLine })))
-  const drops = about.find((row) => row.label === 'Drops')
-  check('desktop: About Shrug still has its four rows, and all four open windows', about.map((row) => `${row.tag} ${row.label}`).join(' | ') === 'BUTTON Group Chat | BUTTON Portfolio | BUTTON Verticals | BUTTON Drops', about.map((row) => `${row.tag} ${row.label}`).join(' | '))
-  // (the row before it is the one to go by: the first of the four has no rule over it, and is a pixel shorter)
-  check('desktop: the Drops row is drawn as the row before it is: its height, its ink, no underline', !!drops && drops.tall === about[2].tall && drops.ink === about[2].ink && drops.line === 'none', JSON.stringify(about.map((row) => [row.label, row.tall, row.ink, row.line])))
-  await p.locator('.wf[data-app="about"] button.about__fact', { hasText: 'Drops' }).click()
+  const about = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="about"] button.about__fact, .wf[data-app="about"] a.about__fact')].map((el) => ({ tag: el.tagName, label: el.firstElementChild.textContent.trim(), says: el.lastElementChild.textContent.trim(), tall: Math.round(el.getBoundingClientRect().height), ink: getComputedStyle(el).color, line: getComputedStyle(el).textDecorationLine })))
+  const facts = await p.evaluate(() => document.querySelector('.wf[data-app="about"]').innerText.replace(/\s*\n\s*/g, ' | '))
+  check('desktop: About Shrug has two rows that open windows, Portfolio (100+ Companies) and Testimonials (how many), and nothing of Backs, Group Chat, Verticals or Drops', about.map((row) => `${row.tag} ${row.label} ${row.says}`).join(' | ') === `BUTTON Portfolio 100+ Companies | BUTTON Testimonials ${A.PEOPLE}` && !/Backs|Group Chat|Verticals|Drops/.test(facts) && /Fund \| V( \||$)/.test(facts), JSON.stringify({ about: about.map((row) => `${row.tag} ${row.label} ${row.says}`), facts }))
+  check('desktop: the two rows are drawn alike: the same ink, no underline', about.length === 2 && about[0].ink === about[1].ink && about.every((row) => row.line === 'none'), JSON.stringify(about.map((row) => [row.label, row.tall, row.ink, row.line])))
+  await p.locator('.wf[data-app="about"] button.about__fact', { hasText: 'Testimonials' }).click()
+  await p.waitForTimeout(1200)
+  check('desktop: Testimonials opens the group chat, and no tab', (await p.evaluate(() => document.querySelector('.wf[data-active]')?.dataset.app)) === 'messages' && tabs() === before, '')
+  await p.locator('.wf[data-app="messages"] button[aria-label^="Close"]').click().catch(() => {})
+  await p.waitForTimeout(400)
+  // (ArtStore is opened from the Dock for what follows: the menus list its window while it is open)
+  await p.locator('.dock [data-dock-app="store"]').click()
   await p.waitForTimeout(1500)
   now = await store(p)
-  check('desktop: pressed, it opens ArtStore’s window, and no tab', now.open && now.front === 'store' && tabs() === before, JSON.stringify(now))
+  check('desktop: ArtStore opens from the Dock, and no tab', now.open && now.front === 'store' && tabs() === before, JSON.stringify(now))
 
   // The menus: the Go menu has it with the Dock's apps, the Window menu lists its window while it is open
   const menus = {}

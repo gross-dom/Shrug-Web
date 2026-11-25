@@ -229,6 +229,9 @@ function fromStore() {
     if (!row && theirs.session?.member && theirs.session.email) {
       const email = theirs.session.email
       row = s.rows[email] ??= standardRow(email, null)
+      // The name they gave at the checkout is the name on the account it made (only then: someone who logs
+      // in on the desk is asked for theirs there)
+      if (theirs.session.member.name && !row.name) row.name = theirs.session.member.name
       s.in = email
       s.via = 'pay'
     }
@@ -236,8 +239,6 @@ function fromStore() {
     if (!theirs.session) s.in = null
     else {
       if (typeof theirs.session.member?.points === 'number') row.points = theirs.session.member.points
-      // The name they gave at checkout is the name on their account, unless they have since chosen another
-      if (theirs.session.member?.name && !row.name) row.name = theirs.session.member.name
       // The number they gave after paying is theirs to log in with
       if (theirs.session.phone && !row.phone) row.phone = phoneOf(theirs.session.phone) ?? row.phone
     }

@@ -4,6 +4,7 @@ import { fmtCents, priceCents } from '../../store/shared/rules'
 import { shotsOf } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
 import { ALL_PAINTS, inkOn, MAKING, MORE, OWNERS, PAINTS, PAPER, shadedOn, type Making, type Paint } from '../data/workspace'
+import { FINISH_WORDS, type Finish } from '../../store/shared/colors'
 import { TEMPLATED } from '../data/site'
 import { Window } from '../kit/window'
 import { account, askLogIn } from '../os/account'
@@ -222,7 +223,7 @@ export function WorkspaceApp() {
           <span className="st-floor" aria-hidden />
           <Word name={chosen.name} />
           <div className="st-stage" data-shot={shot !== null || undefined}>
-            <Turntable color={chosen.color} shift={chosen.shift} matte={chosen.paint.finish === 'matte'} name={chosen.name} live={shown && shot === null} />
+            <Turntable color={chosen.color} shift={chosen.shift} finish={chosen.paint.finish} name={chosen.name} live={shown && shot === null} />
           </div>
           {/* A photograph picked fills the window, under a shade the controls can still be read on. One too
               narrow to fill it is set whole, on a blur of itself */}
@@ -257,7 +258,8 @@ export function WorkspaceApp() {
                 </p>
               )}
               <div className="st-tags">
-                {chosen.shift && <span className="st-tag">Color-shifting</span>}
+                {/* How it is finished, as the catalog words it, and how it is to be had */}
+                <span className="st-tag">{FINISH_WORDS[chosen.paint.finish]}</span>
                 <span className="st-tag">{chosen.paint.stock === 'now' ? 'Available now' : 'Made to order'}</span>
               </div>
             </div>
@@ -503,14 +505,14 @@ function Word({ name }: { name: string }) {
   )
 }
 
-function Turntable({ color, shift, matte, name, live }: { color: string; shift?: string[]; matte?: boolean; name: string; live: boolean }) {
+function Turntable({ color, shift, finish, name, live }: { color: string; shift?: string[]; finish: Finish; name: string; live: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const stage = useRef<Stage | null>(null)
   const [drawn, setDrawn] = useState(false)
   const [angle, setAngle] = useState(0)
-  const paint = useRef({ color, shift, matte })
-  paint.current = { color, shift, matte }
+  const paint = useRef({ color, shift, finish })
+  paint.current = { color, shift, finish }
 
   // The stage is made when the studio is first seen, and three.js is fetched then and not before
   useEffect(() => {
@@ -522,7 +524,7 @@ function Turntable({ color, shift, matte, name, live }: { color: string; shift?:
         const made = makeStage(canvas.current, !prefersReducedMotion(), () => setDrawn(true))
         stage.current = made
         made.size(box.current.clientWidth, box.current.clientHeight)
-        made.paint(paint.current.color, paint.current.shift, paint.current.matte)
+        made.paint(paint.current.color, paint.current.shift, paint.current.finish)
       })
       .catch(() => {
         // No 3D here: the drawing stays, and the app works without turning
@@ -539,7 +541,7 @@ function Turntable({ color, shift, matte, name, live }: { color: string; shift?:
     [],
   )
   // A new color: the paint fades to it, as the cove does
-  useEffect(() => stage.current?.paint(color, shift, matte), [color, shift, matte])
+  useEffect(() => stage.current?.paint(color, shift, finish), [color, shift, finish])
   useEffect(() => {
     const el = box.current
     if (!el) return

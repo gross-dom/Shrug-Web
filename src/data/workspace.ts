@@ -5,10 +5,11 @@
 //
 // Each color is ONE value here, and everything that shows the color is drawn from it: the cove of the
 // studio, the slab on the first screen, the dot in the studio's dock, the Workspace icon in the desktop's
-// Dock, and the paint on the chair itself. The values are working values, not final (WORKSPACE.md, section
-// 3): Scuderia Red and Championship Green were sampled from the catalog; Solar Orange is approximate;
-// Alexandrite is a stand-in for a color-shifting paint; Supersonic and Pearl Lavender are guesses awaiting
-// swatches. To change one, change it here.
+// Dock, and the paint on the chair itself. The values are the Workspace design's as redrawn on 25 Nov (its
+// "Eight priority" and "Sixteen more" boards: the catalog's swatches converted to sRGB, and where a swatch
+// and the reference photographs disagree, as for Championship Green, the photographs won). Pearl Lavender is
+// as it was built: the design has it as a stand-in. Each has a finish, which is how its paint is lit on the
+// chair: one paint material in several settings (store/shared/colors.ts). To change one, change it here.
 //
 // What a chair costs is not here: it is the store's to say (Matte Black from $1,100, a painted one from
 // $1,200), and it is said only to someone logged in. Still Shrug's to supply: which colors are in stock, the
@@ -19,7 +20,7 @@
 // picked from a grid, and from then on are a color like any other. (There is no "color of your own" any
 // more: every color the chair comes in has a name.)
 
-import { MORE_COLORS } from '../../store/shared/colors'
+import { MORE_COLORS, type Finish } from '../../store/shared/colors'
 
 export interface Paint {
   id: string
@@ -27,8 +28,8 @@ export interface Paint {
   /** The color. A paint that shifts with the angle it is seen from has the colors it moves through, first to last. */
   color: string
   shift?: string[]
-  /** Matte Black is not a gloss paint: the chair as it comes, with no shine on it. */
-  finish?: 'matte'
+  /** How it is finished: matte (Matte Black, the chair as it comes), high gloss, pearl, metallic, and the rest. */
+  finish: Finish
   /** In stock, or made to order. Either is bought here. */
   stock: 'now' | 'order'
   /** One line about it. Null until it is written: nothing is drawn where it would be. */
@@ -46,18 +47,18 @@ export interface Paint {
 export const CHAIR_MODEL: string | null = null
 
 export const PAINTS: Paint[] = [
-  { id: 'matte-black', name: 'Matte Black', color: '#1b1c1f', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
-  { id: 'scuderia-red', name: 'Scuderia Red', color: '#d8141c', stock: 'order', line: null, product: 'chair-scuderia-red' },
-  { id: 'solar-orange', name: 'Solar Orange', color: '#fb8a05', stock: 'now', line: null, product: 'chair-solar-orange' },
-  { id: 'alexandrite', name: 'Alexandrite', color: '#6b3f9c', shift: ['#27307d', '#6b3f9c', '#b0683a'], stock: 'order', line: null, product: 'chair-alexandrite' },
-  { id: 'championship-green', name: 'Championship Green', color: '#0f9a48', stock: 'order', line: null, product: 'chair-championship-green' },
-  { id: 'supersonic', name: 'Supersonic', color: '#9db3c9', stock: 'order', line: null, product: 'chair-supersonic' },
-  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', stock: 'order', line: null, product: 'chair-pearl-lavender' },
-  { id: 'mantis-green', name: 'Mantis Green', color: '#6fd12a', stock: 'order', line: null, product: 'chair-mantis-green' },
+  { id: 'matte-black', name: 'Matte Black', color: '#141414', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
+  { id: 'scuderia-red', name: 'Scuderia Red', color: '#ff302c', finish: 'gloss', stock: 'order', line: null, product: 'chair-scuderia-red' },
+  { id: 'solar-orange', name: 'Solar Orange', color: '#ff7900', finish: 'gloss', stock: 'now', line: null, product: 'chair-solar-orange' },
+  { id: 'alexandrite', name: 'Alexandrite', color: '#6e5e72', shift: ['#1c3146', '#6e5e72', '#b47e62'], finish: 'shift', stock: 'order', line: null, product: 'chair-alexandrite' },
+  { id: 'championship-green', name: 'Championship Green', color: '#0b9d6e', finish: 'metallic', stock: 'order', line: null, product: 'chair-championship-green' },
+  { id: 'supersonic', name: 'Supersonic', color: '#ffffff', finish: 'gloss', stock: 'order', line: null, product: 'chair-supersonic' },
+  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', finish: 'pearl', stock: 'order', line: null, product: 'chair-pearl-lavender' },
+  { id: 'mantis-green', name: 'Mantis Green', color: '#13c334', finish: 'pearl', stock: 'order', line: null, product: 'chair-mantis-green' },
 ]
 
 /** The sixteen more: each made to order, and each a chair of its own in the store. */
-export const MORE: Paint[] = MORE_COLORS.map((c) => ({ id: c.id, name: c.name, color: c.color, stock: 'order', line: null, product: `chair-${c.id}`, more: true }))
+export const MORE: Paint[] = MORE_COLORS.map((c) => ({ id: c.id, name: c.name, color: c.color, shift: c.shift, finish: c.finish, stock: 'order', line: null, product: `chair-${c.id}`, more: true }))
 
 /** Every color the chair comes in. */
 export const ALL_PAINTS: Paint[] = [...PAINTS, ...MORE]

@@ -1,6 +1,8 @@
-// Mail (design/v1, "Mail"): twenty exchanges that led to something, read-only, in a window drawn after
-// Superhuman as it is (Dom's screenshots of it are the look) and driven as Superhuman is. Its keys move about, open, search and ask for the command palette; the ones that would
-// send, archive, star or delete say that nothing here changes. Reply opens Messages.
+// Mail (design/v1, "Mail"): twenty exchanges that led to something, in a window drawn after Superhuman as it
+// is (Dom's screenshots of it are the look) and driven as Superhuman is. Its keys move about, open, search and
+// ask for the command palette. What can be done here is real and kept in the browser: Mark Done (and a Done
+// split), Star, Mark Unread, Share (a link to the conversation). An email in a conversation opens and closes.
+// The keys that would send, snooze or delete say that is not here. Reply opens Messages.
 //   node mail.cjs http://127.0.0.1:4273/
 const A = require('./lib.cjs')
 const BASE = process.argv[2] || A.BASE
@@ -22,7 +24,7 @@ const check = (name, ok, detail = '') => {
     p.evaluate((M) => {
       const w = document.querySelector(M)
       const rows = [...w.querySelectorAll('.ml-row')]
-      return { rows: rows.length, on: rows.findIndex((r) => r.classList.contains('on')), tabs: [...w.querySelectorAll('.ml-tabs button')].map((b) => `${b.textContent.replace(/\s+/g, ' ').trim()}${b.classList.contains('on') ? '*' : ''}`).join(' | '), thread: !!w.querySelector('.ml-thread'), zero: !!w.querySelector('.ml-zero'), said: w.querySelector('.ml-said')?.textContent ?? null, pal: w.querySelectorAll('.ml-pal').length, held: document.activeElement?.className ?? '' }
+      return { rows: rows.length, on: rows.findIndex((r) => r.classList.contains('on')), tabs: [...w.querySelectorAll('.ml-tabs button')].map((b) => `${b.firstChild.textContent.trim()} ${b.querySelector('small').textContent}${b.classList.contains('on') ? '*' : ''}`).join(' | '), thread: !!w.querySelector('.ml-thread'), zero: !!w.querySelector('.ml-zero'), said: w.querySelector('.ml-said')?.textContent ?? null, pal: w.querySelectorAll('.ml-pal').length, held: document.activeElement?.className ?? '' }
     }, M)
   const key = async (k, wait = 180) => { await p.keyboard.press(k); await p.waitForTimeout(wait) }
 
@@ -35,7 +37,9 @@ const check = (name, ok, detail = '') => {
   const size = await p.evaluate((M) => { const r = document.querySelector(M).getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}` }, M)
   let s = await inbox()
   check('it opens 1180 by 740 on its inbox: twenty rows, the first picked, and the keyboard in the window', size === '1180x740' && s.rows === 20 && s.on === 0 && /\bml\b/.test(s.held) && (await front()) === 'mail', JSON.stringify({ size, s }))
-  check('its splits are along the top, each with its count, All picked', s.tabs === 'All 20* | Investments 7 | Intros 6 | Hires 3 | Drops 4', s.tabs)
+  check('its splits are along the top, each with its count, All picked, and Done after them', s.tabs === 'All 20* | Investments 7 | Intros 6 | Hires 3 | Drops 4 | Done 0', s.tabs)
+  const near = await p.evaluate((M) => { const b = document.querySelector(`${M} .ml-tabs button`); const r = document.createRange(); r.selectNodeContents(b.firstChild); return Math.round(b.querySelector('small').getBoundingClientRect().left - r.getBoundingClientRect().right) }, M)
+  check('a count sits close against its split’s name', near >= 2 && near <= 6, String(near))
   const row = await p.evaluate((M) => {
     const w = document.querySelector(M)
     const rows = [...w.querySelectorAll('.ml-row')]
@@ -48,6 +52,8 @@ const check = (name, ok, detail = '') => {
       chipIn: r.querySelector('.ml-chip').parentElement.className,
       date: r.querySelector('.d').textContent,
       acts: rows[0].querySelectorAll('.ml-acts svg').length,
+      tips: [...rows[0].querySelectorAll('.ml-acts [data-tip]')].map((x) => x.dataset.tip).join(' | '),
+      hand: getComputedStyle(rows[1]).cursor,
       groups: rows.map((x) => x.dataset.group).filter(Boolean).join(' | '),
       wide: list.scrollWidth - list.clientWidth,
       pill: w.querySelector('.mlbar__pill').textContent.trim(),
@@ -58,10 +64,11 @@ const check = (name, ok, detail = '') => {
       light: (() => { let el = w.querySelector('.ml-list'); while (el && /^rgba\(0, 0, 0, 0\)$|^transparent$/.test(getComputedStyle(el).backgroundColor)) el = el.parentElement; return el ? getComputedStyle(el).backgroundColor : '' })(),
     }
   }, M)
-  check('its bar is one long pill that says where this is; under it a rail of icons, the list, and a pane about whoever the row is from', row.pill === 'All (20) - Mail' && row.rail >= 3 && row.pane === 'About the sender' && row.who, JSON.stringify(row))
+  check('its bar is one long pill that says where this is; under it the list, with no rail of icons beside it, and a pane about whoever the row is from', row.pill === 'All (20) - Mail' && row.rail === 0 && row.pane === 'About the sender' && row.who, JSON.stringify(row))
   check('a row is one line: who, a label for what it led to before the subject and first line, and the day as Superhuman writes it', row.h >= 28 && row.h <= 40 && /^B s d$/.test(row.parts) && /^(investment|intro|hire|drop)$/.test(row.chip) && row.chipIn === 's' && /^\d{1,2} [A-Z]{3}$/.test(row.date) && row.wide <= 0, JSON.stringify(row))
-  check('the rows are under headings for when they came, and the row it is on offers what Superhuman offers there', row.groups.split(' | ').length >= 2 && row.acts === 3, JSON.stringify({ groups: row.groups, acts: row.acts }))
-  check('it is light, as Superhuman is, and its pane says it is read-only', /^rgb\(2[45]\d, 2[45]\d, 2[45]\d\)$/.test(row.light) && row.readonly === 'Read-only', JSON.stringify({ light: row.light, readonly: row.readonly }))
+  check('the rows are under headings for when they came, and the row it is on offers Mark Done and the command palette (no clock)', row.groups.split(' | ').length >= 2 && row.acts === 2 && row.tips === 'Mark Done | Mail Command', JSON.stringify({ groups: row.groups, acts: row.acts, tips: row.tips }))
+  check('a row shows the pointing hand', row.hand === 'pointer', row.hand)
+  check('it is light, as Superhuman is, and its pane says nothing sends from here', /^rgb\(2[45]\d, 2[45]\d, 2[45]\d\)$/.test(row.light) && row.readonly === 'Nothing sends from here', JSON.stringify({ light: row.light, readonly: row.readonly }))
 
   // ---- moving about, as in Superhuman
   await key('j'); await key('j')
@@ -78,16 +85,51 @@ const check = (name, ok, detail = '') => {
   await key('g'); await key('i')
   check('G then I goes to the inbox', (await inbox()).on === 0 && (await inbox()).tabs.includes('All 20*'))
 
-  // ---- what would change mail says so, and changes nothing
+  // ---- what is not here says so, and changes nothing
   const refused = []
-  for (const [k, says] of [['e', 'Nothing is marked done.'], ['s', 'Nothing is starred.'], ['h', 'Nothing is snoozed.'], ['#', 'Nothing is deleted.'], ['u', 'Nothing is marked unread.'], ['f', 'Nothing is forwarded.'], ['Shift+M', 'Nothing is muted.']]) {
+  for (const [k, says] of [['h', 'Nothing is snoozed.'], ['#', 'Nothing is deleted.'], ['f', 'Nothing is forwarded.'], ['Shift+M', 'Nothing is muted.']]) {
     await key(k, 250)
     const now = await inbox()
-    refused.push({ k, ok: now.said === `Read-only. ${says}` && now.rows === 20, said: now.said })
+    refused.push({ k, ok: now.said === `Not here. ${says}` && now.rows === 20, said: now.said })
   }
-  check('E, S, H, #, U, F and Shift M each say Mail is read-only, and nothing changes', refused.every((r) => r.ok), JSON.stringify(refused.filter((r) => !r.ok)))
-  await key('g'); await key('s', 250)
-  check('G then S (Starred) says there is only the inbox', /only the inbox here/.test((await inbox()).said ?? ''), String((await inbox()).said))
+  check('H, #, F and Shift M each say that is not here, and nothing changes', refused.every((r) => r.ok), JSON.stringify(refused.filter((r) => !r.ok)))
+  await key('g'); await key('d', 250)
+  check('G then D (Drafts) says what there is here', /inbox, Done and Starred here/.test((await inbox()).said ?? ''), String((await inbox()).said))
+
+  // ---- what can be done here is real: Mark Done, Star, Mark Unread
+  await key('g'); await key('i', 250)
+  const firstId = await p.evaluate((M) => document.querySelector(`${M} .ml-row.on`).id, M)
+  await key('e', 300)
+  s = await inbox()
+  check('E marks the conversation done: it leaves the inbox for the Done split', s.rows === 19 && /All 19\*/.test(s.tabs) && /Done 1/.test(s.tabs) && s.said === 'Marked Done. Z brings it back.' && !(await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
+  await p.locator(`${M} .ml-tabs button`, { hasText: 'Done' }).click(); await p.waitForTimeout(250)
+  s = await inbox()
+  check('the Done split has it', s.rows === 1 && /Done 1\*/.test(s.tabs) && (await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
+  await key('g'); await key('i', 250)
+  await key('z', 300)
+  s = await inbox()
+  check('Z brings it back to the inbox', s.rows === 20 && /All 20\*/.test(s.tabs) && /Done 0/.test(s.tabs) && s.said === 'Moved back to the inbox.', JSON.stringify(s))
+  await key('s', 250)
+  s = await inbox()
+  const starred = await p.evaluate((M) => ({ star: !!document.querySelector(`${M} .ml-row.on .ml-star`), tabs: [...document.querySelectorAll(`${M} .ml-tabs button`)].map((b) => b.firstChild.textContent.trim()).join(' ') }), M)
+  check('S stars the conversation: a star on its row, and a Starred split', starred.star && / Starred$/.test(starred.tabs) && s.said === 'Starred.', JSON.stringify({ starred, said: s.said }))
+  await key('s', 250)
+  check('S again takes the star off, and the split goes', !(await p.evaluate((M) => !!document.querySelector(`${M} .ml-row.on .ml-star`), M)) && !/Starred/.test((await inbox()).tabs), (await inbox()).tabs)
+  await key('u', 250)
+  check('U marks it unread: its row is heavier, with a dot', await p.evaluate((M) => { const r = document.querySelector(`${M} .ml-row.on`); return r.classList.contains('unread') && !!r.querySelector('.ml-dot') }, M))
+  await key('Shift+U', 250)
+  check('Shift U marks it read again', !(await p.evaluate((M) => document.querySelector(`${M} .ml-row.on`).classList.contains('unread'), M)))
+  // (kept in the browser: a reload has them)
+  await key('j'); await key('e', 300)
+  await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(1600)
+  await p.click('.dock [data-dock-app="mail"]'); await p.waitForSelector(`${M}[data-open] .ml-row`, { timeout: 15000 }); await p.waitForTimeout(500)
+  s = await inbox()
+  check('what was marked done is still done after a reload', s.rows === 19 && /Done 1/.test(s.tabs), s.tabs)
+  await p.locator(`${M} .ml-tabs button`, { hasText: 'Done' }).click(); await p.waitForTimeout(250)
+  await key('Shift+E', 300)
+  await key('g'); await key('i', 250)
+  s = await inbox()
+  check('Shift E, in Done, puts it back', s.rows === 20 && /Done 0/.test(s.tabs), s.tabs)
 
   // ---- a conversation
   await key('j'); await key('Enter', 400)
@@ -106,17 +148,29 @@ const check = (name, ok, detail = '') => {
     }
   }, M)
   check('Return opens the one it is on: a column with its subject, and one line on what it led to under a label', thread.head === 'Re: [Company] seed round' && /^(investment|intro|hire|drop) \/ \S/.test(thread.led ?? '') && thread.back === 'Back to inbox', JSON.stringify(thread))
-  check('its earlier emails are a line each and its newest two are open, in one card; over it what Superhuman offers, and the pane is still about the sender', thread.folded === 2 && thread.open === 2 && thread.does === 'Share | Mark done | Remind me | Instant reply | Previous conversation | Next conversation' && thread.pane === 'About the sender', JSON.stringify(thread))
+  check('its earlier emails are a line each and its newest is open, a card of its own; over it Share, Mark done, the command palette and the way on (no clock); and the pane is still about the sender', thread.folded >= 1 && thread.open === 1 && thread.does === 'Share | Mark done | Command | Previous conversation | Next conversation' && thread.pane === 'About the sender', JSON.stringify(thread))
   check('under it: nothing sends from here, and Reply to Shrug', /^Nothing sends from here\. Reply opens a new message to Shrug in Messages\. \/ Reply to Shrug/.test(thread.reply ?? ''), thread.reply)
   await p.locator(`${M} .ml-msg.fold`).first().click()
   await p.waitForTimeout(200)
-  check('an earlier email opens out when it is pressed', (await p.evaluate((M) => document.querySelectorAll(`${M} .ml-msg.fold`).length, M)) === 1)
+  check('an earlier email opens out when it is pressed', (await p.evaluate((M) => ({ closed: document.querySelectorAll(`${M} .ml-msg.fold`).length, open: document.querySelectorAll(`${M} article.ml-msg`).length }), M)).open === 2)
+  await p.locator(`${M} article.ml-msg .ml-fold`).first().click()
+  await p.waitForTimeout(200)
+  check('and an open email closes to its line again when its head is pressed', (await p.evaluate((M) => document.querySelectorAll(`${M} article.ml-msg`).length, M)) === 1)
+  // Share: a link that opens this conversation on the desk
+  await t.ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
+  await p.locator(`${M} .ml-does .t`).click()
+  await p.waitForTimeout(350)
+  const shared = { said: (await inbox()).said, link: await p.evaluate(() => navigator.clipboard.readText().catch(() => '')), at: new URL(p.url()).searchParams.get('at') }
+  check('Share copies a link to this conversation, which the address names', shared.said === 'Link copied. It opens this conversation here.' && /[?&]open=mail/.test(shared.link) && /[?&]at=exchange-\d+/.test(shared.link) && /^exchange-\d+$/.test(shared.at ?? ''), JSON.stringify(shared))
+  const tip = await p.evaluate((M) => { const b = document.querySelector(`${M} .ml-does .t`); return { tip: b.dataset.tip, keys: b.dataset.keys, hand: getComputedStyle(b).cursor } }, M)
+  check('what can be pressed there says what it is and its key, and shows the pointing hand', tip.tip === 'Share Conversation' && tip.keys === '⌘ S' && tip.hand === 'pointer', JSON.stringify(tip))
   await key('j', 300)
   const next = await p.evaluate((M) => document.querySelector(`${M} .ml-col h1`)?.textContent, M)
   check('J goes on to the next conversation', !!next && next !== thread.head, String(next))
-  await p.locator(`${M} .ml-does button[aria-label="Mark done"]`).click()
-  await p.waitForTimeout(250)
-  check('what Superhuman offers over a conversation says Mail is read-only', (await inbox()).said === 'Read-only. Nothing is marked done.', String((await inbox()).said))
+  await p.locator(`${M} .ml-does button[aria-label="Command"]`).click()
+  await p.waitForTimeout(300)
+  check('the lightning bolt over a conversation opens Mail Command', (await inbox()).pal === 1)
+  await key('Escape', 250)
   await key('Escape', 300)
   s = await inbox()
   check('Escape goes back to the inbox, on the row that was open', !s.thread && s.on === 2, JSON.stringify(s))
@@ -124,13 +178,14 @@ const check = (name, ok, detail = '') => {
   // ---- the command palette
   await key('Control+k', 350)
   const pal = await p.evaluate((M) => { const el = document.querySelector(`${M} .ml-pal`); return { role: el?.getAttribute('role'), name: el?.getAttribute('aria-label'), held: document.activeElement?.getAttribute('role'), list: [...el.querySelectorAll('li')].map((li) => `${li.querySelector('span').textContent} ${[...li.querySelectorAll('kbd')].map((k) => k.textContent).join('')}${li.classList.contains('on') ? '*' : ''}`) } }, M)
-  check('Command K opens the palette, the keyboard in its field, on the six the design lists', pal.role === 'dialog' && pal.name === 'Command' && pal.held === 'combobox' && pal.list.join(' | ') === 'Achieve Inbox Zero ⌘⇧E* | Go to Inbox GI | Reply to Shrug in Messages R | Open what this led to O | Search all twenty / | Show keyboard shortcuts ?', pal.list.join(' | '))
+  check('Command K opens the palette, the keyboard in its field, on what can be done here: Mark Done, Star, Mark Unread, Search, Compose', pal.role === 'dialog' && pal.name === 'Command' && pal.held === 'combobox' && pal.list.join(' | ') === 'Mark Done E* | Star S | Mark Unread U | Search all twenty / | Compose C', pal.list.join(' | '))
   await p.keyboard.type('star')
   await p.waitForTimeout(250)
   const found = await p.evaluate((M) => [...document.querySelectorAll(`${M} .ml-pal li`)].map((li) => li.querySelector('span')?.textContent).join(' | '), M)
   await key('Enter', 300)
   s = await inbox()
-  check('typed into, it finds commands by name; one that would change mail runs as a refusal', /^Star \| Go to Starred$/.test(found) && s.pal === 0 && s.said === 'Read-only. Nothing is starred.', JSON.stringify({ found, said: s.said }))
+  check('typed into, it finds commands by name, and only ones that can be done here; run, it is done', /^Star \| Go to Starred$/.test(found) && s.pal === 0 && s.said === 'Starred.', JSON.stringify({ found, said: s.said }))
+  await key('s', 250)
   check('and the keyboard is back in the window', /\bml\b/.test(s.held), s.held)
 
   // ---- search
@@ -145,7 +200,7 @@ const check = (name, ok, detail = '') => {
   // ---- every key, on one sheet
   await key('?', 300)
   const sheet = await p.evaluate((M) => { const el = document.querySelector(`${M} .ml-sheet`); return { name: el?.getAttribute('aria-label'), groups: [...el.querySelectorAll('h3')].map((h) => h.textContent).join(' | '), lines: el.querySelectorAll('li').length, f6: /F6/.test(el.textContent) } }, M)
-  check('? opens every key Mail answers to, in its groups, with the way out of the window', sheet.name === 'Keyboard shortcuts' && sheet.groups === 'Move about | In a conversation | Find and ask | Read-only here' && sheet.lines >= 45 && sheet.f6, JSON.stringify(sheet))
+  check('? opens every key Mail answers to, in its groups, with the way out of the window', sheet.name === 'Keyboard shortcuts' && sheet.groups === 'Move about | In a conversation | Yours to do | Find and ask | Not here' && sheet.lines >= 45 && sheet.f6, JSON.stringify(sheet))
   await key('Escape', 250)
 
   // ---- the easter egg

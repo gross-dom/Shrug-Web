@@ -77,7 +77,7 @@ exports.DESK = [
   ['updates', 'Updates, desktop icon, locked'],
   ['one-pager', 'One-pager, desktop icon'],
   ['wallpapers', 'Wallpapers, desktop icon'],
-  ['quicktime', 'Film, desktop icon'],
+  ['quicktime', 'QuickTime, desktop icon'],
   ['photobooth', 'Photo Booth, desktop icon'],
   ['spotify', 'Spotify, desktop icon'],
   ['youtube', 'YouTube, desktop icon'],
@@ -101,18 +101,53 @@ exports.tabFrom = async (ctx, press) => {
   return went
 }
 
-/** Answers for the weather service the desk's widget asks (api.weather.gov), so that nothing a check finds
- * depends on the weather or on the service: 58 degrees and mostly cloudy, by day. `as` changes the hour's
- * forecast; `as: 'down'` has the service fail. */
+/** Answers for the weather service the desk's widget and the Weather window ask (api.weather.gov), so that
+ * nothing a check finds depends on the weather or on the service: 58 degrees and mostly cloudy, by day, a
+ * north-west wind at 12, and a week to follow. `as` changes the hour that is running; `as: 'down'` has the
+ * service fail. */
 exports.weather = (ctx, as = {}) =>
   ctx.route('https://api.weather.gov/**', (route) => {
     if (as === 'down') return route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
     const url = route.request().url()
     const headers = { 'access-control-allow-origin': '*' }
-    if (/\/points\//.test(url)) return route.fulfill({ status: 200, headers, contentType: 'application/geo+json', body: JSON.stringify({ properties: { forecastHourly: 'https://api.weather.gov/gridpoints/MTR/85,105/forecast/hourly' } }) })
-    const hour = { startTime: new Date(Date.now() - 600e3).toISOString(), endTime: new Date(Date.now() + 3000e3).toISOString(), temperature: 58, temperatureUnit: 'F', shortForecast: 'Mostly Cloudy', isDaytime: true, ...as }
-    return route.fulfill({ status: 200, headers, contentType: 'application/geo+json', body: JSON.stringify({ properties: { periods: [hour] } }) })
+    const ok = (body) => route.fulfill({ status: 200, headers, contentType: 'application/geo+json', body: JSON.stringify(body) })
+    if (/\/points\//.test(url)) return ok({ properties: { forecastHourly: 'https://api.weather.gov/gridpoints/MTR/85,105/forecast/hourly', forecast: 'https://api.weather.gov/gridpoints/MTR/85,105/forecast' } })
+    const hour = { startTime: new Date(Date.now() - 600e3).toISOString(), endTime: new Date(Date.now() + 3000e3).toISOString(), temperature: 58, temperatureUnit: 'F', shortForecast: 'Mostly Cloudy', isDaytime: true, probabilityOfPrecipitation: { value: 10 }, relativeHumidity: { value: 76 }, dewpoint: { value: 10 }, windSpeed: '12 mph', windDirection: 'NW', ...as }
+    if (/hourly/.test(url)) {
+      // The hour that is running, and the day after it, an hour at a time
+      const later = Array.from({ length: 24 }, (_, i) => ({ ...hour, startTime: new Date(Date.now() + 3000e3 + i * 3600e3).toISOString(), endTime: new Date(Date.now() + 3000e3 + (i + 1) * 3600e3).toISOString(), temperature: 57 - (i % 5), shortForecast: i % 8 === 5 ? 'Chance Light Rain' : 'Mostly Cloudy', probabilityOfPrecipitation: { value: i % 8 === 5 ? 40 : 10 } }))
+      return ok({ properties: { periods: [hour, ...later] } })
+    }
+    // The week, by the half day
+    const noon = new Date(); noon.setUTCHours(20, 0, 0, 0)
+    return ok({ properties: { periods: Array.from({ length: 14 }, (_, i) => ({ startTime: new Date(noon.getTime() + i * 12 * 3600e3).toISOString(), isDaytime: i % 2 === 0, temperature: i % 2 === 0 ? 62 + (i % 4) : 50 + (i % 3), temperatureUnit: 'F', shortForecast: i % 6 === 2 ? 'Rain Showers Likely' : 'Mostly Cloudy', probabilityOfPrecipitation: { value: i % 6 === 2 ? 70 : 10 } })) } })
   })
+
+/** Answers for Spotify, which the Spotify window asks for each row's title and cover (its oEmbed) and for its
+ * player (its embed pages), so that nothing a check finds depends on Spotify or on the network: an episode is
+ * "Stand-in episode <the last four of its id>", a playlist "Stand-in playlist …", with no cover, and the
+ * player is an empty page. `as: 'down'` has Spotify fail. */
+exports.spotify = (ctx, as) =>
+  ctx.route('https://open.spotify.com/**', (route) => {
+    if (as === 'down') return route.fulfill({ status: 503, contentType: 'text/plain', body: '' })
+    const url = route.request().url()
+    const headers = { 'access-control-allow-origin': '*' }
+    if (/\/oembed\?/.test(url)) {
+      const of = /(episode|playlist)%2F([A-Za-z0-9]+)|(episode|playlist)\/([A-Za-z0-9]+)(?!.*oembed)/.exec(url)
+      const kind = of ? of[1] || of[3] : 'episode'
+      const id = of ? of[2] || of[4] : '0000'
+      return route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ title: `Stand-in ${kind} ${id.slice(-4)}`, thumbnail_url: null, provider_name: 'Spotify' }) })
+    }
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Spotify player (stand-in)</title><body style="margin:0;background:#282828"></body>' })
+  })
+
+/** Answers for YouTube, whose stills the YouTube window shows and whose player it frames, so that no check
+ * depends on YouTube or on the network: a still is a small grey picture, and the player an empty page. */
+exports.youtube = (ctx) =>
+  Promise.all([
+    ctx.route('https://i.ytimg.com/**', (route) => route.fulfill({ status: 200, contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==', 'base64') })),
+    ctx.route('https://www.youtube-nocookie.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>YouTube player (stand-in)</title><body style="margin:0;background:#000"></body>' })),
+  ])
 
 /** Opens the site as a device. opts: device | {w,h,touch,dpr}, query, base, reducedMotion, colorScheme, forcedColors,
  * locale, timezoneId, userAgent, network ('slow3g' | 'fast3g' | '4g' | 'offline'), cpu (slowdown factor), js (false to
@@ -135,6 +170,8 @@ exports.open = async (browser, opts = {}) => {
   })
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
   if (opts.weather !== false) await exports.weather(ctx, opts.weather)
+  if (opts.spotify !== false) await exports.spotify(ctx, opts.spotify)
+  await exports.youtube(ctx)
   await exports.points(ctx)
   const page = await ctx.newPage()
   const errors = []
