@@ -80,9 +80,9 @@ const RAL: Record<string, [string, string]> = {
   '6019': ['#b7d9b1', 'Pastel green'],
   '6029': ['#006f3d', 'Mint green'],
   '6033': ['#1f8a7a', 'Mint turquoise'],
-  '7016': ['#383e42', 'Anthracite grey'],
-  '7035': ['#c5c7c4', 'Light grey'],
-  '7037': ['#7a7b7a', 'Dusty grey'],
+  '7016': ['#383e42', 'Anthracite gray'],
+  '7035': ['#c5c7c4', 'Light gray'],
+  '7037': ['#7a7b7a', 'Dusty gray'],
   '8017': ['#442f29', 'Chocolate brown'],
   '9001': ['#e9e0d2', 'Cream'],
   '9003': ['#ecece7', 'Signal white'],
@@ -106,7 +106,9 @@ export function readColor(typed: string): { color: string; name: string } | null
     return found ? { color: found[0], name: `RAL ${ral[1]} ${found[1]}` } : null
   }
   // A name: one of the RAL names, or anything a browser knows as a color ("teal", "hot pink")
-  const named = Object.entries(RAL).find(([, [, name]]) => name.toLowerCase() === text.toLowerCase())
+  // (a name is found however its gray is spelled)
+  const plain = (name: string) => name.toLowerCase().replace(/grey/g, 'gray')
+  const named = Object.entries(RAL).find(([, [, name]]) => plain(name) === plain(text))
   if (named) return { color: named[1][0], name: `RAL ${named[0]} ${named[1][1]}` }
   if (typeof document === 'undefined') return null
   const probe = document.createElement('span')

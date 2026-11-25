@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Check, ChevronLeft, FileText, Play, Rotate3d } from 'lucide-react'
-import { fmtCents, priceCents } from '../../store/shared/rules'
+import { fmtCents, priceCents, wayOf } from '../../store/shared/rules'
 import { shotsOf } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
 import { inkOn, MAKING, OWN, OWNERS, PAINTS, PAPER, readColor, shadedOn, type Making, type Paint } from '../data/workspace'
@@ -12,7 +12,7 @@ import { useShelf, wantShop } from '../os/shop'
 import { useStore } from '../os/store'
 import { pick, picked } from '../os/workspace'
 import { wm } from '../os/wm'
-import { Balance, StoreFrame, type FrameHandle } from './storefront'
+import { askStore, Balance, StoreFrame, type FrameHandle } from './storefront'
 import type { Stage } from './workspace/stage'
 import { ChairStill } from './workspace/Still'
 import '../styles/desk/workspace.css'
@@ -51,23 +51,6 @@ const MAKING_SHOWN = TEMPLATED ? MAKING : MAKING.filter((piece) => piece.src && 
 
 // ---- What has been asked for (a color of their own), in the demo: kept in this browser, by who asked
 
-const ASKED = 'shrug:workspace-asked.v1'
-function asked(email: string): string[] {
-  try {
-    return (JSON.parse(window.localStorage.getItem(ASKED) ?? '{}') as Record<string, string[]>)[email] ?? []
-  } catch {
-    return []
-  }
-}
-function ask(email: string, what: string) {
-  try {
-    const all = JSON.parse(window.localStorage.getItem(ASKED) ?? '{}') as Record<string, string[]>
-    all[email] = [...new Set([...(all[email] ?? []), what])]
-    window.localStorage.setItem(ASKED, JSON.stringify(all))
-  } catch {
-    // No storage: asked for as long as the page is open
-  }
-}
 
 type View = 'first' | 'studio' | 'owners' | 'bts' | 'buy'
 
@@ -85,7 +68,8 @@ export function WorkspaceApp() {
   const [own, setOwn] = useState(() => ({ typed: kept?.id === OWN.id ? (kept.typed ?? '') : '', color: kept?.id === OWN.id ? kept.color : OWN.start }))
   const [flood, setFlood] = useState<string | null>(null)
   const [hover, setHover] = useState<string | null>(null)
-  const [requested, setRequested] = useState<string[]>([])
+  /** A request that could not be sent. */
+  const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   /** Which of the chair's pictures is on the stage: the 3D chair (null), or one of its photographs. */
   const [shot, setShot] = useState<number | null>(null)
@@ -97,7 +81,6 @@ export function WorkspaceApp() {
 
   const chosen: Chosen | null = !kept ? null : kept.id === OWN.id ? { id: OWN.id, name: OWN.name, color: own.color, paint: null } : (PAINTS.map(chosenOf).find((c) => c.id === kept.id) ?? null)
   const email = who.status === 'member' ? who.email : null
-  useEffect(() => setRequested(email ? asked(email) : []), [email])
   useEffect(() => setShot(null), [chosen?.id])
   /** Where the bar's way back leads, and what from: the studio if a color is picked, or the slabs. */
   const home: View = chosen ? 'studio' : 'first'
@@ -138,22 +121,29 @@ export function WorkspaceApp() {
 
   // ---- A color of their own: asked for
 
-  /** The one thing a color of their own is asked for by: the color itself. */
-  const what = chosen?.id === OWN.id ? `own:${own.color}` : ''
-  const isAsked = !!what && requested.includes(what)
+  /** The chair in a color of one's own, as the store has it: a thing that is asked for, and never bought outright. */
+  const ownProduct = shelf?.products.find((p) => p.kind === 'Chair' && wayOf(p) === 'request') ?? null
+  /** Their request for one, once it is made. It is an order in the store, so Shrug has it and it is in My VIP;
+   * the store keeps one request of a thing each. */
+  const ownAsked = ownProduct ? (shelf?.orders.find((o) => o.productId === ownProduct.id && o.status !== 'Refunded') ?? null) : null
+  const isAsked = !!ownAsked
   const request = async () => {
-    if (!chosen || !what || isAsked || busy) return
+    if (!chosen || chosen.id !== OWN.id || isAsked || busy) return
     if (!email) {
       // The color is kept while they log in, and the request is sent when they have
       waiting.current = 'request'
       return askLogIn('request', 'Your color is kept while you log in. Start with your email.')
     }
     waiting.current = null
+    if (!ownProduct) return setFailed(true)
     setBusy(true)
-    await new Promise((done) => setTimeout(done, 400))
-    ask(email, what)
-    setRequested(asked(email))
+    setFailed(false)
+    // What is asked for: the color as they gave it, and its value
+    const typed = own.typed.trim()
+    const option = (typed && typed.toLowerCase() !== own.color ? `${typed} (${own.color})` : own.color).slice(0, 60)
+    const answer = await askStore(ownProduct.id, option)
     setBusy(false)
+    if (answer === 'failed') setFailed(true)
   }
   // Logged in with a request waiting: it is sent, as they asked. The sheet put away without logging in: it waits no longer
   useEffect(() => {
@@ -331,7 +321,9 @@ export function WorkspaceApp() {
                     'Request'
                   )}
                 </button>
-                <small>{isAsked ? 'Requested today. We’ll email you.' : 'Always made to order. No charge now.'}</small>
+                <small role={failed ? 'alert' : undefined}>
+                  {isAsked ? `Requested${ownAsked?.option ? `: ${ownAsked.option}` : ''}. We’ll write to you about it.` : failed ? 'That could not be sent. Try again in a moment.' : 'Always made to order. No charge now.'}
+                </small>
               </>
             ) : !shelf ? (
               <>
@@ -454,6 +446,12 @@ export function WorkspaceApp() {
             first={`/vip/store/?k=chairs&p=${encodeURIComponent(chosen?.paint?.product ?? '')}`}
             onAt={(place) => {
               if (!place.product) return setView((now) => (now === 'buy' ? 'studio' : now))
+              // The chair in a color of one's own is asked for in the studio, where the color is given: picked
+              // along the foot of the store's page, it leads back there
+              if (ownProduct && place.product === ownProduct.id) {
+                choose({ id: OWN.id, name: OWN.name, color: own.color, paint: null })
+                return setView('studio')
+              }
               // Another color picked along the foot of the store's page: the studio follows
               const paint = PAINTS.find((p) => p.product === place.product)
               if (paint && paint.id !== picked.get()?.id) choose(chosenOf(paint))

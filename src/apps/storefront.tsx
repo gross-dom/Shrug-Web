@@ -49,6 +49,29 @@ const desk: Desk = {
 }
 if (typeof window !== 'undefined') (window as Window & { shrugDesk?: Desk }).shrugDesk = desk
 
+const LIVE = import.meta.env.VITE_ACCOUNT === 'live'
+
+/** Asks the store for something that is only ever asked for (the chair in a color of one's own). A request
+ * is an order like any other: the store keeps it with the member's, Shrug sees it where it sees orders, and
+ * it is in My VIP. `option` is what is asked for, in words. The store keeps one request of a thing each. */
+export async function askStore(product: string, option: string): Promise<'asked' | 'already' | 'failed'> {
+  let answer: { ok?: boolean; error?: string } | null = null
+  try {
+    if (LIVE) {
+      const res = await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product, option, points: 0 }), credentials: 'same-origin', cache: 'no-store' })
+      answer = await res.json().catch(() => null)
+    } else {
+      const { demo } = await import('../../store/src/demo')
+      answer = (await demo.order({ product, option, points: 0 })) as unknown as { ok?: boolean; error?: string }
+    }
+  } catch {
+    answer = null
+  }
+  if (!answer?.ok && answer?.error !== 'already') return 'failed'
+  desk.changed()
+  return answer.ok ? 'asked' : 'already'
+}
+
 export interface FrameHandle {
   /** Shows a product of this room, or its front. */
   go(product: string | null): void

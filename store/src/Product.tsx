@@ -40,10 +40,12 @@ export function Picture({ product, size, tile }: { product: Product; size: numbe
   )
 }
 
-/** A price beside a name, in dollars: "$150", "Free", or nothing for something with no price yet. A chair's
- * price is for someone logged in: a visitor is told so in its place. */
+/** A price beside a name, in dollars: "$150", "Free", or nothing for something with no price yet. Something
+ * that is only ever asked for has no price to say, and says how it is had instead. A chair's price is for
+ * someone logged in: a visitor is told so in its place. */
 export function Price({ product }: { product: Product; size?: number }) {
   const points = pointsOf(product)
+  if (wayOf(product) === 'request') return <span className="t-3">On request</span>
   if (product.priceHidden) return <span className="t-3">Log in for price</span>
   return points === null ? null : points === 0 ? <>Free</> : <>{fmtCents(priceCents(product))}</>
 }

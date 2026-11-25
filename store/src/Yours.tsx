@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { fmtCents, fmtPoints, onFile, stockOf, type Order } from '../shared/rules'
 import { CARD, type Backend, type Shop } from './backend'
 import { Points, Wordmark } from './brand'
+import { DESK } from './desk'
 import { DocIcon } from './icons'
 import { Lines, Paid, Picture } from './Product'
 import { editionOf } from './words'
@@ -251,11 +252,12 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
     <div className="ui-card" style={phone ? { marginTop: 14 } : undefined}>
       <div className="ui-split" style={{ alignItems: 'center' }}>
         <div style={{ minWidth: 0 }}>
-          <span className="t-sm t-2">Signed in as</span>
+          {/* (in a window of the desk, in the desk's own words for it: Log In and Log Out) */}
+          <span className="t-sm t-2">{DESK ? 'Logged in as' : 'Signed in as'}</span>
           <p style={{ overflowWrap: 'anywhere' }}>{me.email}</p>
         </div>
         <button type="button" className="ui-btn sec sm" onClick={onSignOut}>
-          Sign out
+          {DESK ? 'Log Out' : 'Sign out'}
         </button>
       </div>
     </div>

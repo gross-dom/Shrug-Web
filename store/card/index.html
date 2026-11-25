@@ -2013,8 +2013,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     botL.textContent = '';
     botR.textContent = '';
     if (kind === 'member') {
-      botL.append(h('span', 'bot-clip', note || 'Signed in as ' + clip(first || 'you', 16)));
-      botR.append(linkBtn('Sign out', signOut));
+      // (in a window of the desk, in the desk's own words: Log In and Log Out)
+      botL.append(h('span', 'bot-clip', note || (DESK ? 'Logged in as ' : 'Signed in as ') + clip(first || 'you', 16)));
+      botR.append(linkBtn(DESK ? 'Log Out' : 'Sign out', signOut));
     } else if (kind === 'applied') {
       botL.append(h('span', 'bot-clip', note || 'Not a member (yet)'));
       botR.append(linkBtn('Try another email', otherEmail));
@@ -2024,7 +2025,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       botR.append(linkBtn('Wrong address?', () => { if (!(S.codeUi && S.codeUi.done)) showEmail(S.email); }));
     } else if (kind === 'armed') {
       // Signed in, with the strip loose: the tear is theirs to do, and theirs to skip
-      botL.append(h('span', 'bot-clip', 'Signed in as ' + clip(first || 'you', 16)));
+      botL.append(h('span', 'bot-clip', (DESK ? 'Logged in as ' : 'Signed in as ') + clip(first || 'you', 16)));
       botR.append(linkBtn('Skip to your card', skipTear));
     } else {
       botL.append(h('span', 'only-wide', 'One card per member. Silver, gold or black. No swaps.'), h('span', 'only-compact', 'One card per member. No swaps.'));
@@ -3355,7 +3356,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     footer('armed', who.member && who.member.first);
     squareUp();
     stripTear();
-    const lead = why === 'code' ? 'Code good' : why === 'printed' ? 'Card printed' : 'Signed in';
+    const lead = why === 'code' ? 'Code good' : why === 'printed' ? 'Card printed' : DESK ? 'Logged in' : 'Signed in';
     setShelf(label(lead + (coarse ? '. Swipe along the strip' : '. Drag along the strip')));
     const seat = () => {
       if (S.armed !== who || S.view !== 'pack') return;
