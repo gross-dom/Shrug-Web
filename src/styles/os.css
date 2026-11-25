@@ -1013,13 +1013,13 @@
   display: flex;
   /* Down the right-hand side, in one line: as far apart as a Mac puts them where the screen is tall enough
      for them all (--desk-n of them, which the desktop says), and closer together on a shorter one, so that
-     they are still one line beside the windows. Only where that would bring them closer than 72px do they
+     they are still one line beside the windows. Only where that would bring them closer than 64px do they
      go to a second line beside the first. (os/wm.ts, DESK_ICONS, says the same to the window manager.) */
   flex-flow: column wrap-reverse;
   align-content: flex-start;
   gap: 8px;
   width: 92px;
-  --desk-pitch: clamp(72px, calc((100vh - 130px) / var(--desk-n, 3)), 99px);
+  --desk-pitch: clamp(64px, calc((100vh - 130px) / var(--desk-n, 3)), 99px);
   /* Under the windows, in their layer, which takes no presses of its own */
   pointer-events: auto;
 }
@@ -1029,7 +1029,7 @@
 @supports (height: 1cqh) {
   .desk {
     container-type: size;
-    --desk-pitch: clamp(72px, calc((100cqh + 8px) / var(--desk-n, 3)), 99px);
+    --desk-pitch: clamp(64px, calc((100cqh + 8px) / var(--desk-n, 3)), 99px);
   }
 }
 
