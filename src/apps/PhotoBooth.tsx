@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Camera, ChevronLeft, ChevronRight, Download, RotateCcw, Sparkles, Trash2, VideoOff, X } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Grid2x2, Lock, RotateCcw, Share, SquareUserRound, Trash2, Video, VideoOff } from 'lucide-react'
 import { Window } from '../kit/window'
 import { account, askLogIn, logIn } from '../os/account'
 import { formatter } from '../os/dates'
@@ -9,11 +9,13 @@ import { post, readWall, remove, wall, type Post } from '../os/wall'
 import { wm } from '../os/wm'
 import '../styles/desk/photobooth.css'
 
-// Photo Booth (design/v1, "Photo Booth"), after the Mac's own. The camera is asked for first, and nothing
-// is saved or posted until its taker chooses to. A photo is taken after a count of three, through one of
-// nine effects. Anyone can take one and save it; posting it to the wall needs someone logged in, and the
-// photo is kept while they log in. The strip along the foot is the wall: the latest photos from everyone,
-// each with a display name and picture. A photo on it opens large; its own taker can remove it.
+// Photo Booth (design/v1, "Photo Booth"), after the Mac's own as Dom's screenshots show it: the picture from
+// edge to edge, the strip under it, and one bar with the view's switch, the red shutter and Effects. It is
+// for someone logged in (Dom's note after testing): a visitor is shown the door, and the camera is not asked
+// for until they are in. Then the camera is asked for, and nothing is saved or posted until its taker
+// chooses to. A photo is taken after a count of three (the bar turns red and counts), through one of nine
+// effects, one at a time or four to a sheet. The strip is the wall: the latest photos from everyone, each
+// with a display name and picture. A photo on it opens large; its own taker can remove it.
 
 /** The nine effects, in the order their grid has them: Normal is in the middle. */
 const EFFECTS = [
@@ -28,7 +30,7 @@ const EFFECTS = [
   { id: 'night', name: 'Night', filter: 'brightness(.55) hue-rotate(200deg)' },
 ]
 
-type Stage = 'ask' | 'starting' | 'refused' | 'live' | 'effects' | 'count' | 'review' | 'large'
+type Stage = 'door' | 'ask' | 'starting' | 'refused' | 'live' | 'effects' | 'count' | 'review' | 'large'
 
 let dayFormat: Intl.DateTimeFormat | undefined
 const dayOf = (at: string) => {
@@ -52,7 +54,9 @@ export function PhotoBoothApp() {
 
   const video = useRef<HTMLVideoElement>(null)
   const stream = useRef<MediaStream | null>(null)
-  const [stage, setStage] = useState<Stage>('ask')
+  const [stage, setStage] = useState<Stage>(() => (account.get().status === 'member' ? 'ask' : 'door'))
+  /** One photo, or four to a sheet. */
+  const [four, setFour] = useState(false)
   const [effect, setEffect] = useState('normal')
   const [count, setCount] = useState(3)
   const [flash, setFlash] = useState(false)
@@ -83,11 +87,23 @@ export function PhotoBoothApp() {
     }
   }, [])
 
+  // Photo Booth is for someone logged in: a visitor is at the door, and whoever logs out is back at it
+  const member = who.status === 'member'
+  useEffect(() => {
+    if (who.status === 'checking') return
+    if (!member) {
+      stop()
+      setPhoto(null)
+      setLarge(null)
+      setStage('door')
+    } else setStage((s) => (s === 'door' ? 'ask' : s))
+  }, [member, who.status, stop])
+
   // The camera is on only while its window can be seen: closed or minimized, it is let go
   useEffect(() => {
     if (shown) return
     stop()
-    setStage((s) => (s === 'review' || s === 'large' ? s : 'ask'))
+    setStage((s) => (s === 'review' || s === 'large' || s === 'door' ? s : 'ask'))
   }, [shown, stop])
   useEffect(() => stop, [stop])
 
@@ -113,17 +129,30 @@ export function PhotoBoothApp() {
     canvas.height = el.videoHeight
     const ctx = canvas.getContext('2d')
     if (!ctx) return setStage('live')
-    // As it was seen: mirrored, and through the effect
-    ctx.filter = filter
-    ctx.translate(canvas.width, 0)
-    ctx.scale(-1, 1)
-    ctx.drawImage(el, 0, 0)
-    setPhoto(canvas.toDataURL('image/jpeg', 0.86))
-    setFlash(true)
-    setStage('review')
-    const timer = setTimeout(() => setFlash(false), 320)
-    return () => clearTimeout(timer)
-  }, [stage, count, filter])
+    /** One frame, as it was seen (mirrored, and through the effect), into a part of the sheet. */
+    const take = (x: number, y: number, w: number, h: number) => {
+      ctx.save()
+      ctx.filter = filter
+      ctx.translate(x + w, y)
+      ctx.scale(-1, 1)
+      ctx.drawImage(el, 0, 0, w, h)
+      ctx.restore()
+      setFlash(true)
+      setTimeout(() => setFlash(false), 220)
+    }
+    const done = () => {
+      setPhoto(canvas.toDataURL('image/jpeg', 0.86))
+      setStage('review')
+    }
+    if (!four) {
+      take(0, 0, canvas.width, canvas.height)
+      return done()
+    }
+    // Four to a sheet: one after another, a beat apart, each into its quarter
+    const timers: ReturnType<typeof setTimeout>[] = []
+    for (let n = 0; n < 4; n++) timers.push(setTimeout(() => (take((n % 2) * (canvas.width / 2), Math.floor(n / 2) * (canvas.height / 2), canvas.width / 2, canvas.height / 2), n === 3 && done()), n * 700))
+    return () => timers.forEach(clearTimeout)
+  }, [stage, count, filter, four])
 
   useEffect(() => {
     if (!said) return
@@ -168,11 +197,12 @@ export function PhotoBoothApp() {
   const open = (p: Post) => (setLarge(p.id), setStage('large'))
   const me = who.status === 'member' ? who.name || who.first : null
 
+  const counting = stage === 'count'
   return (
     <Window className="app pbwin" lightsSize="large" lead={<b className="pb-name">Photo Booth</b>} body={{ className: 'pbwin__body' }}>
       <div className="pb" data-stage={stage}>
         <div className="pb-view">
-          {(stage === 'live' || stage === 'count' || stage === 'effects') && stream.current && stage !== 'effects' && <video ref={video} className="pb-cam" style={{ filter }} muted playsInline aria-label="The camera" />}
+          {(stage === 'live' || stage === 'count') && stream.current && <video ref={video} className="pb-cam" style={{ filter }} muted playsInline aria-label="The camera" />}
           {stage === 'effects' && (
             <div className="pb-fx" role="radiogroup" aria-label="Effects">
               {EFFECTS.map((e) => (
@@ -206,17 +236,17 @@ export function PhotoBoothApp() {
               </div>
             </>
           )}
-          {stage === 'count' && (
-            <div className="pb-count" role="status" aria-label={count ? String(count) : 'Taking the photo'}>
-              <b aria-hidden>{count || ''}</b>
-              <span aria-hidden>
-                {[3, 2, 1].map((n) => (
-                  <i key={n} className={count <= n ? 'on' : undefined} />
-                ))}
-              </span>
+          {flash && <div className="pb-flash" aria-hidden />}
+          {stage === 'door' && (
+            <div className="pb-msg">
+              <Lock size={36} strokeWidth={1.5} aria-hidden />
+              <h2>Log in to use Photo Booth</h2>
+              <p>Photo Booth is for members. Logging in makes your account, and the camera is asked for after.</p>
+              <button type="button" className="pb-btn blue pb-btn--tall" onClick={() => askLogIn('booth')}>
+                Log In
+              </button>
             </div>
           )}
-          {flash && <div className="pb-flash" aria-hidden />}
           {(stage === 'ask' || stage === 'starting') && (
             <div className="pb-msg">
               <Camera size={40} strokeWidth={1.5} aria-hidden />
@@ -244,78 +274,104 @@ export function PhotoBoothApp() {
             </span>
           )}
         </div>
-        <div className="pb-ctl">
-          <div>
-            {(stage === 'live' || stage === 'effects') && (
-              <button type="button" className="pb-btn" aria-pressed={stage === 'effects'} onClick={() => setStage(stage === 'effects' ? 'live' : 'effects')}>
-                <Sparkles size={14} strokeWidth={1.8} aria-hidden />
-                Effects
-              </button>
-            )}
-            {stage === 'review' && (
-              <button type="button" className="pb-btn" onClick={() => (setPhoto(null), (waiting.current = false), setStage(stream.current ? 'live' : 'ask'))}>
-                <RotateCcw size={14} strokeWidth={1.8} aria-hidden />
-                Retake
-              </button>
-            )}
-            {stage === 'large' && (
-              <button type="button" className="pb-btn" onClick={camera}>
-                <Camera size={14} strokeWidth={1.8} aria-hidden />
-                Camera
-              </button>
-            )}
-          </div>
-          {stage === 'review' ? (
-            <button type="button" className="pb-btn blue pb-btn--post" onClick={() => void send()}>
-              Post to the Wall
-            </button>
-          ) : stage === 'large' && shownLarge ? (
-            <button type="button" className="pb-btn pb-btn--tall" onClick={() => save(shownLarge.src)}>
-              <Download size={14} strokeWidth={1.8} aria-hidden />
-              Save
-            </button>
-          ) : stage === 'count' ? (
-            <button type="button" className="pb-shutter off" aria-label="Cancel" onClick={() => setStage('live')}>
-              <X size={22} strokeWidth={2.2} aria-hidden />
-            </button>
+        {/* The strip: the wall, newest first, at the right of the strip as a Mac's booth keeps its own */}
+        {!counting &&
+          (posts.length ? (
+            <ol className="pb-strip" aria-label="The wall: latest photos from everyone">
+              {posts.map((p) => (
+                <li key={p.id} className={`pb-th${large === p.id && stage === 'large' ? ' on' : ''}${fresh === p.id ? ' new' : ''}`}>
+                  <button type="button" aria-label={`A photo by ${p.name}, ${dayOf(p.at)}`} onClick={() => open(p)}>
+                    <span>
+                      <img src={p.src} alt="" />
+                    </span>
+                    <small>
+                      <Face picture={p.picture} name={p.name} size={14} />
+                      {p.name}
+                    </small>
+                  </button>
+                </li>
+              ))}
+            </ol>
           ) : (
-            <button type="button" className={`pb-shutter${stage === 'live' ? '' : ' off'}`} aria-label={stage === 'live' ? 'Take photo' : 'Take photo, unavailable'} aria-disabled={stage !== 'live' || undefined} onClick={() => stage === 'live' && (setCount(3), setStage('count'))}>
-              <Camera size={22} strokeWidth={2} aria-hidden />
+            <div className="pb-strip pb-strip--none">{loaded ? 'No photos yet. Take one and be first on the wall.' : ''}</div>
+          ))}
+        {counting ? (
+          // The count: the bar turns red, and counts three, two, one
+          <div className="pb-ctl pb-ctl--count" role="status" aria-label={count ? String(count) : 'Taking the photo'}>
+            <span className="pb-count" aria-hidden>
+              {[3, 2, 1].map((n) => (
+                <b key={n} className={count === n ? 'on' : undefined}>
+                  {n}
+                </b>
+              ))}
+            </span>
+            <button type="button" className="pb-shutter off" aria-label="Cancel" onClick={() => setStage('live')}>
+              <Camera size={20} strokeWidth={2} aria-hidden />
             </button>
-          )}
-          <div>
-            {stage === 'review' && photo && (
-              <button type="button" className="pb-btn" onClick={() => save(photo)}>
-                <Download size={14} strokeWidth={1.8} aria-hidden />
+          </div>
+        ) : (
+          <div className="pb-ctl">
+            <div>
+              {(stage === 'live' || stage === 'effects' || stage === 'ask' || stage === 'starting' || stage === 'refused' || stage === 'door') && (
+                <span className="pb-seg" role="group" aria-label="What to take">
+                  <button type="button" aria-label="Four to a sheet" aria-pressed={four} onClick={() => setFour(true)}>
+                    <Grid2x2 size={15} strokeWidth={1.7} aria-hidden />
+                  </button>
+                  <button type="button" aria-label="One photo" aria-pressed={!four} onClick={() => setFour(false)}>
+                    <SquareUserRound size={15} strokeWidth={1.7} aria-hidden />
+                  </button>
+                  <button type="button" aria-label="A film: not in this booth" aria-disabled="true" title="Films aren’t taken in this booth">
+                    <Video size={15} strokeWidth={1.7} aria-hidden />
+                  </button>
+                </span>
+              )}
+              {stage === 'review' && (
+                <button type="button" className="pb-btn" onClick={() => (setPhoto(null), (waiting.current = false), setStage(stream.current ? 'live' : 'ask'))}>
+                  <RotateCcw size={14} strokeWidth={1.8} aria-hidden />
+                  Retake
+                </button>
+              )}
+              {stage === 'large' && (
+                <button type="button" className="pb-btn" onClick={camera}>
+                  <Camera size={14} strokeWidth={1.8} aria-hidden />
+                  Camera
+                </button>
+              )}
+            </div>
+            {stage === 'review' ? (
+              <button type="button" className="pb-btn blue pb-btn--post" onClick={() => void send()}>
+                Post to the Wall
+              </button>
+            ) : stage === 'large' && shownLarge ? (
+              <button type="button" className="pb-btn pb-btn--tall" onClick={() => save(shownLarge.src)}>
+                <Share size={14} strokeWidth={1.8} aria-hidden />
                 Save
               </button>
-            )}
-            {stage === 'large' && shownLarge && mine(shownLarge) && (
-              <button type="button" className="pb-btn pb-btn--remove" onClick={() => void remove(shownLarge.id).then((gone) => gone && (camera(), setSaid('Removed from the wall.')))}>
-                <Trash2 size={14} strokeWidth={1.8} aria-hidden />
-                Remove
+            ) : (
+              <button type="button" className={`pb-shutter${stage === 'live' ? '' : ' off'}`} aria-label={stage === 'live' ? (four ? 'Take four photos' : 'Take photo') : 'Take photo, unavailable'} aria-disabled={stage !== 'live' || undefined} onClick={() => stage === 'live' && (setCount(3), setStage('count'))}>
+                <Camera size={20} strokeWidth={2} aria-hidden />
               </button>
             )}
-          </div>
-        </div>
-        {posts.length ? (
-          <ol className="pb-strip" aria-label="The wall: latest photos from everyone">
-            {posts.map((p) => (
-              <li key={p.id} className={`pb-th${large === p.id && stage === 'large' ? ' on' : ''}${fresh === p.id ? ' new' : ''}`}>
-                <button type="button" aria-label={`A photo by ${p.name}, ${dayOf(p.at)}`} onClick={() => open(p)}>
-                  <span>
-                    <img src={p.src} alt="" />
-                  </span>
-                  <small>
-                    <Face picture={p.picture} name={p.name} size={14} />
-                    {p.name}
-                  </small>
+            <div>
+              {(stage === 'live' || stage === 'effects') && (
+                <button type="button" className="pb-btn" aria-pressed={stage === 'effects'} onClick={() => setStage(stage === 'effects' ? 'live' : 'effects')}>
+                  Effects
                 </button>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <div className="pb-strip pb-strip--none">{loaded ? 'No photos yet. Take one and be first on the wall.' : ''}</div>
+              )}
+              {stage === 'review' && photo && (
+                <button type="button" className="pb-btn" onClick={() => save(photo)}>
+                  <Share size={14} strokeWidth={1.8} aria-hidden />
+                  Save
+                </button>
+              )}
+              {stage === 'large' && shownLarge && mine(shownLarge) && (
+                <button type="button" className="pb-btn pb-btn--remove" onClick={() => void remove(shownLarge.id).then((gone) => gone && (camera(), setSaid('Removed from the wall.')))}>
+                  <Trash2 size={14} strokeWidth={1.8} aria-hidden />
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </Window>

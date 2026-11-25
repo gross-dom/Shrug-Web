@@ -1,20 +1,31 @@
-/* Spotify: the listening room (design/v1, screens/shrugos.css, "Spotify"; the look after Spotify's own
-   desktop app, from Dom's screenshots: near-black panels with round corners, a green for what is playing). */
+/* Spotify (apps/Spotify.tsx): the listening room, drawn after Spotify's own Mac app as Dom's screenshots
+   show it (a playlist, Home, a podcast's page, Podcasts). A black window. Along its head: the way back and
+   on, Home in a round grey button, and one long search field. Under it, panels of #121212 with rounded
+   corners and a little black between them: Your Library, and the main pane, whose head is a wash of the
+   cover's color. Along the foot, on the black, the bar where what is playing is. White for what is named,
+   grey for what is said about it, Spotify's green for the one thing to press. */
 
 .ss-window.spwin {
-  --ss-lights-y: 26px;
-  --gr: #3bd671;
-  background: #101211;
-  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.14), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 32px 70px -12px rgba(2, 4, 30, 0.7), 0 10px 24px rgba(2, 4, 30, 0.3);
-  color: #f2f3f2;
+  --ss-lights-y: 32px;
+  --sp-panel: #121212;
+  --sp-lift: #1f1f1f;
+  --sp-hover: #2a2a2a;
+  --sp-ink: #ffffff;
+  --sp-ink-2: #b3b3b3;
+  --sp-green: #1ed760;
+  --ss-canvas: #000;
   color-scheme: dark;
+  background: #000;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.16), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 32px 70px -12px rgba(2, 4, 30, 0.7), 0 10px 24px rgba(2, 4, 30, 0.3);
+  color: var(--sp-ink);
+  font-family: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .ss-window.spwin > .ss-window__bar {
-  height: 52px;
-  padding-right: 14px;
+  height: 64px;
+  padding-right: 16px;
   border-bottom: 0;
-  background: #101211;
+  background: #000;
   gap: 0;
 }
 
@@ -23,178 +34,427 @@
 }
 
 .spbar {
-  display: flex;
+  display: grid;
   flex: 1;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  margin-left: 14px;
+  margin-left: 10px;
 }
 
-.spbar__title {
-  color: #f5f5f7;
-  font-size: 13px;
-  font-weight: 700;
+.spbar__nav {
+  display: inline-flex;
+  gap: 8px;
+  color: var(--sp-ink);
 }
 
-.spbar__grow {
-  flex: 1;
+.spbar__nav button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.spbar__nav button[aria-disabled='true'] {
+  color: #5a5a5a;
+}
+
+.spbar__mid {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spbar__home {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--sp-lift);
+  color: var(--sp-ink-2);
+}
+
+.spbar__home[aria-current] {
+  color: var(--sp-ink);
 }
 
 .sp-search {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  width: 190px;
-  height: 32px;
-  padding: 0 12px;
+  gap: 10px;
+  width: min(430px, 38vw);
+  height: 44px;
+  padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #a6aba8;
-  font-size: 13px;
+  background: var(--sp-lift);
+  color: var(--sp-ink-2);
+}
+
+.sp-search:focus-within {
+  box-shadow: inset 0 0 0 2px #fff;
 }
 
 .sp-search input {
   flex: 1;
   min-width: 0;
-  color: #f2f3f2;
+  border: 0;
+  background: none;
+  color: var(--sp-ink);
+  font: inherit;
+  font-size: 14.5px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .sp-search input::placeholder {
-  color: #a6aba8;
+  color: var(--sp-ink-2);
 }
 
-.sp-search:focus-within {
-  box-shadow: 0 0 0 2px #fff;
+.spwin :where(button, a, [tabindex]):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 .spwin__body {
   display: flex;
+  flex-direction: column;
   min-height: 0;
-  background: #101211;
+  background: #000;
 }
 
 .sp {
-  display: grid;
+  display: flex;
   flex: 1;
-  grid-template-columns: 216px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
   gap: 8px;
-  min-width: 0;
   min-height: 0;
-  padding: 0 8px 8px;
-  color: #f2f3f2;
+  padding: 0 8px;
 }
 
-.sp :where(ol, h1, h2, p) {
+.sp :where(h1, h2, p, ol, ul),
+.sp-now :where(p) {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.sp .num {
-  font-variant-numeric: tabular-nums;
-}
+/* ---- Your Library */
 
-.sp :where(button, a):focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-}
-
-.sp-side {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 14px 8px;
-  overflow-y: auto;
-  border-radius: 12px;
-  background: #181a19;
-  font-size: 13px;
-}
-
-.sp-side h2 {
-  padding: 10px 12px 6px;
-  color: #9a9f9c;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.sp-side h2 + button ~ h2 {
-  margin-top: 8px;
-}
-
-.sp-side button {
+.sp-lib {
   display: flex;
   flex: none;
-  align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 12px;
-  overflow: hidden;
+  flex-direction: column;
+  width: 250px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 8px 8px;
   border-radius: 8px;
-  color: #b9bdbb;
+  background: var(--sp-panel);
+  scrollbar-width: none;
+}
+
+.sp-lib h2 {
+  padding: 2px 8px 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sp-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.sp-lib .sp-chips {
+  padding: 0 8px 14px;
+}
+
+.sp-chips button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--sp-hover);
+  color: var(--sp-ink);
+  font-size: 13px;
   font-weight: 500;
-  text-align: left;
   white-space: nowrap;
 }
 
-.sp-side button.on {
-  background: #262928;
-  color: #fff;
+.sp-chips button[aria-pressed='true'] {
+  background: #fff;
+  color: #000;
 }
 
-.sp-side button.pl {
-  height: 30px;
+.sp-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.sp-item > span:last-child {
+  min-width: 0;
+}
+
+.sp-item b,
+.sp-item small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-item b {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.sp-item small {
+  color: var(--sp-ink-2);
+  font-size: 13px;
+}
+
+.sp-item[aria-current] {
+  background: var(--sp-hover);
+}
+
+.sp-item:not([aria-current]):hover {
+  background: #1a1a1a;
+}
+
+.sp-cov {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 4px;
+  background: #282828;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* (the episodes, as Spotify draws Your Episodes: a green tile with a marker on it) */
+.sp-cov--ep {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(145deg, #1a7a4e, #0f4a32);
+  color: #1ed760;
+}
+
+/* ---- The main pane */
+
+.sp-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--sp-panel);
+  outline: none;
+  scrollbar-width: thin;
+  scrollbar-color: #4d4d4d transparent;
+}
+
+.sp-home {
+  padding: 18px 20px 28px;
+  background: linear-gradient(#232323, var(--sp-panel) 220px);
+}
+
+.sp-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 14px !important;
+}
+
+.sp-tiles button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.sp-tiles button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.sp-tiles .sp-cov {
+  border-radius: 4px 0 0 4px;
+}
+
+.sp-tiles b {
+  display: -webkit-box;
+  overflow: hidden;
+  padding-right: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.sp-sect {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 30px 0 14px;
+}
+
+.sp-sect small {
+  display: block;
+  color: var(--sp-ink-2);
   font-size: 12.5px;
 }
 
-.sp-main {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
-  padding: 22px 24px 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-radius: 12px;
-  background: linear-gradient(#1f2622, #161817 180px);
-  outline: none;
+.sp-sect h1 {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
 }
 
-.sp-main h1 {
-  font-size: 28px;
+.sp-sect button {
+  color: var(--sp-ink-2);
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: -0.025em;
 }
 
-.sp-main h1 + p {
-  margin-top: -10px;
-  color: #a6aba8;
+.sp-sect button:hover {
+  color: var(--sp-ink);
+  text-decoration: underline;
+}
+
+.sp-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 -10px !important;
+}
+
+.sp-card {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.sp-card:hover {
+  background: #1f1f1f;
+}
+
+.sp-card .sp-cov {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+}
+
+.sp-card b {
+  display: block;
+  overflow: hidden;
+  padding-top: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-card span:last-child {
+  display: -webkit-box;
+  overflow: hidden;
+  padding-top: 2px;
+  color: var(--sp-ink-2);
   font-size: 13px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
-.sp-none {
-  color: #a6aba8;
+/* The head of a page: its cover, what it is, its name set large, on a wash of the cover's color */
+.sp-hero {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  min-height: 236px;
+  padding: 22px 22px 22px;
+  background: linear-gradient(color-mix(in srgb, var(--tone) 72%, #121212), color-mix(in srgb, var(--tone) 34%, #121212));
+}
+
+.sp-hero > .sp-cov {
+  width: 184px;
+  height: 184px;
+  border-radius: 4px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.sp-hero > .sp-cov svg {
+  width: 72px;
+  height: 72px;
+}
+
+.sp-hero > span:last-child {
+  min-width: 0;
+}
+
+.sp-hero small {
   font-size: 13px;
+  font-weight: 500;
 }
 
-.sp-rows {
-  padding-bottom: 12px;
+.sp-hero h1 {
+  display: -webkit-box;
+  overflow: hidden;
+  padding: 6px 0 12px;
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.06;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
+.sp-hero p {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-hero p b {
+  color: #fff;
+  font-weight: 700;
+}
+
+.sp-under {
+  padding: 20px 22px 28px;
+  background: linear-gradient(rgba(0, 0, 0, 0.22), transparent 180px);
+}
+
+/* The table: a number, a cover, the title over its show, who is on it, when, how long */
 .sp-row {
   display: grid;
-  grid-template-columns: 24px 44px minmax(0, 1.5fr) minmax(0, 1fr) 78px 48px;
+  grid-template-columns: 28px 40px minmax(0, 1.5fr) minmax(0, 1fr) 80px 50px;
   align-items: center;
   gap: 14px;
   width: 100%;
   height: 56px;
-  padding: 0 12px;
-  border-radius: 8px;
-  color: #a6aba8;
-  font-size: 13px;
+  padding: 0 14px;
+  border-radius: 4px;
+  color: var(--sp-ink-2);
+  font-size: 13.5px;
   text-align: left;
 }
 
@@ -204,222 +464,267 @@
   white-space: nowrap;
 }
 
-.sp-row.head {
-  height: 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.sp-row .num {
+  font-variant-numeric: tabular-nums;
 }
 
-.sp-row b {
+.sp-row > .num:first-child {
+  font-size: 15px;
+  text-align: center;
+}
+
+.sp-row .t b {
   display: block;
   overflow: hidden;
-  color: #f2f3f2;
-  font-size: 14px;
-  font-weight: 500;
+  color: var(--sp-ink);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.35;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.sp-row.head {
+  height: 36px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  font-size: 13px;
+}
+
+button.sp-row:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .sp-row.on {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.18);
 }
 
-.sp-row.on b {
-  color: var(--gr);
-}
-
-@media (hover: hover) {
-  button.sp-row:not(.on):hover,
-  .sp-card:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-}
-
-.sp-cov {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.sp-cov--none {
-  width: 56px;
-  height: 56px;
-  background: #262928;
+.sp-row.on .t b,
+.sp-row.on > .num:first-child {
+  color: var(--sp-green);
 }
 
 .sp-eq {
   display: inline-flex;
   align-items: flex-end;
   gap: 2px;
-  height: 14px;
+  height: 12px;
 }
 
 .sp-eq i {
   width: 3px;
-  border-radius: 1px;
-  background: var(--gr);
+  background: var(--sp-green);
+  animation: sp-eq 0.9s ease-in-out infinite alternate;
 }
 
 .sp-eq i:nth-child(1) {
-  height: 8px;
+  height: 60%;
 }
 
 .sp-eq i:nth-child(2) {
-  height: 14px;
+  height: 100%;
+  animation-delay: -0.3s;
 }
 
 .sp-eq i:nth-child(3) {
-  height: 5px;
+  height: 40%;
+  animation-delay: -0.6s;
 }
 
-.sp-bar {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 18px;
-  min-height: 84px;
-  padding: 0 16px;
-  border-radius: 12px;
-  background: #181a19;
-  color: #a6aba8;
-  font-size: 13px;
+@keyframes sp-eq {
+  to {
+    height: 25%;
+  }
 }
 
-.sp-bar.embed {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px) minmax(0, 1fr);
-  background: #23302a;
-  box-shadow: inset 0 0 0 1px rgba(59, 214, 113, 0.25);
-}
-
-.sp-now {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.sp-now b {
-  display: block;
-  overflow: hidden;
-  color: #fff;
+.sp-none {
+  padding: 18px 2px;
+  color: var(--sp-ink-2);
   font-size: 14px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.sp-now--said {
-  color: #f2f3f2;
-}
-
-.sp-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-self: end;
-  white-space: nowrap;
-}
-
-.sp-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #d7dbd9;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* Spotify's own player: in the bar it is its small one, 80 tall; in the pane, as tall as the pane */
+/* Where Spotify's own player goes, and what stands there until it is */
 .sp-frame {
   display: block;
   width: 100%;
   height: 80px;
   border: 0;
   border-radius: 12px;
-  color-scheme: normal;
+  background: #282828;
 }
 
 .sp-frame--tall {
-  flex: 1;
-  height: 100%;
-  min-height: 352px;
+  height: 352px;
 }
 
-.sp-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  padding-bottom: 16px;
-}
-
-.sp-card {
-  display: block;
-  padding: 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #a6aba8;
-  font-size: 12.5px;
+.sp-stand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 6px 0;
+  color: var(--sp-ink-2);
+  font-size: 13.5px;
   line-height: 1.4;
-  text-align: left;
 }
 
-.sp-card i {
-  display: block;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  aspect-ratio: 1 / 1;
+.sp-stand > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
 }
 
-.sp-card b {
+.sp-stand b {
   display: block;
-  color: #fff;
-  font-size: 14px;
+  color: var(--sp-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sp-play {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: var(--sp-green);
+  color: #000;
+}
+
+.sp-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px #7c7c7c;
+  color: var(--sp-ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sp-pill:hover {
+  box-shadow: inset 0 0 0 1px #fff;
+}
+
+.sp-tag {
+  color: var(--sp-ink-2);
+  font-size: 11.5px;
+}
+
+.sp-under .sp-tag {
+  padding-top: 10px !important;
+}
+
+/* ---- The bar at the foot */
+
+.sp-now {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  height: 84px;
+  padding: 0 16px;
+  background: #000;
+}
+
+.sp-what {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sp-what > span:last-child {
+  min-width: 0;
+}
+
+.sp-what b,
+.sp-what small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-what b {
+  font-size: 13.5px;
   font-weight: 500;
 }
 
-.sp-embed {
+.sp-what small {
+  color: var(--sp-ink-2);
+  font-size: 12px;
+}
+
+.sp-ctl {
   display: flex;
-  flex: 1;
   flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: #6a6a6a;
+}
+
+.sp-ctl p {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 200px;
-  margin-bottom: 16px;
-  padding: 20px;
-  border-radius: 12px;
-  background: #23302a;
-  box-shadow: inset 0 0 0 1px rgba(59, 214, 113, 0.25);
-  color: #b7c7bd;
+  color: var(--sp-ink-2);
   font-size: 13px;
-  text-align: center;
 }
 
-.sp-embed--live {
-  padding: 0;
-  background: none;
-  box-shadow: none;
+.sp-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.sp-embed b {
-  color: #fff;
-  font-size: 15px;
+.sp-keys i {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding-left: 2px;
+  border-radius: 50%;
+  background: #6a6a6a;
+  color: #000;
 }
 
-.sp-embed .sp-tag {
-  margin-top: 6px;
+.sp-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+  font-size: 11px;
+}
+
+.sp-line i {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #4d4d4d;
+}
+
+.sp-now > .sp-tag {
+  justify-self: end;
+  text-align: right;
+}
+
+.sp-in {
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-eq i {
+    animation: none;
+  }
 }

@@ -424,3 +424,201 @@
     background: none;
   }
 }
+
+/* ---- As the Mac's own Photo Booth is laid out now (Dom's screenshots: the live view, a photo taken, the
+   count, Effects). The window's name at the head of its bar, beside the lights. The picture from edge to
+   edge. Under it the strip, its photographs at the right. Then one bar: the view's switch at its left, the
+   red shutter in its middle, Effects at its right. During a count the bar is red, with three, two, one.
+   These rules re-lay what is drawn above. ---- */
+
+.ss-window.pbwin,
+.ss-window.pbwin > .ss-window__bar,
+.pbwin__body {
+  background: #2c2b2a;
+}
+
+.ss-window.pbwin > .ss-window__bar {
+  height: 34px;
+}
+
+.ss-window.pbwin {
+  --ss-lights-y: 17px;
+}
+
+.pb-name {
+  position: static;
+  margin-left: 14px;
+  color: #b9b8b6;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.pb-view {
+  margin: 0;
+  border-radius: 0;
+  background: #1a1918;
+}
+
+.pb-strip {
+  order: 0;
+  justify-content: flex-end;
+  height: 66px;
+  padding: 3px 22px 3px 16px;
+  background: #3a3836;
+  gap: 4px;
+}
+
+.pb-strip--none {
+  justify-content: center;
+  color: #a5a3a0;
+}
+
+.pb-th button {
+  position: relative;
+}
+
+.pb-th button > span:first-child {
+  width: 96px;
+  height: 60px;
+  border-radius: 0;
+}
+
+.pb-th small {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  left: 3px;
+  justify-content: flex-start;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 9.5px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.pb-th button:hover small,
+.pb-th button:focus-visible small,
+.pb-th.new small {
+  opacity: 1;
+}
+
+.pb-th.on button > span:first-child {
+  outline: 2px solid #3d8bff;
+  outline-offset: 0;
+}
+
+.pb-ctl {
+  height: 64px;
+  padding: 0 20px;
+  background: #2c2b2a;
+}
+
+/* Which is taken: four to a sheet, one photo, a film */
+.pb-seg {
+  display: inline-flex;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #4a4846;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
+
+.pb-seg button {
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 22px;
+  color: #dddcda;
+}
+
+.pb-seg button + button {
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.25);
+}
+
+.pb-seg button[aria-pressed='true'] {
+  background: #2f6fe0;
+  color: #fff;
+}
+
+.pb-seg button[aria-disabled='true'] {
+  color: #8d8b88;
+}
+
+.pb-btn {
+  border-radius: 6px;
+  background: #4a4846;
+}
+
+.pb-ctl .pb-btn:not(.blue) {
+  height: 26px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.pb-shutter {
+  width: 50px;
+  height: 50px;
+  border: 0;
+  background: #c8201d;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 1px 3px rgba(0, 0, 0, 0.4);
+  color: #fff;
+}
+
+.pb-shutter.off {
+  background: #4f4d4b;
+  color: #cfcecb;
+}
+
+/* The count: the bar is red, the number it is on bright, the others to come or gone are faint */
+.pb-ctl--count {
+  display: flex;
+  justify-content: center;
+  gap: 46px;
+  background: #d9534a;
+}
+
+.pb-ctl--count .pb-count {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 46px;
+  width: auto;
+  height: auto;
+  background: none;
+}
+
+.pb-ctl--count .pb-count b {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.pb-ctl--count .pb-count b.on {
+  color: #fff;
+}
+
+.pb-ctl--count .pb-shutter {
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+  color: #f7d9d6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-th small {
+    transition: none;
+  }
+}
+
+.pb-ctl--count .pb-count {
+  flex-direction: row;
+}
+
+.pb-ctl--count .pb-count b {
+  min-height: 0;
+}

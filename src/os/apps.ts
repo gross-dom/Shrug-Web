@@ -264,7 +264,7 @@ export const APPS: Record<AppId, AppSpec> = {
     min: { w: 780, h: 520 },
     nudge: { x: -10, y: 10 },
     resizable: true,
-    lightsY: 26,
+    lightsY: 32,
     dock: null,
   },
   // YouTube: one playlist, videos the team loves, played by YouTube's own player (src/apps/YouTube.tsx). On the desk
@@ -276,7 +276,7 @@ export const APPS: Record<AppId, AppSpec> = {
     min: { w: 860, h: 540 },
     nudge: { x: 10, y: 6 },
     resizable: true,
-    lightsY: 26,
+    lightsY: 28,
     dock: null,
   },
 }
