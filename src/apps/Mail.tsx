@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowLeft, Command as CommandIcon, CornerDownLeft, Inbox, Keyboard, Lock, MessageCircle, Search, Sparkles, Undo2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, CircleHelp, Clock, CornerDownLeft, Flame, Forward, Inbox, Keyboard, Lightbulb, Link2, Lock, Mail as MailGlyph, Menu, MessageCircle, Reply, Search, Sparkles, SquarePen, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
 import { launchApp, showCompany } from '../os/launch'
@@ -104,10 +104,19 @@ function pressed(e: KeyboardEvent | globalThis.KeyboardEvent) {
   return parts.join('+')
 }
 
-const DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
-const TIME = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-const dayOf = (date: string) => DAY.format(new Date(`${date.slice(0, 10)}T12:00:00`))
-const timeOf = (at: string) => TIME.format(new Date(at))
+const MONTH = new Intl.DateTimeFormat('en-US', { month: 'short' })
+const MONTH_LONG = new Intl.DateTimeFormat('en-US', { month: 'long' })
+const noon = (date: string) => new Date(`${date.slice(0, 10)}T12:00:00`)
+/** A day as Superhuman's list writes one: 18 NOV. */
+const dayOf = (date: string) => `${noon(date).getDate()} ${MONTH.format(noon(date)).toUpperCase()}`
+/** The heading a day's exchanges are listed under: the last week, the rest of this month, then a month at a time. */
+function groupOf(date: string, now = new Date()): string {
+  const day = noon(date)
+  const ago = (now.getTime() - day.getTime()) / 86_400_000
+  if (ago >= 0 && ago < 8) return 'Last 7 days'
+  if (day.getFullYear() === now.getFullYear() && day.getMonth() === now.getMonth()) return 'Earlier this month'
+  return day.getFullYear() === now.getFullYear() ? MONTH_LONG.format(day) : `${MONTH_LONG.format(day)} ${day.getFullYear()}`
+}
 
 const K = ({ children }: { children: ReactNode }) => <kbd className="k">{children}</kbd>
 const Keys = ({ keys }: { keys: string[] }) => (
@@ -141,6 +150,9 @@ export function MailApp() {
   const [unfolded, setUnfolded] = useState<number[]>([])
   const [lit, setLit] = useState(false)
   const [said, setSaid] = useState<{ text: string; n: number } | null>(null)
+  /** The hint under a search opened with the pointer: there is a key for it. */
+  const [hint, setHint] = useState(false)
+  const [tip, setTip] = useState(true)
   const g = useRef(0)
 
   const q = (query ?? '').trim().toLowerCase()
@@ -284,109 +296,280 @@ export function MailApp() {
     root.current?.querySelector(`[data-email="${message}"]`)?.scrollIntoView({ block: 'nearest' })
   }, [message, thread])
 
+  const splitName = SPLITS.find((s) => s.id === split)!.label
+  /** Who the pane at the right is about: whoever the conversation open, or the row the keyboard is on, is from. */
+  const about = thread ?? rows[cursor] ?? null
+  const readOnly = (what: string) => say(`Read-only. Nothing is ${what}.`)
+
+  // The title bar: one long pill, as a browser's tab would be, saying where this is
   const bar = (
-    <div className="mlbar">
-      <div className="ml-tabs" role="tablist" aria-label="Splits">
-        {SPLITS.map((s) => (
-          <button key={s.id} type="button" role="tab" aria-selected={split === s.id} className={split === s.id ? 'on' : undefined} onClick={() => (setSplit(s.id), setOpen(null), setZero(false), setAt(0), back())}>
-            {s.label} <small>{count(s.id)}</small>
-          </button>
-        ))}
-      </div>
-      <span className="mlbar__grow" />
-      {query !== null ? (
-        <label className="ml-search">
-          <Search size={14} strokeWidth={2} aria-hidden />
-          <input
-            autoFocus
-            type="text"
-            value={query}
-            aria-label="Search all twenty"
-            placeholder="Search all twenty"
-            spellCheck={false}
-            autoComplete="off"
-            onChange={(e) => (setQuery(e.target.value), setAt(0))}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') return e.preventDefault(), e.stopPropagation(), setQuery(null)
-              // Return, or the down arrow, goes into what was found
-              if (e.key === 'Enter' || e.key === 'ArrowDown') e.preventDefault(), back()
-            }}
-          />
-          <K>esc</K>
-        </label>
-      ) : (
-        <button type="button" className="ml-k" aria-label="Search all twenty" onClick={() => run('search')}>
-          <Search size={14} strokeWidth={2} aria-hidden />
-          <K>/</K>
-        </button>
-      )}
-      <button type="button" className="ml-k" onClick={() => setOver('command')}>
-        Command <K>⌘</K>
-        <K>K</K>
-      </button>
+    <div className="mlbar" data-zero={zero || undefined}>
+      <span className="mlbar__pill">
+        <i aria-hidden />
+        {query !== null ? 'Search' : `${splitName} (${count(split)})`} - Mail
+      </span>
+      <span className="mlbar__plus" aria-hidden>
+        +
+      </span>
     </div>
   )
 
-  return (
-    <Window className="app mailwin" lightsSize="large" lead={bar} body={{ className: 'mailwin__body' }}>
-      <div ref={root} className="ml" data-autofocus tabIndex={0} role="application" aria-label="Mail: twenty exchanges that led to something. Read-only. Press ? for its keys." onKeyDown={onKey}>
-        {zero ? (
-          <div className="ml-zero">
-            <img src="/wallpapers/dusk.webp" alt="" />
-            <h2>Inbox Zero.</h2>
-            {ZERO_LINE && (
-              <p>
-                “{ZERO_LINE.words.replace(/^[“"]|[”"]$/g, '')}” <span>{ZERO_LINE.by}</span>
-              </p>
-            )}
-            <button type="button" className="ml-k" onClick={() => setZero(false)}>
-              Press <K>Z</K> to bring them back
+  const tabs = (
+    <div className="ml-tabs" role="tablist" aria-label="Splits">
+      {SPLITS.map((s) => (
+        <button key={s.id} type="button" role="tab" aria-selected={split === s.id} className={split === s.id ? 'on' : undefined} onClick={() => (setSplit(s.id), setOpen(null), setZero(false), setAt(0), back())}>
+          {s.label} <small>{count(s.id)}</small>
+        </button>
+      ))}
+    </div>
+  )
+  const tools = (
+    <span className="ml-tools">
+      <button type="button" aria-label="New message to Shrug, in Messages" onClick={() => run('reply')}>
+        <SquarePen size={15} strokeWidth={1.7} aria-hidden />
+      </button>
+      <button type="button" aria-label="Search all twenty" onClick={() => (setHint(true), run('search'))}>
+        <Search size={15} strokeWidth={1.7} aria-hidden />
+      </button>
+    </span>
+  )
+
+  /** The list: each exchange a line, under the heading its day falls under. */
+  const list = (found: Exchange[]) => {
+    let under = ''
+    return (
+      <ol className="ml-list" role="listbox" aria-label={`${splitName}: ${found.length === 1 ? 'one exchange' : `${found.length} exchanges`}`} aria-activedescendant={found[cursor] ? `mail-${found[cursor]!.id}` : undefined}>
+        {found.map((x, i) => {
+          const group = groupOf(x.date)
+          const head = group !== under
+          under = group
+          return (
+            <li key={x.id} id={`mail-${x.id}`} role="option" aria-selected={i === cursor} className={`ml-row${i === cursor ? ' on' : ''}`} data-group={head ? group : undefined} onPointerMove={(e) => e.pointerType === 'mouse' && i !== cursor && setAt(i)} onClick={() => (setAt(i), show(x))}>
+              <b>{x.from}</b>
+              <span className="s">
+                <span className={`ml-chip ${x.led.toLowerCase()}`}>{x.led.toLowerCase()}</span>
+                <em>{x.subject}</em>
+                {x.first}
+              </span>
+              {i === cursor ? (
+                // (what Superhuman offers on the row it is on: each would change mail, and says so)
+                <span className="ml-acts" aria-hidden>
+                  <Check size={15} strokeWidth={1.7} onClick={(e) => (e.stopPropagation(), readOnly('marked done'))} />
+                  <Clock size={14} strokeWidth={1.7} onClick={(e) => (e.stopPropagation(), readOnly('snoozed'))} />
+                  <Zap size={14} strokeWidth={1.7} onClick={(e) => (e.stopPropagation(), readOnly('sent'))} />
+                </span>
+              ) : (
+                <span className="d">{dayOf(x.date)}</span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    )
+  }
+
+  /** The pane at the right: who it is from, what else they wrote about, and where it led. */
+  const pane = (
+    <aside className="ml-pane" aria-label={query !== null && !thread ? 'Search tips' : 'About the sender'}>
+      {query !== null && !thread ? (
+        <>
+          <h2>Tips</h2>
+          <dl className="ml-tips">
+            {[
+              ['investment', 'led to an investment'],
+              ['intro', 'led to an intro'],
+              ['hire', 'led to a hire'],
+              ['drop', 'led to a drop'],
+              ['founder', 'from a founder'],
+              ['investor', 'from an investor'],
+              ['seed round', 'subject contains "seed round"'],
+              ['thank-you', 'subject contains "thank-you"'],
+            ].map(([term, means]) => (
+              <div key={term}>
+                <dt>
+                  <button type="button" onClick={() => (setQuery(term!), setAt(0))}>
+                    {term}
+                  </button>
+                </dt>
+                <dd>{means}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      ) : about ? (
+        <>
+          <h2>{about.from}</h2>
+          <div className="ml-who">
+            <span className="ml-face" aria-hidden>
+              <svg viewBox="0 0 50 50">
+                <circle cx="25" cy="19" r="9" />
+                <path d="M7 50c0-12 8-19 18-19s18 7 18 19z" />
+              </svg>
+            </span>
+            <span>
+              <b>{about.people.find((person) => person.name === about.from)?.of ?? about.people[about.people.length - 1]?.of}</b>
+              <small>With {about.people.filter((person) => person.name !== about.from).map((person) => person.name).join(' and ')}</small>
+            </span>
+          </div>
+          <div className="ml-refer">
+            <button type="button" className="ml-outline" onClick={() => run('led')}>
+              {about.led}
             </button>
+            <span>What it led to</span>
+          </div>
+          <h3>
+            <MailGlyph size={13} strokeWidth={1.7} aria-hidden />
+            Mail
+          </h3>
+          <ul className="ml-more">
+            {EXCHANGES.filter((x) => x.led === about.led && x.id !== about.id)
+              .slice(0, 4)
+              .map((x) => (
+                <li key={x.id}>
+                  <button type="button" onClick={() => (setQuery(null), setSplit('all'), setAt(EXCHANGES.indexOf(x)), show(x))}>{x.subject}</button>
+                </li>
+              ))}
+          </ul>
+          <p className="ml-link">
+            <Link2 size={13} strokeWidth={1.7} aria-hidden />
+            <b>{about.people[1]?.of}</b>
+          </p>
+        </>
+      ) : (
+        <h2>Mail</h2>
+      )}
+      <div className="ml-end">
+        {tip && (
+          <div className="ml-tip">
+            <Lightbulb size={13} strokeWidth={1.8} aria-hidden />
+            <button type="button" onClick={() => setOver('shortcuts')}>
+              Learn every shortcut
+            </button>
+            <button type="button" aria-label="Put this away" onClick={() => setTip(false)}>
+              <X size={14} strokeWidth={1.7} aria-hidden />
+            </button>
+          </div>
+        )}
+        <p className="ml-readonly">
+          <span>
+            <Lock size={12} strokeWidth={2} aria-hidden />
+            Read-only
+          </span>
+          <button type="button" aria-label="Keyboard shortcuts" onClick={() => setOver('shortcuts')}>
+            <CircleHelp size={14} strokeWidth={1.7} aria-hidden />
+          </button>
+        </p>
+      </div>
+    </aside>
+  )
+
+  return (
+    <Window className={`app mailwin${zero ? ' zero' : ''}`} lightsSize="large" lead={bar} body={{ className: 'mailwin__body' }}>
+      <div ref={root} className="ml" data-zero={zero || undefined} data-autofocus tabIndex={0} role="application" aria-label="Mail: twenty exchanges that led to something. Read-only. Press ? for its keys." onKeyDown={onKey}>
+        {zero && <img className="ml-photo" src="/wallpapers/lagoon.webp" alt="" />}
+        <nav className="ml-rail" aria-label="Mail">
+          <button type="button" className="spark" aria-label="Command" onClick={() => setOver('command')}>
+            <Sparkles size={14} strokeWidth={1.7} aria-hidden />
+          </button>
+          <span className="ml-rail__set">
+            <button type="button" aria-label="Inbox" aria-current={!zero ? 'page' : undefined} onClick={() => run('inbox')}>
+              <MailGlyph size={14} strokeWidth={1.7} aria-hidden />
+            </button>
+            <button type="button" aria-label="Calendar" onClick={() => say('There is only the inbox here: twenty exchanges that led to something.')}>
+              <Calendar size={14} strokeWidth={1.7} aria-hidden />
+            </button>
+          </span>
+        </nav>
+        {zero ? (
+          <div className="ml-main ml-zero">
+            <header className="ml-top">
+              <span className="ml-menu" aria-hidden>
+                <Menu size={15} strokeWidth={1.7} />
+              </span>
+              {tabs}
+              {tools}
+            </header>
+            <p className="ml-hit">
+              <b>
+                You’ve hit Inbox Zero! <Flame size={13} strokeWidth={1.8} aria-hidden />
+              </b>
+              {ZERO_LINE && (
+                <span>
+                  “{ZERO_LINE.words.replace(/^[“"]|[”"]$/g, '')}” {ZERO_LINE.by}
+                </span>
+              )}
+              <button type="button" onClick={() => setZero(false)}>
+                Press <K>Z</K> to bring them back
+              </button>
+            </p>
           </div>
         ) : thread ? (
           <Thread
             x={thread}
-            place={`${EXCHANGES.indexOf(thread) + 1} of ${EXCHANGES.length}`}
             message={message}
             unfolded={unfolded}
             lit={lit}
             onUnfold={(i) => (setUnfolded((u) => (u.includes(i) ? u : [...u, i])), setMessage(i))}
             onBack={() => setOpen(null)}
             onReply={() => run('reply')}
+            onStep={(by) => stepThread(by)}
+            onNo={readOnly}
           />
-        ) : (
-          <>
+        ) : query !== null ? (
+          <div className="ml-main ml-finding">
+            <header className="ml-top">
+              <label className="ml-search">
+                <span className="sr-only">Search all twenty</span>
+                <input
+                  autoFocus
+                  type="text"
+                  value={query}
+                  placeholder="Search all twenty"
+                  spellCheck={false}
+                  autoComplete="off"
+                  onChange={(e) => (setQuery(e.target.value), setAt(0))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') return e.preventDefault(), e.stopPropagation(), setQuery(null), setHint(false)
+                    // Return, or the down arrow, goes into what was found
+                    if (e.key === 'Enter' || e.key === 'ArrowDown') e.preventDefault(), back()
+                  }}
+                />
+              </label>
+              <span className="ml-tools">
+                <button type="button" aria-label="Close search" onClick={() => (setQuery(null), setHint(false))}>
+                  <X size={16} strokeWidth={1.6} aria-hidden />
+                </button>
+              </span>
+            </header>
             {rows.length ? (
-              <ol className="ml-list" role="listbox" aria-label={`${SPLITS.find((s) => s.id === split)!.label}: ${rows.length === 1 ? 'one exchange' : `${rows.length} exchanges`}`} aria-activedescendant={rows[cursor] ? `mail-${rows[cursor]!.id}` : undefined}>
-                {rows.map((x, i) => (
-                  <li key={x.id} id={`mail-${x.id}`} role="option" aria-selected={i === cursor} className={`ml-row${i === cursor ? ' on' : ''}`} onPointerMove={(e) => e.pointerType === 'mouse' && i !== cursor && setAt(i)} onClick={() => (setAt(i), show(x))}>
-                    <b>{x.from}</b>
-                    <span className="s">
-                      <em>{x.subject}</em>
-                      {x.first}
-                    </span>
-                    <span className={`ml-tag${i === cursor ? ' v' : ''}`}>{x.led}</span>
-                    <span className="d">{dayOf(x.date)}</span>
-                  </li>
-                ))}
-              </ol>
+              list(rows)
             ) : (
               <div className="ml-none" role="status">
                 Nothing among the twenty says “{query}”.
               </div>
             )}
-            <div className="ml-foot">
-              <span>
-                <Lock size={12} strokeWidth={2.2} aria-hidden />
-                Read-only. Twenty exchanges that led to something.
-              </span>
-              <span aria-hidden>
-                <K>J</K>
-                <K>K</K> move <K>↵</K> open <K>R</K> reply to Shrug <K>esc</K> back
-              </span>
-            </div>
-          </>
+            {hint && (
+              <p className="ml-hint" role="status">
+                Next time, hit <K>/</K> to search instantly!
+                <button type="button" aria-label="Put this away" onClick={() => setHint(false)}>
+                  <X size={13} strokeWidth={1.8} aria-hidden />
+                </button>
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="ml-main">
+            <header className="ml-top">
+              <button type="button" className="ml-menu" aria-label="Keyboard shortcuts" onClick={() => setOver('shortcuts')}>
+                <Menu size={15} strokeWidth={1.7} aria-hidden />
+              </button>
+              {tabs}
+              {tools}
+            </header>
+            {list(rows)}
+          </div>
         )}
+        {!zero && pane}
         {said && (
           <div className="ml-said" role="status" key={said.n}>
             {said.text}
@@ -399,92 +582,78 @@ export function MailApp() {
   )
 }
 
-function Thread({ x, place, message, unfolded, lit, onUnfold, onBack, onReply }: { x: Exchange; place: string; message: number; unfolded: number[]; lit: boolean; onUnfold: (i: number) => void; onBack: () => void; onReply: () => void }) {
+function Thread({ x, message, unfolded, lit, onUnfold, onBack, onReply, onStep, onNo }: { x: Exchange; message: number; unfolded: number[]; lit: boolean; onUnfold: (i: number) => void; onBack: () => void; onReply: () => void; onStep: (by: number) => void; onNo: (what: string) => void }) {
   // The newest two are open; the earlier ones are a line each until they are asked for
   const folded = (i: number) => i < x.emails.length - 2 && !unfolded.includes(i)
   return (
-    <div className="ml-thread">
+    <div className="ml-main ml-thread">
+      <button type="button" className="ml-back" aria-label="Back to inbox" onClick={onBack}>
+        <ArrowLeft size={15} strokeWidth={1.7} aria-hidden />
+      </button>
       <div className="ml-col">
-        <div className="ml-head">
-          <button type="button" className="ml-k" onClick={onBack}>
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden />
-            <span className="sr-only">Back to inbox</span>
-            <K>esc</K>
-          </button>
-          <span className="ml-tag v">{x.led}</span>
-          <span className="ml-k ml-place">{place}</span>
-        </div>
-        <h1>{x.subject}</h1>
-        <div className="ml-led" data-lit={lit || undefined}>
-          <b>What this led to</b>
-          <span>{x.ledTo}</span>
-        </div>
-        {x.emails.map((email, i) =>
-          folded(i) ? (
-            <button key={i} type="button" className="ml-msg fold" data-email={i} data-at={i === message || undefined} onClick={() => onUnfold(i)}>
-              <b>{email.from}</b>
-              <span>{email.body[0]}</span>
-              {dayOf(email.at)}
-              <i className="sr-only">. Show this email</i>
+        <header className="ml-head">
+          <h1>{x.subject}</h1>
+          <span className="ml-does">
+            <button type="button" className="t" onClick={() => onNo('shared')}>
+              Share
             </button>
-          ) : (
-            <article key={i} className="ml-msg" data-email={i} data-at={i === message || undefined}>
-              <header>
-                <span className="av" aria-hidden>
-                  {/^\[/.test(email.from) ? '[ ]' : email.from.charAt(0)}
-                </span>
-                <span>
-                  <b>{email.from}</b> to {email.to}
-                </span>
-                <small>{timeOf(email.at)}</small>
-              </header>
-              {email.body.map((paragraph, n) => (
-                <p key={n}>{paragraph}</p>
-              ))}
-            </article>
-          ),
-        )}
-        <div className="ml-reply">
-          <span>Nothing sends from here. Reply opens a new message to Shrug in Messages.</span>
-          <button type="button" className="ml-go" onClick={onReply}>
-            <MessageCircle size={14} strokeWidth={2.2} aria-hidden />
-            Reply to Shrug <K>R</K>
-          </button>
+            <button type="button" aria-label="Mark done" onClick={() => onNo('marked done')}>
+              <Check size={15} strokeWidth={1.7} aria-hidden />
+            </button>
+            <button type="button" aria-label="Remind me" onClick={() => onNo('snoozed')}>
+              <Clock size={14} strokeWidth={1.7} aria-hidden />
+            </button>
+            <button type="button" aria-label="Instant reply" onClick={() => onNo('sent')}>
+              <Zap size={14} strokeWidth={1.7} aria-hidden />
+            </button>
+            <button type="button" aria-label="Previous conversation" onClick={() => onStep(-1)}>
+              <ChevronUp size={16} strokeWidth={1.6} aria-hidden />
+            </button>
+            <button type="button" aria-label="Next conversation" onClick={() => onStep(1)}>
+              <ChevronDown size={16} strokeWidth={1.6} aria-hidden />
+            </button>
+          </span>
+        </header>
+        {/* One line on what it led to, where Superhuman sets its one line on what a conversation is */}
+        <p className="ml-led" data-lit={lit || undefined}>
+          <span className={`ml-chip ${x.led.toLowerCase()}`}>{x.led.toLowerCase()}</span>
+          <span>{x.ledTo}</span>
+        </p>
+        <div className="ml-card">
+          {x.emails.map((email, i) =>
+            folded(i) ? (
+              <button key={i} type="button" className="ml-msg fold" data-email={i} data-at={i === message || undefined} onClick={() => onUnfold(i)}>
+                <b>{email.from}</b>
+                <span>{email.body[0]}</span>
+                {dayOf(email.at)}
+                <i className="sr-only">. Show this email</i>
+              </button>
+            ) : (
+              <article key={i} className="ml-msg" data-email={i} data-at={i === message || undefined}>
+                <header>
+                  <b>{email.from}</b>
+                  <span>to {email.to}</span>
+                  <span className="ml-mini" aria-hidden>
+                    <Reply size={14} strokeWidth={1.6} />
+                    <Forward size={14} strokeWidth={1.6} />
+                  </span>
+                  <small>{dayOf(email.at)}</small>
+                </header>
+                {email.body.map((paragraph, n) => (
+                  <p key={n}>{paragraph}</p>
+                ))}
+              </article>
+            ),
+          )}
         </div>
       </div>
-      <aside className="ml-side" aria-label="About this thread">
-        <h2>In this thread</h2>
-        <ul>
-          {x.people.map((person) => (
-            <li key={person.name}>
-              {person.name}
-              <span className="ml-tag">{person.of}</span>
-            </li>
-          ))}
-        </ul>
-        <h2>Shortcuts</h2>
-        <ul>
-          <li>
-            Next thread<K>J</K>
-          </li>
-          <li>
-            Previous thread<K>K</K>
-          </li>
-          <li>
-            Reply to Shrug<K>R</K>
-          </li>
-          <li>
-            Back to inbox<K>esc</K>
-          </li>
-          <li>
-            Command
-            <span>
-              <K>⌘</K>
-              <K>K</K>
-            </span>
-          </li>
-        </ul>
-      </aside>
+      <div className="ml-reply">
+        <span>Nothing sends from here. Reply opens a new message to Shrug in Messages.</span>
+        <button type="button" className="ml-go" onClick={onReply}>
+          <MessageCircle size={13} strokeWidth={2} aria-hidden />
+          Reply to Shrug <K>R</K>
+        </button>
+      </div>
     </div>
   )
 }
@@ -514,15 +683,18 @@ function Palette({ thread, onClose, onRun }: { thread: boolean; onClose: () => v
     <>
       <div className="ml-dim" onPointerDown={onClose} />
       <div className="ml-pal" role="dialog" aria-label="Command" onKeyDown={onKey}>
+        <h2>
+          <Zap size={15} strokeWidth={1.7} aria-hidden />
+          Mail Command
+        </h2>
         <label className="in">
-          <CommandIcon size={18} strokeWidth={2} aria-hidden />
-          <input autoFocus type="text" role="combobox" aria-expanded aria-controls="mail-commands" aria-activedescendant={found[on] ? `mail-command-${found[on]!.id}` : undefined} aria-label="Command" value={typed} spellCheck={false} autoComplete="off" onChange={(e) => (setTyped(e.target.value), setAt(0))} />
+          <span className="sr-only">Command</span>
+          <input autoFocus type="text" role="combobox" aria-expanded aria-controls="mail-commands" aria-activedescendant={found[on] ? `mail-command-${found[on]!.id}` : undefined} value={typed} spellCheck={false} autoComplete="off" onChange={(e) => (setTyped(e.target.value), setAt(0))} />
         </label>
-        <h2>Commands</h2>
         <ul id="mail-commands" role="listbox" aria-label="Commands">
           {found.map((c, i) => (
             <li key={c.id} id={`mail-command-${c.id}`} role="option" aria-selected={i === on} className={i === on ? 'on' : undefined} onPointerMove={() => i !== on && setAt(i)} onClick={() => onRun(c.does)}>
-              {ICON[c.id] ?? (typeof c.does === 'string' ? <CornerDownLeft size={16} strokeWidth={1.9} aria-hidden /> : <Lock size={15} strokeWidth={1.9} aria-hidden />)}
+              {ICON[c.id] ?? (typeof c.does === 'string' ? <CornerDownLeft size={16} strokeWidth={1.7} aria-hidden /> : <Lock size={15} strokeWidth={1.7} aria-hidden />)}
               <span>{c.name}</span>
               <Keys keys={c.keys} />
             </li>
@@ -553,20 +725,20 @@ function Shortcuts({ onClose }: { onClose: () => void }) {
           e.stopPropagation()
         }}
       >
-        <div className="in">
-          <Keyboard size={18} strokeWidth={2} aria-hidden />
-          <span>Keyboard shortcuts</span>
-          <button type="button" className="ml-k" onClick={onClose}>
+        <h2>
+          <Keyboard size={15} strokeWidth={1.7} aria-hidden />
+          Keyboard shortcuts
+          <button type="button" aria-label="Close" onClick={onClose}>
             <K>esc</K>
           </button>
-        </div>
+        </h2>
         <p className="ml-leave">
           Tab moves between splits here, as it does in Superhuman. <K>F6</K> leaves Mail for the Dock or the menu bar.
         </p>
         <div className="ml-groups" tabIndex={0} role="group" aria-label="Every key">
           {GROUPS.map((group) => (
             <section key={group}>
-              <h2>{group}</h2>
+              <h3>{group}</h3>
               <ul>
                 {COMMANDS.filter((c) => c.group === group).map((c) => (
                   <li key={c.id}>

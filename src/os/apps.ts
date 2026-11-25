@@ -181,7 +181,7 @@ export const APPS: Record<AppId, AppSpec> = {
     whole: true,
     nudge: { x: 0, y: -4 },
     resizable: true,
-    lightsY: 25,
+    lightsY: 21,
     dock: 4,
   },
   // The desk's wallpapers, to look at, to keep on the desk and to download. It is a folder on the desk, not
