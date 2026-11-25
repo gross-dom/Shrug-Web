@@ -50,17 +50,19 @@ export function MyVipApp() {
   const open = useStore(wm, (s) => s.wins.myvip.open)
   // The frame is made when the window is first opened, and kept: closing the window does not lose their place
   const [made, setMade] = useState(false)
+  // Where the frame begins is decided when the window is first opened, by who is logged in then (someone
+  // whose account was made a moment ago, at a checkout, has a pack to open): the pack, for someone logged in
+  // who has not had it in this browser; otherwise My VIP
+  const [first, setFirst] = useState(() => addressOf('yours'))
   useEffect(() => {
-    if (open) setMade(true)
-  }, [open])
+    if (!open || made) return
+    const now = account.get()
+    setFirst(now.status === 'member' && packDue(now.email) ? CARD : addressOf('yours'))
+    setMade(true)
+  }, [open, made])
   const frame = useRef<FrameHandle>(null)
   const who = useStore(account, (s) => (s.status === 'member' ? s.email : s.status === 'anon' ? '' : null))
   const [page, setPage] = useState<'pack' | 'store'>('store')
-  // Where the frame begins: the pack, for someone logged in who has not had it in this browser; otherwise My VIP
-  const [first] = useState(() => {
-    const now = account.get()
-    return now.status === 'member' && packDue(now.email) ? CARD : addressOf('yours')
-  })
 
   // Someone who has just logged in, with My VIP's own page showing, gets their pack; someone who logs out
   // while the pack is showing is taken off it

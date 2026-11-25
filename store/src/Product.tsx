@@ -109,8 +109,8 @@ function AddressField({ typed, onType }: { typed: string; onType: (text: string)
 /** After a visitor has paid: their payment made them an account, under the email they checked out with.
  * They are told so and asked for a phone number, for news of the order (and it is how they log in from then
  * on: it is texted six digits, and the six digits make it theirs). A number or a code that cannot be one is
- * said to be so where it was typed. With the number added, or put off, the way on is My VIP, where the order
- * is. */
+ * said to be so where it was typed. With the number added they are taken to My VIP, where the order is (and,
+ * the first time, their pack); what is left here says so, for when they come back to this window. */
 function NewAccount({ backend, email, onLater, onYours }: { backend: Backend; email: string; onLater: () => void; onYours: () => void }) {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -139,8 +139,10 @@ function NewAccount({ backend, email, onLater, onYours }: { backend: Backend; em
     if ('error' in answer) return setSaid(WHY[answer.error] ?? 'That didn’t work. Try again.')
     if (!given) return setStep('code')
     setStep('done')
-    // The desk shows who is logged in: it is told there is someone now
+    // The desk shows who is logged in: it is told there is someone now. And they are taken straight to
+    // My VIP, where their order is and their pack is waiting: nothing more is said here first
     DESK?.changed()
+    onYours()
   }
   if (step === 'done')
     return (

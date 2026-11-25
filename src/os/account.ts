@@ -223,7 +223,7 @@ function fromStore() {
   const s = state()
   let row = s.in ? s.rows[s.in] : null
   try {
-    const theirs = JSON.parse(window.localStorage.getItem(STORE_DEMO) ?? 'null') as { session?: { member?: { points?: number }; email?: string; phone?: string } | null } | null
+    const theirs = JSON.parse(window.localStorage.getItem(STORE_DEMO) ?? 'null') as { session?: { member?: { points?: number; name?: string }; email?: string; phone?: string } | null } | null
     if (!theirs) return
     // A visitor who has just paid there: the payment made them an account, and they are logged in to it
     if (!row && theirs.session?.member && theirs.session.email) {
@@ -236,6 +236,8 @@ function fromStore() {
     if (!theirs.session) s.in = null
     else {
       if (typeof theirs.session.member?.points === 'number') row.points = theirs.session.member.points
+      // The name they gave at checkout is the name on their account, unless they have since chosen another
+      if (theirs.session.member?.name && !row.name) row.name = theirs.session.member.name
       // The number they gave after paying is theirs to log in with
       if (theirs.session.phone && !row.phone) row.phone = phoneOf(theirs.session.phone) ?? row.phone
     }

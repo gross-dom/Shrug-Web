@@ -1393,6 +1393,26 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   // told when someone signs out.
   const DESK = (() => { try { const up = window.parent; return up !== window && up.shrugDesk ? up.shrugDesk : null; } catch (e) { return null; } })();
   if (DESK) document.documentElement.classList.add('in-desk');
+  // In My VIP's window the card is the head of a longer page (their points, orders and address are under
+  // it, a press of the button away). Whoever scrolls down from the card means to go on to that, so a pull
+  // down on the wheel or the trackpad, or the keys that scroll, takes the button's way on. (Dom found the
+  // card's screen would not scroll, and it had nothing to scroll to: this is what scrolling it now does.)
+  if (DESK) {
+    let pulled = 0, last = 0;
+    const on = () => { const go = document.querySelector('a.go'); if (go) go.click(); return !!go; };
+    addEventListener('wheel', (e) => {
+      if (e.deltaY <= 0 || !document.querySelector('a.go')) { pulled = 0; return; }
+      const now = Date.now();
+      if (now - last > 500) pulled = 0;
+      last = now;
+      pulled += e.deltaY;
+      if (pulled > 140) { pulled = -1e9; on(); }
+    }, { passive: true });
+    addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if ((e.key === 'ArrowDown' || e.key === 'PageDown') && on()) e.preventDefault();
+    });
+  }
 
   // demo.js (never deployed) swaps this for a stand-in that runs in the browser.
   const backend = window.ShrugBackend || {
