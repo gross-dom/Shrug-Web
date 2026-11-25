@@ -122,7 +122,8 @@ export function WorkspaceApp() {
   const product = chosen?.paint ? (shelf?.products.find((p) => p.id === chosen.paint!.product) ?? null) : null
   /** Its price, as it is said: only to someone logged in, and never one the store has not given. */
   const price = product && !product.priceHidden && product.points ? `From ${fmtCents(priceCents(product))}` : null
-  const shots = product ? shotsOf(product) : []
+  // (its photographs: a color that has none yet has the chair drawn in the store's pages, and here the chair itself)
+  const shots = product ? shotsOf(product).filter((s) => !s.drawn) : []
   const buy = () => {
     if (!chosen?.paint) return
     setView('buy')

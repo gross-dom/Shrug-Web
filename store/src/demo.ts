@@ -13,7 +13,7 @@ const STORE = 'shrugdemo.store.v2'
 
 export const PEOPLE: Record<string, { label: string; member: { name: string; first: string; roles: string[]; tier: string; points: number; number: string; since: number } | null; funds: string[] }> = {
   founder: { label: 'Founder, silver, 1,250 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Founder'], tier: 'silver', points: 1250, number: '014', since: 2026 }, funds: [] },
-  lp: { label: 'LP in Shrug 1, gold, 8,400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['LP'], tier: 'gold', points: 8400, number: '003', since: 2021 }, funds: ['Shrug 1'] },
+  lp: { label: 'LP in Shrug 2 and Shrug 4, gold, 8,400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['LP'], tier: 'gold', points: 8400, number: '003', since: 2021 }, funds: ['Shrug 2', 'Shrug 4'] },
   investor: { label: 'Investor, silver, 400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 }, funds: [] },
   black: { label: 'Investor, black, 20,000 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'black', points: 20000, number: '027', since: 2024 }, funds: [] },
   // Not on the list: a standard member, as the server makes of anyone who signs in. No name until they give one
@@ -24,7 +24,7 @@ export const PEOPLE: Record<string, { label: string; member: { name: string; fir
 export const SCENES: Record<string, string> = {
   normal: 'As it is',
   soldout: 'Art No. 1 sold out',
-  kept: 'Art No. 1 kept to Shrug 1 LPs',
+  kept: 'Art No. 1 kept to Shrug 2 LPs',
   empty: 'Nothing in the store',
   down: 'The store does not answer',
   declined: 'A payment that fails',
@@ -126,7 +126,7 @@ function shelves(store: StoreState): Product[] {
   return SHELVES.map((product) => ({
     ...product,
     left: product.left === null ? null : product.id === 'art-1' && store.scene === 'soldout' ? 0 : (store.left[product.id] ?? product.left),
-    visibleTo: product.id === 'art-1' && store.scene === 'kept' ? ['Shrug 1 LPs'] : product.visibleTo,
+    visibleTo: product.id === 'art-1' && store.scene === 'kept' ? ['Shrug 2 LPs'] : product.visibleTo,
   }))
 }
 const papers = (store: StoreState) => (store.scene === 'empty' ? [] : PAPERS)

@@ -2176,8 +2176,8 @@ html[data-wm-busy] .dock__item .dock__label {
    rules recolor what is laid out above; nothing is moved. ---- */
 
 .os {
-  --glass: rgba(38, 38, 41, 0.74);
-  --glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.13), 0 22px 54px -8px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.22);
+  --dark-glass: rgba(38, 38, 41, 0.74);
+  --dark-glass-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.13), 0 22px 54px -8px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.22);
   --glass-ink: rgba(255, 255, 255, 0.94);
   --glass-ink-2: rgba(235, 235, 245, 0.64);
   --glass-rule: rgba(255, 255, 255, 0.13);
@@ -2189,8 +2189,8 @@ html[data-wm-busy] .dock__item .dock__label {
 .menu {
   border-radius: 13px;
   color: var(--glass-ink);
-  --ss-popover-bg: var(--glass);
-  --ss-popover-shadow: var(--glass-edge);
+  --ss-popover-bg: var(--dark-glass);
+  --ss-popover-shadow: var(--dark-glass-edge);
 }
 
 .menu::before {
@@ -2223,10 +2223,10 @@ html[data-wm-busy] .dock__item .dock__label {
 
 .account {
   border-radius: 16px;
-  background: var(--glass);
+  background: var(--dark-glass);
   -webkit-backdrop-filter: blur(40px) saturate(1.7);
   backdrop-filter: blur(40px) saturate(1.7);
-  box-shadow: var(--glass-edge);
+  box-shadow: var(--dark-glass-edge);
   color: var(--glass-ink);
   color-scheme: dark;
 }
@@ -2318,10 +2318,10 @@ html[data-wm-busy] .dock__item .dock__label {
 .notify__card,
 .desk-note {
   border-radius: 20px;
-  background: var(--glass);
+  background: var(--dark-glass);
   -webkit-backdrop-filter: blur(40px) saturate(1.7);
   backdrop-filter: blur(40px) saturate(1.7);
-  box-shadow: var(--glass-edge);
+  box-shadow: var(--dark-glass-edge);
   color: var(--glass-ink);
 }
 
@@ -2343,10 +2343,10 @@ html[data-wm-busy] .dock__item .dock__label {
 }
 
 .desk__tip {
-  background: var(--glass);
+  background: var(--dark-glass);
   -webkit-backdrop-filter: blur(30px) saturate(1.7);
   backdrop-filter: blur(30px) saturate(1.7);
-  box-shadow: var(--glass-edge);
+  box-shadow: var(--dark-glass-edge);
   color: var(--glass-ink);
 }
 

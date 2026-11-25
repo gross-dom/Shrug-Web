@@ -95,6 +95,13 @@ const check = (name, ok, detail = '') => {
     await p.waitForTimeout(1200)
   }
   const ADDRESS = 'Riley Chen\n1 Example St\nSan Francisco, CA 94110'
+  /** Whether every way to pay is in sight in the column they are in: none of them under its foot, to be scrolled to. */
+  const paysInSight = (f) =>
+    f.locator('.ui-col').first().evaluate((col) => {
+      const c = col.getBoundingClientRect()
+      const buttons = [...col.querySelectorAll('.ui-btn')]
+      return buttons.length > 0 && buttons.every((b) => { const r = b.getBoundingClientRect(); return r.top >= c.top - 1 && r.bottom <= c.bottom + 1 })
+    })
 
   // ================= ArtStore, to a visitor: six pieces, in dollars, and nothing else of the store's
   let t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty' })
@@ -147,8 +154,9 @@ const check = (name, ok, detail = '') => {
   await f.locator('.ui-btn', { hasText: 'Pay with card' }).click()
   await f.locator('textarea.ui-area').waitFor({ timeout: 20000 })
   await f.locator('textarea.ui-area').fill(ADDRESS)
-  await p.waitForTimeout(300)
+  await p.waitForTimeout(900)
   const pay = (await f.locator('.ui-col .ui-btn').last().innerText()).trim()
+  check('with the address asked for under the sums, the button that pays is still in sight, not under the window’s foot', await paysInSight(f), '')
   await f.locator('.ui-col .ui-btn').last().click()
   await f.locator('.ui-check').waitFor({ timeout: 20000 })
   await p.waitForTimeout(1200)
@@ -205,6 +213,8 @@ const check = (name, ok, detail = '') => {
   await k.locator('.ui-col .ui-btn').first().click()
   await k.locator('.ui-btn', { hasText: 'Pay with card' }).waitFor({ timeout: 20000 })
   const bookOut = await words(k)
+  await p.waitForTimeout(700)
+  check('both ways to pay are in sight at Books’ checkout', await paysInSight(k), '')
   check('at Books\' checkout the address from ArtStore is already there, and is not asked for', /Ship to \| Riley Chen \| 1 Example St \| San Francisco, CA 94110 \| Change/.test(bookOut) && (await k.locator('textarea.ui-area').count()) === 0, bookOut)
   await k.locator('.ui-btn', { hasText: 'Pay with card' }).click()
   await p.waitForTimeout(600)
@@ -334,6 +344,20 @@ const check = (name, ok, detail = '') => {
     await p.waitForTimeout(250)
   }
   check('an LP: no piece scrolls at the window\'s size, and enough points make it free of everything but shipping', count === 6 && lpFits.every((x) => x.over <= 0 && x.wide <= 0) && lpFits.every((x) => /^Buy (for \$\d|with [\d,]+ points)/.test(x.says)), JSON.stringify(lpFits))
+  // an LP at checkout, with points to choose: the ways to pay are in sight
+  await f.locator('.ui-prod').nth(3).click()
+  await f.locator('.ui-col .ui-btn').first().waitFor({ timeout: 20000 })
+  await f.locator('.ui-range').focus()
+  for (let i = 0; i < 40; i++) await p.keyboard.press('ArrowLeft')
+  await p.waitForTimeout(500)
+  const eased = await words(f)
+  check('an LP can ease the points off and pay more by card: the sums follow', /Total \| \$\d{2,3} \| Buy for \$\d{2,3}/.test(eased) && !/Total \| \$5 \|/.test(eased), eased)
+  await f.locator('.ui-col .ui-btn').first().click()
+  await f.locator('.ui-btn', { hasText: 'Pay with card' }).waitFor({ timeout: 20000 })
+  await p.waitForTimeout(900)
+  check('at an LP’s checkout, with points to choose, both ways to pay are in sight', await paysInSight(f), '')
+  await p.locator(`${WIN('store')} .storebar__name`).click()
+  await f.locator('.ui-prod').first().waitFor({ timeout: 20000 })
   const grip = await p.evaluate((W) => { const g = document.querySelector(`${W} .wf__grip[data-edge="se"]`)?.getBoundingClientRect(); return g ? { x: g.left + g.width / 2, y: g.top + g.height / 2 } : null }, WIN('store'))
   if (grip) {
     await p.mouse.move(grip.x, grip.y)
@@ -360,7 +384,8 @@ const check = (name, ok, detail = '') => {
   await f.locator('input.ui-in[type=email]').waitFor({ timeout: 20000 })
   await p.waitForTimeout(400)
   at = await inFrame(p, 'store')
-  check('a visitor\'s checkout asks for their email, and fits the window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
+  await p.waitForTimeout(700)
+  check('a visitor\'s checkout asks for their email, fits the window, and has both ways to pay in sight', at.over <= 0 && at.wide <= 0 && (await paysInSight(f)), JSON.stringify(at))
   await f.locator('input.ui-in[type=email]').fill('casey@example.test')
   await f.locator('.ui-btn', { hasText: 'Apple Pay' }).click()
   await p.waitForTimeout(2600)

@@ -196,6 +196,21 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     setWanted(mostPoints({ points: shop.member.points }, product))
   }, [shop.member.points]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Checkout can be taller than the room a window gives it (an address on file, points to choose, two ways
+  // to pay; or the address asked for under the sums). Where it is, the column is taken to its foot, so that
+  // the ways to pay are in sight and it is the heading, which they have just read, that is scrolled away
+  useEffect(() => {
+    if (mode !== 'checkout') return
+    const toFoot = () => {
+      const col = document.querySelector<HTMLElement>('.ui-col[aria-label="Checkout"], .up-sheet')
+      col?.scrollTo({ top: col.scrollHeight, behavior: 'smooth' })
+    }
+    const now = requestAnimationFrame(toFoot)
+    // (and again once the card's own fields, which arrive a moment later, have taken their room)
+    const later = setTimeout(toFoot, 600)
+    return () => (cancelAnimationFrame(now), clearTimeout(later))
+  }, [mode, finishing])
+
   const points = way === 'buy' ? fitPoints({ points: balance }, product, wanted) : 0
   const price = priceCents(product)
   const postage = postageCents(product)
@@ -372,7 +387,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         <>
           {/* The same picture, out of focus, fills the tile behind it: a tall one and a wide one sit alike */}
           <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />
-          <img className="ui-media-pic" key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
+          <img className="ui-media-pic" key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shot.drawn ? `${product.name}: a drawing of it, not a photograph` : shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
         </>
       ) : (
         <span className="t-3">
@@ -397,6 +412,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         </>
       )}
       {(done || bought) && <span className="ui-badge on">Yours{done?.order.number ? ` · ${editionOf(done.order.number)}` : ''}</span>}
+      {/* A picture that is the site's own drawing says so, where a photograph would be taken at its word */}
+      {shot?.drawn && !done && !bought && <span className="ui-badge">A drawing, not a photograph</span>}
     </>
   )
 

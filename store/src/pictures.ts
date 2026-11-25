@@ -20,6 +20,8 @@ export interface Shot {
   aspect?: number
   /** Where its subject is, for a tile that shows only part of it (the display crops to 4:5). */
   at?: string
+  /** It is not a photograph: the thing as the site draws it, standing where a photograph will go. */
+  drawn?: boolean
 }
 
 // (the desktop's own windows read these too, for a shelf of covers: from there the store's pages are at /vip/store/)
@@ -49,6 +51,14 @@ const set = (slug: string, at: Record<number, string> = {}): Shot[] =>
     }
   })
 
+/** A chair color with no photograph yet: the chair as Workspace draws it, in that color, on its ground
+ * (`node tools/chair-shots.cjs` takes them from the studio itself). It says of itself that it is drawn, so
+ * that nothing calls it a photograph, and Workspace, which has the chair itself to show, leaves it out. */
+const drawn = (color: string): Shot[] => {
+  const at1 = `${BASE}pictures/workspace-${color}-drawn`
+  return [{ full: `${at1}.webp`, small: `${at1}-s.webp`, set: `${at1}-s.webp 760w, ${at1}.webp 1800w`, aspect: 1, drawn: true }]
+}
+
 /** By name, in small letters. The chair goes by its old names too, in case a row in Airtable still has one. */
 const KEPT: Record<string, Shot[]> = {
   chromatic: set('chromatic'),
@@ -57,6 +67,12 @@ const KEPT: Record<string, Shot[]> = {
   'workspace, ferrari red': set('workspace-ferrari-red'),
   'workspace chair, ferrari red': set('workspace-ferrari-red'),
   'workspace, scuderia red': set('workspace-ferrari-red'),
+  'workspace, solar orange': drawn('solar-orange'),
+  'workspace, alexandrite': drawn('alexandrite'),
+  'workspace, championship green': drawn('championship-green'),
+  'workspace, supersonic': drawn('supersonic'),
+  'workspace, pearl lavender': drawn('pearl-lavender'),
+  'workspace, mantis green': drawn('mantis-green'),
   'art on acrylic': set('art-on-acrylic'),
   // (the six pieces have no photographs of their own yet: the first two stand under the ones there are)
   'art no. 1': set('art-on-acrylic').slice(0, 2),
