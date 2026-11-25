@@ -209,10 +209,16 @@
   letter-spacing: -0.025em;
 }
 
+.fl-slab b,
+.fl-slab small {
+  /* (a slab too narrow for a word breaks it, with a hyphen, rather than have the slab's edge cut it off) */
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
 .fl-slab small {
   margin-top: 4px;
   font-size: 11.5px;
-  white-space: nowrap;
 }
 
 .fl-slab svg.ch {
@@ -561,6 +567,8 @@
 
 .fl-info {
   flex: none;
+  /* (one width whatever the color is called, so that the tray beside it does not change with the name) */
+  width: 264px;
   min-width: 0;
   max-width: 300px;
   padding-bottom: 10px;
@@ -667,7 +675,7 @@
 .fl-dock {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--dot-gap, 10px);
   height: 70px;
   padding: 0 16px;
   border-radius: 24px;
@@ -681,8 +689,9 @@
 .fl-dot {
   position: relative;
   flex: none;
-  width: 36px;
-  height: 36px;
+  /* (as large as lets them all in: Workspace.tsx) */
+  width: var(--dot, 36px);
+  height: var(--dot, 36px);
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16), 0 2px 5px rgba(0, 0, 0, 0.2);
   cursor: pointer;
@@ -728,6 +737,7 @@
 /* (in a narrow window the name is set a little smaller and has less of the row, so the tray keeps more of its dots) */
 @container studio (max-width: 900px) {
   .fl-info {
+    width: 220px;
     max-width: 230px;
   }
 

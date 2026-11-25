@@ -102,6 +102,11 @@
   box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.16), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 32px 70px -12px rgba(2, 4, 30, 0.7), 0 10px 24px rgba(2, 4, 30, 0.3);
 }
 
+/* Portfolio as a list: its every other line is a shade lighter than the window, not the light appearance's pale grey (on which the names, white here, could not be read) */
+.os[data-theme='dark'] .pf-row:nth-child(odd):not(.pf-row--head):not([aria-selected='true']) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 /* The v1 controls (Updates, Preview) */
 .os[data-theme='dark'] .v1 {
   --v-accent: #0a84ff;

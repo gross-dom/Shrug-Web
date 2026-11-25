@@ -237,7 +237,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     // (and again once the card's own fields, which arrive a moment later, have taken their room)
     const later = setTimeout(toFoot, 600)
     return () => (cancelAnimationFrame(now), clearTimeout(later))
-  }, [mode, finishing])
+    // (and when something is said over the button, which would otherwise push it under the foot)
+  }, [mode, finishing, error])
 
   const points = way === 'buy' ? fitPoints({ points: balance }, product, wanted) : 0
   const price = priceCents(product)

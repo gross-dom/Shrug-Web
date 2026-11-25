@@ -105,6 +105,12 @@ function Note({ children }: { children: ReactNode }) {
   return ACCOUNT_DEMO ? <p className="account__note">{children}</p> : null
 }
 
+/** Whether a number is all there: an American one is ten digits after its 1, and one from elsewhere eight at the least. */
+const enough = (phone: string) => {
+  const digits = phone.replace(/\D/g, '')
+  return digits.startsWith('1') ? digits.length >= 11 : digits.length >= 8
+}
+
 /** Six digits, in six boxes: one field under them takes the typing, a paste, or the code a phone offers from its texts. */
 function Code({ value, bad, busy, label, onChange }: { value: string; bad: boolean; busy: boolean; label: string; onChange: (code: string) => void }) {
   const field = useRef<HTMLInputElement>(null)
@@ -301,7 +307,7 @@ function Sheet({ who, why, says, hold, onDone }: { who: Member | null; why: Why;
             }}
           />
         </label>
-        <button type="submit" className="account__go" disabled={busy || phone.replace(/\D/g, '').length < 8}>
+        <button type="submit" className="account__go" disabled={busy || !enough(phone)}>
           {busy ? 'Texting…' : 'Text Me a Code'}
         </button>
         {told && (

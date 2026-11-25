@@ -126,6 +126,16 @@
   pointer-events: none;
 }
 
+/* The desk's own note (Updates is unlocked) has that corner first: a notification comes down under it and
+   not over it. And while the Log In sheet is down, which is in the same corner, none is shown behind it */
+.os:has(.desk-note) .notify {
+  top: 128px;
+}
+
+.os:has(.account) .notify {
+  visibility: hidden;
+}
+
 .notify__card {
   position: relative;
   border-radius: 18px;
@@ -1003,13 +1013,13 @@
   display: flex;
   /* Down the right-hand side, in one line: as far apart as a Mac puts them where the screen is tall enough
      for them all (--desk-n of them, which the desktop says), and closer together on a shorter one, so that
-     they are still one line beside the windows. Only where that would bring them closer than 64px do they
+     they are still one line beside the windows. Only where that would bring them closer than 72px do they
      go to a second line beside the first. (os/wm.ts, DESK_ICONS, says the same to the window manager.) */
   flex-flow: column wrap-reverse;
   align-content: flex-start;
   gap: 8px;
   width: 92px;
-  --desk-pitch: clamp(64px, calc((100vh - 130px) / var(--desk-n, 3)), 99px);
+  --desk-pitch: clamp(72px, calc((100vh - 130px) / var(--desk-n, 3)), 99px);
   /* Under the windows, in their layer, which takes no presses of its own */
   pointer-events: auto;
 }
@@ -1019,7 +1029,7 @@
 @supports (height: 1cqh) {
   .desk {
     container-type: size;
-    --desk-pitch: clamp(64px, calc((100cqh + 8px) / var(--desk-n, 3)), 99px);
+    --desk-pitch: clamp(72px, calc((100cqh + 8px) / var(--desk-n, 3)), 99px);
   }
 }
 
@@ -1115,6 +1125,12 @@
   line-height: 38px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.sf__time small {
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 /* One line where the words fit and two where they do not (“Showers And
@@ -2092,6 +2108,16 @@ html[data-wm-busy] .dock__item .dock__label {
     opacity: 1;
   }
 
+  /* (and the room a window's bar keeps for them is theirs at that size, so that a title beside them is
+     not under the last of them) */
+  .wf .ss-window__lights {
+    gap: 14px;
+  }
+
+  .wf .ss-window__lights .ss-window__dot {
+    --ss-dot: 18px;
+  }
+
   /* A light that does nothing says nothing */
   .wf__light:disabled svg {
     opacity: 0;
@@ -2400,9 +2426,13 @@ html[data-wm-busy] .dock__item .dock__label {
   color: var(--glass-bad);
 }
 
-.account__link,
-.account__wait {
+.account__link {
   color: var(--glass-link);
+}
+
+/* (a count of seconds, not something to press: it is not in the links' color) */
+.account__wait {
+  color: var(--glass-ink-2);
 }
 
 .account hr {
@@ -2530,6 +2560,12 @@ html[data-wm-busy] .dock__item .dock__label {
 .desk-free .desk__cell {
   position: absolute;
   pointer-events: auto;
+}
+
+/* (an icon being carried is over everything, the Dock it may be on its way to included: the desk it
+   belongs to is lifted with it for as long as it is carried) */
+.desk:has([data-dragging]) {
+  z-index: 760;
 }
 
 .desk__item[data-dragging],

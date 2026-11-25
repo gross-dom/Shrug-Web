@@ -178,7 +178,7 @@ const check = (name, ok, detail = '') => {
   // ---- the command palette
   await key('Control+k', 350)
   const pal = await p.evaluate((M) => { const el = document.querySelector(`${M} .ml-pal`); return { role: el?.getAttribute('role'), name: el?.getAttribute('aria-label'), held: document.activeElement?.getAttribute('role'), list: [...el.querySelectorAll('li')].map((li) => `${li.querySelector('span').textContent} ${[...li.querySelectorAll('kbd')].map((k) => k.textContent).join('')}${li.classList.contains('on') ? '*' : ''}`) } }, M)
-  check('Command K opens the palette, the keyboard in its field, on what can be done here: Mark Done, Star, Mark Unread, Search, Compose', pal.role === 'dialog' && pal.name === 'Command' && pal.held === 'combobox' && pal.list.join(' | ') === 'Mark Done E* | Star S | Mark Unread U | Search all twenty / | Compose C', pal.list.join(' | '))
+  check('Command K opens the palette, the keyboard in its field, on what can be done here: Mark Done, Star, Mark Unread, Search, Write to Shrug', pal.role === 'dialog' && pal.name === 'Command' && pal.held === 'combobox' && pal.list.join(' | ') === 'Mark Done E* | Star S | Mark Unread U | Search all twenty / | Write to Shrug C', pal.list.join(' | '))
   await p.keyboard.type('star')
   await p.waitForTimeout(250)
   const found = await p.evaluate((M) => [...document.querySelectorAll(`${M} .ml-pal li`)].map((li) => li.querySelector('span')?.textContent).join(' | '), M)

@@ -323,6 +323,12 @@
   gap: 6px;
 }
 
+/* (over the field, for a message with no form of its own to show them in) */
+.im-files--over {
+  flex: none;
+  padding: 0 20px 8px 58px;
+}
+
 .im-file {
   display: inline-flex;
   align-items: center;

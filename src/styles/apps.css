@@ -3363,6 +3363,10 @@
 
 /* A store's own name, at the head of its bar: it leads back to everything in it */
 .storebar__name {
+  /* (a button in a store, where it leads back to its front, and plain words in My VIP: set the same either
+     way, in the middle of its own height, level with the window's lights) */
+  display: inline-flex;
+  align-items: center;
   justify-self: start;
   min-height: 32px;
   padding: 0 10px;

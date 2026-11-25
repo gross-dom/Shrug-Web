@@ -167,7 +167,7 @@ function shared(a: Rect, b: Rect) {
  * under the menu bar to above the Dock, as far apart as a Mac puts them where the screen is tall enough
  * for them all in one line, closer together on a shorter one, and in a second line beside the first only
  * where they would otherwise be closer than `least`. */
-export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, least: 64, most: 99 }
+export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, least: 72, most: 99 }
 
 /** How many icons the desk has. The desktop says (Surface.tsx), as soon as it is loaded: the first window
  * can open before the desk has been drawn, and has to know what it is keeping clear of. */

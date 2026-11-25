@@ -2241,6 +2241,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     if (!S.armed || S.opening) return;
     // (skipped, the pack was still theirs to open: the card after it is new to them)
     hadPack = true;
+    try { if (DESK && typeof DESK.opened === 'function') DESK.opened(); } catch (e) { /* the desk is told when it can be */ }
     enter(S.armed);
   }
 
@@ -3434,7 +3435,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       setPhase('armed');
     };
     if (later) setTimeout(seat, later); else seat();
-    R.el.btn.focus({ preventScroll: true });
+    // (in a window of the desk the keyboard may be in something else, the Log In sheet for one, which is
+    // still asking for a number: the strip takes it only when this page already has it)
+    if (!DESK || document.hasFocus()) R.el.btn.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------------- the opening
@@ -3566,6 +3569,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     S.armed = null;
     S.opening = true;
     hadPack = true;
+    try { if (DESK && typeof DESK.opened === 'function') DESK.opened(); } catch (e) { /* the desk is told when it can be */ }
     remember(who);
     const kind = who.status === 'member' ? 'member' : 'applied';
     const first = who.member && who.member.first;
@@ -3799,7 +3803,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     // In My VIP's window, asked for a pack (?pack: whoever is logged in on the desk has not had theirs in
     // this browser): the card this browser kept, which may be someone else's who was logged in before, is
     // forgotten, so that a pack hangs and the tear is theirs
-    if (DESK && new URLSearchParams(window.location.search).has('pack')) forget();
+    const deskPack = !!DESK && new URLSearchParams(window.location.search).has('pack');
+    if (deskPack) forget();
     const hint = keep.get('hint');
     const cached = hint ? recall() : null;
     const pending = hint ? null : keep.read('pending');
@@ -3839,6 +3844,14 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       footer('sent', sentTo());
       codeShelf();
       setPhase('idle');
+    } else if (deskPack) {
+      // Asked for by My VIP, for someone logged in on the desk: nothing of a stranger's pack (Apply, Sign in,
+      // "Your name here") is shown while the server says who they are. Their pack hangs once it has
+      if (pending) keep.set('pending', null);
+      rig.hidden = true;
+      setShelf(null);
+      botL.textContent = '';
+      botR.textContent = '';
     } else {
       if (pending) keep.set('pending', null);
       setShelf(label(quip())); // "Tap" or "Click", whichever this visitor will be doing
@@ -3863,6 +3876,14 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
         showCard(r);
       } else if (S.mode === 'code' && S.codeUi && !S.codeUi.done && !S.busy) {
         armTear(r, 'signed', 0); // waiting on a code they no longer need: they signed in elsewhere
+      } else if (deskPack && !S.engaged) {
+        // The desk's own: their pack drops in, with their name on it, and the strip is loose
+        rig.hidden = false;
+        engrave(r);
+        dropIn();
+        // (the strip is loose once the pack has landed, and not before: a press on it then tears it)
+        await wait(reduced ? 0 : 580);
+        if (!S.engaged && S.view === 'pack') armTear(r, 'signed', 0);
       } else if (!S.engaged) {
         // Signed in, but they never tore it (or this browser forgot). Let the pack hang for a
         // beat, then loosen the strip.
@@ -3870,6 +3891,13 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
         if (!S.engaged && S.view === 'pack') armTear(r, 'signed', 380);
       }
       return;
+    }
+    if (deskPack && rig.hidden) {
+      // (not logged in after all, or the server could not say: the pack as a visitor has it)
+      rig.hidden = false;
+      footer('anon');
+      setShelf(label(quip()));
+      dropIn();
     }
     if (r.status === 'anon') {
       if (hint) { forget(); hangPack(null, true); if (asked !== null) signIn(); }

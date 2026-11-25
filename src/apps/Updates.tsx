@@ -62,7 +62,7 @@ function Row({ doc, picked, onPick }: { doc: Doc; picked: boolean; onPick: () =>
       </span>
       <span>
         <b>{doc.name}</b>
-        <small>{failed ? 'That didn’t send. Try again.' : `Written for ${doc.forWhom}`}</small>
+        <small>{failed ? 'That didn’t send. Try again.' : `Written for ${doc.forWhom.replace(/^All\b/, 'all')}`}</small>
       </span>
       <span className="v-chip">{doc.tag}</span>
       <span className="d">{dayOf(doc.date)}</span>

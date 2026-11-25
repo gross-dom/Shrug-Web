@@ -104,15 +104,29 @@ export function Write() {
       setEmail((was) => was || member.email)
     }
   }, [member])
+  // What was just sent, and what is offered after it, are brought into sight: when it is sent, when it is
+  // said to have gone (the offer comes then), and when a subject is picked
+  const lastState = sent[sent.length - 1]?.state
   useEffect(() => {
-    scroll.current?.scrollTo({ top: scroll.current.scrollHeight })
-  }, [sent.length, subject])
+    const el = scroll.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight })
+    const frame = requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight }))
+    return () => cancelAnimationFrame(frame)
+  }, [sent.length, subject, lastState])
 
   // A subject is a help and not a gate: whoever starts typing has a message, and it can be sent as it is
   const typed = box.draft.trim().length > 0 || box.picked.length > 0
   const ready = typed && (chosen?.id !== 'intro' || meet.trim().length > 0)
+  /** What is still wanted before it can go, said once Send has been tried without it. */
+  const [tried, setTried] = useState(false)
+  const lacks = typed && chosen?.id === 'intro' && !meet.trim() ? 'Say who you want to meet, and it can be sent.' : null
+  useEffect(() => {
+    if (!lacks) setTried(false)
+  }, [lacks])
   const send = () => {
-    if (!ready) return
+    if (!ready) return setTried(true)
+    setTried(false)
     const details: Record<string, string> =
       chosen?.id === 'testimonial' ? { name, role, publish: publish ? 'yes' : 'no' } : chosen?.id === 'intro' ? { meet, name, email } : { name, email }
     if (about?.subject) details.about = about.subject
@@ -213,14 +227,29 @@ export function Write() {
                 <small>Up to ten files, {Math.round(LIMITS.each / (1024 * 1024))} MB each.</small>
               </>
             )}
-            {box.refused && (
+            {(box.refused || (tried && lacks)) && (
               <small className="im-said" role="status">
-                {box.refused}
+                {box.refused ?? lacks}
               </small>
             )}
           </div>
         )}
       </div>
+      {/* What has been picked to go with it, in sight over the field, each with its own way off (a meeting's
+          files are in its form) */}
+      {chosen?.id !== 'meeting' && box.picked.length > 0 && (
+        <div className="im-files im-files--over">
+          {box.picked.map((p) => (
+            <span key={p.id} className="im-file">
+              <FileText size={13} strokeWidth={1.9} aria-hidden />
+              {p.file.name} · {sizeOf(p.file.size)}
+              <button type="button" aria-label={`Remove ${p.file.name}`} onClick={() => (unpick(p.id), field.current?.focus())}>
+                <X size={12} strokeWidth={2.4} aria-hidden />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="im-field">
         <input
           ref={files}
@@ -230,6 +259,8 @@ export function Write() {
           onChange={(e) => {
             pick(Array.from(e.target.files ?? []))
             e.target.value = ''
+            // (back to the words: Return then sends, and does not open the picker again)
+            field.current?.focus()
           }}
         />
         {/* (the plus is for a message that has been begun: there is nothing to add files to while the three

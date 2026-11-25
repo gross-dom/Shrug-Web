@@ -6,7 +6,7 @@ import { AppIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
-import { addressOf, PACK, StoreFrame, type FrameHandle } from './storefront'
+import { addressOf, PACK, packs, StoreFrame, type FrameHandle } from './storefront'
 
 // My VIP: what is a member's, in a window of its own.
 //
@@ -61,6 +61,17 @@ export function MyVipApp() {
     setFirst(now.status === 'member' && now.name.trim() && packDue(now.email) ? PACK : addressOf('yours'))
     setMade(true)
   }, [open, made])
+  // A pack is had once it has been opened, and not before: one left hanging through a reload is still there
+  // to tear (the card's page says when it is opened: storefront.tsx)
+  useEffect(() => {
+    packs.opened = () => {
+      const me = account.get()
+      if (me.status === 'member') packShown(me.email)
+    }
+    return () => {
+      packs.opened = null
+    }
+  }, [])
   const frame = useRef<FrameHandle>(null)
   /** Who is logged in, and whether they have said what they are called: a change in either is looked at below. */
   const who = useStore(account, (s) => (s.status === 'member' ? `${s.email}|${s.name.trim() ? 'named' : ''}` : s.status === 'anon' ? '' : null))
@@ -120,11 +131,7 @@ export function MyVipApp() {
           room="yours"
           title="My VIP"
           first={first}
-          onPage={(now) => {
-            setPage(now)
-            const me = account.get()
-            if (now === 'pack' && me.status === 'member') packShown(me.email)
-          }}
+          onPage={setPage}
         />
       )}
     </Window>

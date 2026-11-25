@@ -122,7 +122,9 @@ export function SanFrancisco() {
         )}
       </span>
       <span className="sf__time">
-        <time dateTime={now.toISOString()}>{TIME.format(now)}</time>
+        {/* (AM and PM are set small beside the hour, as a Mac's clock widget sets them: at the hour's own size
+            a time after ten ran to the widget's edge) */}
+        <time dateTime={now.toISOString()}>{TIME.formatToParts(now).map((part, i) => (part.type === 'dayPeriod' ? <small key={i}>{part.value}</small> : part.value))}</time>
       </span>
       {weather ? (
         <span className="sf__weather">

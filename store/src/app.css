@@ -68,11 +68,14 @@ body {
 .ui-col {
   max-height: 100%;
   overflow-y: auto;
-  scrollbar-width: none;
+  /* (a fine bar of its own where it does scroll, so that what is out of sight is known to be there) */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-.ui-col::-webkit-scrollbar {
-  display: none;
+/* (and nothing in it gives up its own height to fit: a round badge stays round) */
+.ui-col > * {
+  flex-shrink: 0;
 }
 
 /* A list longer than the window scrolls in its place, under the bar. A row's surface reaches 12px past its

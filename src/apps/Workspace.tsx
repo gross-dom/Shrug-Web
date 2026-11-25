@@ -118,13 +118,18 @@ export function WorkspaceApp() {
   const tray = [...PAINTS, ...added.map((id) => MORE.find((p) => p.id === id)).filter((p): p is Paint => !!p)].map(chosenOf)
   const foot = useRef<HTMLDivElement>(null)
   /** How many dots the tray has room for (the one that lets the grid down among them), and how far it is moved to stand under the middle of the window. */
-  const [room, setRoom] = useState({ dots: 99, nudge: 0 })
+  const [room, setRoom] = useState({ dots: 99, nudge: 0, dot: 36, gap: 10 })
   const all = tray.length + 1
   useLayoutEffect(() => {
     const el = foot.current
     if (!el || view !== 'studio') return
-    const DOT = 36
-    const GAP = 10
+    // The dots are drawn as large as lets them all in, down to the smallest that can still be told apart
+    // and pressed; only past that does the tray hold fewer of them
+    const SIZES = [
+      { dot: 36, gap: 10 },
+      { dot: 30, gap: 8 },
+      { dot: 26, gap: 7 },
+    ]
     const PAD = 32
     const measure = () => {
       const pick = el.querySelector<HTMLElement>('.fl-pick')
@@ -132,10 +137,12 @@ export function WorkspaceApp() {
       const info = el.querySelector<HTMLElement>('.fl-info')?.offsetWidth ?? 0
       const buy = el.querySelector<HTMLElement>('.fl-buy')?.offsetWidth ?? 0
       const wide = pick.clientWidth
-      const dots = Math.max(2, Math.min(all, Math.floor((wide - PAD + GAP) / (DOT + GAP))))
-      const slack = Math.max(0, wide - (dots * DOT + (dots - 1) * GAP + PAD))
+      const fits = (size: { dot: number; gap: number }) => Math.floor((wide - PAD + size.gap) / (size.dot + size.gap))
+      const size = SIZES.find((one) => fits(one) >= all) ?? SIZES[SIZES.length - 1]!
+      const dots = Math.max(2, Math.min(all, fits(size)))
+      const slack = Math.max(0, wide - (dots * size.dot + (dots - 1) * size.gap + PAD))
       const nudge = Math.round(Math.max(-slack / 2, Math.min(slack / 2, (buy - info) / 2)))
-      setRoom((was) => (was.dots === dots && was.nudge === nudge ? was : { dots, nudge }))
+      setRoom((was) => (was.dots === dots && was.nudge === nudge && was.dot === size.dot ? was : { dots, nudge, ...size }))
     }
     measure()
     const watch = new ResizeObserver(measure)
@@ -143,13 +150,17 @@ export function WorkspaceApp() {
     for (const part of el.children) watch.observe(part)
     return () => watch.disconnect()
   }, [view, all, chosen?.id])
-  /** The dots there is room for: the first of the tray, and always the color that is picked. */
+  /** The dots there is room for: the eight, then of what has been added the latest, and always the color that is picked. */
   const shownDots = (() => {
     const n = Math.max(1, Math.min(tray.length, room.dots - 1))
-    const first = tray.slice(0, n)
+    const eight = tray.filter((c) => !c.paint.more)
+    const addedOn = tray.filter((c) => c.paint.more)
+    const first = n >= eight.length ? [...eight, ...addedOn.slice(addedOn.length - (n - eight.length))] : eight.slice(0, n)
     if (!chosen || first.some((c) => c.id === chosen.id)) return first
     const mine = tray.find((c) => c.id === chosen.id)
-    return mine ? [...first.slice(0, n - 1), mine] : first
+    // (the one picked takes the place of the oldest of what was added, or of the last of the eight)
+    if (!mine) return first
+    return n > eight.length ? [...eight, mine, ...first.slice(eight.length + 1)] : [...first.slice(0, n - 1), mine]
   })()
   /** Those there is no room for: they are in the grid, ahead of the sixteen. */
   const crowded = tray.filter((c) => !c.paint.more && !shownDots.some((d) => d.id === c.id))
@@ -315,7 +326,7 @@ export function WorkspaceApp() {
               </div>
             </div>
             <div className="fl-pick">
-              <div className="fl-dock" role="group" aria-label="Colors" style={{ ['--nudge' as string]: `${room.nudge}px` }}>
+              <div className="fl-dock" role="group" aria-label="Colors" style={{ ['--nudge' as string]: `${room.nudge}px`, ['--dot' as string]: `${room.dot}px`, ['--dot-gap' as string]: `${room.gap}px` }}>
                 {shownDots.map((c) => (
                   <button key={c.id} type="button" className={`fl-dot${chosen.id === c.id ? ' on' : ''}`} style={{ background: ground(c), color: ink }} aria-label={c.name} aria-pressed={chosen.id === c.id} onClick={() => choose(c)} />
                 ))}

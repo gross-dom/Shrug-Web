@@ -37,6 +37,8 @@ export const addressOf = (room: Room, product?: string | null) => `${SHELVES}?k=
 // ---- What the desk leaves for the pages in a frame to ask of it
 
 const rooms: Partial<Record<Room, { at: (place: Place) => void; reload: () => void }>> = {}
+/** What My VIP does when the card's page says the pack has been opened. */
+export const packs: { opened: (() => void) | null } = { opened: null }
 const desk: Desk = {
   logIn: (why) => askLogIn(why === 'request' ? 'request' : why === 'price' ? 'price' : null),
   // Points were spent in one room, or someone logged out there: the desk's own figures are asked for again,
@@ -48,6 +50,7 @@ const desk: Desk = {
   },
   at: (place, room) => rooms[room]?.at(place),
   open: (room) => launchApp(APP_OF[room]),
+  opened: () => packs.opened?.(),
 }
 if (typeof window !== 'undefined') (window as Window & { shrugDesk?: Desk }).shrugDesk = desk
 
