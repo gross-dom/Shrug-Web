@@ -452,7 +452,7 @@ const ringOf = (page) =>
 
   // ------------------------------------------------------------------ about (desktop)
   if (!only || only === 'about') {
-    // What is in it is 406px tall in full; with the smaller icon, 368px; with its rows closer, 348px; shorter than that, it scrolls
+    // What is in it is 406px tall in full; with the smaller icon, 368px; with its rows closer, 346px; shorter than that, it scrolls
     for (const [name, w, h, icon, fits] of [['1440x900', 1440, 900, 84, true], ['1366x700', 1366, 700, 84, true], ['1366x650', 1366, 650, 84, true], ['1280x560', 1280, 560, 60, true], ['1280x520', 1280, 520, 60, true], ['1280x500', 1280, 500, 60, false], ['900x480', 900, 480, 60, false]]) {
       const t = await A.open(browser, { device: { w, h, dpr: 1 }, base: BASE, query: 'still&open=about' })
       await t.page.waitForSelector('.wf[data-app="about"] .about__body', { timeout: 20000 })

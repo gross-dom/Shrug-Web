@@ -266,7 +266,9 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const label = colors.length > 0 && colors.every((c) => c.color) ? 'Color' : 'Choice'
   const neighbour = (by: number) => all[(at + by + all.length) % all.length]!
   const to = (p: Product) => ({ href: `?p=${encodeURIComponent(p.id)}`, onClick: (e: React.MouseEvent) => (e.preventDefault(), go({ view: 'product', id: p.id })) })
-  const turn = (by: number) => setSeen((n) => (n + by + shots.length) % shots.length)
+  // (it stops at the first picture and at the last: there is no arrow back from the first, which could be
+  // taken for the way back to the shelf, nor one on from the last)
+  const turn = (by: number) => setSeen((n) => Math.min(shots.length - 1, Math.max(0, n + by)))
 
   // The arrow keys page through this product's pictures; Escape leaves checkout
   useEffect(() => {
@@ -424,12 +426,16 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
       )}
       {shots.length > 1 && (
         <>
-          <button type="button" className="ui-round prev" aria-label="Previous picture" onClick={() => turn(-1)}>
-            <Left />
-          </button>
-          <button type="button" className="ui-round next" aria-label="Next picture" onClick={() => turn(1)}>
-            <Right />
-          </button>
+          {seen > 0 && (
+            <button type="button" className="ui-round prev" aria-label="Previous picture" onClick={() => turn(-1)}>
+              <Left />
+            </button>
+          )}
+          {seen < shots.length - 1 && (
+            <button type="button" className="ui-round next" aria-label="Next picture" onClick={() => turn(1)}>
+              <Right />
+            </button>
+          )}
           <ol className="ui-dots" aria-label={`Picture ${seen + 1} of ${shots.length}`}>
             {shots.map((s, n) => (
               <li key={s.full}>

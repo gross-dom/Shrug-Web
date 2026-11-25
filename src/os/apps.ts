@@ -249,7 +249,7 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'photobooth',
     name: 'Photo Booth',
     blurb: 'Take a photo for the wall',
-    size: fit({ w: 0.55, h: 0.84 }, { w: 620, h: 540 }, { w: 780, h: 660 }),
+    size: fit({ w: 0.55, h: 0.85 }, { w: 620, h: 540 }, { w: 780, h: 660 }),
     min: { w: 620, h: 540 },
     nudge: { x: -20, y: 0 },
     resizable: true,

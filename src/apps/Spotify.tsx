@@ -498,7 +498,7 @@ export function SpotifyApp() {
         <aside className="sp-side" aria-label="Now playing" data-shut={!side || undefined} {...(side ? {} : { inert: '' })}>
           <header>
             <b>{episode ? listName(episode.list) : 'Now playing'}</b>
-            <button type="button" aria-label="Close the Now playing view" onClick={() => setSide(false)}>
+            <button type="button" aria-label="Hide the Now playing view" onClick={() => setSide(false)}>
               <X size={18} strokeWidth={2} aria-hidden />
             </button>
           </header>

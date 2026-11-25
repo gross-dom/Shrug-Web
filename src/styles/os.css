@@ -2284,11 +2284,13 @@ html[data-wm-busy] .dock__item .dock__label {
 }
 
 .os[data-theme='light'] {
-  --sheet-glass: rgba(250, 250, 252, 0.62);
+  /* (a little more tint than the dark glass has, and a darker second ink, so that the small grey words on it
+     can still be read when the wallpaper behind is a dark one) */
+  --sheet-glass: rgba(250, 250, 252, 0.72);
   --sheet-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 22px 54px -8px rgba(6, 14, 60, 0.36), 0 6px 16px rgba(6, 14, 60, 0.14);
   --glass-ink: #1d1d1f;
   --glass-ink-1: #2c2c2e;
-  --glass-ink-2: #55555c;
+  --glass-ink-2: #424247;
   --glass-ink-3: rgba(60, 60, 67, 0.5);
   --glass-rule: rgba(0, 0, 0, 0.1);
   --glass-field: rgba(255, 255, 255, 0.7);

@@ -307,25 +307,14 @@ const touchOf = (t) => ({
     await p.waitForTimeout(1300)
     const sent = await p.evaluate((TOP) => ({ receipt: document.querySelector(`${TOP} .msgn-receipt`)?.textContent, file: document.querySelector(`${TOP} .msgn-file b`)?.textContent, words: document.querySelector(`${TOP} .msgn-bubble`)?.textContent, field: document.querySelector(`${TOP} .msg-field__input`).value, waiting: document.querySelectorAll(`${TOP} .msgn-pick`).length, head: document.querySelector(`${TOP} .msg-head__name`)?.textContent }), TOP)
     say(/^Sending/.test(sending || '') && sent.file === 'Seed Deck.pdf' && sent.words === 'Our seed deck' && sent.field === '' && sent.waiting === 0 && sent.head === 'Shrug', 'sent, it is in the conversation with its file, and the field is empty', JSON.stringify({ sending, ...sent }))
-    say(sent.receipt === 'Not Delivered', 'with nowhere to send it yet it says Not Delivered: never Delivered', sent.receipt)
-    const laid = await p.evaluate((TOP) => {
-      const mid = (el) => { const r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2 }
-      const [words, file, mark] = ['.msgn-bubble', '.msgn-file', '.msgn-alert'].map((sel) => document.querySelector(`${TOP} ${sel}`))
-      return { level: Math.round(mid(mark) - mid(words)), underFile: Math.round(mid(mark) - mid(file)), beside: Math.round(mark.getBoundingClientRect().left - words.getBoundingClientRect().right), stamp: document.querySelector(`${TOP} .msgn-stamp`).innerText.replace(/\s*\n\s*/g, ' / ') }
-    }, TOP)
-    say(laid.level === 0 && laid.beside === 6 && laid.underFile > 20, 'the mark that says so is beside the last part of the message (its words), not half-way up the file over them', JSON.stringify(laid))
-    say(/^iMessage \/ Today \d{1,2}:\d\d/.test(laid.stamp), 'and the conversation is stamped with the time it began, as every conversation is', laid.stamp)
-    await p.locator(`${TOP} .msgn-alert`).tap(); await p.waitForTimeout(700)
-    const why = await p.locator('.msg-alert__box').innerText().catch(() => '')
-    say(/Not Delivered/.test(why) && /Nothing has left your phone/.test(why), 'and its mark says why', why.replace(/\n/g, ' | '))
-    const acts = await p.locator('.msg-alert__act').evaluateAll((els) => els.map((el) => ({ tag: el.tagName, says: el.textContent, href: el.getAttribute('href'), target: el.getAttribute('target') })))
-    const held = await p.evaluate(() => document.activeElement?.textContent)
-    say(acts.length === 2 && acts[0].tag === 'A' && acts[0].says === 'Read the One-pager, opens in a new tab' && /docsend\.com/.test(acts[0].href || '') && acts[0].target === '_blank' && acts[1].says === 'OK' && held === 'OK', 'with something to do about it: the one-pager, in a tab of its own, over the OK that has the keyboard', JSON.stringify({ acts, held }))
-    await p.locator('.msg-alert__act').last().tap(); await p.waitForTimeout(600)
+    // The demo has no inbox to take it: it is shown as Delivered, and says under it that nothing was sent
+    const demo = await p.evaluate((TOP) => ({ note: document.querySelector(`${TOP} .msgn-demo`)?.textContent ?? null, marks: document.querySelectorAll(`${TOP} .msgn-alert`).length, stamp: document.querySelector(`${TOP} .msgn-stamp`).innerText.replace(/\s*\n\s*/g, ' / ') }), TOP)
+    say(sent.receipt === 'Delivered' && demo.note === 'Demo: nothing was sent.' && demo.marks === 0, 'in the demo, with nowhere to send it, it is shown as Delivered, and says under it that nothing was sent', JSON.stringify({ receipt: sent.receipt, ...demo }))
+    say(/^iMessage \/ Today \d{1,2}:\d\d/.test(demo.stamp), 'and the conversation is stamped with the time it began, as every conversation is', demo.stamp)
     // the list has it at its head now
     await p.locator(`${TOP} .ios-bar button[aria-label^="Back"]`).tap(); await p.waitForTimeout(900)
-    const row = await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-rows > :first-child`)?.textContent ?? '', TOP)
-    say(/^Shrug/.test(row) && /Not Delivered/.test(row), 'the list of conversations has it at its head, and says it did not go', row.slice(0, 80))
+    let row = await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-rows > :first-child`)?.textContent ?? '', TOP)
+    say(/^Shrug/.test(row) && /Our seed deck/.test(row) && !/Not Delivered/.test(row), 'the list of conversations has it at its head, with what was said', row.slice(0, 80))
     // (the list has no search of its own for now: Shrug took it off)
     say((await p.locator(`${TOP} .ios-search__input`).count()) === 0, 'the list of conversations has no search field')
     // a reload brings it back with what was being written; a file that was only picked is not kept
@@ -335,8 +324,33 @@ const touchOf = (t) => ({
     await p.waitForTimeout(300)
     await p.reload({ waitUntil: 'load' })
     await p.waitForSelector(`${TOP} .msgn-thread`, { timeout: 20000 }); await p.waitForTimeout(900)
-    const kept = await p.evaluate((TOP) => ({ draft: document.querySelector(`${TOP} .msg-field__input`).value, waiting: document.querySelectorAll(`${TOP} .msgn-pick`).length, words: document.querySelector(`${TOP} .msgn-bubble`)?.textContent, file: [...document.querySelectorAll(`${TOP} .msgn-file__words`)].map((f) => f.innerText.replace(/\s*\n\s*/g, ', ')).join(), receipt: document.querySelector(`${TOP} .msgn-receipt`)?.textContent, stamped: /Today \d/.test(document.querySelector(`${TOP} .msgn-stamp`)?.innerText ?? '') }), TOP)
-    say(kept.draft === 'And one more thing' && kept.words === 'Our seed deck' && kept.file === 'Seed Deck.pdf, 2.2 MB' && kept.receipt === 'Not Delivered' && kept.stamped, 'a reload brings the conversation back: what was sent, its file by name and size, and what was being written', JSON.stringify(kept))
+    const read = () => p.evaluate((TOP) => ({ draft: document.querySelector(`${TOP} .msg-field__input`).value, waiting: document.querySelectorAll(`${TOP} .msgn-pick`).length, words: document.querySelector(`${TOP} .msgn-bubble`)?.textContent, file: [...document.querySelectorAll(`${TOP} .msgn-file__words`)].map((f) => f.innerText.replace(/\s*\n\s*/g, ', ')).join(), receipt: document.querySelector(`${TOP} .msgn-receipt`)?.textContent, note: document.querySelector(`${TOP} .msgn-demo`)?.textContent ?? null, stamped: /Today \d/.test(document.querySelector(`${TOP} .msgn-stamp`)?.innerText ?? '') }), TOP)
+    const kept = await read()
+    say(kept.draft === 'And one more thing' && kept.words === 'Our seed deck' && kept.file === 'Seed Deck.pdf, 2.2 MB' && kept.receipt === 'Delivered' && kept.note === 'Demo: nothing was sent.' && kept.stamped, 'a reload brings the conversation back: what was sent, its file by name and size, and what was being written', JSON.stringify(kept))
+    // A message that had not gone when the page went (as one would not, on a live site with no inbox yet) is
+    // never said to have been delivered: it comes back as Not Delivered, with a mark that says why
+    await p.evaluate(() => { const was = JSON.parse(sessionStorage.getItem('shrug:outbox')); was.sent = was.sent.map((m) => ({ ...m, state: 'sending', demo: undefined })); sessionStorage.setItem('shrug:outbox', JSON.stringify(was)) })
+    // (the page keeps the conversation as it changes: the reload is before it writes it again)
+    await p.reload({ waitUntil: 'load' })
+    await p.waitForSelector(`${TOP} .msgn-thread`, { timeout: 20000 }); await p.waitForTimeout(900)
+    const lost = await read()
+    say(lost.receipt === 'Not Delivered' && lost.note === null, 'a message that had not gone when the page went comes back as Not Delivered: never Delivered', JSON.stringify(lost))
+    const laid = await p.evaluate((TOP) => {
+      const mid = (el) => { const r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2 }
+      const [words, file, mark] = ['.msgn-bubble', '.msgn-file', '.msgn-alert'].map((sel) => document.querySelector(`${TOP} ${sel}`))
+      return { level: Math.round(mid(mark) - mid(words)), underFile: Math.round(mid(mark) - mid(file)), beside: Math.round(mark.getBoundingClientRect().left - words.getBoundingClientRect().right) }
+    }, TOP)
+    say(laid.level === 0 && laid.beside === 6 && laid.underFile > 20, 'the mark that says so is beside the last part of the message (its words), not half-way up the file over them', JSON.stringify(laid))
+    await p.locator(`${TOP} .msgn-alert`).tap(); await p.waitForTimeout(700)
+    const why = await p.locator('.msg-alert__box').innerText().catch(() => '')
+    say(/Not Delivered/.test(why) && /Nothing has left your phone/.test(why), 'and its mark says why', why.replace(/\n/g, ' | '))
+    const acts = await p.locator('.msg-alert__act').evaluateAll((els) => els.map((el) => ({ tag: el.tagName, says: el.textContent, href: el.getAttribute('href'), target: el.getAttribute('target') })))
+    const held = await p.evaluate(() => document.activeElement?.textContent)
+    say(acts.length === 2 && acts[0].tag === 'A' && acts[0].says === 'Read the One-pager, opens in a new tab' && /docsend\.com/.test(acts[0].href || '') && acts[0].target === '_blank' && acts[1].says === 'OK' && held === 'OK', 'with something to do about it: the one-pager, in a tab of its own, over the OK that has the keyboard', JSON.stringify({ acts, held }))
+    await p.locator('.msg-alert__act').last().tap(); await p.waitForTimeout(600)
+    await p.locator(`${TOP} .ios-bar button[aria-label^="Back"]`).tap(); await p.waitForTimeout(900)
+    row = await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-rows > :first-child`)?.textContent ?? '', TOP)
+    say(/^Shrug/.test(row) && /Not Delivered/.test(row), 'and the list of conversations says it did not go', row.slice(0, 80))
     say(kept.waiting === 0, 'a file that was only picked is not kept', String(kept.waiting))
     // nothing was asked of anywhere
     say(A.realErrors(t.errors).length === 0, 'no errors, and nothing was sent anywhere', A.realErrors(t.errors).slice(0, 2).join(' | '))

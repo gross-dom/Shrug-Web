@@ -37,7 +37,7 @@ const check = (name, ok, detail = '') => {
   const size = await p.evaluate((M) => { const r = document.querySelector(M).getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}` }, M)
   let s = await inbox()
   check('it opens 1180 by 740 on its inbox: twenty rows, the first picked, and the keyboard in the window', size === '1180x740' && s.rows === 20 && s.on === 0 && /\bml\b/.test(s.held) && (await front()) === 'mail', JSON.stringify({ size, s }))
-  check('its splits are along the top, each with its count, All picked, and Done after them', s.tabs === 'All 20* | Investments 7 | Intros 6 | Hires 3 | Drops 4 | Done 0', s.tabs)
+  check('its splits are along the top, each with its count, All picked; and no Done split, nothing being done yet', s.tabs === 'All 20* | Investments 7 | Intros 6 | Hires 3 | Drops 4', s.tabs)
   const near = await p.evaluate((M) => { const b = document.querySelector(`${M} .ml-tabs button`); const r = document.createRange(); r.selectNodeContents(b.firstChild); return Math.round(b.querySelector('small').getBoundingClientRect().left - r.getBoundingClientRect().right) }, M)
   check('a count sits close against its split’s name', near >= 2 && near <= 6, String(near))
   const row = await p.evaluate((M) => {
@@ -68,7 +68,7 @@ const check = (name, ok, detail = '') => {
   check('a row is one line: who, a label for what it led to before the subject and first line, and the day as Superhuman writes it', row.h >= 28 && row.h <= 40 && /^B s d$/.test(row.parts) && /^(investment|intro|hire|drop)$/.test(row.chip) && row.chipIn === 's' && /^\d{1,2} [A-Z]{3}$/.test(row.date) && row.wide <= 0, JSON.stringify(row))
   check('the rows are under headings for when they came, and the row it is on offers Mark Done and the command palette (no clock)', row.groups.split(' | ').length >= 2 && row.acts === 2 && row.tips === 'Mark Done | Mail Command', JSON.stringify({ groups: row.groups, acts: row.acts, tips: row.tips }))
   check('a row shows the pointing hand', row.hand === 'pointer', row.hand)
-  check('it is light, as Superhuman is, and its pane says nothing sends from here', /^rgb\(2[45]\d, 2[45]\d, 2[45]\d\)$/.test(row.light) && row.readonly === 'Nothing sends from here', JSON.stringify({ light: row.light, readonly: row.readonly }))
+  check('it is light, as Superhuman is, and its pane says which key writes to Shrug', /^rgb\(2[45]\d, 2[45]\d, 2[45]\d\)$/.test(row.light) && /^C\s*writes to Shrug$/.test(row.readonly), JSON.stringify({ light: row.light, readonly: row.readonly }))
 
   // ---- moving about, as in Superhuman
   await key('j'); await key('j')
@@ -101,14 +101,14 @@ const check = (name, ok, detail = '') => {
   const firstId = await p.evaluate((M) => document.querySelector(`${M} .ml-row.on`).id, M)
   await key('e', 300)
   s = await inbox()
-  check('E marks the conversation done: it leaves the inbox for the Done split', s.rows === 19 && /All 19\*/.test(s.tabs) && /Done 1/.test(s.tabs) && s.said === 'Marked Done. Z brings it back.' && !(await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
+  check('E marks the conversation done: it leaves the inbox for a Done split, which is there now', s.rows === 19 && /All 19\*/.test(s.tabs) && /Done 1/.test(s.tabs) && s.said === 'Marked Done. Z brings it back.' && !(await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
   await p.locator(`${M} .ml-tabs button`, { hasText: 'Done' }).click(); await p.waitForTimeout(250)
   s = await inbox()
   check('the Done split has it', s.rows === 1 && /Done 1\*/.test(s.tabs) && (await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
   await key('g'); await key('i', 250)
   await key('z', 300)
   s = await inbox()
-  check('Z brings it back to the inbox', s.rows === 20 && /All 20\*/.test(s.tabs) && /Done 0/.test(s.tabs) && s.said === 'Moved back to the inbox.', JSON.stringify(s))
+  check('Z brings it back to the inbox, and with nothing done the Done split goes', s.rows === 20 && /All 20\*/.test(s.tabs) && !/Done/.test(s.tabs) && s.said === 'Moved back to the inbox.', JSON.stringify(s))
   await key('s', 250)
   s = await inbox()
   const starred = await p.evaluate((M) => ({ star: !!document.querySelector(`${M} .ml-row.on .ml-star`), tabs: [...document.querySelectorAll(`${M} .ml-tabs button`)].map((b) => b.firstChild.textContent.trim()).join(' ') }), M)
@@ -129,7 +129,7 @@ const check = (name, ok, detail = '') => {
   await key('Shift+E', 300)
   await key('g'); await key('i', 250)
   s = await inbox()
-  check('Shift E, in Done, puts it back', s.rows === 20 && /Done 0/.test(s.tabs), s.tabs)
+  check('Shift E, in Done, puts it back', s.rows === 20 && !/Done/.test(s.tabs), s.tabs)
 
   // ---- a conversation
   await key('j'); await key('Enter', 400)
@@ -149,7 +149,7 @@ const check = (name, ok, detail = '') => {
   }, M)
   check('Return opens the one it is on: a column with its subject, and one line on what it led to under a label', thread.head === 'Re: [Company] seed round' && /^(investment|intro|hire|drop) \/ \S/.test(thread.led ?? '') && thread.back === 'Back to inbox', JSON.stringify(thread))
   check('its earlier emails are a line each and its newest is open, a card of its own; over it Share, Mark done, the command palette and the way on (no clock); and the pane is still about the sender', thread.folded >= 1 && thread.open === 1 && thread.does === 'Share | Mark done | Command | Previous conversation | Next conversation' && thread.pane === 'About the sender', JSON.stringify(thread))
-  check('under it: nothing sends from here, and Reply to Shrug', /^Nothing sends from here\. Reply opens a new message to Shrug in Messages\. \/ Reply to Shrug/.test(thread.reply ?? ''), thread.reply)
+  check('under it: the twenty are for reading, and Reply to Shrug', /^These twenty are for reading\. A reply is a new message to Shrug\. \/ Reply to Shrug/.test(thread.reply ?? ''), thread.reply)
   await p.locator(`${M} .ml-msg.fold`).first().click()
   await p.waitForTimeout(200)
   check('an earlier email opens out when it is pressed', (await p.evaluate((M) => ({ closed: document.querySelectorAll(`${M} .ml-msg.fold`).length, open: document.querySelectorAll(`${M} article.ml-msg`).length }), M)).open === 2)
@@ -216,10 +216,56 @@ const check = (name, ok, detail = '') => {
   await key('z', 300)
   check('Z brings all twenty back: nothing was archived', (await inbox()).rows === 20 && !(await inbox()).zero)
 
-  // ---- Reply opens Messages
+  // ---- Writing to Shrug, from here
+  const letter = () => p.evaluate((M) => {
+    const w = document.querySelector(M)
+    const c = w.querySelector('.ml-compose')
+    if (!c) return null
+    const f = [...c.querySelectorAll('input')]
+    return {
+      head: c.querySelector('h1').textContent.trim(),
+      to: c.querySelector('output').textContent.replace(/\s+/g, ' ').trim(),
+      from: f[0].value,
+      fromType: f[0].type,
+      subject: f[1].value,
+      text: c.querySelector('textarea').value,
+      send: c.querySelector('.ml-send').textContent.trim(),
+      off: c.querySelector('.ml-send').getAttribute('aria-disabled') === 'true',
+      says: c.querySelector('.ml-says').textContent.trim(),
+      on: document.activeElement === f[0] ? 'from' : document.activeElement === c.querySelector('textarea') ? 'text' : document.activeElement?.tagName ?? '',
+      pane: !!w.querySelector('.ml-pane, aside.ml-side'),
+      title: w.querySelector('.ss-window__title, .ss-titlebar')?.textContent.trim() ?? '',
+    }
+  }, M)
   await key('Enter', 300)
-  await key('r', 700)
-  check('R in a conversation opens Messages, where a reply is a new message to Shrug', (await front()) === 'messages')
+  const about = await p.evaluate((M) => document.querySelector(`${M} .ml-thread .ml-head h1`)?.textContent.trim() ?? '', M)
+  await key('r', 500)
+  let l = await letter()
+  check('R in a conversation writes back here, in Mail: a new message to Shrug at its address, with the conversation’s subject (and one Re:)', (await front()) === 'mail' && !!l && l.head === 'New Message' && l.to === 'Shrug hello@shrug.vc' && about.length > 0 && l.subject === (/^re:/i.test(about) ? about : `Re: ${about}`) && l.fromType === 'email', JSON.stringify({ about, l }))
+  check('nobody logged in, it asks where to reply to first, and Send waits for an address and something written', !!l && l.from === '' && l.on === 'from' && l.send === 'Send' && l.off, JSON.stringify(l))
+  await p.locator(`${M} .ml-compose .ml-send`).click({ force: true }); await p.waitForTimeout(200)
+  l = await letter()
+  check('Send, with no address, says what is missing and sends nothing', !!l && l.says === 'Add your email, so Shrug can reply.', l?.says)
+  await p.locator(`${M} .ml-compose input[type=email]`).fill('sam@example.test')
+  await p.locator(`${M} .ml-compose textarea`).fill('A question about the fund.')
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300)
+  check('Escape puts it by: back in the conversation, nothing lost', !(await letter()) && (await inbox()).thread)
+  await key('Escape', 300)
+  await key('c', 400)
+  l = await letter()
+  check('C writes to Shrug from anywhere, and what was being written is still there', !!l && l.from === 'sam@example.test' && l.text === 'A question about the fund.' && !l.off, JSON.stringify(l))
+  await p.keyboard.press('Control+Enter'); await p.waitForTimeout(1500)
+  s = await inbox()
+  check('Command Return sends it: in the demo it is shown as sent, and says nothing was', !(await letter()) && s.said === 'Message sent. (Demo: nothing was sent.)', s.said)
+  await p.locator(`${M} button[aria-label="New message to Shrug"]`).click(); await p.waitForTimeout(400)
+  l = await letter()
+  check('the pen in the bar writes another, which starts empty', !!l && l.text === '' && l.subject === '', JSON.stringify(l))
+  await p.locator(`${M} .ml-compose textarea`).fill('x')
+  await p.locator(`${M} .ml-compose .ml-bin`).click(); await p.waitForTimeout(300)
+  await key('c', 400)
+  l = await letter()
+  check('the bin discards what was written', !!l && l.from === '' && l.text === '', JSON.stringify(l))
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200)
   check('nothing went wrong on the way', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 

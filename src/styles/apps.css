@@ -3005,7 +3005,7 @@
    then its rows sit closer. Each step is taken at the height the one before
    it stops fitting. What is in the window is 406px tall as it is drawn in
    full (the window is given that and the 38px of its bar: src/os/apps.ts),
-   368px with the smaller icon and 348px with the closer rows; shorter than
+   368px with the smaller icon and 346px with the closer rows; shorter than
    that, it scrolls. A container's height is its body's less the 12px under
    the last row, so the steps are at 394px and 356px */
 .about__body {
@@ -3028,8 +3028,12 @@
   }
 }
 
-/* And, shorter still, its rows sit a little closer */
+/* And, shorter still, its rows sit a little closer, and its name closer under its icon */
 @container about (max-height: 355px) {
+  .about__name {
+    margin-top: 6px;
+  }
+
   .about__fact {
     padding-top: 6px;
     padding-bottom: 6px;

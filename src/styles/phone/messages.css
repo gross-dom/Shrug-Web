@@ -948,6 +948,15 @@
   color: #c4001d;
 }
 
+/* Under a message the demo shows as Delivered: that nothing was sent */
+.msgn-demo {
+  display: block;
+  margin: 1px 2px 0;
+  color: var(--label-2);
+  font-size: 11px;
+  line-height: 14px;
+}
+
 /* The field, with what has been picked to go waiting in it over the words */
 .msg-field.msgn-field {
   flex-direction: column;

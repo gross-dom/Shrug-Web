@@ -197,6 +197,40 @@ const afresh = async (page, go) => {
     await t.ctx.close()
   }
 
+  // 10. A page left open while the site is put up again (src/os/rebuilt.ts). The half it asks for late is gone,
+  // by its old name. Where the site's page now names another first script, the page loads itself again, once,
+  // and has the new build; where it names the same one (the half is missing for some other reason), it does
+  // not load itself again, and says what it lacks
+  for (const again of [true, false]) {
+    t = await A.open(browser, { device: 'desktop', base: BASE, goto: false })
+    // How many times the page itself has been loaded: the first is its opening, a second is its loading itself again
+    let docs = 0
+    await t.page.route((url) => url.href.startsWith(BASE) && !/\/(assets|vip|api)\//.test(url.pathname) && !/\.\w+$/.test(url.pathname), async (route) => {
+      const kind = route.request().resourceType()
+      if (kind === 'document') docs++
+      // (the page's own question of the site, not the browser's loading of it: where the site has been put
+      // up again, its page names another first script)
+      if (kind !== 'fetch' || !again) return route.continue()
+      const answer = await route.fetch()
+      return route.fulfill({ response: answer, body: (await answer.text()).replace(/(\/assets\/index-)[^"]+(\.js)/, '$1ANOTHERBUILD$2') })
+    })
+    // the half by its old name is gone; the page loaded again is the new build's, which has it
+    await t.page.route('**/assets/Phone-*.js', (route) => (docs < 2 ? route.fulfill({ status: 404, contentType: 'text/plain', body: 'not found' }) : route.continue()))
+    await t.page.goto(BASE, { waitUntil: 'load' })
+    await t.page.waitForFunction(() => !document.getElementById('boot') && !!document.querySelector('.dock'), null, { timeout: 15000 })
+    await t.page.setViewportSize({ width: 500, height: 800 })
+    if (again) {
+      await t.page.waitForFunction(() => !!document.querySelector('.ph') && !!document.querySelector('.os[data-booted]'), null, { timeout: 20000 }).catch(() => {})
+      await t.page.waitForTimeout(600)
+      check('a page left open over a new build: it loads itself again, once, and has the half it lacked', docs === 2 && !!(await t.page.$('.ph')) && !(await stalled(t.page)), `loaded ${docs} times, phone ${!!(await t.page.$('.ph'))}, stalled ${!!(await stalled(t.page))}`)
+    } else {
+      await t.page.waitForSelector('.stalled', { timeout: 15000 }).catch(() => {})
+      await t.page.waitForTimeout(2500)
+      check('a half that is missing on a site that has not changed: the page does not load itself again, and says what it lacks', docs === 1 && !!(await stalled(t.page)), `loaded ${docs} times, stalled ${!!(await stalled(t.page))}`)
+    }
+    await t.ctx.close()
+  }
+
   // 9. No scripts at all
   t = await A.open(browser, { device: 'iphone', base: BASE, js: false })
   const plain = await t.page.evaluate(() => {

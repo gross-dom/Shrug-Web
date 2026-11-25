@@ -1,5 +1,5 @@
 // The apps out on the desk, and what else step 5 of design/v1 added: the Film, which QuickTime Player opens;
-// Photo Booth; Spotify; YouTube; the Photographs in Wallpapers; and a message to Shrug, in Messages.
+// Photo Booth; Spotify; YouTube; the Photographs in Wallpapers; a message to Shrug, in Messages; and Weather.
 // (What goes in several of them has not been supplied yet: the films, the episodes, the videos and the
 // photographs are stand-ins or templated, as src/data says of each, and that is what these hold them to.)
 //   node desk-apps.cjs http://127.0.0.1:4273/
@@ -96,6 +96,7 @@ const check = (name, ok, detail = '') => {
     p.evaluate((S) => {
       const w = document.querySelector(S)
       const dark = (el) => { const m = /rgba?\((\d+), (\d+), (\d+)/.exec(getComputedStyle(el).backgroundColor); return !!m && +m[1] < 40 && +m[2] < 40 && +m[3] < 40 }
+      const lines = (el) => el?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null
       return {
         view: w.querySelector('.sp-main').getAttribute('aria-label'),
         lib: [...w.querySelectorAll('.sp-lib .sp-item')].map((b) => `${b.innerText.replace(/\s*\n\s*/g, '/')}${b.getAttribute('aria-current') ? '*' : ''}`),
@@ -108,20 +109,49 @@ const check = (name, ok, detail = '') => {
         rows: w.querySelectorAll('button.sp-row').length,
         on: [...w.querySelectorAll('button.sp-row')].findIndex((r) => r.classList.contains('on')),
         eq: !!w.querySelector('.sp-row.on .sp-eq'),
-        hero: w.querySelector('.sp-hero')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
-        stand: w.querySelector('.sp-stand')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
-        tag: w.querySelector('.sp-main .sp-tag')?.textContent ?? null,
-        now: w.querySelector('.sp-now').innerText.replace(/\s*\n\s*/g, ' / '),
-        frames: w.querySelectorAll('iframe').length,
-        panels: dark(w.querySelector('.sp-lib')) && dark(w.querySelector('.sp-main')) && dark(w.querySelector('.sp-now')),
+        hero: lines(w.querySelector('.sp-hero')),
+        said: w.querySelector('.sp-main').innerText,
+        what: lines(w.querySelector('.sp-what')),
+        keys: [...w.querySelectorAll('.sp-keys button')].map((b) => b.getAttribute('aria-label')).join(', '),
+        line: lines(w.querySelector('.sp-line')),
+        side: !w.querySelector('.sp-side').hasAttribute('data-shut'),
+        about: lines(w.querySelector('.sp-about')),
+        players: [...w.querySelectorAll('.sp-side iframe')].map((f) => f.src),
+        inFoot: w.querySelectorAll('.sp-now iframe').length,
+        panels: dark(w.querySelector('.sp-lib')) && dark(w.querySelector('.sp-main')) && dark(w.querySelector('.sp-side')) && dark(w.querySelector('.sp-now')),
       }
     }, S)
+  /** What Spotify's player (a stand-in: lib.cjs) has been told to do, and where it is. */
+  const player = () => p.evaluate(() => (window.__spotify ? { uri: window.__spotify.uri, paused: window.__spotify.paused, at: window.__spotify.at, calls: window.__spotify.calls.join(', ') } : null))
   let so = await sp()
-  check('Spotify opens 1000 by 660 on Home: the way back and on, Home and one long search field along its head', (await sizeOf(p, 'spotify')) === '1000x660' && so.view === 'Home' && so.home === 'page' && so.search === 'What do you want to play?' && so.back === 'true', JSON.stringify(so))
-  check('it is three dark panels: Your Library (the three lists of podcasts, then each playlist under the name Spotify gives it), the main pane, and the bar at the foot where what is playing is', so.panels && so.lib.length === 5 && /^Podcasts 1\/11 episodes/.test(so.lib[0]) && /^Podcasts 2\/10 episodes/.test(so.lib[1]) && /^Podcasts 3\/10 episodes/.test(so.lib[2]) && so.lib.slice(3).every((l) => /^Stand-in playlist \w{4}\/Playlist$/.test(l)), JSON.stringify(so.lib))
-  check('Home has its tiles and its sections, one for each list of podcasts and one for the playlists, each with Show all; the first episode is set out in the bar at the foot under the title Spotify gives it (it does not say Nothing playing, nor Plays through Spotify), in Spotify’s own player', so.tiles === 6 && so.sects === 'Shrug’s network, on air/Podcasts 1/Show all | Shrug’s network, on air/Podcasts 2/Show all | Shrug’s network, on air/Podcasts 3/Show all | From the team/Playlists/Show all' && so.cards === 2 && /^Stand-in episode \w{4} \/ Podcast episode/.test(so.now) && !/Nothing playing|Plays through Spotify|no link/.test(so.now) && so.frames === 1, JSON.stringify(so))
-  const embed = await p.evaluate((S) => document.querySelector(`${S} .sp-now iframe`)?.src ?? '', S)
-  check('the player in the bar is Spotify’s embed of the first episode Dom supplied, by its link (with no "si" on it)', embed.startsWith('https://open.spotify.com/embed/episode/4HK2X8EhWMW9PuyEWdf90F') && !/[?&]si=/.test(embed), embed)
+  check('Spotify opens on Home: the way back and on, Home and one long search field along its head', so.view === 'Home' && so.home === 'page' && so.search === 'What do you want to play?' && so.back === 'true', JSON.stringify(so))
+  check('it is dark panels on black: Your Library (the three playlists of podcasts under the names Dom gave them, then each playlist of songs under Spotify’s name for it), the main pane, the Now playing view, and the bar at the foot', so.panels && so.lib.join(' | ') === 'Tech/Podcasts · 11 episodes | Culture/Podcasts · 10 episodes | Infrastructure/Podcasts · 10 episodes | Lalala/Playlist | portugal/Playlist', JSON.stringify(so.lib))
+  check('Home has its tiles and its sections, one for each list of podcasts and one for the playlists, each with Show all; the first episode is set out in the bar at the foot under its own title and show (it does not say Nothing playing, Plays through Spotify, or anything of previews)', so.tiles === 8 && so.sects === 'Podcasts/Tech/Show all | Podcasts/Culture/Show all | Podcasts/Infrastructure/Show all | From the team/Playlists/Show all' && so.cards === 2 && /^69\. Niv Dror .* \/ Non-Technical$/.test(so.what) && !/Nothing playing|Plays through Spotify|[Pp]review/.test(so.what + so.said), JSON.stringify({ tiles: so.tiles, sects: so.sects, what: so.what }))
+  let pl = await player()
+  check('Spotify’s own player for that episode is in the Now playing view (and not in the bar), by the episode’s link with no "si" on it, not yet playing; under it, what the episode is', so.side && so.players.length === 1 && so.players[0].includes('/embed/episode/4HK2X8EhWMW9PuyEWdf90F') && !/[?&]si=/.test(so.players[0]) && so.inFoot === 0 && pl?.uri === 'spotify:episode:4HK2X8EhWMW9PuyEWdf90F' && pl.paused && /Non-Technical \/ May 2022 · 39 min$/.test(so.about), JSON.stringify({ players: so.players, pl, about: so.about }))
+  check('the bar at the foot is the buttons that play it, as Spotify’s bar has them, over a line of where the episode is', so.keys === 'Back 15 seconds, Previous episode, Play, Next episode, Forward 15 seconds' && /^0:00 \/ /.test(so.line), JSON.stringify({ keys: so.keys, line: so.line }))
+  await p.locator(`${S} .sp-go`).click()
+  await p.waitForTimeout(900)
+  pl = await player()
+  so = await sp()
+  check('Play plays Spotify’s player: the button is Pause, and the line moves along with the episode, whose length it now says', pl.calls === 'toggle' && !pl.paused && pl.at > 0 && /Pause/.test(so.keys) && /^0:0[1-9] \/ 10:00$/.test(so.line), JSON.stringify({ pl, keys: so.keys, line: so.line }))
+  await p.locator(`${S} .sp-keys button[aria-label="Forward 15 seconds"]`).click()
+  await p.waitForTimeout(300)
+  check('Forward 15 seconds moves it on by that', /seek (1[5-9]|2\d)\b/.test((await player()).calls), (await player()).calls)
+  await p.locator(`${S} .sp-keys button[aria-label="Next episode"]`).click()
+  await p.waitForTimeout(700)
+  pl = await player()
+  so = await sp()
+  check('Next episode gives the player the episode after it in its list, and plays on', pl.uri === 'spotify:episode:5rRgN3DwsHNjZpGrdInLYw' && !pl.paused && /load spotify:episode:5rRgN3DwsHNjZpGrdInLYw, play$/.test(pl.calls) && /^Talking Startup Investing .* \/ HyperChange$/.test(so.what), JSON.stringify({ pl, what: so.what }))
+  await p.locator(`${S} .sp-end button`).click()
+  await p.waitForTimeout(300)
+  so = await sp()
+  check('the switch at the bar’s right puts the Now playing view away; the episode plays on behind it', !so.side && so.players.length === 1 && !(await player()).paused, JSON.stringify({ side: so.side, players: so.players.length }))
+  await p.locator(`${S} .sp-end button`).click()
+  await p.waitForTimeout(300)
+  await p.locator(`${S} .sp-go`).click()
+  await p.waitForTimeout(300)
+  check('and brings it back; Pause pauses', (await sp()).side && (await player()).paused, JSON.stringify(await player()))
   // the chips over Your Library filter the library, one kind at a time
   await p.locator(`${S} .sp-lib .sp-chips button`, { hasText: 'Playlists' }).click()
   await p.waitForTimeout(250)
@@ -131,7 +161,7 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${S} .sp-lib .sp-chips button`, { hasText: 'Podcasts' }).click()
   await p.waitForTimeout(250)
   lib = await sp()
-  check('the Podcasts chip leaves only the lists of podcasts; its x has everything back', lib.lib.length === 3 && lib.lib.every((l) => /^Podcasts \d\//.test(l)), JSON.stringify(lib.lib))
+  check('the Podcasts chip leaves only the lists of podcasts; its x has everything back', lib.lib.length === 3 && lib.lib.every((l) => /\/Podcasts · \d+ episodes$/.test(l)), JSON.stringify(lib.lib))
   await p.locator(`${S} .sp-lib .sp-chips button.x`).click()
   await p.waitForTimeout(250)
   await p.locator(`${S} .sp-home .sp-chips button`, { hasText: 'Playlists' }).click()
@@ -142,26 +172,32 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${S} .sp-lib .sp-item`).first().click()
   await p.waitForTimeout(400)
   so = await sp()
-  check('a list of podcasts, from the library: its page, its eleven episodes in a table, and the way back lit', so.view === 'Podcasts 1' && so.hero === 'Podcasts / Shrug’s network, on air / Podcasts 1 · 11 episodes' && so.rows === 11 && so.back === null && /\*$/.test(so.lib[0]), JSON.stringify(so))
-  const table = await p.evaluate((S) => ({ head: [...document.querySelectorAll(`${S} .sp-row.head > span`)].map((x) => x.textContent.trim()).join('|'), row: document.querySelector(`${S} button.sp-row .t`).innerText.replace(/\s*\n\s*/g, ' / ') }), S)
-  check('the table has a column only for what there is to say: each episode’s title, as Spotify gives it', table.head === '#||Title' && /^Stand-in episode \w{4} \/ Podcast episode$/.test(table.row), JSON.stringify(table))
+  check('a list of podcasts, from the library: its page under its name, its eleven episodes in a table, and the way back lit', so.view === 'Tech' && so.hero === 'Podcasts / Tech / Shrug · 11 episodes' && so.rows === 11 && so.back === null && /\*$/.test(so.lib[0]), JSON.stringify(so))
+  const table = await p.evaluate((S) => ({ head: [...document.querySelectorAll(`${S} .sp-row.head > span`)].map((x) => x.textContent.trim()).join('|'), row: document.querySelector(`${S} button.sp-row`).innerText.replace(/\s*\n\s*/g, ' / ') }), S)
+  check('the table: each episode’s number, its title over its show, when it came out and how long it is, as Spotify has them', table.head === '#||Title|Released|' && /^1 \/ 69\. Niv Dror \(Founder & Managing Partner, Shrug Capital\) has “no problem” with cartoon fish \/ Non-Technical \/ May 2022 \/ 39 min$/.test(table.row), JSON.stringify(table))
   await p.locator(`${S} button.sp-row`).nth(2).click()
-  await p.waitForTimeout(400)
+  await p.waitForTimeout(600)
   so = await sp()
-  check('an episode picked is marked in the table and named in the bar at the foot, where Spotify’s player for it is', so.on === 2 && so.eq && /^Stand-in episode \w{4} \/ Podcast episode/.test(so.now) && so.frames === 1 && (await p.evaluate((S) => document.querySelector(`${S} .sp-now iframe`).src, S)).includes('/embed/episode/2IFu3Y5z2WfjZVieQc8a72'), JSON.stringify(so))
+  pl = await player()
+  check('an episode picked plays: it is marked in the table, named in the bar at the foot, and the one Spotify’s player has', so.on === 2 && so.eq && /^Consumer Social, .* \/ Village Global Podcast$/.test(so.what) && pl.uri === 'spotify:episode:2IFu3Y5z2WfjZVieQc8a72' && !pl.paused && so.players.length === 1, JSON.stringify({ on: so.on, eq: so.eq, what: so.what, pl }))
+  await p.locator(`${S} .sp-go`).click()
   await p.locator(`${S} .sp-lib .sp-item`).nth(4).click()
   await p.waitForTimeout(600)
   so = await sp()
   const listFrame = await p.evaluate((S) => document.querySelector(`${S} .sp-main iframe`)?.src ?? '', S)
-  check('a playlist is the main pane’s: its page under the name Spotify gives it, with Spotify’s own player for it, which brings its tracks', /^Public Playlist \/ Stand-in playlist \w{4}$/.test(so.hero ?? '') && listFrame.includes('/embed/playlist/2UDAoEBddY0XvO9oXcI87S') && so.tag === 'Previews, unless you’re signed in to Spotify' && /\*$/.test(so.lib[4]), JSON.stringify({ hero: so.hero, listFrame, tag: so.tag }))
+  check('a playlist of songs is the main pane’s: its page under Spotify’s name for it, with Spotify’s own player, which brings its tracks; nothing is said of previews', so.hero === 'Public Playlist / portugal' && listFrame.includes('/embed/playlist/2UDAoEBddY0XvO9oXcI87S') && !/[Pp]review/.test(so.said) && /\*$/.test(so.lib[4]), JSON.stringify({ hero: so.hero, listFrame }))
   await p.locator(`${S} .spbar__nav button[aria-label="Back"]`).click()
   await p.waitForTimeout(300)
-  check('Back goes to where it was: the list of podcasts', (await sp()).view === 'Podcasts 1', (await sp()).view)
+  check('Back goes to where it was: the list of podcasts', (await sp()).view === 'Tech', (await sp()).view)
   await p.locator(`${S} .sp-search input`).fill('zzzz')
   await p.waitForTimeout(300)
   const nothing = await p.locator(`${S} .sp-none`).first().innerText()
   check('the search field searches the room, and says when nothing in it is called that', (await sp()).rows === 0 && nothing === 'Nothing in the room is called that.', nothing)
+  await p.locator(`${S} .sp-search input`).fill('nvidia')
+  await p.waitForTimeout(300)
+  check('and finds an episode by its title, whichever list it is in', (await sp()).rows === 1 && /Nvidia Part I/.test((await sp()).said), String((await sp()).rows))
   await close(p, 'spotify')
+  check('closed, the player is let go of', (await player())?.calls.endsWith('destroy'), JSON.stringify(await player()))
 
   // ---- YouTube: its watch page
   await openFromDesk(p, 'youtube')
@@ -183,29 +219,39 @@ const check = (name, ok, detail = '') => {
         under: w.querySelector('.yt-under').innerText.replace(/\s*\n\s*/g, ' / '),
         why: w.querySelector('.yt-why')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
         stills: [...w.querySelectorAll('.yt-item .yt-th img')].slice(0, 2).map((i) => i.getAttribute('src')).join(' '),
-        start: w.querySelector('.yt-start img')?.getAttribute('src') ?? null,
+        second: w.querySelectorAll('.yt-item')[1]?.querySelector('.w').innerText.replace(/\s*\n\s*/g, ' / '),
+        player: w.querySelector('.yt-player iframe')?.src ?? null,
         frames: w.querySelectorAll('iframe').length,
         ratio: Math.round((r.width / r.height) * 100) / 100,
         radius: getComputedStyle(w.querySelector('.yt-player')).borderRadius,
         still: !!w.querySelector('.yt-item .yt-th'),
       }
     }, Y)
+  /** YouTube's player (a stand-in) says something to the page, as the real one does. */
+  const says = (told) => p.evaluate(([Y, told]) => { const f = document.querySelector(`${Y} .yt-player iframe`); window.dispatchEvent(new MessageEvent('message', { origin: 'https://www.youtube-nocookie.com', source: f.contentWindow, data: JSON.stringify(told) })) }, [Y, told])
   let yo = await yt()
-  check('YouTube opens 1100 by 664 as its watch page: YouTube’s own logo (its mark and its word, drawn) and one field along the head, with no menu button, the rounded player sixteen by nine, and the list of twenty-two at the right, the first picked', (await sizeOf(p, 'youtube')) === '1100x664' && yo.mark === 'YouTube' && yo.word && !yo.menu && yo.field === 'Search this playlist' && yo.search === 'Search Videos the team loves' && yo.items === 22 && yo.on === 0 && yo.head === 'Videos the team loves / Shrug · 1 / 22' && yo.ratio === 1.78 && yo.radius === '12px' && yo.still, JSON.stringify(yo))
-  check('under the player: the video’s place in the list; each video is its own still from YouTube, by its id; no player is fetched until one is played, and nothing is said of why it is here until someone has written it', yo.h1 === 'Video 1' && /· 1 \/ 22/.test(yo.under) && yo.why === null && yo.frames === 0 && yo.start === 'https://i.ytimg.com/vi/MnrJzXM7a6o/hqdefault.jpg' && yo.stills === 'https://i.ytimg.com/vi/MnrJzXM7a6o/mqdefault.jpg https://i.ytimg.com/vi/yU3GUHDf0mk/mqdefault.jpg', JSON.stringify({ h1: yo.h1, under: yo.under, why: yo.why, start: yo.start, stills: yo.stills }))
+  check('YouTube opens 1100 by 664 as its watch page: YouTube’s own logo (its mark and its word, drawn) and one field along the head, with no menu button, the rounded player sixteen by nine, and the list of twenty-two at the right, the first picked, with Play all at its head', (await sizeOf(p, 'youtube')) === '1100x664' && yo.mark === 'YouTube' && yo.word && !yo.menu && yo.field === 'Search this playlist' && yo.search === 'Search Videos the team loves' && yo.items === 22 && yo.on === 0 && yo.head === 'Videos the team loves / Shrug · 1 / 22 / Play all' && yo.ratio === 1.78 && yo.radius === '12px' && yo.still, JSON.stringify(yo))
+  check('each video is under its own title and channel, as YouTube has them, with its still from YouTube by its id; nothing is said of why it is here until someone has written it', yo.h1 === 'Steve Jobs introduces iPhone in 2007' && /^J \/ John Schroter \/ Videos the team loves · 1 \/ 22/.test(yo.under) && yo.second === 'Jensen Huang-The First Six Months of NVIDIA / Entrepreneurship.org' && yo.why === null && yo.stills === 'https://i.ytimg.com/vi/MnrJzXM7a6o/mqdefault.jpg https://i.ytimg.com/vi/yU3GUHDf0mk/mqdefault.jpg', JSON.stringify({ h1: yo.h1, under: yo.under, second: yo.second, why: yo.why, stills: yo.stills }))
+  check('it plays as the window opens, in YouTube’s own player, with its sound off', yo.frames === 1 && /^https:\/\/www\.youtube-nocookie\.com\/embed\/MnrJzXM7a6o\?autoplay=1&mute=1&/.test(yo.player), String(yo.player))
   await p.locator(`${Y} .yt-item`).nth(3).click()
   await p.waitForTimeout(300)
   yo = await yt()
-  check('a video picked in the list is the one shown, in YouTube’s own player', yo.on === 3 && yo.head === 'Videos the team loves / Shrug · 4 / 22' && yo.frames === 1 && (await p.evaluate((Y) => document.querySelector(`${Y} .yt-player iframe`).src, Y)).startsWith('https://www.youtube-nocookie.com/embed/oXsQ4NMQ6B8?'), JSON.stringify({ on: yo.on, head: yo.head, frames: yo.frames }))
-  // the player says what it is playing: from then on the window calls the video by its title, and says whose it is
-  await p.evaluate((Y) => { const f = document.querySelector(`${Y} .yt-player iframe`); window.dispatchEvent(new MessageEvent('message', { origin: 'https://www.youtube-nocookie.com', source: f.contentWindow, data: JSON.stringify({ event: 'infoDelivery', info: { videoData: { video_id: 'oXsQ4NMQ6B8', title: 'A stand-in title', author: 'A stand-in channel' } } }) })) }, Y)
-  await p.waitForTimeout(300)
+  check('a video picked in the list is the one shown, and plays with its sound', yo.on === 3 && yo.head === 'Videos the team loves / Shrug · 4 / 22 / Play all' && yo.frames === 1 && /^https:\/\/www\.youtube-nocookie\.com\/embed\/oXsQ4NMQ6B8\?autoplay=1&rel=0/.test(yo.player) && yo.h1 === 'Raf Simons Autumn/Winter 2001-2002 "Riot! Riot! Riot!"', JSON.stringify({ on: yo.on, head: yo.head, player: yo.player, h1: yo.h1 }))
+  // the player says a video has ended: the next one in the list begins
+  await says({ event: 'onStateChange', info: 0 })
+  await p.waitForTimeout(400)
   yo = await yt()
-  const named = await p.evaluate((Y) => document.querySelectorAll(`${Y} .yt-item`)[3].querySelector('.w').innerText.replace(/\s*\n\s*/g, ' / '), Y)
-  check('once YouTube’s player says what it is playing, the window calls the video by its title and channel, under the player and in the list', yo.h1 === 'A stand-in title' && /^A \/ A stand-in channel/.test(yo.under) && named === 'A stand-in title / A stand-in channel', JSON.stringify({ h1: yo.h1, under: yo.under, named }))
+  check('when a video ends the next begins, as a playlist does', yo.on === 4 && /\/embed\/aayZ9ybDTBw\?/.test(yo.player) && yo.h1 === 'Inspiration: Jay-Z & Timbaland in the Studio', JSON.stringify({ on: yo.on, player: yo.player, h1: yo.h1 }))
+  await p.locator(`${Y} .yt-list header .yt-pill`).click()
+  await p.waitForTimeout(400)
+  yo = await yt()
+  check('Play all starts the list from its top, with its sound', yo.on === 0 && /\/embed\/MnrJzXM7a6o\?autoplay=1&rel=0/.test(yo.player), JSON.stringify({ on: yo.on, player: yo.player }))
   await p.locator(`${Y} .yt-search input`).fill('zzzz')
   await p.waitForTimeout(300)
   check('the field searches this playlist, as it says, and says when nothing in it is called that', (await p.locator(`${Y} .yt-item`).count()) === 0 && (await p.locator(`${Y} .yt-none`).innerText()) === 'Nothing in the list is called that.', '')
+  await p.locator(`${Y} .yt-search input`).fill('bowie')
+  await p.waitForTimeout(300)
+  check('and finds a video by its title', (await p.locator(`${Y} .yt-item`).count()) === 1, String(await p.locator(`${Y} .yt-item`).count()))
   await p.locator(`${Y} .yt-search button[aria-label="Clear"]`).click()
   await p.waitForTimeout(200)
   await p.locator(`${Y} .yt-pill`, { hasText: 'Theater mode' }).click()
@@ -245,8 +291,20 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${M} .im-field textarea`).fill('Hello Shrug.')
   await p.waitForTimeout(200)
   const typing = await p.evaluate((M) => ({ plus: document.querySelectorAll(`${M} .im-field .plus`).length, send: document.querySelector(`${M} .im-field .send`)?.getAttribute('aria-disabled') ?? 'ready' }), M)
-  check('typing begins a message: the plus and Send are there, and it can be sent as it is', typing.plus === 1 && typing.send === 'ready', JSON.stringify(typing))
-  await p.locator(`${M} .im-field textarea`).fill('')
+  check('typing begins a message: the plus and Send are there, it can be sent as it is, and the offer of subjects is gone', typing.plus === 1 && typing.send === 'ready' && (await p.locator(`${M} .im-pick`).count()) === 0, JSON.stringify(typing))
+  // another conversation is looked at: the new message stays at the head of the list, with what was typed in it
+  await p.locator(`${M} .conv-list .conv`).first().click()
+  await p.waitForTimeout(400)
+  const kept = await p.evaluate((M) => ({ row: document.querySelector(`${M} .conv-write .conv`)?.innerText.trim(), x: !!document.querySelector(`${M} .conv-write__x`), write: document.querySelectorAll(`${M} .chat-write`).length }), M)
+  await p.locator(`${M} .conv-write .conv`).click()
+  await p.waitForTimeout(300)
+  check('the new message stays in the list while another conversation is looked at, with its x, and has what was typed when it is come back to', kept.row === 'New Message' && kept.x && kept.write === 0 && (await p.locator(`${M} .im-field textarea`).inputValue()) === 'Hello Shrug.', JSON.stringify(kept))
+  await p.locator(`${M} .conv-write__x`).click()
+  await p.waitForTimeout(300)
+  const away0 = await p.locator(`${M} .conv-write`).count()
+  await p.locator('.im-pencil').click()
+  await p.waitForTimeout(300)
+  check('its x puts it away, and what was typed with it: the pencil starts another, empty, with the subjects offered', away0 === 0 && (await p.locator(`${M} .im-field textarea`).inputValue()) === '' && (await p.locator(`${M} .im-opt`).count()) === 3, String(away0))
   await p.locator(`${M} .im-opt`).nth(1).click()
   await p.waitForTimeout(300)
   const intro = await p.evaluate((M) => { const w = document.querySelector(M); return { head: w.querySelector('.im-form header b').textContent, labels: [...w.querySelectorAll('.im-form .im-lbl > span')].map((s) => s.textContent).join(' | '), small: w.querySelector('.im-form small').textContent, ask: w.querySelector('.im-field textarea').placeholder, send: w.querySelector('.im-field .send')?.getAttribute('aria-disabled') } }, M)
@@ -264,9 +322,10 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(350)
   const sending = await p.evaluate((M) => document.querySelector(`${M} .im-stat`)?.textContent.trim(), M)
   await p.waitForTimeout(1500)
-  const gone = await p.evaluate((M) => { const w = document.querySelector(M); return { sub: w.querySelector('.im-sub')?.textContent, me: w.querySelector('.im-me')?.textContent, att: w.querySelector('.im-att')?.innerText.replace(/\s*\n\s*/g, ' / '), stat: w.querySelector('.im-stat')?.innerText.replace(/\s+/g, ' ').trim(), again: !!w.querySelector('.im-stat.bad button'), row: w.querySelector('.conv-write .conv')?.innerText.replace(/\s*\n\s*/g, ' / '), note: w.querySelectorAll('.im-note').length } }, M)
+  const gone = await p.evaluate((M) => { const w = document.querySelector(M); return { sub: w.querySelector('.im-sub')?.textContent, me: w.querySelector('.im-me')?.textContent, att: w.querySelector('.im-att')?.innerText.replace(/\s*\n\s*/g, ' / '), stat: w.querySelector('.im-stat')?.innerText.replace(/\s+/g, ' ').trim(), again: !!w.querySelector('.im-stat.bad button'), row: w.querySelector('.conv-write .conv')?.innerText.replace(/\s*\n\s*/g, ' / '), note: w.querySelector('.im-note')?.textContent ?? null, more: w.querySelector('.im-pick h2')?.textContent ?? null, room: (() => { const last = w.querySelector('.im-note')?.getBoundingClientRect(); const pick = w.querySelector('.im-pick h2')?.getBoundingClientRect(); return last && pick ? Math.round(pick.top - last.bottom) : null })() } }, M)
   check('sent, it is in the conversation under its subject, with its file, and says Sending… while it goes', sending === 'Sending…' && gone.sub === 'Request a meeting' && gone.me === 'We are building a thing.' && /^Deck\.pdf \/ 4 KB$/.test(gone.att ?? ''), JSON.stringify({ sending, gone }))
-  check('delivery is honest: with no inbox to take it yet it says Not Delivered, with Try Again, and never Delivered', /^! Not Delivered · Try Again$/.test(gone.stat ?? '') && gone.again && gone.row === 'Shrug / Not Delivered' && gone.note === 0, JSON.stringify(gone))
+  check('in the demo, which has no inbox to take it, it is shown as Delivered and says under it that nothing was sent (a live site with no inbox says Not Delivered)', gone.stat === 'Delivered' && !gone.again && gone.row === 'Shrug / You: Request a meeting' && gone.note === 'Demo: nothing was sent.', JSON.stringify(gone))
+  check('after it the subjects are offered again, as "More to say?", set well clear of what was sent', gone.more === 'More to say?' && gone.room >= 36, JSON.stringify({ more: gone.more, room: gone.room }))
   // another conversation is a press away, and the message to Shrug is kept
   await p.locator(`${M} .conv-list .conv`).first().click()
   await p.waitForTimeout(500)
@@ -354,18 +413,14 @@ const check = (name, ok, detail = '') => {
   await p.locator('.pb-btn--post').click()
   await p.waitForTimeout(1200)
   b = await pb(p)
-  const first = await p.evaluate(() => { const th = document.querySelector('.pb-th'); return { name: th?.querySelector('small')?.textContent.trim(), fresh: th?.classList.contains('new'), waiting: th?.classList.contains('waiting'), tag: th?.querySelector('.pb-th__wait')?.textContent.trim(), says: th?.querySelector('button')?.getAttribute('aria-label') } })
-  check('Post to the Wall sends it for approval: it is in the strip for its taker, marked Waiting, and the booth says what happens next', b.wall === 1 && /Riley Chen$/.test(first.name ?? '') && first.fresh && first.waiting && first.tag === 'Waiting' && b.toast === 'Sent. It goes on the wall once Shrug has approved it.' && /^A photo by Riley Chen, \d{1,2} \w+ \d{4}, waiting for approval$/.test(first.says ?? ''), JSON.stringify({ b, first }))
+  const first = await p.evaluate(() => { const th = document.querySelector('.pb-th'); return { name: th?.querySelector('small')?.textContent.trim(), fresh: th?.classList.contains('new'), marked: th?.classList.contains('waiting'), tag: th?.querySelector('.pb-th__wait')?.textContent.trim() ?? null, says: th?.querySelector('button')?.getAttribute('aria-label') } })
+  check('Post to the Wall puts it on the wall at once, with no queue: it is in the strip under its taker’s name, and the booth says so', b.wall === 1 && /Riley Chen$/.test(first.name ?? '') && first.fresh && !first.marked && first.tag === null && b.toast === 'Posted. It’s on the wall.' && /^A photo by Riley Chen, \d{1,2} \w+ \d{4}$/.test(first.says ?? ''), JSON.stringify({ b, first }))
   await p.locator('.pb-th button').first().click()
   await p.waitForTimeout(500)
   b = await pb(p)
   const meta = await p.evaluate(() => document.querySelector('.pb-meta')?.innerText.replace(/\s*\n\s*/g, ' / '))
   const bar = await p.evaluate(() => { const ctl = document.querySelector('.pb-ctl').getBoundingClientRect(); const cam = document.querySelector('.pb-shutter.back').getBoundingClientRect(); const share = document.querySelector('.pb-ctl .pb-share').getBoundingClientRect(); return { camMid: Math.round(Math.abs(cam.left + cam.width / 2 - (ctl.left + ctl.width / 2))), shareRight: Math.round(ctl.right - share.right), x: document.querySelector('.pb-th.on .pb-th__x')?.getAttribute('aria-label') } })
-  check('a photo opens large, with who took it and when, and that it is waiting; the camera’s button is in the middle of the bar, Share at its right (no Save), and its own taker has an x on it in the strip', b.stage === 'large' && /Riley Chen \/ \d{1,2} \w+ \d{4} \/ Waiting for approval$/.test(meta ?? '') && b.ctl === 'Approve (demo) | Back to the camera | Share this photo' && bar.camMid <= 1 && bar.shareRight <= 24 && bar.x === 'Remove this photo', JSON.stringify({ b, meta, bar }))
-  await p.locator('.pb-ctl .pb-btn', { hasText: 'Approve (demo)' }).click()
-  await p.waitForTimeout(400)
-  b = await pb(p)
-  check('approved (the demo’s stand-in for Shrug), it is on the wall and no longer waiting', b.ctl === 'Back to the camera | Share this photo' && !(await p.evaluate(() => document.querySelector('.pb-th').classList.contains('waiting'))) && (await p.evaluate(() => document.querySelector('.pb-th.on .pb-th__x')?.getAttribute('aria-label'))) === 'Remove this photo from the wall', JSON.stringify(b))
+  check('a photo opens large, with who took it and when; the camera’s button is in the middle of the bar, Share at its right (no Save), and its own taker has an x on it in the strip (and no Flag: that is for someone else’s)', b.stage === 'large' && /Riley Chen \/ \d{1,2} \w+ \d{4}$/.test(meta ?? '') && b.ctl === 'Back to the camera | Share this photo' && bar.camMid <= 1 && bar.shareRight <= 24 && bar.x === 'Remove this photo from the wall', JSON.stringify({ b, meta, bar }))
   await p.locator('.pb-shutter.back').click()
   await p.waitForTimeout(500)
   check('the camera’s button goes back to the camera', (await pb(p)).stage === 'live', (await pb(p)).stage)
@@ -386,10 +441,8 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(400)
   const four = await p.evaluate(() => { const img = document.querySelector('.pb-photo'); return { w: img.naturalWidth, h: img.naturalHeight } })
   check('four are taken, one after another, and set on one sheet', four.w > 300 && four.h > 300, JSON.stringify(four))
-  // (this one is posted and approved, so that there is something on the wall for a visitor to look at)
+  // (this one is posted, so that there is something on the wall for a visitor to look at, and for someone else to flag)
   await p.locator('.pb-btn--post').click(); await p.waitForTimeout(1000)
-  await p.locator('.pb-th button').first().click(); await p.waitForTimeout(400)
-  await p.locator('.pb-ctl .pb-btn', { hasText: 'Approve (demo)' }).click(); await p.waitForTimeout(300)
   // logging out puts the camera away: it is a member's
   await p.locator('.menubar__login').click()
   await p.locator('.account__row', { hasText: 'Log Out' }).click()
@@ -401,6 +454,29 @@ const check = (name, ok, detail = '') => {
   await p.locator('.pb-shutter.back').click(); await p.waitForTimeout(400)
   b = await pb(p)
   check('a visitor can look at the wall, and the camera’s button there leads back to the door, not to the camera', looking.stage === 'large' && b.stage === 'door' && !b.cam, JSON.stringify({ looking: looking.stage, then: b.stage }))
+  // someone else, logged in, flags it: it is off the wall at once, until Shrug has looked
+  await p.locator('.pb-msg .pb-btn').click()
+  await p.waitForTimeout(400)
+  await p.locator('.account input[type=email]').fill('sam@example.test')
+  await p.keyboard.press('Enter'); await p.waitForTimeout(900)
+  await p.keyboard.type('4155550177'); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
+  await p.keyboard.type('246810'); await p.waitForTimeout(1500)
+  await p.keyboard.type('Sam Okafor'); await p.locator('.account__go').click(); await p.waitForTimeout(1800)
+  await p.locator('.pb-th button').first().click(); await p.waitForTimeout(400)
+  const theirs = await pb(p)
+  await p.locator('.pb-ctl .pb-btn', { hasText: 'Flag' }).click(); await p.waitForTimeout(500)
+  b = await pb(p)
+  check('someone else, logged in, can flag a photo: it is off the wall at once, and the booth says what happens next', /^Flag this photo as not right for the wall \| Back to the camera \| Share this photo$/.test(theirs.ctl) && b.wall === 0 && b.toast === 'Flagged. It’s off the wall until Shrug has looked.', JSON.stringify({ theirs: theirs.ctl, wall: b.wall, toast: b.toast }))
+  await p.locator('.menubar__login').click()
+  await p.locator('.account__row', { hasText: 'Log Out' }).click()
+  await p.waitForTimeout(900)
+  await p.locator('.pb-msg .pb-btn').click()
+  await p.waitForTimeout(400)
+  await p.locator('.account input[type=email]').fill('riley@example.test')
+  await p.keyboard.press('Enter'); await p.waitForTimeout(900)
+  await p.keyboard.type('246810'); await p.waitForTimeout(1800)
+  const mine = await p.evaluate(() => { const th = document.querySelector('.pb-th'); return { n: document.querySelectorAll('.pb-th').length, tag: th?.querySelector('.pb-th__wait')?.textContent.trim() ?? null, says: th?.querySelector('button')?.getAttribute('aria-label') ?? null } })
+  check('its taker still sees it in the strip, marked Flagged', mine.n === 1 && mine.tag === 'Flagged' && /, flagged$/.test(mine.says ?? ''), JSON.stringify(mine))
   check('nothing went wrong on the way (Photo Booth)', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
   await booth.close()
@@ -420,6 +496,107 @@ const check = (name, ok, detail = '') => {
   check('refused the camera, it says the camera is off and how to turn it on, with Try Again', b.msg === 'The camera is off / Turn it on for this site in your browser’s settings, then try again. The wall below still works without it. / Try Again', String(b.msg))
   await t.ctx.close()
   await none.close()
+
+  // ---- Weather: the Mac's own, opened from the widget on the desk (the forecast is the checks' stand-in for
+  // the National Weather Service's: lib.cjs)
+  const WT = '.wf[data-app="weather"]'
+  const skies = await A.launch()
+  const openWeather = async (weather, more = {}) => {
+    const w = await A.open(skies, { device: 'desktop', base: BASE, query: 'empty', locale: 'en-US', timezoneId: 'America/Los_Angeles', weather, ...more })
+    await w.page.waitForSelector('.sf', { timeout: 20000 })
+    await w.page.waitForTimeout(900)
+    await w.page.locator('.sf').click()
+    await w.page.waitForSelector(`${WT}[data-open] .wt-msg, ${WT}[data-open] .wt-col`, { timeout: 15000 })
+    await w.page.waitForTimeout(1200)
+    return w
+  }
+  const wt = (p) => p.evaluate((WT) => {
+    const w = document.querySelector(WT)
+    const text = (sel, from = w) => from.querySelector(sel)?.textContent.replace(/\s+/g, ' ').trim() ?? null
+    const tile = (name) => [...w.querySelectorAll('.wt-tile')].find((x) => (x.getAttribute('aria-label') ?? '').startsWith(name))
+    const feel = tile('Feels like')
+    const app = w.querySelector('.wt-app')
+    const dock = document.querySelector('.dock__shelf').getBoundingClientRect()
+    const box = w.getBoundingClientRect()
+    return {
+      kind: app.dataset.kind,
+      light: app.dataset.light,
+      sky: !!w.querySelector('.wt-sky'),
+      clouds: w.querySelectorAll('.wt-sky .wt-cloud').length,
+      drift: [...w.querySelectorAll('.wt-sky .wt-cloud')].some((c) => getComputedStyle(c).animationName !== 'none'),
+      canvas: !!w.querySelector('.wt-sky canvas'),
+      place: text('.wt-head h1'),
+      temp: text('.wt-temp'),
+      feels: text('.wt-feel'),
+      range: text('.wt-range'),
+      ink: getComputedStyle(w.querySelector('.wt-temp') ?? app).color,
+      tiles: [...w.querySelectorAll('.wt-tile')].map((x) => (x.getAttribute('aria-label') ?? '').replace(/^The moon: .*/, 'The moon').replace(/^Sunrise$/, 'Sunset')).join(' | '),
+      feel: feel ? { big: text('.wt-big', feel), mid: text('.wt-mid', feel), gap: text('.wt-gap', feel), says: text('p', feel) } : null,
+      rain: text('.wt-big', tile('Chance of rain') ?? w),
+      humid: text('.wt-big', tile('Humidity') ?? w),
+      places: [...w.querySelectorAll('.wt-card')].map((c) => `${c.querySelector('.wt-card__top')?.firstElementChild?.firstChild?.textContent.trim() ?? c.textContent.trim().slice(0, 14)}${c.getAttribute('aria-current') ? '*' : ''}`).join(' | '),
+      none: text('.wt-none'),
+      msg: w.querySelector('.wt-msg')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
+      wide: w.querySelector('.wt').scrollWidth - w.querySelector('.wt').clientWidth,
+      clear: box.bottom <= dock.top + 1 && box.top >= 24,
+      hours: [...w.querySelectorAll('.wt-hours li')].slice(0, 4).map((li) => li.textContent.replace(/\s+/g, ' ').trim()).join(' | '),
+      spilt: [...w.querySelectorAll('.wt-tile')].filter((x) => x.scrollWidth > x.clientWidth + 1 || x.scrollHeight > x.clientHeight + 1).map((x) => x.getAttribute('aria-label')).join(' | '),
+    }
+  }, WT)
+  /** Whether what falls in the sky is moving: its canvas drawn differently a little later. */
+  const falling = async (p) => {
+    const shot = () => p.evaluate((WT) => document.querySelector(`${WT} .wt-sky canvas`)?.toDataURL() ?? null, WT)
+    const a = await shot(); await p.waitForTimeout(400); const b = await shot()
+    return { drawn: !!a && a.length > 2000, moves: !!a && a !== b }
+  }
+  let w = await openWeather()
+  p = w.page
+  let s = await wt(p)
+  check('the widget on the desk opens Weather: the window is the sky of the place, clear of the menu bar and the Dock, with the place’s name, its temperature large, how it feels, and the day’s high and low', (await front(p)) === 'weather' && s.sky && s.clear && s.place === 'San Francisco' && /^58°/.test(s.temp ?? '') && /Feels Like: 58°/.test(s.feels ?? '') && /^H:\d+° L:\d+°$/.test(s.range ?? '') && s.ink === 'rgb(255, 255, 255)', JSON.stringify({ place: s.place, temp: s.temp, feels: s.feels, range: s.range, ink: s.ink, clear: s.clear }))
+  check('a mostly cloudy sky is clouds, and they drift', s.kind === 'cloud' && s.clouds >= 2 && s.drift && !s.canvas, JSON.stringify({ kind: s.kind, light: s.light, clouds: s.clouds, drift: s.drift, canvas: s.canvas }))
+  check('under them, tiles: Feels Like first, then the wind, the hours ahead, humidity, rain, the week, the moon and the sun', s.tiles === 'Feels like | Wind | The hours ahead | Humidity | Chance of rain | Day by day | The moon | Sunset', s.tiles)
+  check('Feels Like says what it feels like and what it is: at 58 with a breeze, the same', !!s.feel && s.feel.big === '58°' && s.feel.mid === 'Actual: 58°' && s.feel.gap === '=' && s.feel.says === 'Similar to the actual temperature.', JSON.stringify(s.feel))
+  check('humidity and the chance of rain are the Service’s own numbers', s.humid === '76%' && s.rain === '10%', `${s.humid} ${s.rain}`)
+  check('nothing in a tile is cut off, and the window does not scroll sideways', s.spilt === '' && s.wide <= 0, JSON.stringify({ spilt: s.spilt, wide: s.wide }))
+  check('the places are down its left, the one shown picked', /^San Francisco\* \| Los Angeles \| New York$/.test(s.places), s.places)
+  await p.locator(`${WT} .wt-seg button[aria-label*="ain"]`).first().click(); await p.waitForTimeout(300)
+  const asRain = (await wt(p)).hours
+  check('the hours ahead can be read as the chance of rain', /\d+%/.test(asRain), asRain)
+  await p.locator(`${WT} .wt-card`, { hasText: 'New York' }).click(); await p.waitForTimeout(700)
+  s = await wt(p)
+  check('another place, picked, is shown', s.place === 'New York' && /New York\*/.test(s.places), JSON.stringify({ place: s.place, places: s.places }))
+  await p.locator(`${WT} .wt-find input`).fill('los'); await p.waitForTimeout(250)
+  const found = (await wt(p)).places
+  await p.locator(`${WT} .wt-find input`).fill('zzz'); await p.waitForTimeout(250)
+  s = await wt(p)
+  check('the field over them finds a place by name, and says so when none is called that', found === 'Los Angeles' && s.places === '' && s.none === 'No place here is called that.', JSON.stringify({ found, places: s.places, none: s.none }))
+  await p.locator(`${WT} .wt-find input`).fill('')
+  await p.locator(`${WT} .wt-fold`).click(); await p.waitForTimeout(300)
+  check('the button at its head puts the places away, and brings them back', (await p.locator(`${WT} .wt-side`).count()) === 0 && (await p.locator(`${WT} .wt-fold`).getAttribute('aria-label')) === 'Show the places')
+  check('nothing went wrong on the way (Weather)', A.realErrors(w.errors).length === 0, A.realErrors(w.errors).join(' | '))
+  await w.ctx.close()
+  // cold and windy, in the rain: it feels colder than it is, and the rain falls
+  w = await openWeather({ temperature: 44, windSpeed: '15 mph', shortForecast: 'Rain Showers' })
+  p = w.page
+  s = await wt(p)
+  let fall = await falling(p)
+  check('at 44 in a 15 mph wind it feels like 37 (the Service’s wind chill): seven lower, and it says the wind is why', /Feels Like: 37°/.test(s.feels ?? '') && !!s.feel && s.feel.big === '37°' && s.feel.mid === 'Actual: 44°' && s.feel.gap === '↓7°' && s.feel.says === 'Wind is making it feel colder.', JSON.stringify({ feels: s.feels, feel: s.feel }))
+  check('in rain the sky is rain, and it falls', s.kind === 'rain' && s.canvas && fall.drawn && fall.moves, JSON.stringify({ kind: s.kind, ...fall }))
+  await w.ctx.close()
+  // for someone who has asked for less motion, the sky is still
+  w = await openWeather({ shortForecast: 'Rain Showers' }, { reducedMotion: true })
+  p = w.page
+  s = await wt(p)
+  fall = await falling(p)
+  check('with less motion asked for, the sky is the same sky, and nothing in it moves', s.kind === 'rain' && !s.drift && !fall.moves, JSON.stringify({ kind: s.kind, drift: s.drift, ...fall }))
+  await w.ctx.close()
+  // the Service does not answer: it says so, and offers to ask again
+  w = await openWeather('down')
+  p = w.page
+  s = await wt(p)
+  check('with no answer from the Service it says the forecast didn’t arrive, with Try Again, and shows no weather it was not told', /^San Francisco \/ The forecast didn’t arrive\. \/ Try Again$/.test(s.msg ?? '') && s.tiles === '' && s.temp === null, JSON.stringify({ msg: s.msg, tiles: s.tiles, temp: s.temp }))
+  await w.ctx.close()
+  await skies.close()
 
   console.log(failed ? `${failed} FAILED` : 'all ok')
   process.exit(failed ? 1 : 0)

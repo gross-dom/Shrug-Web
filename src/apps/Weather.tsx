@@ -265,7 +265,8 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
               ))}
             </span>
           </header>
-          <ol className="wt-hours">
+          {/* (it runs on to the right: it takes the keyboard, so that the arrow keys can scroll it) */}
+          <ol className="wt-hours" tabIndex={0} aria-label="Hour by hour">
             {line.map((entry) => {
               if ('sun' in entry)
                 return (

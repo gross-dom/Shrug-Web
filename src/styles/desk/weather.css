@@ -41,7 +41,14 @@
   position: absolute;
   inset: 0;
   display: flex;
-  isolation: isolate;
+}
+
+/* (The window's bar lies over the top of all this, to be held and moved by. What is in the window is
+   stacked with it, not under it as one piece, so that the button at its head can lie over the bar and be
+   pressed: the sky at the bottom, the places and the forecast over the sky, the bar over those, and the
+   button over the bar) */
+.wt-app > .wt-sky {
+  z-index: 0;
 }
 
 .wtwin :where(h1, h2, p, ol, ul) {
@@ -54,7 +61,7 @@
   cursor: pointer;
 }
 
-.wtwin :where(button, a, input):focus-visible,
+.wtwin :where(button, a, input, .wt-hours):focus-visible,
 .wt:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
@@ -341,6 +348,8 @@
 /* ---- The place that is picked */
 
 .wt {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   overflow-y: auto;
@@ -563,8 +572,8 @@
   position: relative;
   flex: none;
   align-self: center;
-  width: 92px;
-  height: 92px;
+  width: 80px;
+  height: 80px;
   margin: 4px 0 2px;
   border-radius: 50%;
   background: repeating-conic-gradient(rgb(255 255 255 / 0.34) 0 1deg, transparent 1deg 6deg);
@@ -580,9 +589,9 @@
 .wt-tile .wt-dial {
   position: absolute;
   top: 31px;
-  left: calc(50% - 46px);
-  width: 92px;
-  height: 92px;
+  left: calc(50% - 40px);
+  width: 80px;
+  height: 80px;
 }
 
 .wt-dial i {
@@ -595,23 +604,23 @@
 }
 
 .wt-dial i:nth-child(1) {
-  top: 9px;
+  top: 8px;
   left: calc(50% - 3.5px);
 }
 
 .wt-dial i:nth-child(2) {
   top: calc(50% - 5px);
-  right: 10px;
+  right: 9px;
 }
 
 .wt-dial i:nth-child(3) {
-  bottom: 9px;
+  bottom: 8px;
   left: calc(50% - 3px);
 }
 
 .wt-dial i:nth-child(4) {
   top: calc(50% - 5px);
-  left: 10px;
+  left: 9px;
 }
 
 .wt-dial svg {
@@ -628,15 +637,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 19px;
+  line-height: 17px;
 }
 
 .wt-dial small {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  line-height: 12px;
+  line-height: 11px;
 }
 
 /* The hours ahead: what they are read as at the head, and the hours in a row that runs on to the right */

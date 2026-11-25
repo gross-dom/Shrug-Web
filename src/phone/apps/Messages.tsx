@@ -566,6 +566,8 @@ function SentMessage({ message, last }: { message: Sent; last: boolean }) {
           {failed ? 'Not Delivered' : message.state === 'sent' ? 'Delivered' : message.files.length ? `Sending… ${Math.round(message.part * 100)}%` : 'Sending…'}
         </p>
       )}
+      {/* (the demo shows it as gone, and says under it that nothing was) */}
+      {last && message.state === 'sent' && message.demo && <p className="msgn-demo">Demo: nothing was sent.</p>}
     </div>
   )
 }

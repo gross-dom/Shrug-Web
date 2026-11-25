@@ -325,7 +325,7 @@ export function MailApp() {
       case 'reply':
       case 'compose': {
         // A new message, written here, to Shrug: a reply to a conversation takes its subject
-        const re = does === 'reply' && thread ? `Re: ${thread.subject}` : null
+        const re = does === 'reply' && thread ? (/^re:/i.test(thread.subject) ? thread.subject : `Re: ${thread.subject}`) : null
         if (re && letter.subject !== re) setLetter((was) => ({ ...was, subject: re }))
         setZero(false)
         return setComposing(true)
@@ -573,7 +573,9 @@ export function MailApp() {
           </div>
         )}
         <p className="ml-readonly">
-          <span>Nothing sends from here</span>
+          <span>
+            <K>C</K> writes to Shrug
+          </span>
           <button type="button" aria-label="Keyboard shortcuts" onClick={() => setOver('shortcuts')}>
             <CircleHelp size={14} strokeWidth={1.7} aria-hidden />
           </button>

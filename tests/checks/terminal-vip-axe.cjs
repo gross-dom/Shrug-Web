@@ -149,6 +149,12 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
   await run(p, 'desktop Mail, the sheet of its keys', '.wf[data-app="mail"]')
   await p.keyboard.press('Escape'); await p.keyboard.press('Control+Shift+E'); await p.waitForTimeout(500)
   await run(p, 'desktop Mail, Inbox Zero', '.wf[data-app="mail"]')
+  // a new message to Shrug, written here: empty, and with what is missing said
+  await p.keyboard.press('z'); await p.waitForTimeout(300)
+  await p.keyboard.press('c'); await p.waitForSelector('.wf[data-app="mail"] .ml-compose', { timeout: 8000 }); await p.waitForTimeout(400)
+  await run(p, 'desktop Mail, a new message to Shrug', '.wf[data-app="mail"]')
+  await p.locator('.wf[data-app="mail"] .ml-compose .ml-send').click({ force: true }); await p.waitForTimeout(300)
+  await run(p, 'desktop Mail, a new message with its address still to add', '.wf[data-app="mail"]')
   await t.ctx.close()
   // The windows laid out with VIP's classes
   t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&open=wallpapers,updates', reducedMotion: true })
@@ -239,6 +245,14 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
   await p.locator(`${W('messages')} .im-opt`).nth(2).click(); await p.waitForTimeout(400)
   await run(p, 'desktop Messages, a message to Shrug: a meeting asked for', W('messages'))
   await t.ctx.close()
+  // Weather: the place it opens on, and another picked with the places put away
+  await fresh('&open=weather')
+  await p.waitForSelector(`${W('weather')}[data-open] .wt-col`, { timeout: 15000 }); await p.waitForTimeout(900)
+  await run(p, 'desktop Weather, San Francisco', W('weather'))
+  await p.locator(`${W('weather')} .wt-card`).nth(2).click(); await p.waitForTimeout(600)
+  await p.locator(`${W('weather')} .wt-fold`).click(); await p.waitForTimeout(300)
+  await run(p, 'desktop Weather, another place, with the places put away', W('weather'))
+  await t.ctx.close()
   // Workspace: its slabs; the studio in every color, to a visitor; a photograph on the stage; the sixteen more
   // colors and one of them; BTS and a picture of it open large; Notable Owners; and, logged in, the price and the chair's own page
   await fresh('&open=workspace')
@@ -250,7 +264,7 @@ const arrived = (p) => p.waitForFunction(() => !document.getElementById('boot') 
   await run(p, 'desktop Workspace, the studio in Matte Black', W('workspace'))
   await p.locator(`${W('workspace')} .st-shot`).nth(1).click(); await p.waitForTimeout(700)
   await run(p, 'desktop Workspace, a photograph of the chair on the stage', W('workspace'))
-  for (const name of ['Scuderia Red', 'Solar Orange', 'Alexandrite', 'Championship Green', 'Supersonic', 'Pearl Lavender', 'Mantis Green']) {
+  for (const name of ['Scuderia Red', 'Solar Orange', 'Alexandrite', 'Illusion Blue', 'Supersonic', 'Pearl Lavender', 'Mantis Green']) {
     await p.locator(`${W('workspace')} .fl-dot[aria-label="${name}"]`).click(); await p.waitForTimeout(700)
     await run(p, `desktop Workspace, the studio in ${name}`, W('workspace'))
   }
