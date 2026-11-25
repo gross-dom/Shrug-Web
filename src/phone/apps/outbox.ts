@@ -222,6 +222,29 @@ export function resend(id: string) {
   deliver(id, message.text, files ?? [], { subject: message.subject, details: message.details })
 }
 
+/** Where a letter to Shrug is addressed, as Mail's New Message shows it. */
+export const SHRUG_MAIL = 'hello@shrug.vc'
+
+/** A letter to Shrug that is not the conversation in Messages (Mail's New Message): the same inbox takes
+ * it, as a form (`via` says where it was written, `from` whom to answer). It says how it went: sent; shown
+ * as sent by the demo, which sends nothing; or not sent. */
+export function postToShrug(fields: Record<string, string>): Promise<'sent' | 'demo' | 'failed'> {
+  const inbox = SITE.contact.inbox
+  if (!inbox) return new Promise((done) => setTimeout(() => done(DEMO ? 'demo' : 'failed'), 900))
+  const body = new FormData()
+  for (const [name, value] of Object.entries(fields)) if (value.trim()) body.append(name, value)
+  return fetch(inbox, { method: 'POST', body }).then(
+    (answer) => (answer.ok ? 'sent' : 'failed'),
+    () => 'failed',
+  )
+}
+
+/** With no inbox on the live site, a letter is handed to the visitor's own mail app: this is the link that does it. */
+export const mailtoShrug = (subject: string, text: string) => `mailto:${SHRUG_MAIL}?${[subject.trim() && `subject=${encodeURIComponent(subject.trim())}`, text.trim() && `body=${encodeURIComponent(text.trim())}`].filter(Boolean).join('&')}`
+
+/** Whether a letter can be sent from the page itself: there is an inbox, or this is the demo. */
+export const CAN_POST = !!SITE.contact.inbox || DEMO
+
 /** A file's size as Files gives it: 840 KB, 3.2 MB. */
 export function sizeOf(bytes: number) {
   if (bytes < 1024) return `${bytes} bytes`

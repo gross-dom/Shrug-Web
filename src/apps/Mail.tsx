@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Undo2, X, Zap } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Trash2, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
 import { launchApp, showCompany } from '../os/launch'
 import { mail, markDone, markUnread, openExchange, star } from '../os/mail'
 import { linkTo } from '../os/place'
 import { useStore } from '../os/store'
-import { writeToShrug } from '../os/write'
+import { account } from '../os/account'
+import { CAN_POST, mailtoShrug, postToShrug, SHRUG_MAIL } from '../phone/apps/outbox'
 import '../styles/desk/mail.css'
 
 // Mail (design/v1, "Mail", and Dom's notes after testing it): twenty email exchanges that led to something,
@@ -27,7 +28,7 @@ import '../styles/desk/mail.css'
 type Split = 'all' | Led | 'done' | 'starred'
 
 /** What a command does here. A string is what a read-only one says instead of doing anything. */
-type Does = 'next' | 'previous' | 'open' | 'back' | 'next-split' | 'previous-split' | 'top' | 'bottom' | 'inbox' | 'search' | 'command' | 'shortcuts' | 'reply' | 'led' | 'next-message' | 'previous-message' | 'expand' | 'zero' | 'undo' | 'done' | 'not-done' | 'star' | 'unread' | 'read' | 'share' | 'go-done' | 'go-starred' | { says: string }
+type Does = 'next' | 'previous' | 'open' | 'back' | 'next-split' | 'previous-split' | 'top' | 'bottom' | 'inbox' | 'search' | 'command' | 'shortcuts' | 'reply' | 'led' | 'next-message' | 'previous-message' | 'expand' | 'zero' | 'undo' | 'done' | 'not-done' | 'star' | 'unread' | 'read' | 'share' | 'go-done' | 'go-starred' | 'compose' | { says: string }
 
 interface Command {
   id: string
@@ -46,7 +47,7 @@ const elsewhere: Does = { says: 'There is the inbox, Done and Starred here: twen
 const COMMANDS: Command[] = [
   { id: 'zero', name: 'Achieve Inbox Zero', keys: ['⌘', '⇧', 'E'], when: ['mod+shift+e'], group: 'Find and ask', does: 'zero' },
   { id: 'inbox', name: 'Go to Inbox', keys: ['G', 'I'], when: ['g i'], group: 'Move about', does: 'inbox' },
-  { id: 'reply', name: 'Reply to Shrug in Messages', keys: ['R'], when: ['r'], group: 'In a conversation', does: 'reply' },
+  { id: 'reply', name: 'Reply to Shrug', keys: ['R'], when: ['r'], group: 'In a conversation', does: 'reply' },
   { id: 'led', name: 'Open what this led to', keys: ['O'], when: [], group: 'In a conversation', does: 'led' },
   { id: 'search', name: 'Search all twenty', keys: ['/'], when: ['/'], group: 'Find and ask', does: 'search' },
   { id: 'shortcuts', name: 'Show keyboard shortcuts', keys: ['?'], when: ['?', 'mod+/'], group: 'Find and ask', does: 'shortcuts' },
@@ -63,7 +64,7 @@ const COMMANDS: Command[] = [
   { id: 'previous-message', name: 'Previous message', keys: ['P'], when: ['p'], group: 'In a conversation', does: 'previous-message' },
   { id: 'expand', name: 'Expand all messages', keys: ['⇧', 'O'], when: ['shift+o'], group: 'In a conversation', does: 'expand' },
   { id: 'reply-all', name: 'Reply all', keys: ['↵'], when: [], group: 'In a conversation', does: 'reply' },
-  { id: 'compose', name: 'Compose', keys: ['C'], when: ['c'], group: 'In a conversation', does: 'reply' },
+  { id: 'compose', name: 'Compose', keys: ['C'], when: ['c'], group: 'In a conversation', does: 'compose' },
   { id: 'undo', name: 'Undo', keys: ['Z'], when: ['z'], group: 'Find and ask', does: 'undo' },
   // ---- what a visitor can do with the twenty: kept in their own browser
   { id: 'done', name: 'Mark Done', keys: ['E'], when: ['e'], group: 'Yours to do', does: 'done' },
@@ -166,6 +167,9 @@ export function MailApp() {
   const setOpen = openExchange
   const [over, setOver] = useState<'command' | 'shortcuts' | null>(null)
   const [zero, setZero] = useState(false)
+  /** A new message to Shrug, being written here: what it has in it so far. It is kept while it is put by (Escape, the way back), and gone once it is sent or discarded. */
+  const [letter, setLetter] = useState<Letter>(BLANK)
+  const [composing, setComposing] = useState(false)
   /** In a conversation: the message the keyboard is on, and the ones that are open (the rest are a line each). */
   const [message, setMessage] = useState(0)
   const [unfolded, setUnfolded] = useState<number[]>([])
@@ -190,8 +194,12 @@ export function MailApp() {
   const cursor = Math.min(at, Math.max(0, rows.length - 1))
   const thread = open ? (EXCHANGES.find((x) => x.id === open) ?? null) : null
   const count = (id: Split) => EXCHANGES.filter((x) => under(x, id)).length
-  /** The splits along the bar: Starred is there once something is. */
-  const splits: { id: Split; label: string }[] = [...SPLITS, { id: 'done', label: 'Done' }, ...(starred.length || split === 'starred' ? [{ id: 'starred' as const, label: 'Starred' }] : [])]
+  /** The splits along the bar: Done is there once something has been marked done, and Starred once something is starred. */
+  const splits: { id: Split; label: string }[] = [...SPLITS, ...(done.length ? [{ id: 'done' as const, label: 'Done' }] : []), ...(starred.length || split === 'starred' ? [{ id: 'starred' as const, label: 'Starred' }] : [])]
+  // (the last of Done brought back to the inbox: Done is no longer a place to be)
+  useEffect(() => {
+    if (split === 'done' && !done.length) setSplit('all')
+  }, [split, done.length])
 
   const say = (text: string) => setSaid((s) => ({ text, n: (s?.n ?? 0) + 1 }))
   useEffect(() => {
@@ -252,6 +260,8 @@ export function MailApp() {
       }
       case 'go-done':
       case 'go-starred':
+        // (Done is somewhere to go once something has been marked done)
+        if (does === 'go-done' && !done.length) return say('Nothing is marked done yet.')
         setZero(false)
         setOpen(null)
         setQuery(null)
@@ -313,8 +323,13 @@ export function MailApp() {
       case 'shortcuts':
         return setOver('shortcuts')
       case 'reply':
-        // Nothing sends from here: a reply is a new message to Shrug, in Messages
-        return writeToShrug(thread ? { subject: thread.subject } : undefined)
+      case 'compose': {
+        // A new message, written here, to Shrug: a reply to a conversation takes its subject
+        const re = does === 'reply' && thread ? `Re: ${thread.subject}` : null
+        if (re && letter.subject !== re) setLetter((was) => ({ ...was, subject: re }))
+        setZero(false)
+        return setComposing(true)
+      }
       case 'led': {
         const x = thread ?? rows[cursor]
         if (!x) return
@@ -349,8 +364,8 @@ export function MailApp() {
   }
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    // What is typed into a field is the field's, and a sheet over the window answers its own keys
-    if (over || (e.target as HTMLElement).closest('input, textarea')) return
+    // What is typed into a field is the field's, a sheet over the window answers its own keys, and so does a message being written
+    if (over || composing || (e.target as HTMLElement).closest('input, textarea')) return
     if (e.altKey) return
     const press = pressed(e)
     // G, and then where to go
@@ -393,7 +408,7 @@ export function MailApp() {
     <div className="mlbar" data-zero={zero || undefined}>
       <span className="mlbar__pill">
         <i aria-hidden />
-        {query !== null ? 'Search' : `${splitName} (${count(split)})`} - Mail
+        {composing ? 'New Message' : query !== null ? 'Search' : `${splitName} (${count(split)})`} - Mail
       </span>
       <span className="mlbar__plus" aria-hidden>
         +
@@ -415,7 +430,7 @@ export function MailApp() {
   )
   const tools = (
     <span className="ml-tools">
-      <button type="button" aria-label="New message to Shrug, in Messages" onClick={() => run('reply')}>
+      <button type="button" aria-label="New message to Shrug" onClick={() => run('compose')}>
         <SquarePen size={15} strokeWidth={1.7} aria-hidden />
       </button>
       <button type="button" aria-label="Search all twenty" onClick={() => (setHint(true), run('search'))}>
@@ -594,6 +609,19 @@ export function MailApp() {
               </button>
             </p>
           </div>
+        ) : composing ? (
+          <Compose
+            letter={letter}
+            onChange={setLetter}
+            onPutBy={() => (setComposing(false), back())}
+            onDiscard={() => (setLetter(BLANK), setComposing(false), back())}
+            onSent={(how) => {
+              setLetter(BLANK)
+              setComposing(false)
+              say(how === 'demo' ? 'Message sent. (Demo: nothing was sent.)' : 'Message sent.')
+              back()
+            }}
+          />
         ) : thread ? (
           <Thread
             x={thread}
@@ -672,7 +700,7 @@ export function MailApp() {
             )}
           </div>
         )}
-        {!zero && pane}
+        {!zero && !composing && pane}
         {said && (
           <div className="ml-said" role="status" key={said.n}>
             {said.text}
@@ -744,7 +772,7 @@ function Thread({ x, message, unfolded, lit, done, starred, onFold, onBack, onRe
                     </b>
                     <i className="sr-only">. Close this email</i>
                   </button>
-                  <button type="button" className="ml-mini" aria-label="Reply: a new message to Shrug, in Messages" data-tip="Reply in Messages" data-keys="R" onClick={onReply}>
+                  <button type="button" className="ml-mini" aria-label="Reply to Shrug" data-tip="Reply" data-keys="R" onClick={onReply}>
                     <Reply size={14} strokeWidth={1.6} aria-hidden />
                   </button>
                   <time>{dayOf(email.at)}</time>
@@ -758,11 +786,116 @@ function Thread({ x, message, unfolded, lit, done, starred, onFold, onBack, onRe
         </div>
       </div>
       <div className="ml-reply">
-        <span>Nothing sends from here. Reply opens a new message to Shrug in Messages.</span>
+        <span>These twenty are for reading. A reply is a new message to Shrug.</span>
         <button type="button" className="ml-go" onClick={onReply}>
-          <MessageCircle size={13} strokeWidth={2} aria-hidden />
+          <Reply size={13} strokeWidth={2} aria-hidden />
           Reply to Shrug <K>R</K>
         </button>
+      </div>
+    </div>
+  )
+}
+
+/** What a new message has in it. */
+interface Letter {
+  from: string
+  subject: string
+  text: string
+}
+const BLANK: Letter = { from: '', subject: '', text: '' }
+
+/** A new message, as Superhuman sets one out (Dom's screenshot of it): the way back at the left, "New
+ * Message", and a card: who it is to, who it is from, its subject, what it says, and along its foot Send
+ * and the bin. It has one recipient, Shrug. ⌘ Return sends it; Escape puts it by, as it was, for later.
+ *
+ * It goes where a message to Shrug goes (src/phone/apps/outbox.ts): to Shrug's inbox where the site has
+ * one; in the demo it is shown as sent, and says nothing was; and on a live site with no inbox yet, Send
+ * hands the letter to the visitor's own mail app. */
+function Compose({ letter, onChange, onPutBy, onDiscard, onSent }: { letter: Letter; onChange: (next: Letter) => void; onPutBy: () => void; onDiscard: () => void; onSent: (how: 'sent' | 'demo') => void }) {
+  const who = useStore(account, (s) => s)
+  const mine = who.status === 'member' ? who.email : ''
+  const [state, setState] = useState<'writing' | 'sending' | 'failed'>('writing')
+  const [asked, setAsked] = useState(false)
+  const from = letter.from || mine
+  const first = useRef<HTMLInputElement>(null)
+  const words = useRef<HTMLTextAreaElement>(null)
+  // The keyboard goes to the first thing still to be filled in
+  useEffect(() => {
+    if (!from) first.current?.focus()
+    else words.current?.focus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const set = (part: Partial<Letter>) => (setState('writing'), onChange({ ...letter, ...part }))
+  const address = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from.trim())
+  const ready = letter.text.trim().length > 0 && address
+  const send = () => {
+    setAsked(true)
+    if (!ready || state === 'sending') return
+    setState('sending')
+    void postToShrug({ via: 'mail', from: from.trim(), email: from.trim(), subject: letter.subject.trim(), text: letter.text.trim() }).then((how) => (how === 'failed' ? setState('failed') : onSent(how)))
+  }
+  return (
+    <div
+      className="ml-main ml-thread ml-compose"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') return e.preventDefault(), e.stopPropagation(), onPutBy()
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) e.preventDefault(), e.stopPropagation(), send()
+      }}
+    >
+      <button type="button" className="ml-back" aria-label="Back to inbox" onClick={onPutBy}>
+        <ArrowLeft size={15} strokeWidth={1.7} aria-hidden />
+      </button>
+      <div className="ml-col">
+        <header className="ml-head">
+          <h1>New Message</h1>
+        </header>
+        <form
+          className="ml-card"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            send()
+          }}
+        >
+          <div className="ml-line">
+            <span>To</span>
+            <output>
+              <b>Shrug</b> {SHRUG_MAIL}
+            </output>
+          </div>
+          <label className="ml-line">
+            <span>From</span>
+            <input ref={first} type="email" value={from} placeholder="Your email, for the reply" autoComplete="email" spellCheck={false} aria-invalid={(asked && !address) || undefined} onChange={(e) => set({ from: e.target.value })} />
+          </label>
+          <label className="ml-line">
+            <span className="sr-only">Subject</span>
+            <input type="text" value={letter.subject} placeholder="Subject" autoComplete="off" onChange={(e) => set({ subject: e.target.value })} />
+          </label>
+          <textarea ref={words} value={letter.text} placeholder="Write to Shrug" aria-label="Message" rows={9} onChange={(e) => set({ text: e.target.value })} />
+          <footer>
+            {CAN_POST ? (
+              <button type="submit" className="ml-send" aria-disabled={!ready || state === 'sending' || undefined}>
+                {state === 'sending' ? 'Sending…' : 'Send'}
+              </button>
+            ) : (
+              // No inbox on this site yet: the letter is handed to the visitor's own mail app, which sends it
+              <a className="ml-send" href={mailtoShrug(letter.subject, letter.text)}>
+                Send from your mail app
+              </a>
+            )}
+            {CAN_POST && (
+              <small aria-hidden>
+                <K>⌘</K> <K>↵</K>
+              </small>
+            )}
+            <span role="status" className="ml-says">
+              {state === 'failed' ? 'Not sent. Check your connection and try again.' : asked && !address ? 'Add your email, so Shrug can reply.' : asked && !letter.text.trim() ? 'Write something first.' : ''}
+            </span>
+            <button type="button" className="ml-bin" aria-label="Discard this message" data-tip="Discard" onClick={onDiscard}>
+              <Trash2 size={15} strokeWidth={1.6} aria-hidden />
+            </button>
+          </footer>
+        </form>
       </div>
     </div>
   )

@@ -1237,3 +1237,139 @@ article.ml-msg[data-at] .ml-mini,
 .ml .ml-acts > [data-tip]:hover::after {
   transform: none;
 }
+
+/* ---- New Message (Dom's screenshot of Superhuman's): a card in the conversation's column. Who it is to,
+   who it is from and its subject, a line each with the faintest rule under; then what it says; and along
+   its foot, over a rule, Send in bold as Superhuman sets it, and the bin at the far end */
+
+.ml-compose .ml-col {
+  padding-bottom: 40px;
+}
+
+.ml-card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+  padding: 6px 30px 0;
+  background: #fff;
+  box-shadow: 0 1px 9px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+}
+
+.ml-line {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 38px;
+  color: var(--ml-ink-3);
+  font-size: 13px;
+}
+
+.ml-line > span:first-child:not(.sr-only) {
+  flex: none;
+  width: 36px;
+}
+
+.ml-line output {
+  color: var(--ml-ink-2);
+}
+
+.ml-line output b {
+  margin-right: 6px;
+  color: var(--ml-ink);
+  font-weight: 500;
+}
+
+.ml-line input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  color: var(--ml-ink);
+  font-size: 13px;
+}
+
+.ml-card :where(input, textarea)::placeholder {
+  color: #a3a3aa;
+  opacity: 1;
+}
+
+.ml-card :where(input, textarea):focus-visible {
+  outline: none;
+}
+
+.ml-line:focus-within > span:first-child {
+  color: var(--ml-violet);
+}
+
+.ml-line input[aria-invalid='true'] {
+  color: #b3261e;
+}
+
+.ml-card textarea {
+  min-height: 180px;
+  margin-top: 6px;
+  padding: 8px 0 12px;
+  color: #3a3a3e;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.62;
+  resize: none;
+}
+
+.ml-card footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 46px;
+  border-top: 1px solid var(--ml-hair);
+  font-size: 12.5px;
+}
+
+.ml-send {
+  color: var(--ml-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ml-send:hover {
+  color: var(--ml-violet);
+}
+
+.ml-send[aria-disabled='true'] {
+  color: #a3a3aa;
+}
+
+.ml-card footer small {
+  display: inline-flex;
+  gap: 3px;
+  color: var(--ml-ink-3);
+}
+
+.ml-says {
+  flex: 1;
+  min-width: 0;
+  color: #b3261e;
+  font-size: 12px;
+}
+
+.ml-bin {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-right: -6px;
+  border-radius: 6px;
+  color: var(--ml-ink-3);
+}
+
+.ml-bin:hover {
+  background: #f1f0f5;
+  color: var(--ml-ink);
+}
+
+.ml .ml-bin[data-tip]::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}

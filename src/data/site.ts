@@ -25,11 +25,14 @@ export const SITE = {
    * `inbox` is where a message written to Shrug on the phone is sent, with the
    * files that go with it (a deck, a one-pager: Messages, the compose button):
    * an address that takes a form by POST, the words as `text` and each file as
-   * `files`, and answers 2xx once it has them. Shrug means these to reach a
-   * forwarding number linked to an email account, to be built later. There is
-   * none yet, so a message written there says it was not delivered, and
-   * nothing leaves the page. */
-  contact: { sms: null as string | null, email: null as string | null, inbox: null as string | null },
+   * `files`, and answers 2xx once it has them. The site has one of its own to
+   * use: /api/message (api/message.js), which sends what it is given to
+   * Shrug by email. It is used when the site is built with
+   * VITE_INBOX=/api/message, once that function has been given its sending
+   * key (the file says what it needs). Until then there is no inbox: on the
+   * live site a message says it was not delivered and nothing leaves the page,
+   * and in the demo it is shown as delivered and says that nothing was sent. */
+  contact: { sms: null as string | null, email: null as string | null, inbox: ((import.meta.env as { VITE_INBOX?: string } | undefined)?.VITE_INBOX || null) as string | null },
 }
 
 /** What About Shrug says of the firm (the window on the desktop). Each is said in Shrug's own FAQs
