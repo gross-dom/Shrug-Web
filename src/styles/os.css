@@ -1172,6 +1172,17 @@
   filter: drop-shadow(0 3px 6px rgba(4, 10, 50, 0.32));
 }
 
+/* On a Mac's desktop a folder and an app are not drawn the same size in their places: an app's tile keeps a
+   margin about it (52 of the place's 64), and a folder fills more of it and is a little wider than tall
+   (59 by 48). These are those proportions, from Dom's screenshot of the two side by side */
+.desk__icon .app-icon {
+  transform: scale(0.875);
+}
+
+.desk__icon .folder-icon {
+  transform: scale(1.14);
+}
+
 .desk__name {
   max-width: 100%;
   padding: 1px 6px 2px;
@@ -1620,21 +1631,24 @@ html[data-wm-busy='se'] * {
   pointer-events: none;
 }
 
+/* The tray: clear glass, as the Mac's own is in Dom's screenshot of his Dock. The desk shows through it,
+   only softened, under a bright fine rim; and the icons have room about them (12 over, 12 under with the
+   dot in it, 10 at the ends) */
 .dock__shelf {
   position: relative;
   display: flex;
   align-items: flex-end;
-  height: calc(var(--dock-size) + 16px);
-  padding: 0 3px 10px;
-  border-radius: 21px;
-  background: rgba(255, 255, 255, 0.3);
+  height: calc(var(--dock-size) + 25px);
+  padding: 0 10px 13px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.14);
   box-shadow:
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.62),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 0 0 0.5px rgba(4, 10, 50, 0.3),
-    0 14px 36px -8px rgba(4, 10, 50, 0.45);
-  -webkit-backdrop-filter: blur(30px) saturate(1.7);
-  backdrop-filter: blur(30px) saturate(1.7);
+    0 0 0 0.5px rgba(4, 10, 50, 0.22),
+    0 14px 36px -8px rgba(4, 10, 50, 0.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.8);
+  backdrop-filter: blur(14px) saturate(1.8);
   pointer-events: auto;
 }
 
@@ -1796,7 +1810,7 @@ html[data-wm-busy='se'] * {
    Dock's own menus are on a Mac. While it is open the icons' names stay away */
 .dock-menu {
   position: fixed;
-  bottom: 92px;
+  bottom: 101px;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -2250,8 +2264,10 @@ html[data-wm-busy] .dock__item .dock__label {
    menus do. These rules recolor what is laid out above; nothing is moved. ---- */
 
 .os {
-  --sheet-glass: rgba(38, 38, 41, 0.74);
-  --sheet-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.13), 0 22px 54px -8px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.22);
+  /* (see-through, as the Mac's own glass is in Dom's screenshots of it: a light tint, and the desk behind it
+     blurred and brought up, under a bright fine edge. Not a grey pane) */
+  --sheet-glass: rgba(28, 28, 32, 0.46);
+  --sheet-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 22px 54px -8px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.22);
   --glass-ink: rgba(255, 255, 255, 0.94);
   --glass-ink-1: rgba(255, 255, 255, 0.86);
   --glass-ink-2: rgba(235, 235, 245, 0.64);
@@ -2268,8 +2284,8 @@ html[data-wm-busy] .dock__item .dock__label {
 }
 
 .os[data-theme='light'] {
-  --sheet-glass: rgba(246, 247, 250, 0.84);
-  --sheet-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.2), inset 0 0 0 0.5px rgba(255, 255, 255, 0.7), 0 22px 54px -8px rgba(6, 14, 60, 0.36), 0 6px 16px rgba(6, 14, 60, 0.14);
+  --sheet-glass: rgba(250, 250, 252, 0.62);
+  --sheet-edge: 0 0 0 0.5px rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 22px 54px -8px rgba(6, 14, 60, 0.36), 0 6px 16px rgba(6, 14, 60, 0.14);
   --glass-ink: #1d1d1f;
   --glass-ink-1: #2c2c2e;
   --glass-ink-2: #55555c;

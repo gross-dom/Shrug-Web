@@ -74,7 +74,6 @@ export function NotesApp() {
       className="app faq"
       title="FAQs"
       sidebarWidth={264}
-      sidebarStyle="floating"
       lightsSize="large"
       barSize="tall"
       sidebar={

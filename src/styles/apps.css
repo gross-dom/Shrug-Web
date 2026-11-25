@@ -2073,16 +2073,74 @@
   background: var(--ss-ink-1);
 }
 
-/* The note that's open is marked in a notebook's yellow */
-.faq-row[data-selected],
-.faq-row[data-selected]:hover {
-  background: #ffdb63;
-  --ss-ink-2: rgba(80, 50, 0, 0.16);
+/* Notes, as the Mac's own is in Dom's screenshots of it (light and dark: theme.css has the dark values).
+   Two panes side by side, the list's flush down the window's left with a hair between them; in the list a
+   bold heading, each note a title over one line of how it begins, a hair between notes, and the note that
+   is open on a grey round-cornered ground with its words as they were (not a notebook's yellow, on which
+   white could not be read) */
+.app.faq > .ss-window__side {
+  background: #fff;
+  border-right: 1px solid #e6e6e6;
 }
 
-/* Grey on the yellow is hard to read (4.3:1): the line under the open question is the yellow's own dark */
+.app.faq > .ss-window__main,
+.app.faq > .ss-window__main > .ss-window__bar {
+  background: #fff;
+}
+
+.app.faq .side-label {
+  margin: 14px 14px 8px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 22px;
+  color: var(--ss-text-strong);
+}
+
+.app.faq .side-label__count {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.app.faq .faq-row {
+  --ss-row-title: 14px;
+  position: relative;
+  margin-bottom: 0;
+  padding-top: 11px;
+  padding-bottom: 11px;
+  border-radius: 10px;
+}
+
+.app.faq .faq-row .ss-row__title {
+  font-weight: 700;
+}
+
+/* (a hair under each note, from under its title's first letter to the pane's edge; none about the one that is open) */
+.app.faq .faq-row::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  left: 12px;
+  height: 1px;
+  background: #e6e6e6;
+}
+
+.app.faq .faq-row[data-selected]::after,
+.app.faq .faq-row:has(+ .faq-row[data-selected])::after,
+.app.faq .faq-row:last-child::after {
+  background: none;
+}
+
+.faq-row[data-selected],
+.faq-row[data-selected]:hover {
+  background: #dcdcdc;
+  --ss-ink-2: rgba(0, 0, 0, 0.12);
+}
+
 .faq-row[data-selected] .ss-row__preview[data-text] {
-  color: #5e4700;
+  color: #4c4c50;
 }
 
 .faq-row:focus-visible {

@@ -65,7 +65,7 @@ export const metrics = (compact: boolean) => ({
   /** The menu bar's height. */
   bar: compact ? 36 : 28,
   /** Room kept clear for the Dock under a zoomed or tiled window. */
-  dock: compact ? 74 : 82,
+  dock: compact ? 83 : 91,
 })
 
 /** The address asks for the phone whatever the screen's size (`?phone`), or a page holding this one does. */

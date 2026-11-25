@@ -78,12 +78,12 @@
 /* ---- The Dock, and the names over its icons */
 
 .os[data-theme='dark'] .dock__shelf {
-  background: rgba(40, 40, 46, 0.42);
+  background: rgba(22, 22, 28, 0.16);
   box-shadow:
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 0 0 0.5px rgba(0, 0, 0, 0.5),
-    0 14px 36px -8px rgba(0, 0, 0, 0.6);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 0 0 0.5px rgba(0, 0, 0, 0.45),
+    0 14px 36px -8px rgba(0, 0, 0, 0.55);
 }
 
 .os[data-theme='dark'] .dock__label {
@@ -191,6 +191,57 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* ---- Notes, dark, in the Mac's own greys (Dom's screenshot of it): the list's pane #292828, the note's
+   #1e1e1e, hairs of #3e3d3d, and the open note on #464646 with its words white */
+
+.os[data-theme='dark'] .app.faq > .ss-window__side {
+  background: #292828;
+  border-right-color: rgba(0, 0, 0, 0.5);
+}
+
+.os[data-theme='dark'] .app.faq > .ss-window__main,
+.os[data-theme='dark'] .app.faq > .ss-window__main > .ss-window__bar {
+  background: #1e1e1e;
+}
+
+.os[data-theme='dark'] .app.faq .faq-row::after {
+  background: #3e3d3d;
+}
+
+.os[data-theme='dark'] .app.faq .faq-row[data-selected]::after,
+.os[data-theme='dark'] .app.faq .faq-row:has(+ .faq-row[data-selected])::after,
+.os[data-theme='dark'] .app.faq .faq-row:last-child::after {
+  background: none;
+}
+
+.os[data-theme='dark'] .faq-row[data-selected],
+.os[data-theme='dark'] .faq-row[data-selected]:hover {
+  background: #464646;
+  --ss-ink-2: rgba(255, 255, 255, 0.16);
+}
+
+.os[data-theme='dark'] .faq-row[data-selected] .ss-row__title {
+  color: #fff;
+}
+
+.os[data-theme='dark'] .faq-row[data-selected] .ss-row__preview[data-text] {
+  color: #c6c6cb;
+}
+
+.os[data-theme='dark'] .app.faq .search {
+  background: #4b4b4b;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  color: #b4b4b9;
+}
+
+.os[data-theme='dark'] .app.faq .search__input {
+  color: #fff;
+}
+
+.os[data-theme='dark'] .app.faq .search__input::placeholder {
+  color: #b4b4b9;
+}
+
 /* ---- Wallpapers, dark: a tile's name is on dark glass */
 
 .os[data-theme='dark'] .vip-tile__cap {
@@ -243,4 +294,114 @@
 
 .os :where(.wf, .account, .menu, .menubar, .notify, .dock, .desk, .desk-free, .desk-note) :where(button:not(:disabled):not([aria-disabled='true']), a[href], [role='button'], [role='tab'], [role='option'], [role='radio'], [role='menuitem'], [role='switch'], [role='slider']:not([aria-disabled='true']), summary, label:has(input[type='checkbox'], input[type='radio'])) {
   cursor: pointer;
+}
+
+/* ---- Photo Booth, light: the Mac's own in its light dress, from Dom's screenshots of it. A white title bar
+   with its name in grey, the strip of pictures on warm grey, the bar under it on cool grey, a red shutter,
+   and grey buttons. (What is laid over a picture, the countdown and a line about it, is the same in both.)
+   Dark, it is as it was drawn first (styles/desk/photobooth.css). */
+
+.os[data-theme='light'] .ss-window.pbwin {
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 32px 70px -12px rgba(2, 4, 30, 0.5), 0 10px 24px rgba(2, 4, 30, 0.2);
+  color: #1d1d1f;
+  color-scheme: light;
+}
+
+.os[data-theme='light'] .ss-window.pbwin > .ss-window__bar {
+  background: #fff;
+}
+
+.os[data-theme='light'] .pb-name {
+  color: #595959;
+}
+
+.os[data-theme='light'] .pbwin__body,
+.os[data-theme='light'] .pb-ctl:not(.pb-ctl--count) {
+  background: #d9d9df;
+}
+
+.os[data-theme='light'] .pb {
+  color: #1d1d1f;
+}
+
+.os[data-theme='light'] .pb-view {
+  background: #ececf0;
+}
+
+.os[data-theme='light'] .pb-msg > svg {
+  color: #7c7c82;
+}
+
+.os[data-theme='light'] .pb-msg p {
+  color: #55565c;
+}
+
+.os[data-theme='light'] .pb-strip {
+  background: #d2d0cf;
+  box-shadow: none;
+}
+
+.os[data-theme='light'] .pb-strip--none {
+  color: #4c4c50;
+}
+
+.os[data-theme='light'] .pb-seg {
+  background: #cccbcf;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+.os[data-theme='light'] .pb-seg button {
+  color: #3e3e3f;
+}
+
+.os[data-theme='light'] .pb-seg button + button {
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+.os[data-theme='light'] .pb-seg button[aria-pressed='true'] {
+  background: #2e72f0;
+  color: #fff;
+}
+
+.os[data-theme='light'] .pb-seg button[aria-disabled='true'] {
+  color: #77777c;
+}
+
+.os[data-theme='light'] .pb-btn:not(.blue) {
+  background: #c7c7cd;
+  color: #3c3c3e;
+}
+
+.os[data-theme='light'] .pb-btn--remove {
+  color: #b3261e;
+}
+
+.os[data-theme='light'] .pb-ctl:not(.pb-ctl--count) .pb-shutter {
+  background: #f90000;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.25);
+  color: #fff;
+}
+
+.os[data-theme='light'] .pb-ctl:not(.pb-ctl--count) .pb-shutter.off {
+  background: #b4b4ba;
+  color: #fff;
+}
+
+.os[data-theme='light'] .pb-ctl:not(.pb-ctl--count) .pb-shutter.back {
+  background: #e8e8ee;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.16);
+  color: #6d6d73;
+}
+
+.os[data-theme='light'] .pb-ctl:not(.pb-ctl--count) .pb-shutter.back:hover {
+  background: #f3f3f7;
+}
+
+.os[data-theme='light'] .pb-th.on button > span:first-child {
+  outline-color: #4277f4;
+}
+
+.os[data-theme='light'] .pb :where(button):focus-visible {
+  outline-color: #2e72f0;
 }
