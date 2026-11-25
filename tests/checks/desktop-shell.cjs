@@ -203,7 +203,7 @@ const parts = {
       t = await fresh({ w, h, dpr: 1 }, 'still')
       const on = (await lying(t.page, 'messages', '.sf'))[0] ? ['messages'] : []
       const widget = await t.page.evaluate(() => !!document.querySelector('.sf')?.getClientRects().length)
-      // (the Dock's three other apps of that size, and the Wallpapers folder from the desk: the fifth icon in the Dock, VIP Store, opens a window as wide as the store was drawn, which store-window.cjs looks at)
+      // (the Dock's three other apps of that size, and the Wallpapers folder from the desk: the stores in the Dock (ArtStore, Books, My VIP) open windows as wide as the store was drawn, which store-window.cjs looks at)
       for (const id of ['finder', 'notes', 'terminal', 'wallpapers']) {
         if (id === 'wallpapers') await t.page.dblclick('[data-desk="wallpapers"]')
         else await t.page.click(`[data-dock-app="${id}"]`)
@@ -302,12 +302,12 @@ const parts = {
     await tapAt(t.page, other.x, other.y)
     await t.page.waitForTimeout(700)
     check('…and the next tap opens what it is on', !!(await win(t.page, 'terminal'))?.open)
-    // The same of VIP Store, the Dock's last, which was a link and is an app now: under an open menu a tap on it opens nothing
+    // The same of ArtStore, in the Dock where VIP was a link: it is an app now, and under an open menu a tap on it opens nothing
     await openMenu(t.page, 'window')
     const vip = await mid(t.page, '.dock [data-dock-app="store"]')
     await tapAt(t.page, vip.x, vip.y)
     await t.page.waitForTimeout(300)
-    check('touch: with a menu open, a tap on VIP Store in the Dock closes the menu and opens nothing', !(await win(t.page, 'store'))?.open && !(await t.page.evaluate(() => document.querySelector('.menubar').hasAttribute('data-open'))))
+    check('touch: with a menu open, a tap on ArtStore in the Dock closes the menu and opens nothing', !(await win(t.page, 'store'))?.open && !(await t.page.evaluate(() => document.querySelector('.menubar').hasAttribute('data-open'))))
     const tabsBefore = t.ctx.pages().length
     await tapAt(t.page, vip.x, vip.y)
     await t.page.waitForTimeout(700)
@@ -384,7 +384,7 @@ const parts = {
       lights: [...document.querySelectorAll('.wf[data-app="finder"] .wf__light')].map((b) => b.getAttribute('aria-label')),
     }))
     check('menus: Pause Replies is in the mark\'s menu with Portfolio in front', names.app === 'Portfolio' && names.mark.includes('Pause Replies') && names.mark.includes('Screen Saver') && names.mark.includes('Never'), JSON.stringify(names.mark))
-    check('copy: "Minimize", "Group Chat", "Questions about Shrug", "VIP Store" in the Dock and the Go menu, and the One-pager in the Go menu, which is no link now: it opens in Preview', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager') && !names.go.some((n) => /opens in a new tab/.test(n)) && names.dock.includes('FAQs: Questions about Shrug') && names.lights.includes('Minimize Portfolio') && names.go.includes('VIP Store') && !names.go.some((n) => /^VIP,/.test(n)) && names.dock.join(' | ') === A.DOCK.map(([, name, line]) => `${name}: ${line}`).join(' | '), JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
+    check('copy: "Minimize", "Group Chat", "Questions about Shrug", ArtStore, Books and My VIP in the Dock and the Go menu, and the One-pager in the Go menu, which is no link now: it opens in Preview', names.window.includes('Minimize') && !names.window.includes('Minimise') && names.go.includes('Group Chat') && names.go.includes('One-pager') && !names.go.some((n) => /opens in a new tab/.test(n)) && names.dock.includes('FAQs: Questions about Shrug') && names.lights.includes('Minimize Portfolio') && ['ArtStore', 'Books', 'My VIP'].every((n) => names.go.includes(n)) && !names.go.some((n) => /^VIP,/.test(n)) && names.dock.join(' | ') === A.DOCK.map(([, name, line]) => `${name}: ${line}`).join(' | '), JSON.stringify({ w: names.window, go: names.go, dock: names.dock, lights: names.lights }))
     check('desk: icons are named "…, desktop icon", the locked folder says it is locked, they sit inside main, and nothing in the Dock is a link', names.desk.join(' | ') === A.DESK.map(([, says]) => says).join(' | ') && names.deskInMain && names.dockLinks === 0, JSON.stringify(names.desk))
     check('title: names the window in front', names.title === 'Portfolio · Shrug', names.title)
     check('menus: What’s New in Shrug V is in the mark\'s menu, straight under About Shrug', names.mark[0] === 'About Shrug' && names.mark[1] === 'What’s New in Shrug V', JSON.stringify(names.mark.slice(0, 3)))
@@ -491,12 +491,12 @@ const parts = {
     await t.page.click('[data-dock-app="terminal"]', { force: true })
     await t.page.waitForTimeout(500)
     check('menus: with one open, a click on the Dock only closes it', !(await t.page.evaluate(() => document.querySelector('.menubar').hasAttribute('data-open'))) && !!!(await win(t.page, 'terminal'))?.open)
-    // (and so with VIP Store there, the Dock's last: the click that puts the menu away does not open it)
+    // (and so with ArtStore there: the click that puts the menu away does not open it)
     await t.page.click('[data-menu-title="go"]')
     await t.page.waitForTimeout(250)
     await t.page.click('.dock [data-dock-app="store"]', { force: true })
     await t.page.waitForTimeout(400)
-    check('menus: with one open, a click on VIP Store in the Dock only closes it too: no window opens', !(await win(t.page, 'store'))?.open && !(await t.page.evaluate(() => document.querySelector('.menubar').hasAttribute('data-open'))))
+    check('menus: with one open, a click on ArtStore in the Dock only closes it too: no window opens', !(await win(t.page, 'store'))?.open && !(await t.page.evaluate(() => document.querySelector('.menubar').hasAttribute('data-open'))))
     // the Dock's name shows under a resting pointer only where a pointer can rest
     const hoverRule = await t.page.evaluate(() => {
       const found = []
