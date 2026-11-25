@@ -2918,16 +2918,16 @@
 /* On a short desk the window is shorter than what is in it. It gives up what
    it can spare before it makes anyone scroll: the icon is drawn smaller, and
    then its rows sit closer. Each step is taken at the height the one before
-   it stops fitting. What is in the window is 522px tall as it is drawn in
-   full (which is the height the window is given: src/os/apps.ts), 484px with
-   the smaller icon and 452px with the closer rows; shorter than that, it
-   scrolls. A container's height is its body's less the 12px under the last
-   row, so the steps are at 510px and 472px */
+   it stops fitting. What is in the window is 406px tall as it is drawn in
+   full (the window is given that and the 38px of its bar: src/os/apps.ts),
+   368px with the smaller icon and 348px with the closer rows; shorter than
+   that, it scrolls. A container's height is its body's less the 12px under
+   the last row, so the steps are at 394px and 356px */
 .about__body {
   container: about / size;
 }
 
-@container about (max-height: 509px) {
+@container about (max-height: 393px) {
   .about__icon {
     width: 60px;
     height: 60px;
@@ -2944,7 +2944,7 @@
 }
 
 /* And, shorter still, its rows sit a little closer */
-@container about (max-height: 471px) {
+@container about (max-height: 355px) {
   .about__fact {
     padding-top: 6px;
     padding-bottom: 6px;
