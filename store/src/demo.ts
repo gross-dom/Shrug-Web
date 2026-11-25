@@ -1,4 +1,4 @@
-import { dueCents, mayHave, numberOf, onFile, refusalOf, unpriced, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
+import { awardFor, dueCents, mayHave, numberOf, onFile, refusalOf, unpriced, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
 import { samplePdf } from '../shared/sample'
 import { save, type Asked, type Backend, type Failed, type Placed, type Who } from './backend'
 
@@ -9,7 +9,7 @@ import { save, type Asked, type Backend, type Failed, type Placed, type Who } fr
 
 /** The card page's demo keeps who is signed in here (see the stand-in at the foot of card/index.html). */
 const CARD = 'shrugdemo.v1'
-const STORE = 'shrugdemo.store.v2'
+const STORE = 'shrugdemo.store.v3'
 
 export const PEOPLE: Record<string, { label: string; member: { name: string; first: string; roles: string[]; tier: string; points: number; number: string; since: number } | null; funds: string[] }> = {
   founder: { label: 'Founder, silver, 1,250 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Founder'], tier: 'silver', points: 1250, number: '014', since: 2026 }, funds: [] },
@@ -40,8 +40,11 @@ const item = (id: string, name: string, more: Partial<Product>): Product => ({
 const LINE = 'A one-line write-up goes here.'
 
 /** A chair, in one color: a product each (Workspace, Matte Black), as the store has them. Matte Black is
- * $1,100 and a painted one $1,200; the floor and the postage are the samples the demo has always had. */
-const chair = (id: string, color: string, dollars: number, more: Partial<Product> = {}) => item(id, `Workspace, ${color}`, { kind: 'Chair', points: dollars * 10, floor: 500, postage: 70, needsAddress: true, description: LINE, ...more })
+ * $1,100 and a painted one $1,200. Someone with the points for it can put as many towards one as they have;
+ * the postage is the sample the demo has always had. */
+const chair = (id: string, color: string, dollars: number, more: Partial<Product> = {}) => item(id, `Workspace, ${color}`, { kind: 'Chair', points: dollars * 10, postage: 70, needsAddress: true, description: LINE, ...more })
+/** A book: posted for $5. */
+const book = (id: string, name: string, dollars: number, more: Partial<Product> = {}) => item(id, name, { kind: 'Book', points: dollars * 10, postage: 5, needsAddress: true, description: LINE, ...more })
 /** One of the six art pieces: $150, in an edition of 50. Their names are Shrug's to give. */
 const art = (n: number, left = 50) => item(`art-${n}`, `Art No. ${n}`, { kind: 'Art', points: 1500, postage: 5, editionOf: 50, left, needsAddress: true, description: LINE })
 
@@ -49,11 +52,11 @@ const art = (n: number, left = 50) => item(`art-${n}`, `Art No. ${n}`, { kind: '
  * each color (Workspace). The photographs are found by name (pictures.ts). The books' prices here are
  * samples: Shrug's own are in Airtable. */
 const SHELVES: Product[] = [
-  item('chromatic', 'Chromatic', { kind: 'Book', points: 400, needsAddress: true, description: LINE }),
-  item('build-the-future', 'Build the Future', { kind: 'Book', status: 'Pre-order', points: 450, needsAddress: true, description: LINE }),
-  item('what-is-shrug', 'What is Shrug?', { kind: 'Book', points: 250, needsAddress: true, description: LINE }),
-  item('in-plain-sight', 'In Plain Sight', { kind: 'Book', status: 'Pre-order', points: 550, needsAddress: true, description: LINE }),
-  item('catalog', 'WS Catalog', { kind: 'Book', points: 1000, needsAddress: true, description: LINE }),
+  book('chromatic', 'Chromatic', 40),
+  book('build-the-future', 'Build the Future', 45, { status: 'Pre-order' }),
+  book('what-is-shrug', 'What is Shrug?', 25),
+  book('in-plain-sight', 'In Plain Sight', 55, { status: 'Pre-order' }),
+  book('catalog', 'WS Catalog', 100),
   art(1, 43),
   art(2),
   art(3, 48),
@@ -89,9 +92,11 @@ interface CardState {
   session: { member: NonNullable<(typeof PEOPLE)[string]['member']> | null; seen: number | null; emails?: boolean; reason?: string; email?: string; phone?: string } | null
 }
 interface StoreState {
+  /** `who`: the account an order is: its email (or, on the store's own site, where the demo has no emails, whoever it is viewed as). */
   orders: (Order & { who: string })[]
   left: Record<string, number>
-  shipTo: string
+  /** The address each account has on file. */
+  shipTos: Record<string, string>
   scene: string
 }
 
@@ -111,7 +116,9 @@ const write = (key: string, value: unknown) => {
 }
 
 const card = () => read<CardState>(CARD, { pick: 'founder', session: null })
-const kept = (): StoreState => ({ orders: [], left: {}, shipTo: '', scene: 'normal', ...read<Partial<StoreState>>(STORE, {}) })
+const kept = (): StoreState => ({ orders: [], left: {}, shipTos: {}, scene: 'normal', ...read<Partial<StoreState>>(STORE, {}) })
+/** Which account is asking: an order and an address are that account's, and nobody else's who has used this browser. */
+const accountOf = (state: CardState) => (state.session?.email ?? state.pick).toLowerCase()
 const lag = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
 function now(): { state: CardState; member: Member | null } {
@@ -138,19 +145,23 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   if (!member || !state.session?.member) return { error: 'anon' }
   const store = kept()
   if (store.scene === 'offline') return { error: 'offline' }
-  const mine = store.orders.filter((order) => order.who === member.id)
+  const me = accountOf(state)
+  const mine = store.orders.filter((order) => order.who === me)
   const typed = (asked.shipTo ?? '').trim()
   const ask = (product: Product, status: OrderStatus, points: number, cents: number, takes: boolean): Placed => {
-    const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: takes ? numberOf(product) : '', points, paid: cents / 100, placed: new Date().toISOString(), who: member.id }
+    const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: takes ? numberOf(product) : '', points, paid: cents / 100, placed: new Date().toISOString(), who: me }
     store.orders.unshift(order)
     if (takes && product.left !== null) store.left[product.id] = product.left - 1
-    if (onFile(typed)) store.shipTo = typed
+    if (onFile(typed)) store.shipTos[me] = typed
     write(STORE, store)
-    state.session!.member!.points -= points
-    // Spent points are no news to the card: its "since you last looked" is for points that arrive
-    state.session!.seen = state.session!.member!.points
+    // What buying it awards (shared/rules.ts) is added with the order
+    const awarded = takes ? awardFor(product) : 0
+    state.session!.member!.points += awarded - points
+    // Spent points are no news to the card: its "since you last looked" is for points that arrive, as the
+    // ones this order awards do
+    state.session!.seen = state.session!.member!.points - awarded
     write(CARD, state)
-    return { ok: true, order, points: state.session!.member!.points }
+    return { ok: true, order, points: state.session!.member!.points, awarded }
   }
   // An update that is listed to them and written for others: asked for
   const doc = papers(store).find((p) => p.id === asked.product)
@@ -164,7 +175,7 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   const product = shelves(store).find((p) => p.id === asked.product && mayHave(member, p))
   if (!product) return { error: 'hidden' }
   if (store.scene === 'lastgone') return { error: 'sold-out' }
-  const refusal = refusalOf(member, product, mine, { ...asked, shipTo: onFile(typed) ? typed : store.shipTo })
+  const refusal = refusalOf(member, product, mine, { ...asked, shipTo: onFile(typed) ? typed : store.shipTos[me] })
   if (refusal) return { error: refusal }
   const way = wayOf(product)
   const points = way === 'buy' ? (asked.points ?? 0) : 0
@@ -184,8 +195,9 @@ export const demo: Backend = {
     // Nobody signed in (or the card's "not on the list", which the demo has no account for): a visitor
     // (and sent a chair without its figures, as the server sends it: its price is for someone logged in)
     if (!state.session || !member) return { status: 'visitor', products: shelves(store).filter((p) => mayHave(VISITOR, p)).map(unpriced), stripeKey: '' }
-    const orders = store.orders.filter((order) => order.who === member.id)
-    const who: Who = { ...member, number: state.session.member?.number ?? '', since: state.session.member?.since ?? null, reason: state.session.reason ?? null, emails: state.session.emails !== false, email: state.session.email ?? 'sample@example.com', shipTo: store.shipTo }
+    const me = accountOf(state)
+    const orders = store.orders.filter((order) => order.who === me)
+    const who: Who = { ...member, number: state.session.member?.number ?? '', since: state.session.member?.since ?? null, reason: state.session.reason ?? null, emails: state.session.emails !== false, email: state.session.email ?? 'sample@example.com', shipTo: store.shipTos[me] ?? '' }
     return {
       status: 'member',
       member: who,
@@ -217,7 +229,9 @@ export const demo: Backend = {
     const email = (asked.email ?? '').trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'email' }
     if (kept().scene === 'declined') return { error: 'unpaid' }
-    write(CARD, { ...state, pick: 'standard', session: { member: { ...PEOPLE.standard!.member! }, seen: null, emails: true, email } })
+    // (under the name they gave at checkout, which is the name on their card)
+    const name = (asked.name ?? '').trim().slice(0, 80)
+    write(CARD, { ...state, pick: 'standard', session: { member: { ...PEOPLE.standard!.member!, name, first: name.split(/\s+/)[0] ?? '' }, seen: null, emails: true, email } })
     const placed = place({ ...asked, points: 0 }, true)
     if ('error' in placed) {
       write(CARD, state)
@@ -240,7 +254,9 @@ export const demo: Backend = {
     await lag(300)
     if (!onFile(shipTo)) return { error: 'address' }
     const tidy = shipTo.split('\n').map((line) => line.trim()).filter(Boolean).join('\n')
-    write(STORE, { ...kept(), shipTo: tidy })
+    const store = kept()
+    store.shipTos[accountOf(card())] = tidy
+    write(STORE, store)
     return { ok: true, shipTo: tidy }
   },
   async emails(on) {
@@ -285,4 +301,4 @@ export function demoAddPoints(points: number) {
   write(CARD, state)
 }
 /** Everything as it began: the shelves full, nothing ordered, no address. */
-export const demoReset = () => write(STORE, { orders: [], left: {}, shipTo: '', scene: 'normal' })
+export const demoReset = () => write(STORE, { orders: [], left: {}, shipTos: {}, scene: 'normal' })

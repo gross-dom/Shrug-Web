@@ -43,7 +43,7 @@ export function StoreApp() {
       <button type="button" className="storebar__name" aria-label="ArtStore: everything in it" aria-current={at ? undefined : 'page'} onClick={() => frame.current?.go(null)}>
         ArtStore
       </button>
-      <span className="storebar__says">Six pieces. Fifty of each.</span>
+      <span className="storebar__says" />
       <Balance />
     </div>
   )

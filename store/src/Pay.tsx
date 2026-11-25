@@ -23,6 +23,8 @@ interface Props {
   needsAddress: boolean
   /** A visitor's email, for the receipt and for the account the payment makes. Not given for a member. */
   email?: string
+  /** A visitor's name, which that account is under. */
+  name?: string
   /** Paying by card has been chosen. */
   byCard: boolean
   onCard: () => void
@@ -42,6 +44,7 @@ const WHY: Record<string, string> = {
   already: 'You already have this.',
   address: 'Add where to send it first.',
   email: 'Add your email for the receipt first.',
+  name: 'Add your name first.',
 }
 const anEmail = (text: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.trim())
 export const whyNot = (error: string) => WHY[error] ?? 'That did not work. Nothing was taken.'
@@ -53,13 +56,14 @@ const Others = ({ onOptions, off }: { onOptions: () => void; off: boolean }) => 
   </button>
 )
 
-function DemoPay({ backend, product, option, points, cents, shipTo, needsAddress, email, byCard, onCard, onOptions, address, onDone, onError }: Props) {
+function DemoPay({ backend, product, option, points, cents, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError }: Props) {
   const [busy, setBusy] = useState(false)
   const pay = async () => {
+    if (email !== undefined && !(name ?? '').trim()) return onError(whyNot('name'))
     if (email !== undefined && !anEmail(email)) return onError(whyNot('email'))
     setBusy(true)
     onError('')
-    const placed = await backend.paid('demo', { product: product.id, option, points, shipTo: shipTo || undefined, ...(email !== undefined ? { email: email.trim() } : {}) })
+    const placed = await backend.paid('demo', { product: product.id, option, points, shipTo: shipTo || undefined, ...(email !== undefined ? { email: email.trim(), name: (name ?? '').trim() } : {}) })
     setBusy(false)
     if ('error' in placed) onError(whyNot(placed.error))
     else onDone(placed)
@@ -101,7 +105,7 @@ const stripeJs = () =>
     document.head.append(script)
   }))
 
-function StripePay({ backend, product, option, points, cents, stripeKey, shipTo, needsAddress, email, byCard, onCard, onOptions, address, onDone, onError }: Props) {
+function StripePay({ backend, product, option, points, cents, stripeKey, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError }: Props) {
   const express = useRef<HTMLDivElement>(null)
   const cardBox = useRef<HTMLDivElement>(null)
   const kit = useRef<{ stripe: any; elements: any } | null>(null)
@@ -110,6 +114,8 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
   typed.current = shipTo
   const mail = useRef(email)
   mail.current = email
+  const named = useRef(name)
+  named.current = name
   const [ready, setReady] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [wallet, setWallet] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -122,6 +128,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
     // A visitor has no account yet: the payment makes it, from the email given here and the address (typed
     // here, or Apple Pay's own), so both go with the payment and nothing is kept on file beforehand
     const visitor = mail.current !== undefined
+    if (visitor && !(named.current ?? '').trim()) return { error: 'name' }
     if (visitor && !anEmail(mail.current!)) return { error: 'email' }
     const { error: unfinished } = await elements.submit()
     if (unfinished) return { error: unfinished.message ?? 'card' }
@@ -130,7 +137,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
       const kept = await backend.address(typed.current)
       if ('error' in kept) return kept
     }
-    const started = await backend.pay(visitor ? { product: product.id, option, points: 0, email: mail.current!.trim(), shipTo: typed.current || undefined, wallet: !!shipping } : { product: product.id, option, points })
+    const started = await backend.pay(visitor ? { product: product.id, option, points: 0, email: mail.current!.trim(), name: (named.current ?? '').trim(), shipTo: typed.current || undefined, wallet: !!shipping } : { product: product.id, option, points })
     if ('error' in started) return started
     if (!('clientSecret' in started)) return { error: 'server' }
     // The price was changed between the page being drawn and now: nothing is taken at a price that was not shown

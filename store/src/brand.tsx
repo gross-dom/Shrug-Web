@@ -1,4 +1,4 @@
-import { CAPITAL, SHRUG, STORE, VIP, WIDE } from '../shared/wordmark'
+import { CAPITAL, MY, MY_VIP_SHIFT, SHRUG, STORE, VIP, WIDE } from '../shared/wordmark'
 
 // Shrug's wordmark, as the brand kit draws it: SHRUG in Unbounded Bold, with the G whose bar turns down into
 // an arrow, and what follows it (VIP, STORE) in Unbounded Light, as the kit sets CAPITAL. These are outlines,
@@ -6,15 +6,23 @@ import { CAPITAL, SHRUG, STORE, VIP, WIDE } from '../shared/wordmark'
 // never a colour. All three are in the units of the face (1,000 to the em), on one baseline.
 
 
-const NAMED = { shrug: 'Shrug', vip: 'Shrug VIP', store: 'Shrug VIP Store', capital: 'Shrug Capital' }
+const NAMED = { shrug: 'Shrug', vip: 'Shrug VIP', store: 'Shrug VIP Store', capital: 'Shrug Capital', my: 'My VIP' }
 
 /** SHRUG, SHRUG VIP, SHRUG VIP STORE, or SHRUG CAPITAL (the fund's own name in full: what an official document
- * carries). It is named for assistive tech; the drawing itself is not read. */
-export function Wordmark({ lockup = 'store', height = 14, className }: { lockup?: 'shrug' | 'vip' | 'store' | 'capital'; height?: number; className?: string }) {
+ * carries); and MY VIP, which is the member's own part of it, set the same way: MY in SHRUG's weight and place,
+ * VIP after it. It is named for assistive tech; the drawing itself is not read. */
+export function Wordmark({ lockup = 'store', height = 14, className }: { lockup?: 'shrug' | 'vip' | 'store' | 'capital' | 'my'; height?: number; className?: string }) {
   const wide = WIDE[lockup]
   return (
     <svg className={className} viewBox={`0 0 ${wide} 782`} width={Math.round((wide / 782) * height * 10) / 10} height={height} role="img" aria-label={NAMED[lockup]}>
-      <path fill="currentColor" d={wordmarkPath(lockup)} />
+      {lockup === 'my' ? (
+        <>
+          <path fill="currentColor" d={MY} />
+          <path fill="currentColor" d={VIP} transform={`translate(${MY_VIP_SHIFT} 0)`} />
+        </>
+      ) : (
+        <path fill="currentColor" d={wordmarkPath(lockup)} />
+      )}
     </svg>
   )
 }

@@ -38,7 +38,7 @@ export const wayIn = (row: Row): 'text' | 'inbox' => (phoneOn(row) && (!listed(r
 /** A row for someone who is not on the list: a standard user, with a few points to begin with. They have no
  * Role, so they are in no group, and are shown what is for Everyone and nothing else. They are made by a
  * proved phone number (signing in) or by a payment (buying as a visitor), never by an address alone. */
-export const welcome = (email: string, more: { phone?: string; shipTo?: string } = {}): Promise<Row> =>
+export const welcome = (email: string, more: { phone?: string; shipTo?: string; name?: string } = {}): Promise<Row> =>
   add(T.members, {
     [F.member.email]: email,
     [F.member.tier]: STANDARD_TIER[0]!.toUpperCase() + STANDARD_TIER.slice(1),
@@ -47,12 +47,14 @@ export const welcome = (email: string, more: { phone?: string; shipTo?: string }
     [F.member.since]: String(new Date().getUTCFullYear()),
     ...(more.phone ? { [F.member.phone]: more.phone } : {}),
     ...(more.shipTo ? { [F.member.shipTo]: more.shipTo } : {}),
+    // (the name they paid under is the name on their card, until they choose another)
+    ...(more.name ? { [F.member.displayName]: more.name } : {}),
   })
 
 /** The row for an address, made if there is none: for a payment by a visitor, which makes their account.
  * The page and Stripe may both come to say the payment arrived, at the same moment, and each would make the
  * row: each makes its own first, and only the earlier of the two is kept. `made` says whether it was made now. */
-export async function rowFor(email: string, more: { shipTo?: string } = {}): Promise<{ row: Row; made: boolean }> {
+export async function rowFor(email: string, more: { shipTo?: string; name?: string } = {}): Promise<{ row: Row; made: boolean }> {
   const there = await rowOf(email)
   if (there) return { row: there, made: false }
   const mine = await welcome(email, more)
@@ -138,5 +140,10 @@ export async function answerFor(row: Row, via: Via) {
   await change(T.members, row.id, { [F.member.seenPoints]: member.points, [F.member.lastSeen]: new Date().toISOString() }).catch(() => {})
   // The card is told what it always was: an address is the store's business, and is not sent to it
   const { shipTo: _shipTo, ...card } = member
-  return { status: 'member' as const, member: card, seenPoints: seen, needs: needsOf(row), via }
+  // What they have spent, on every order that was not refunded: the card prints it with their balance, so
+  // that the figure on it is every point they have been awarded and only ever goes up
+  const spent = await all(T.orders)
+    .then((orders) => orders.filter((order) => list(order.fields[F.order.member]).includes(row.id) && str(order.fields[F.order.status]) !== 'Refunded').reduce((sum, order) => sum + Math.max(0, num(order.fields[F.order.points]) ?? 0), 0))
+    .catch(() => 0)
+  return { status: 'member' as const, member: card, spent, seenPoints: seen, needs: needsOf(row), via }
 }

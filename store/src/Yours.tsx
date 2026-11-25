@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fmtCents, fmtPoints, onFile, stockOf, type Order } from '../shared/rules'
+import { awardFor, AWARDS, fmtPoints, onFile, POINTS_PER_DOLLAR, STARTING_POINTS, stockOf, totalPoints, type Order } from '../shared/rules'
 import { CARD, type Backend, type Shop } from './backend'
 import { Points, Wordmark } from './brand'
 import { DESK } from './desk'
@@ -9,10 +9,11 @@ import { editionOf } from './words'
 
 // My VIP (the section the address still calls "yours"): the member's card as the card page draws it (pressed,
 // it goes to the card page), their account at a glance (what kind of member they are, their balance, how
-// long they have been one, what they have bought and which funds they are in), then the history behind
-// each: purchases and where each stands; apart from those, what they have only asked for or had kept for
-// them; investments; the points that have come and gone; and three cards: where things are sent, emails,
-// and the account. Everything here is what the server says of them: nothing is worked out that it does not know.
+// long they have been one, what they have bought and which funds they are in: a word and a figure each,
+// and no more), then the history behind each: purchases and where each stands; apart from those, what they
+// have only asked for or had kept for them; investments; the points that have been awarded and spent; how
+// points work; and the cards at the side: where things are sent, emails, and whose account this is.
+// Everything here is what the server says of them: nothing is worked out that it does not know.
 
 const WHEN = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const when = (iso: string) => (Number.isFinite(Date.parse(iso)) ? WHEN.format(Date.parse(iso)) : '')
@@ -34,11 +35,6 @@ const purchased = (order: Order) => order.status !== 'Requested' && order.status
 /** What was bought, and not since given back. */
 const boughtOf = (orders: Order[]) => orders.filter((order) => purchased(order) && order.status !== 'Refunded')
 const WORDS: Record<string, string> = { Founder: 'Founder', LP: 'Limited partner', Investor: 'Investor' }
-/** How long a member has been one, from the year on their card. */
-const yearsOf = (since: number) => {
-  const years = new Date().getFullYear() - since
-  return years <= 0 ? 'This year' : years === 1 ? '1 year' : `${years} years`
-}
 
 /** Where things are sent: shown, and changed here. */
 function Address({ shop, backend, onChange, style }: { shop: Shop; backend: Backend; onChange: () => void; style?: React.CSSProperties }) {
@@ -99,13 +95,15 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
   const [emails, setEmails] = useState(me.emails)
   const stock = stockOf(me.tier)
   const Stock = stock[0]!.toUpperCase() + stock.slice(1)
-  const spent = shop.orders.filter((order) => order.points > 0)
-  const spentPoints = spent.reduce((sum, order) => sum + order.points, 0)
+  const spent = shop.orders.filter((order) => order.points > 0 && order.status !== 'Refunded')
   const bought = boughtOf(shop.orders)
-  const paid = bought.reduce((sum, order) => sum + order.paid, 0)
-  // Airtable keeps the balance and the last reason, not each award: what was given is said as the one line
-  // it comes to, the balance and everything since spent
-  const given = me.points + spentPoints
+  /** What each purchase awarded (shared/rules.ts says what buying a thing awards). */
+  const awards = bought.map((order) => ({ order, points: awardFor(shop.products.find((p) => p.id === order.productId) ?? { kind: 'Other', status: 'Available', points: null }) })).filter((award) => award.points > 0)
+  /** Every point they have been awarded: it is what their card shows, and it only goes up. */
+  const total = totalPoints(me, shop.orders)
+  // Airtable keeps the balance and the last reason, not each award: what was awarded apart from purchases is
+  // said as the one line it comes to, which is everything they have had less what their purchases awarded
+  const given = Math.max(0, total - awards.reduce((sum, award) => sum + award.points, 0))
   const flip = async () => {
     const next = !emails
     setEmails(next)
@@ -113,41 +111,34 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
     if ('error' in told) setEmails(!next)
   }
 
-  // The account at a glance. Each figure is one the lists below it account for
+  // The account at a glance: a word and a figure each. Each figure is one the lists below it account for
   const stats = (
     <dl className="ui-stats">
       <div>
-        <dt>Account type</dt>
+        <dt>Account</dt>
         <dd>{me.roles.length ? me.roles.join(' · ') : 'Member'}</dd>
-        {/* The role in full, where that says more than the role itself does */}
-        <dd className="sub">{me.roles.some((role) => WORDS[role] && WORDS[role] !== role) ? me.roles.map((role) => WORDS[role] ?? role).join(', ') : 'Shrug VIP member'}</dd>
       </div>
       <div>
         <dt>Card</dt>
         <dd>{Stock}</dd>
-        <dd className="sub">{me.number ? `No. ${me.number} · Series 01` : 'Series 01'}</dd>
       </div>
       <div>
         <dt>Balance</dt>
         <dd>
           <Points n={me.points} size={18} />
         </dd>
-        <dd className="sub">{spentPoints > 0 ? `${fmtPoints(spentPoints)} spent so far` : 'Nothing spent yet'}</dd>
       </div>
       <div>
         <dt>Member since</dt>
         <dd>{me.since ?? '—'}</dd>
-        <dd className="sub">{me.since ? yearsOf(me.since) : 'Not on file'}</dd>
       </div>
       <div>
         <dt>Purchases</dt>
         <dd>{bought.length}</dd>
-        <dd className="sub">{bought.length === 0 ? 'Nothing yet' : paid > 0 ? `${fmtCents(Math.round(paid * 100))} paid by card` : 'All with points'}</dd>
       </div>
       <div>
         <dt>Investments</dt>
         <dd>{me.funds.length}</dd>
-        <dd className="sub">{me.funds.length ? me.funds.join(', ') : 'No funds on file'}</dd>
       </div>
     </dl>
   )
@@ -223,10 +214,21 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
             </span>
           </li>
         ))}
+        {awards.map(({ order, points }) => (
+          <li key={`award-${order.id}`} className="ui-row ui-pts">
+            <span className="who">
+              <b>Awarded for {nameOf(order)}</b>
+              <span>{when(order.placed)}</span>
+            </span>
+            <span className="r t-gold">
+              <Points n={points} size={14} sign="+" />
+            </span>
+          </li>
+        ))}
         {given > 0 && (
           <li className="ui-row ui-pts">
             <span className="who">
-              <b>{me.reason ? `For ${me.reason}` : 'Points given'}</b>
+              <b>{me.reason ? `For ${me.reason}` : 'Points awarded'}</b>
               <span>{me.since ? `Member since ${me.since}` : ' '}</span>
             </span>
             <span className="r t-gold">
@@ -234,6 +236,31 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
             </span>
           </li>
         )}
+      </ol>
+    </>
+  )
+  // How points work, in the three things there are to know: how they come, what they do, and what the card shows
+  const chair = AWARDS.Chair ?? 0
+  const how = (
+    <>
+      <h2 className="ui-sect">How points work</h2>
+      <ol className="ui-how">
+        <li>
+          <b>Earn</b>
+          <span>
+            {fmtPoints(STARTING_POINTS)} points when you join{chair > 0 ? `, and ${fmtPoints(chair)} each time you buy a Workspace chair` : ''}.
+          </span>
+        </li>
+        <li>
+          <b>Spend</b>
+          <span>
+            {POINTS_PER_DOLLAR} points take $1 off anything in ArtStore, Books and Workspace. You choose how many to use at checkout.
+          </span>
+        </li>
+        <li>
+          <b>Total</b>
+          <span>Your card shows every point you’ve been awarded, so it only goes up. Your balance is what’s left to spend.</span>
+        </li>
       </ol>
     </>
   )
@@ -256,9 +283,12 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
           <span className="t-sm t-2">{DESK ? 'Logged in as' : 'Signed in as'}</span>
           <p style={{ overflowWrap: 'anywhere' }}>{me.email}</p>
         </div>
-        <button type="button" className="ui-btn sec sm" onClick={onSignOut}>
-          {DESK ? 'Log Out' : 'Sign out'}
-        </button>
+        {/* (in a window of the desk the way out is the menu bar's, and nowhere else) */}
+        {!DESK && (
+          <button type="button" className="ui-btn sec sm" onClick={onSignOut}>
+            Sign out
+          </button>
+        )}
       </div>
     </div>
   )
@@ -295,8 +325,8 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
         </div>
         <div className="mc-pts">
           <div>
-            <small>Points</small>
-            <b>{fmtPoints(me.points)}</b>
+            <small>Total points</small>
+            <b>{fmtPoints(total)}</b>
           </div>
           <i>
             Series 01
@@ -316,6 +346,7 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
         {orders}
         {funds}
         {points}
+        {how}
         <Address shop={shop} backend={backend} onChange={onChange} style={{ marginTop: 14 }} />
         {emailsCard}
         {account}
@@ -333,6 +364,7 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
         {orders}
         {funds}
         {points}
+        {how}
       </div>
       <aside className="ui-side" style={{ paddingTop: 58 }}>
         <Address shop={shop} backend={backend} onChange={onChange} />

@@ -4,6 +4,8 @@
 # units (1,000 to the em, the baseline at 766, y running down), starting where VIP starts.
 #   python3 tools/wordmark.py CAPITAL path/to/unbounded-latin-300-normal.woff2
 #   (the face is @fontsource/unbounded; needs fonttools, brotli and uharfbuzz)
+# A third argument says where the word starts, for one that stands in SHRUG's own place and weight:
+#   python3 tools/wordmark.py MY path/to/unbounded-latin-700-normal.woff2 0      (MY, for MY VIP)
 import io
 import sys
 
@@ -17,7 +19,7 @@ START = 4758  # where what follows SHRUG begins: VIP's own left edge
 BASELINE = 766
 
 
-def main(word, path):
+def main(word, path, start=START):
     font = TTFont(path)
     font.flavor = None
     held = io.BytesIO()
@@ -41,10 +43,10 @@ def main(word, path):
     x0, y0, x1, y1 = bounds.bounds
     pen = SVGPathPen(glyphs, ntos=lambda v: str(int(round(v))))
     for name, at in placed:
-        glyphs[name].draw(TransformPen(pen, (to, 0, 0, -to, START + (at - x0) * to, BASELINE)))
-    print('cap height', font['OS/2'].sCapHeight * to, 'ends at', round(START + (x1 - x0) * to))
+        glyphs[name].draw(TransformPen(pen, (to, 0, 0, -to, start + (at - x0) * to, BASELINE)))
+    print('cap height', font['OS/2'].sCapHeight * to, 'ends at', round(start + (x1 - x0) * to))
     print(pen.getCommands())
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else START)

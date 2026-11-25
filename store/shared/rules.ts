@@ -259,6 +259,17 @@ export function fitPoints(member: Pick<Member, 'points'>, product: Priced, wante
  *   request  no buying: the member asks, and Shrug writes back
  *   reserve  a pre-order with no price yet: a place is kept, and nothing is taken
  *   buy      dollars, less whatever points are used; with enough points, and no floor or postage, nothing to pay */
+/** Points awarded for buying something, by what it is: a chair awards 200. (Nothing else awards any yet:
+ * a kind is added here when Shrug says what it is worth.) */
+export const AWARDS: Partial<Record<Kind, number>> = { Chair: 200 }
+/** What buying this awards. Asking for something, or reserving it, awards nothing. */
+export const awardFor = (product: Pick<Product, 'kind' | 'status' | 'points'>): number => (wayOf(product) === 'buy' ? (AWARDS[product.kind] ?? 0) : 0)
+/** The points a member has spent: on every order of theirs that was not refunded. */
+export const spentPoints = (orders: Pick<Order, 'points' | 'status'>[]): number => orders.reduce((sum, order) => sum + (order.status === 'Refunded' ? 0 : Math.max(0, order.points || 0)), 0)
+/** Every point a member has been awarded: what they have now, and what they have spent. It is what their card
+ * shows, so that the figure on it only ever goes up. */
+export const totalPoints = (member: Pick<Member, 'points'>, orders: Pick<Order, 'points' | 'status'>[]): number => member.points + spentPoints(orders)
+
 export type Way = 'request' | 'reserve' | 'buy'
 
 export function wayOf(product: Pick<Product, 'status' | 'points'>): Way {

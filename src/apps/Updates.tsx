@@ -11,6 +11,9 @@ import { useStore } from '../os/store'
 import '../styles/desk/v1.css'
 import '../styles/desk/updates.css'
 
+/** What the folder says to anyone it is not for. */
+const LOCKED = 'This folder is for Shrug LPs only. Please log in with your LP email to access its contents.'
+
 // The Updates folder on the desk, opened (design/v1, "Updates"): a Finder's list of the documents that are
 // this LP's to read, under Funds and SPVs, each row naming the fund it was written for. Which those are is
 // decided by the store's server from Airtable (os/account.ts): an update for the LPs of one fund is theirs,
@@ -153,8 +156,7 @@ export function UpdatesApp() {
         // by an address that names it, or by logging out while it is open)
         <div className="v-empty updates__locked">
           <Lock size={38} strokeWidth={1.6} aria-hidden />
-          <h3>For Shrug’s LPs</h3>
-          <p>{who.status === 'checking' ? 'One moment…' : 'This folder holds documents written for the people in Shrug’s funds. Log in to open it.'}</p>
+          <p>{who.status === 'checking' ? 'One moment…' : LOCKED}</p>
           {who.status !== 'checking' && (
             <button type="button" className="v-btn v-btn--lg" onClick={() => askLogIn('updates')}>
               Log In
@@ -165,13 +167,7 @@ export function UpdatesApp() {
         // Logged in, and not an LP: still locked. They are told who it is for, and shown nothing of what is in it
         <div className="v-empty updates__locked">
           <Lock size={38} strokeWidth={1.6} aria-hidden />
-          <h3>For Shrug’s LPs</h3>
-          <p>
-            You’re logged in as {who.name || who.email}. This folder holds documents written for the people in Shrug’s funds, and nothing in it is shown to anyone else. An LP who used a different email can log in with that one.
-          </p>
-          <button type="button" className="v-btn v-btn--grey v-btn--lg" onClick={() => launchApp('messages')}>
-            Message Shrug
-          </button>
+          <p>{LOCKED}</p>
         </div>
       ) : docs.length === 0 ? (
         <div className="v-empty">

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { asksAddress, dueCents, fitPoints, fmtCents, fmtPoints, has, mostPoints, numberOf, onFile, POINTS_PER_DOLLAR, postageCents, priceCents, soldOut, wayOf, type Order, type Product } from '../shared/rules'
 import { CARD, type Backend, type Placed, type Shop } from './backend'
-import { Points } from './brand'
+import { Points, PointsMark } from './brand'
 import { DESK } from './desk'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
 import { shotsOf, tileSizes, wholeSizes } from './pictures'
-import { badgeOf, captionOf, editionOf, keptOf, offCents, owned, pointsOf, shortOf } from './words'
+import { nameIn } from './room'
+import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shortOf } from './words'
 
 // One product to a screen: its pictures, then what it is and what it costs this member. The arrows on the
 // picture (and the arrow keys, and a finger drawn across it) page through that product's own pictures; the
@@ -105,17 +106,32 @@ function AddressField({ typed, onType }: { typed: string; onType: (text: string)
   )
 }
 
-/** After a visitor has paid: their payment made them an account, from the email and address they paid with.
- * They are told so and asked for a phone number, which is how they log in: it is texted six digits, and the
- * six digits make it theirs. Not now leaves the account as it is (its way in is then a code to that email). */
-function NewAccount({ backend, email, onLater }: { backend: Backend; email: string; onLater: () => void }) {
+/** After a visitor has paid: their payment made them an account, under the email they checked out with.
+ * They are told so and asked for a phone number, for news of the order (and it is how they log in from then
+ * on: it is texted six digits, and the six digits make it theirs). A number or a code that cannot be one is
+ * said to be so where it was typed. With the number added, or put off, the way on is My VIP, where the order
+ * is. */
+function NewAccount({ backend, email, onLater, onYours }: { backend: Backend; email: string; onLater: () => void; onYours: () => void }) {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'phone' | 'code' | 'done'>('phone')
   const [busy, setBusy] = useState(false)
   const [said, setSaid] = useState('')
-  const WHY: Record<string, string> = { phone: 'That doesn’t look like a phone number.', wrong: 'That code isn’t right. Try again.', taken: 'That number is on another account. Log in with it instead.', locked: 'Too many tries. Try again in a few minutes.', expired: 'That code has run out. Send a new one.', wait: 'One was sent a moment ago. Give it a minute.', offline: 'No connection.' }
+  const WHY: Record<string, string> = { phone: 'That doesn’t look like a phone number. Include the area code.', wrong: 'That code isn’t right. Try again.', taken: 'That number is on another account. Log in with it instead.', locked: 'Too many tries. Try again in a few minutes.', expired: 'That code has run out. Send a new one.', wait: 'One was sent a moment ago. Give it a minute.' }
+  /** What is wrong with what was typed, before anything is asked of the server; nothing, if it could be right. */
+  const wrong = (): string => {
+    if (step === 'phone') {
+      if (/[a-z]/i.test(phone)) return 'A phone number is digits only.'
+      const digits = phone.replace(/\D/g, '')
+      if (digits.length < 10) return 'That number is too short. Include the area code.'
+      if (digits.length > 15) return 'That number is too long.'
+      return ''
+    }
+    return /^\d{6}$/.test(code) ? '' : 'The code is six digits.'
+  }
   const ask = async (given?: string) => {
+    const before = wrong()
+    if (before) return setSaid(before)
     setBusy(true)
     setSaid('')
     const answer = await backend.phone(phone, given)
@@ -126,35 +142,41 @@ function NewAccount({ backend, email, onLater }: { backend: Backend; email: stri
     // The desk shows who is logged in: it is told there is someone now
     DESK?.changed()
   }
+  if (step === 'done')
+    return (
+      <>
+        <div className="ui-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <h2 className="t-h2">You’re all set.</h2>
+          <p className="t-sm t-2">Order updates will come to that number. Track this order in My VIP.</p>
+        </div>
+        <button type="button" className="ui-btn" onClick={onYours}>
+          Open My VIP
+        </button>
+      </>
+    )
   return (
     <>
       <div className="ui-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h2 className="t-h2">You have an account now.</h2>
-        {step === 'done' ? (
-          <p className="t-sm t-2">That number is how you log in from now on, with a texted code. This order is in My VIP.</p>
+        <p className="t-sm t-2">It uses the email you just checked out with. Please add your phone number for order updates.</p>
+        {step === 'phone' ? (
+          <input className="ui-in" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 (___) ___ ____" aria-label="Phone number" aria-invalid={!!said || undefined} value={phone} onChange={(e) => (setPhone(e.target.value), setSaid(''))} onKeyDown={(e) => e.key === 'Enter' && !busy && void ask()} />
         ) : (
-          <>
-            <p className="t-sm t-2">We made it from the email and address you just paid with, so this order is in My VIP and the next one is quicker. Add a phone number: it is how you log in, with a texted code.</p>
-            {step === 'phone' ? (
-              <input className="ui-in" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 (___) ___ ____" aria-label="Phone number" value={phone} onChange={(e) => (setPhone(e.target.value), setSaid(''))} />
-            ) : (
-              <input className="ui-in" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="The six digits we texted" aria-label="Six-digit code" value={code} onChange={(e) => (setCode(e.target.value.replace(/\D/g, '').slice(0, 6)), setSaid(''))} />
-            )}
-            {said && (
-              <p className="ui-note" role="alert">
-                {said}
-              </p>
-            )}
-            <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy || (step === 'phone' ? phone.replace(/\D/g, '').length < 8 : code.length !== 6)} onClick={() => ask(step === 'code' ? code : undefined)}>
-              {step === 'phone' ? 'Text Me a Code' : 'Confirm'}
-            </button>
-          </>
+          <input className="ui-in" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="The six digits we texted" aria-label="Six-digit code" aria-invalid={!!said || undefined} value={code} onChange={(e) => (setCode(e.target.value.slice(0, 6)), setSaid(''))} onKeyDown={(e) => e.key === 'Enter' && !busy && void ask(code)} />
         )}
+        {said && (
+          <p className="ui-note" role="alert">
+            {said}
+          </p>
+        )}
+        <button type="button" className="ui-btn" data-busy={busy || undefined} disabled={busy || (step === 'phone' ? !phone.trim() : !code.trim())} onClick={() => ask(step === 'code' ? code : undefined)}>
+          {step === 'phone' ? 'Text Me a Code' : 'Confirm'}
+        </button>
       </div>
       <button type="button" className="ui-link quiet ui-other" onClick={onLater}>
-        {step === 'done' ? 'Done' : 'Not now'}
+        Not now
       </button>
-      {step !== 'done' && email && (
+      {email && (
         <p className="t-sm t-3" style={{ textAlign: 'center' }}>
           Your receipt is on its way to {email} either way.
         </p>
@@ -180,6 +202,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const [typed, setTyped] = useState('')
   /** A visitor's email: where the receipt goes, and what the account their payment makes is under. */
   const [email, setEmail] = useState('')
+  /** A visitor's name: whose account it is, and what their card is printed with. */
+  const [name, setName] = useState('')
   /** A visitor whose payment made them an account has put off giving it a phone number. */
   const [later, setLater] = useState(false)
   /** At checkout: a way to finish that needs an address has been chosen (a card, or points alone), so the address is asked for now, if there is none on file. */
@@ -374,8 +398,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
       {button.text}
     </button>
   )
-  const caption = way !== 'buy' && asked ? `${way === 'request' ? 'We’ll write to you about it.' : 'We’ll let you know when it’s ready.'} It is in My VIP.` : way === 'buy' && !out && !button.off ? captionOf(product) : ''
-  const preorder = product.status === 'Pre-order' && !asked && !bought && <p className="t-words">Reserve a copy and we’ll let you know when it’s ready. You can use points to pre-order today.</p>
+  const caption = way !== 'buy' && asked ? `${way === 'request' ? 'We’ll write to you about it.' : 'We’ll let you know when it’s ready.'} It is in My VIP.` : ''
+  const preorder = product.status === 'Pre-order' && !asked && !bought && <p className="t-words">Reserve a copy and we’ll let you know when it’s ready.</p>
   const said = error && (
     <p className="ui-note" role="alert">
       {error}
@@ -389,7 +413,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         <>
           {/* The same picture, out of focus, fills the tile behind it: a tall one and a wide one sit alike */}
           <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />
-          <img className="ui-media-pic" key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shot.drawn ? `${product.name}: a drawing of it, not a photograph` : shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
+          <img className="ui-media-pic" key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shot.drawn ? `${product.name}: a drawing of it` : shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
         </>
       ) : (
         <span className="t-3">
@@ -413,9 +437,6 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
           </ol>
         </>
       )}
-      {(done || bought) && <span className="ui-badge on">Yours{done?.order.number ? ` · ${editionOf(done.order.number)}` : ''}</span>}
-      {/* A picture that is the site's own drawing says so, where a photograph would be taken at its word */}
-      {shot?.drawn && !done && !bought && <span className="ui-badge">A drawing, not a photograph</span>}
     </>
   )
 
@@ -436,7 +457,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         <div>
           <dt>Item</dt>
           <dd>
-            {done.order.productName}
+            {nameIn({ name: done.order.productName })}
             {done.order.option ? `, ${swatchOf(done.order.option).name}` : ''}
           </dd>
         </div>
@@ -459,12 +480,18 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
           </div>
         )}
       </dl>
+      {(done.awarded ?? 0) > 0 && (
+        <p className="ui-earned" role="status">
+          <PointsMark size={16} />
+          You earned {fmtPoints(done.awarded!)} points for this purchase.
+        </p>
+      )}
     </>
   )
   const after =
     done?.account === 'new' && !later ? (
       // A visitor's payment made them an account: they are told so, and asked for the number they will log in with
-      <NewAccount backend={backend} email={done.email ?? email} onLater={() => setLater(true)} />
+      <NewAccount backend={backend} email={done.email ?? email} onLater={() => setLater(true)} onYours={() => go({ view: 'yours' })} />
     ) : (
     <>
       {done?.account === 'theirs' && <p className="t-sm t-2">That email already has an account, so this order is in its My VIP. Log in to see it.</p>}
@@ -489,16 +516,23 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
           <Picture product={product} size={20} />
         </span>
         <div>
-          <b>{product.name}</b>
-          <span className="t-sm t-2">{[option ? swatchOf(option).name : '', editionOf(number)].filter(Boolean).join(' · ') || product.kind}</span>
+          <b>{nameIn(product)}</b>
+          {/* (which color, and which of the edition: nothing, where there is neither) */}
+          {(option || number) && <span className="t-sm t-2">{[option ? swatchOf(option).name : '', editionOf(number)].filter(Boolean).join(' · ')}</span>}
         </div>
       </div>
       {ships && onFile(shop.member.shipTo) && <OnFile shop={shop} go={go} />}
       {visiting && (
-        <label className="ui-field">
-          <span className="sr">Email for the receipt</span>
-          <input className="ui-in" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="Email for the receipt" value={email} onChange={(e) => (setEmail(e.target.value), setError(''))} />
-        </label>
+        <div className="ui-pair">
+          <label className="ui-field">
+            <span className="sr">Your name</span>
+            <input className="ui-in" type="text" autoComplete="name" autoCapitalize="words" spellCheck={false} placeholder="Your name" value={name} onChange={(e) => (setName(e.target.value), setError(''))} />
+          </label>
+          <label className="ui-field">
+            <span className="sr">Email for the receipt</span>
+            <input className="ui-in" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="Email for the receipt" value={email} onChange={(e) => (setEmail(e.target.value), setError(''))} />
+          </label>
+        </div>
       )}
       {sums(true, true)}
       {said}
@@ -515,6 +549,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
               shipTo={needsAddress && onFile(typed) ? typed : ''}
               needsAddress={needsAddress}
               email={visiting ? email : undefined}
+              name={visiting ? name : undefined}
               byCard={finishing}
               onCard={() => setFinishing(true)}
               onOptions={() => (setError(''), setFinishing(false))}
@@ -562,12 +597,13 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
                 {media}
               </figure>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="ui-meta">
-                  <span>{product.kind}</span>
-                  {badge && !bought && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
-                  {keptOf(product) && <span className="ui-badge">{keptOf(product)}</span>}
-                </div>
-                <h1 className="t-title">{product.name}</h1>
+                {((badge && !bought) || keptOf(product)) && (
+                  <div className="ui-meta">
+                    {badge && !bought && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
+                    {keptOf(product) && <span className="ui-badge">{keptOf(product)}</span>}
+                  </div>
+                )}
+                <h1 className="t-title">{nameIn(product)}</h1>
                 {product.description && <p className="t-words">{product.description}</p>}
               </div>
               {preorder}
@@ -634,7 +670,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
             <div style={{ margin: '-8px 0 -12px' }}>
               <a className="ui-link quiet" href={`?p=${encodeURIComponent(product.id)}`} onClick={(e) => (e.preventDefault(), setMode('product'))}>
                 <Left size={16} />
-                {product.name}
+                {nameIn(product)}
               </a>
             </div>
             <h1 className="t-title" style={{ fontSize: 28 }}>
@@ -644,13 +680,14 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
           </section>
         ) : (
           <section className="ui-col" aria-label={product.name} key="product">
-            <div className="ui-meta">
-              <span>{product.kind}</span>
-              {badge && !bought && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
-              {keptOf(product) && <span className="ui-badge">{keptOf(product)}</span>}
-            </div>
+            {((badge && !bought) || keptOf(product)) && (
+              <div className="ui-meta">
+                {badge && !bought && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
+                {keptOf(product) && <span className="ui-badge">{keptOf(product)}</span>}
+              </div>
+            )}
             <div className="ui-name">
-              <h1 className="t-title">{product.name}</h1>
+              <h1 className="t-title">{nameIn(product)}</h1>
               {product.description && <p className="t-words">{product.description}</p>}
             </div>
             {preorder}
@@ -672,7 +709,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
                 </span>
                 <span>
                   {shortOf(p.name)}
-                  <small>{owned(shop.orders, p) ? 'Yours' : pointsOf(p) === null ? 'Pre-order' : <Price product={p} size={13} />}</small>
+                  <small>{owned(shop.orders, p) ? 'You own this' : pointsOf(p) === null ? 'Pre-order' : <Price product={p} size={13} />}</small>
                 </span>
               </a>
             </li>

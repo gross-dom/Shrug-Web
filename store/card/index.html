@@ -738,6 +738,11 @@ html.is-scroll .page { touch-action: pan-y pinch-zoom; }
 }
 .hollow { color: rgba(0, 0, 0, 0); -webkit-text-stroke: 1.6px #d7dae0; }
 .blank-name { font-family: var(--display); font-size: 46px; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; white-space: nowrap; }
+/* (the words a nameless card has, "Your name here", are set to fit its window) */
+.blank-name.unnamed { font-size: 37px; }
+/* In a window of the desk this page is My VIP's: the window says what it is, so the page's own head is not
+   drawn (it keeps its room, so that nothing under it moves) */
+.in-desk .top { visibility: hidden; }
 .blank-note { font-size: calc(10.5px * var(--cf)); font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; }
 
 /* points up: a price-gun label goes over the old number */
@@ -1155,6 +1160,13 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     const out = { status: 'member', member: Object.assign({ reason: s.reason || null, emails: s.emails !== false }, s.member), seenPoints: s.seen };
     s.seen = s.member.points; // looking counts as seeing, as on the real server
     save();
+    // What they have spent, which the card adds to their balance (the store's demo keeps their orders)
+    try {
+      const store = JSON.parse(window.localStorage.getItem('shrugdemo.store.v3') || 'null');
+      const me = String(s.email || state.pick).toLowerCase();
+      const spent = ((store && store.orders) || []).filter((o) => o.who === me && o.status !== 'Refunded').reduce((n, o) => n + Math.max(0, o.points || 0), 0);
+      if (spent > 0) { out.member = Object.assign({}, out.member, { points: out.member.points + spent }); if (typeof out.seenPoints === 'number') out.seenPoints += spent; }
+    } catch (e) { /* nothing spent that it knows of */ }
     return out;
   }
 
@@ -1337,6 +1349,17 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
   // A request that has not answered in `ms` is not going to. Without a limit, one that never
   // answers leaves the page waiting on it for good: a strip that will not take a code, or let go.
+  /** A member's card is printed with every point they have been awarded, so that the figure on it only ever
+   * goes up: their balance, and what they have spent (`spent`, which the server says beside the balance).
+   * Everything here that speaks of points means that total, so it is made the figure as soon as it arrives. */
+  function totalled(j) {
+    if (j && j.status === 'member' && j.member && typeof j.member.points === 'number' && typeof j.spent === 'number' && j.spent > 0) {
+      j.member.points += j.spent;
+      if (typeof j.seenPoints === 'number') j.seenPoints += j.spent;
+    }
+    return j;
+  }
+
   async function call(method, path, body, ms) {
     const ctl = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = ctl ? setTimeout(() => ctl.abort(), ms) : 0;
@@ -1352,7 +1375,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       });
       try {
         const j = await res.json();
-        if (j && typeof j === 'object') return j;
+        if (j && typeof j === 'object') return totalled(j);
       } catch (e) {
         if (gaveUp()) return { error: 'timeout' };
       }
@@ -1369,6 +1392,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   // then: the desk has done that, so the pack hangs with its strip loose and the tear is theirs. The desk is
   // told when someone signs out.
   const DESK = (() => { try { const up = window.parent; return up !== window && up.shrugDesk ? up.shrugDesk : null; } catch (e) { return null; } })();
+  if (DESK) document.documentElement.classList.add('in-desk');
 
   // demo.js (never deployed) swaps this for a stand-in that runs in the browser.
   const backend = window.ShrugBackend || {
@@ -2012,10 +2036,13 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     clearTimeout(footNote.t);
     botL.textContent = '';
     botR.textContent = '';
-    if (kind === 'member') {
-      // (in a window of the desk, in the desk's own words: Log In and Log Out)
-      botL.append(h('span', 'bot-clip', note || (DESK ? 'Logged in as ' : 'Signed in as ') + clip(first || 'you', 16)));
-      botR.append(linkBtn(DESK ? 'Log Out' : 'Sign out', signOut));
+    if (kind === 'member' && DESK) {
+      // In a window of the desk the foot says nothing of who is in or how to get out: the menu bar does
+      // both. (Only what it has to say for a moment is said: a note.)
+      if (note) botL.append(h('span', 'bot-clip', note));
+    } else if (kind === 'member') {
+      botL.append(h('span', 'bot-clip', note || 'Signed in as ' + clip(first || 'you', 16)));
+      botR.append(linkBtn('Sign out', signOut));
     } else if (kind === 'applied') {
       botL.append(h('span', 'bot-clip', note || 'Not a member (yet)'));
       botR.append(linkBtn('Try another email', otherEmail));
@@ -2025,7 +2052,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       botR.append(linkBtn('Wrong address?', () => { if (!(S.codeUi && S.codeUi.done)) showEmail(S.email); }));
     } else if (kind === 'armed') {
       // Signed in, with the strip loose: the tear is theirs to do, and theirs to skip
-      botL.append(h('span', 'bot-clip', (DESK ? 'Logged in as ' : 'Signed in as ') + clip(first || 'you', 16)));
+      if (!DESK) botL.append(h('span', 'bot-clip', 'Signed in as ' + clip(first || 'you', 16)));
       botR.append(linkBtn('Skip to your card', skipTear));
     } else {
       botL.append(h('span', 'only-wide', 'One card per member. Silver, gold or black. No swaps.'), h('span', 'only-compact', 'One card per member. No swaps.'));
@@ -2667,7 +2694,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       h('div', 'card-head', mark('card-brand'), microLine(tier[0].toUpperCase() + tier.slice(1), m.number ? 'No. ' + m.number : '')),
       h('div', 'card-art', finish('holo'), name),
       h('div', 'card-band role-' + key, roleEl, since),
-      h('div', 'card-foot', h('div', 'card-pts', h('div', 'card-micro', 'Points'), num), ser),
+      h('div', 'card-foot', h('div', 'card-pts', h('div', 'card-micro', 'Total points'), num), ser),
       finish('card-foil'), finish('card-spark'), finish('streak'), finish('glare'), finish('card-sweep'));
   }
 
@@ -2689,7 +2716,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     const words = (m.name || '').trim().split(/\s+/).filter(Boolean);
     const name = h('div', 'blank-name hollow');
     name.id = 'cardName';
-    if (!words.length) name.append('Your name', h('br'), 'here');
+    if (!words.length) { name.append('Your name', h('br'), 'here'); name.classList.add('unnamed'); }
     else if (words.length === 1) name.append(words[0]);
     else name.append(words[0], h('br'), words.slice(1).join(' '));
     const num = h('div', 'card-num hollow', fmt(printed));
@@ -2699,7 +2726,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       h('div', 'card-head', mark('card-brand'), h('div', 'card-micro', 'Standard')),
       h('div', 'card-art blank-art', name),
       h('div', 'card-band role-none', h('div', 'card-role', 'Member'), m.since ? h('div', 'card-micro card-since', 'Member since ' + m.since) : null),
-      h('div', 'card-foot', h('div', 'card-pts', h('div', 'card-micro', 'Points'), num), h('div', 'card-micro card-ser', 'Series 01', h('br'), '1 of 1')),
+      h('div', 'card-foot', h('div', 'card-pts', h('div', 'card-micro', 'Total points'), num), h('div', 'card-micro card-ser', 'Series 01', h('br'), '1 of 1')),
       glare);
   }
 
@@ -2944,7 +2971,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   function storeGo(when) {
     // In a window of the desk this page is My VIP's, and what follows the card is the rest of My VIP: their
     // points, orders and address, and the ways in to the three stores (ArtStore, Books, Workspace)
-    const a = h('a', 'go' + (when ? ' ' + when : ''), DESK ? 'Continue to My VIP' : 'Go to the store');
+    // (out of a pack just torn it is the way on; from a card they came to look at, the way back)
+    const a = h('a', 'go' + (when ? ' ' + when : ''), DESK ? (when === 'after' ? 'Continue to My VIP' : 'Back to My VIP') : 'Go to the store');
     a.insertAdjacentHTML('beforeend', '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>');
     a.href = DESK ? 'store/?k=yours' : 'store/';
     a.addEventListener('click', (e) => {
@@ -3356,8 +3384,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     footer('armed', who.member && who.member.first);
     squareUp();
     stripTear();
-    const lead = why === 'code' ? 'Code good' : why === 'printed' ? 'Card printed' : DESK ? 'Logged in' : 'Signed in';
-    setShelf(label(lead + (coarse ? '. Swipe along the strip' : '. Drag along the strip')));
+    // (in a window of the desk nobody has just signed in here: the label says only what to do)
+    const lead = why === 'code' ? 'Code good. ' : why === 'printed' ? 'Card printed. ' : DESK ? '' : 'Signed in. ';
+    setShelf(label(lead + (coarse ? 'Swipe along the strip' : 'Drag along the strip')));
     const seat = () => {
       if (S.armed !== who || S.view !== 'pack') return;
       // In the pack, with its back to us. What it says is for after the tear, for everyone,

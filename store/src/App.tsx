@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fmtPoints, onShelf, shelfOf } from '../shared/rules'
+import { fmtPoints, onShelf } from '../shared/rules'
 import { CARD, DEMO, server, shopOf, type Backend, type Placed, type Shop, type StoreAnswer } from './backend'
 import { PointsMark, Wordmark } from './brand'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
-import { DESK, type Room, type StoreInWindow } from './desk'
+import { DESK, type StoreInWindow } from './desk'
 import { Lock, NoCloud } from './icons'
 import { Picture, Price, ProductView, type Go } from './Product'
+import { NAMES, nameIn, ROOM, SHELF } from './room'
 import { Visiting } from './visiting'
 import { badgeOf } from './words'
 import { YoursView } from './Yours'
@@ -23,16 +24,6 @@ import { YoursView } from './Yours'
 
 const backend: Backend = DEMO ? demo : server
 
-/** Which of the desk's windows this is, by the address it was opened at (?k=): one of the three stores, which
- * shows its own shelf and nothing else, or My VIP, which shows what is the member's and no shelf at all. On
- * its own site (no window) there is none: the whole store, and My VIP beside it, as before. */
-const ROOM: Room | null = (() => {
-  const asked = new URLSearchParams(window.location.search).get('k')
-  return asked === 'yours' ? 'yours' : shelfOf(asked)
-})()
-const SHELF = ROOM === 'yours' ? null : ROOM
-/** What each window calls itself. */
-const NAMES: Record<Room, string> = { art: 'ArtStore', books: 'Books', chairs: 'Workspace', yours: 'My VIP' }
 
 type Section = 'store' | 'yours'
 interface Place {
@@ -155,8 +146,7 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
               </span>
               <span className="ui-prod-cap">
                 <span>
-                  <b>{product.name}</b>
-                  <small>{product.kind}</small>
+                  <b>{nameIn(product)}</b>
                 </span>
                 <span className="r">
                   <Price product={product} />
@@ -302,6 +292,13 @@ export function App() {
   }
 
   const visiting = answer.status === 'visitor'
+  // Logged out: whatever was on a product's screen (a receipt, a checkout begun) was theirs, and goes with them
+  const wasIn = useRef(false)
+  const [outs, setOuts] = useState(0)
+  useEffect(() => {
+    if (answer.status === 'visitor' && wasIn.current) setOuts((n) => n + 1)
+    if (answer.status === 'member' || answer.status === 'visitor') wasIn.current = answer.status === 'member'
+  }, [answer.status])
   const all = answer.status === 'member' ? answer : answer.status === 'visitor' ? shopOf(answer) : null
   // What this window sells: its own shelf of what they are shown. (My VIP is drawn from everything: an order
   // is of whatever it was, from whichever store)
@@ -309,7 +306,7 @@ export function App() {
   const product = shop && place.section === 'store' ? (shop.products.find((p) => p.id === place.product) ?? null) : null
   const storeName = SHELF ? NAMES[SHELF] : 'Store'
   useEffect(() => {
-    const names: Record<Section, string> = { store: product ? product.name : storeName, yours: 'My VIP' }
+    const names: Record<Section, string> = { store: product ? nameIn(product) : storeName, yours: 'My VIP' }
     document.title = `${names[place.section]} · Shrug VIP`
   }, [place.section, product, storeName])
 
@@ -339,7 +336,6 @@ export function App() {
         <h1 className="sr">Shrug VIP: My VIP</h1>
         <Lock />
         <h2 className="t-h2">Log in to see My VIP</h2>
-        <p className="t-words">Your card, your orders and the address on file live here.</p>
         <button type="button" className="ui-btn fit" onClick={() => DESK!.logIn('store')}>
           Log In
         </button>
@@ -355,7 +351,7 @@ export function App() {
       place.section === 'yours' ? (
         <YoursView shop={all!} phone={phone} backend={backend} onChange={load} onSignOut={signout} />
       ) : product ? (
-        <ProductView key={product.id} shop={shop} visiting={visiting} product={product} phone={phone} backend={backend} go={go} onPlaced={placed} />
+        <ProductView key={`${product.id}:${outs}`} shop={shop} visiting={visiting} product={product} phone={phone} backend={backend} go={go} onPlaced={placed} />
       ) : (
         <Display shop={shop} phone={phone} open={(id) => go({ view: 'product', id })} />
       )

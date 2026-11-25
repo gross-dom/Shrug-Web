@@ -3,7 +3,7 @@ import { add, all, change, F, num, one, remove, str, T, type Row } from './airta
 import { keepAddress, rowFor } from './members.js'
 import { orderOf, productOf } from './catalogue.js'
 import { intentOf, type Intent } from './stripe.js'
-import { dueCents, fitPoints, numberOf, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
+import { awardFor, dueCents, fitPoints, numberOf, onFile, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
 
 // Placing an order: the row in Orders, the points off the balance, and one fewer on the shelf.
 
@@ -26,8 +26,10 @@ interface Placing {
   takes: boolean
 }
 
-async function place({ member, productRow, product, status, option, shipTo, paid = 0, payment = '', points = 0, takes }: Placing): Promise<{ order: Order; points: number }> {
+async function place({ member, productRow, product, status, option, shipTo, paid = 0, payment = '', points = 0, takes }: Placing): Promise<{ order: Order; points: number; awarded: number }> {
   const balance = num(member.fields[F.member.points]) ?? 0
+  // What buying it awards (shared/rules.ts): added to the balance with the order
+  const awarded = takes ? awardFor(product) : 0
   const row = await add(T.orders, {
     [F.order.reference]: reference(),
     [F.order.status]: status,
@@ -50,15 +52,17 @@ async function place({ member, productRow, product, status, option, shipTo, paid
     const first = same[0]
     if (first && first.id !== row.id) {
       await remove(T.orders, row.id).catch(() => {})
-      return { order: orderOf(first, names), points: balance }
+      return { order: orderOf(first, names), points: balance, awarded: 0 }
     }
   }
-  if (points > 0) {
-    // The balance it was told of at the last email is brought down with it, so that the next rise is counted from here
-    await change(T.members, member.id, { [F.member.points]: balance - points, [F.member.seenPoints]: balance - points, [F.member.notified]: balance - points })
+  if (points > 0 || awarded > 0) {
+    // The balance it was told of at the last email is brought down with it, so that the next rise is counted
+    // from here. What the order awards is said on its receipt, so no email is owed for it; the card has not
+    // seen it, and shows it as new
+    await change(T.members, member.id, { [F.member.points]: balance - points + awarded, [F.member.seenPoints]: balance - points, [F.member.notified]: balance - points + awarded })
   }
   if (takes && product.left !== null) await change(T.products, productRow.id, { [F.product.left]: Math.max(0, product.left - 1) })
-  return { order: orderOf(row, names), points: balance - points }
+  return { order: orderOf(row, names), points: balance - points + awarded, awarded }
 }
 
 /** A request for something sold on request: nothing is taken, and Shrug writes back. */
@@ -82,7 +86,7 @@ const shipToOf = (intent: Intent) => {
  * with the same order. If the money is in but the order no longer adds up (the last one went, the points
  * were spent elsewhere meanwhile, or the price was changed), nothing more is taken and the order is marked
  * for Shrug to look at. */
-export async function settle(paymentId: string, forMember?: string): Promise<{ order: Order; points: number; member: Row } | { error: 'unpaid' | 'unknown' }> {
+export async function settle(paymentId: string, forMember?: string): Promise<{ order: Order; points: number; awarded: number; member: Row } | { error: 'unpaid' | 'unknown' }> {
   const intent = await intentOf(paymentId)
   if (intent.status !== 'succeeded') return { error: 'unpaid' }
   const productRow = await one(T.products, intent.metadata.product ?? '')
@@ -91,11 +95,13 @@ export async function settle(paymentId: string, forMember?: string): Promise<{ o
   // one, unless that address has one already, and the order is that account's
   const visitor = intent.metadata.visitor === '1' && !!intent.metadata.email
   const typed = (intent.metadata.shipTo ?? '').trim()
-  const member = visitor ? (await rowFor(intent.metadata.email!, { shipTo: typed || shipToOf(intent) })).row : await one(T.members, intent.metadata.member ?? '')
+  // (their name: the one they gave at checkout, or else the one the parcel is addressed to)
+  const buyer = (intent.metadata.buyer ?? '').trim() || (intent.shipping?.name ?? '').trim() || (onFile(typed) ? typed.split('\n')[0]!.trim() : '')
+  const member = visitor ? (await rowFor(intent.metadata.email!, { shipTo: typed || shipToOf(intent), name: buyer.slice(0, 80) })).row : await one(T.members, intent.metadata.member ?? '')
   if (!member || (forMember && member.id !== forMember)) return { error: 'unknown' }
   const balance = num(member.fields[F.member.points]) ?? 0
   const already = (await all(T.orders)).find((row) => str(row.fields[F.order.payment]) === paymentId)
-  if (already) return { order: orderOf(already, new Map([[productRow.id, str(productRow.fields[F.product.name])]])), points: balance, member }
+  if (already) return { order: orderOf(already, new Map([[productRow.id, str(productRow.fields[F.product.name])]])), points: balance, awarded: 0, member }
   const product = productOf(productRow)
   // It goes to the address on file. With none, the one the payment gave is used, and kept for next time. (A
   // visitor's goes where they said this time, whatever an account of that address has on file: nobody has

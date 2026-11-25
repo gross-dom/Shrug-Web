@@ -7,16 +7,16 @@ import { floorCents, fmtCents, fmtPoints, has, keptTo, POINTS_PER_DOLLAR, priceC
 
 export interface Badge {
   text: string
-  /** gold: Pre-order and Made to order. on: Yours. */
+  /** gold: Pre-order and Made to order. on: You own this. */
   tone?: 'gold' | 'on'
 }
 
 /** Whether a member has bought it (a request or a reservation is not having it). */
 export const owned = (orders: Order[], product: Product) => orders.some((order) => order.productId === product.id && ['Paid', 'Points', 'Sent'].includes(order.status))
 
-/** The badge in the corner of a product: what is scarce or different about it, and Yours once they have it. */
+/** The badge in the corner of a product: what is scarce or different about it, and that they own it once they do. */
 export function badgeOf(product: Product, orders: Order[]): Badge | null {
-  if (owned(orders, product)) return { text: 'Yours', tone: 'on' }
+  if (owned(orders, product)) return { text: 'You own this', tone: 'on' }
   if (product.status === 'Pre-order') return { text: 'Pre-order', tone: 'gold' }
   if (product.status === 'On request') return { text: 'Made to order', tone: 'gold' }
   if (soldOut(product)) return { text: 'Sold out' }

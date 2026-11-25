@@ -38,7 +38,7 @@ export const ABOUT = {
   facts: [
     { label: 'Started', value: '2017' },
     { label: 'Partners', value: 'Niv Dror, Dom Santry' },
-    { label: 'Fund', value: 'Shrug V, the fifth' },
+    { label: 'Fund', value: 'V' },
   ],
   /** What it backs: a row of its own, under the others. */
   backs: 'Defense, space, energy, manufacturing and consumer brands',

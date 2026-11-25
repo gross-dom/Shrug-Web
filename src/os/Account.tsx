@@ -37,12 +37,12 @@ const said = (error: string) => SAID[error] ?? 'That didn’t work. Try again.'
 
 /** What the sheet says at its head, for whatever opened it. */
 const HEADS: Record<NonNullable<Why> | 'plain', { head: string; lead: string }> = {
-  plain: { head: 'Log in to Shrug VIP', lead: 'Start with your email. New here? This makes your account.' },
-  updates: { head: 'Log in to open Updates', lead: 'Updates is for Shrug’s LPs. Start with your email.' },
-  request: { head: 'Log in to request', lead: 'Start with your email. New here? This makes your account.' },
+  plain: { head: 'Welcome to Shrug VIP', lead: 'Log in or sign up to get started.' },
+  updates: { head: 'Log in to open Updates', lead: 'Updates is for Shrug’s LPs. Log in with your LP email.' },
+  request: { head: 'Log in to request', lead: 'Log in or sign up to get started.' },
   post: { head: 'Log in to post', lead: 'Every photo on the wall has a name behind it. Yours is kept while you log in.' },
-  price: { head: 'Log in to see the price', lead: 'The chair’s price is for members. Start with your email. New here? This makes your account.' },
-  booth: { head: 'Log in to use Photo Booth', lead: 'Photo Booth is for members. Start with your email. New here? This makes your account.' },
+  price: { head: 'Log in to enquire', lead: 'Log in or sign up to get started.' },
+  booth: { head: 'Log in to use Photo Booth', lead: 'Log in or sign up to get started.' },
 }
 
 const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five']

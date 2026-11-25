@@ -33,7 +33,8 @@ export type Failed = { error: string }
 /** An order placed. For a visitor, who paid without an account: `account` says whether the payment made them
  * one (`new`: they are signed in to it, and are asked for a phone number) or the email already had one
  * (`theirs`: the order is that account's, and nobody is signed in), and `email` is where the receipt went. */
-export type Placed = { ok: true; order: Order; points: number; account?: 'new' | 'theirs'; email?: string }
+/** `awarded`: the points this order was awarded, which are in the balance (`points`) already. */
+export type Placed = { ok: true; order: Order; points: number; awarded?: number; account?: 'new' | 'theirs'; email?: string }
 export type PayStart = { ok: true; clientSecret: string; payment: string; cents: number } | { ok: true; demo: true; cents: number }
 
 export interface Asked {
@@ -45,6 +46,8 @@ export interface Asked {
   shipTo?: string
   /** A visitor's: where the receipt goes, which is the account the payment makes. */
   email?: string
+  /** A visitor's: their name, which the account the payment makes is under (and their card is printed with). */
+  name?: string
   /** A visitor's: Apple Pay will give the address, so none is typed. */
   wallet?: boolean
 }

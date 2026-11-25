@@ -33,7 +33,7 @@ async function forAVisitor(request: Request, payment: string) {
   const fresh = !listed(member) && !phoneOn(member) && theirs.length === 1 && str(theirs[0]!.fields[F.order.payment]) === payment
   const headers = new Headers({ 'Set-Cookie': noPayCookie() })
   if (fresh) headers.append('Set-Cookie', sessionCookie(email, 'pay'))
-  return json({ ok: true, order, points: fresh ? settled.points : 0, account: fresh ? 'new' : 'theirs', email }, { headers })
+  return json({ ok: true, order, points: fresh ? settled.points : 0, awarded: fresh ? settled.awarded : 0, account: fresh ? 'new' : 'theirs', email }, { headers })
 }
 
 export async function POST(request: Request) {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     if (payment) {
       const settled = await settle(payment, who.row.id)
       if ('error' in settled) return json(settled, { status: 400 })
-      return json({ ok: true, order: settled.order, points: settled.points })
+      return json({ ok: true, order: settled.order, points: settled.points, awarded: settled.awarded })
     }
 
     const { products, rows } = await shelvesFor(who.member)

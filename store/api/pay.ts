@@ -27,7 +27,9 @@ async function fromAVisitor(body: Record<string, unknown>) {
   if (product.options.length && !product.options.includes(option)) return json({ error: 'option' }, { status: 400 })
   const shipTo = tidied(body.shipTo)
   if (asksAddress(product) && !onFile(shipTo) && body.wallet !== true) return json({ error: 'address' }, { status: 400 })
-  const intent = await newIntent(due, { member: '', visitor: '1', email, product: product.id, option, points: '0', name: product.name, shipTo })
+  // (their name, as they gave it at checkout: the account the payment makes is under it)
+  const buyer = text(body.name, 80)
+  const intent = await newIntent(due, { member: '', visitor: '1', email, buyer, product: product.id, option, points: '0', name: product.name, shipTo })
   return json({ ok: true, clientSecret: intent.client_secret, payment: intent.id, cents: due }, { headers: { 'Set-Cookie': payCookie(intent.id) } })
 }
 

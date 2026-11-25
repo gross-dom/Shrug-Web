@@ -41,7 +41,7 @@ function packShown(email: string) {
 
 /** The three stores, as My VIP leads to them. */
 const DOORS: { app: AppId; says: string }[] = [
-  { app: 'store', says: 'Six pieces. Fifty of each.' },
+  { app: 'store', says: 'Six pieces, in editions of fifty.' },
   { app: 'books', says: 'Five books, two on pre-order.' },
   { app: 'workspace', says: 'The chair, in every color.' },
 ]
@@ -77,10 +77,11 @@ export function MyVipApp() {
 
   const bar = (
     <div className="storebar">
+      {/* (the window's name is its mark: MY VIP, and nothing is said again in the middle of the bar) */}
       <span className="storebar__mark">
-        <Wordmark lockup="vip" height={14} />
+        <Wordmark lockup="my" height={14} />
       </span>
-      <span className="storebar__says">{page === 'pack' ? 'Your pack' : 'My VIP'}</span>
+      <span className="storebar__says" />
       <Balance />
     </div>
   )

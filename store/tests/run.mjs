@@ -249,26 +249,29 @@ check('unpaid is not an order', (await call('ada', 'order', 'POST', { payment: i
 Object.assign(intent, { status: 'succeeded', amount_received: 52000, shipping: { name: 'Ada Example', address: { line1: '1 Example Street', city: 'San Francisco', state: 'CA', postal_code: '94103', country: 'US' } } })
 check("someone else's payment is not theirs to claim", (await call('lee', 'order', 'POST', { payment: intent.id })).body.error === 'unknown')
 const paid = await call('ada', 'order', 'POST', { payment: intent.id })
-check('paid: the order, the points used and the address', paid.body.ok && paid.body.order.status === 'Paid' && paid.body.order.paid === 520 && paid.body.order.points === 5500 && paid.body.order.option === 'Stone' && paid.body.points === 6100 && founder.fields[M.points] === 6100 && tables[T.orders].at(-1).fields[F.order.shipTo].includes('San Francisco'), JSON.stringify(paid.body))
+check('paid: the order, the points used, the 200 a chair awards, and the address', paid.body.ok && paid.body.order.status === 'Paid' && paid.body.order.paid === 520 && paid.body.order.points === 5500 && paid.body.order.option === 'Stone' && paid.body.points === 6300 && paid.body.awarded === 200 && founder.fields[M.points] === 6300 && tables[T.orders].at(-1).fields[F.order.shipTo].includes('San Francisco'), JSON.stringify(paid.body))
 const event = JSON.stringify({ type: 'payment_intent.succeeded', data: { object: { id: intent.id } } })
 const at = Math.floor(Date.now() / 1000)
 const sig = (secret) => `t=${at},v1=${createHmac('sha256', secret).update(`${at}.${event}`).digest('hex')}`
 const hook = (signature) => api.stripe.POST(new Request('https://store.test/api/stripe', { method: 'POST', headers: { 'stripe-signature': signature }, body: event }))
 check('a webhook not from Stripe is refused', (await hook(sig('whsec_wrong'))).status === 400)
-check('Stripe saying so again makes no second order', (await hook(sig('whsec_test'))).status === 200 && tables[T.orders].filter((o) => o.fields[F.order.payment] === intent.id).length === 1 && founder.fields[M.points] === 6100)
+check('Stripe saying so again makes no second order', (await hook(sig('whsec_test'))).status === 200 && tables[T.orders].filter((o) => o.fields[F.order.payment] === intent.id).length === 1 && founder.fields[M.points] === 6300)
 
 // An edition
 const artPay = await call('ada', 'pay', 'POST', { product: art.id, points: 2050 })
 check('the acrylic: $280 less 2,050 points is its $75 floor, and $5 postage', artPay.body.cents === 8000)
 Object.assign(intents.get(artPay.body.payment), { status: 'succeeded', amount_received: 8000 })
 const artPaid = await call('ada', 'order', 'POST', { payment: artPay.body.payment })
-check('an edition is numbered and counted down', artPaid.body.order.number === '2/3' && art.fields[P.left] === 1 && artPaid.body.points === 4050, JSON.stringify(artPaid.body.order))
+check('an edition is numbered and counted down', artPaid.body.order.number === '2/3' && art.fields[P.left] === 1 && artPaid.body.points === 4250 && artPaid.body.awarded === 0, JSON.stringify(artPaid.body.order))
 // Money arrives for something that no longer adds up: nothing more is taken, and it is marked
 const late = await call('ada', 'pay', 'POST', { product: art.id, points: 2050 })
 art.fields[P.left] = 0
 Object.assign(intents.get(late.body.payment), { status: 'succeeded', amount_received: 8000 })
 const review = await call('ada', 'order', 'POST', { payment: late.body.payment })
-check('money in for a sold-out thing is marked for review, with no points taken', review.body.order.status === 'Needs review' && review.body.points === 4050 && founder.fields[M.points] === 4050)
+const adaSpent = tables[T.orders].filter((o) => (o.fields[F.order.member] ?? []).includes(founder.id) && o.fields[F.order.status] !== 'Refunded').reduce((sum, o) => sum + (o.fields[F.order.points] ?? 0), 0)
+const adaCard = (await call('ada', 'me', 'GET')).body
+check('the card is told what they have spent, beside their balance: together, every point they have been awarded', adaSpent >= 7550 && adaCard.spent === adaSpent && adaCard.member.points === 4250, JSON.stringify({ adaSpent, spent: adaCard.spent, points: adaCard.member?.points }))
+check('money in for a sold-out thing is marked for review, with no points taken', review.body.order.status === 'Needs review' && review.body.points === 4250 && founder.fields[M.points] === 4250)
 check('sold out cannot start a payment', (await call('ada', 'pay', 'POST', { product: art.id, points: 0 })).body.error === 'sold-out')
 // The points are spent elsewhere between starting to pay and paying
 art.fields[P.left] = 2
@@ -450,6 +453,7 @@ const veraOrder = await call('vera', 'order', 'POST', { payment: veraPay.body.pa
 const vera = rowFor('vera@example.test')
 check('the payment makes their account: a standard one, with their address on file, and the order is its', veraOrder.body.ok && veraOrder.body.account === 'new' && veraOrder.body.order.status === 'Paid' && !!vera && vera.fields[M.tier] === 'Standard' && vera.fields[M.points] === 100 && vera.fields[M.shipTo] === home2 && !vera.fields[M.phone] && tables[T.orders].at(-1).fields[F.order.member][0] === vera.id && tables[T.orders].at(-1).fields[F.order.shipTo] === home2, JSON.stringify(veraOrder.body))
 const veraMe = (await call('vera', 'me', 'GET')).body
+check('the account is under the name they paid with (the one the parcel is addressed to, where they gave no other), which is the name on their card', vera.fields[M.displayName] === 'Vera Example' && veraMe.member?.name === 'Vera Example', JSON.stringify(veraMe.member))
 check('they are signed in to it, and it lacks a number', veraMe.status === 'member' && veraMe.via === 'pay' && veraMe.needs.phone === true && (await call('vera', 'store', 'GET')).body.orders.length === 1, JSON.stringify(veraMe))
 check('which they add there and then, with no code to their inbox', (await call('vera', 'phone', 'POST', { phone: '+14155550107' })).body.ok && (await call('vera', 'phone', 'POST', { phone: '+14155550107', code: textIn('+14155550107') })).body.ok && vera.fields[M.phone] === '+14155550107' && !mail.some((m) => m.to[0] === 'vera@example.test'))
 check('asked twice, the payment is still one order and one account', (await call('vera', 'order', 'POST', { payment: veraPay.body.payment })).body.order?.reference === veraOrder.body.order.reference && tables[T.members].filter((r) => r.fields[M.email] === 'vera@example.test').length === 1)
