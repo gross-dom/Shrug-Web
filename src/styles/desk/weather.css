@@ -1,50 +1,47 @@
-/* Weather (apps/Weather.tsx), after the Mac's own as Dom's screenshots show it: a window that is the sky of
-   the place that is picked (blue by day, grey under cloud, deep blue at night), a dark sidebar of places, each
-   a card with a sky of its own, and the forecast in tiles of darker glass. White on every sky, at sizes and
-   weights that can be read on it. */
+/* Weather (apps/Weather.tsx), after the Mac's own as Dom's screenshots show it (macOS 26): the window is the
+   sky of the place that is picked, moving (apps/weather/Sky.tsx draws what falls and shines in it; its
+   ground and its clouds are here). Over the sky, at the left, a pane of glass with the places in it, each a
+   card with a sky of its own; and the place at length: its name, the temperature large and thin, how it
+   feels and the day's high and low, and tiles of darker glass. The measures are the screenshot's: a pane
+   280 wide, cards 100 tall with 16 at their corners, tiles 143 square with 18 between them, in a column 626
+   wide. White on every sky, at sizes and weights that can be read on it. */
 
 .ss-window.wtwin {
   --ss-lights-y: 26px;
   --wt-ink: #fff;
   --wt-ink-2: rgb(255 255 255 / 0.86);
-  --wt-tile: rgb(6 20 48 / 0.24);
-  --wt-edge: rgb(255 255 255 / 0.14);
-  background: linear-gradient(180deg, #1b549d 0%, #2c6cb6 60%, #3274bd 100%);
+  --wt-ink-3: rgb(255 255 255 / 0.64);
+  --wt-edge: rgb(255 255 255 / 0.16);
+  position: relative;
+  overflow: hidden;
+  background: #2c6cb6;
   color: var(--wt-ink);
   font-family: var(--font-ui);
 }
 
-.ss-window.wtwin[data-sky='gray'] {
-  background: linear-gradient(180deg, #3f5068 0%, #566b85 60%, #64798f 100%);
-}
-
-.ss-window.wtwin[data-sky='night'] {
-  --wt-tile: rgb(255 255 255 / 0.08);
-  background: linear-gradient(180deg, #080d22 0%, #18214a 60%, #232d5c 100%);
-}
-
-.ss-window.wtwin > .ss-window__side {
-  border-right: 1px solid rgb(0 0 0 / 0.28);
-  background: rgb(14 18 30 / 0.62);
-  -webkit-backdrop-filter: blur(30px) saturate(1.4);
-  backdrop-filter: blur(30px) saturate(1.4);
-}
-
-.ss-window.wtwin > .ss-window__main,
-.ss-window.wtwin > .ss-window__main > .ss-window__bar,
-.wtwin__body {
+/* The window's bar is only where it is held to be moved: it lies over the top of the sky, and has nothing drawn in it */
+.ss-window.wtwin > .ss-window__bar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 3;
+  height: 52px;
+  min-height: 0;
   border: 0;
   background: none;
 }
 
-.ss-window.wtwin > .ss-window__main > .ss-window__bar {
-  height: 18px;
-  min-height: 0;
+.wtwin__body {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: none;
 }
 
-.wtwin__body {
+.wt-app {
+  position: absolute;
+  inset: 0;
   display: flex;
-  min-height: 0;
+  isolation: isolate;
 }
 
 .wtwin :where(h1, h2, p, ol, ul) {
@@ -57,7 +54,7 @@
   cursor: pointer;
 }
 
-.wtwin :where(button, a):focus-visible,
+.wtwin :where(button, a, input):focus-visible,
 .wt:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
@@ -67,52 +64,207 @@
   outline-offset: -4px;
 }
 
-/* ---- The places */
+/* ---- The sky: its ground by the light it is in and what is in it, its clouds, its sun */
+
+.wt-sky {
+  --cloud: rgb(255 255 255 / 0.82);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: linear-gradient(180deg, #2a67b9 0%, #4b8fd9 55%, #7fb6ea 100%);
+  pointer-events: none;
+}
+
+.wt-sky:is([data-kind='cloud'], [data-kind='fog']) {
+  --cloud: rgb(236 240 247 / 0.7);
+  background: linear-gradient(180deg, #5b7190 0%, #7d93af 55%, #a1b1c4 100%);
+}
+
+.wt-sky:is([data-kind='rain'], [data-kind='storm'], [data-kind='snow']) {
+  --cloud: rgb(206 214 226 / 0.5);
+  background: linear-gradient(180deg, #3f4d62 0%, #58687c 55%, #77869a 100%);
+}
+
+.wt-sky[data-kind='snow'] {
+  background: linear-gradient(180deg, #62718a 0%, #8494ab 55%, #aab6c6 100%);
+}
+
+/* (the hour about sunrise and sunset, as in Dom's screenshot: lavender over blue-violet, warming to the horizon, under rose clouds) */
+.wt-sky[data-light='dusk'] {
+  --cloud: rgb(250 214 226 / 0.78);
+  background: linear-gradient(180deg, #8f88b7 0%, #6572ae 28%, #5f6ca7 52%, #8d85a6 78%, #c4a293 100%);
+}
+
+.wt-sky[data-light='dusk']:is([data-kind='rain'], [data-kind='storm'], [data-kind='snow']) {
+  --cloud: rgb(190 176 196 / 0.5);
+  background: linear-gradient(180deg, #4b4963 0%, #55597e 50%, #7c7083 100%);
+}
+
+.wt-sky[data-light='night'] {
+  --cloud: rgb(150 160 204 / 0.26);
+  background: linear-gradient(180deg, #04071a 0%, #0f1740 55%, #232c62 100%);
+}
+
+.wt-sky[data-light='night']:is([data-kind='cloud'], [data-kind='fog']) {
+  background: linear-gradient(180deg, #141a2c 0%, #252d45 55%, #3a4258 100%);
+}
+
+.wt-sky[data-light='night']:is([data-kind='rain'], [data-kind='storm'], [data-kind='snow']) {
+  --cloud: rgb(130 140 164 / 0.24);
+  background: linear-gradient(180deg, #0d111b 0%, #1b2230 55%, #2a323f 100%);
+}
+
+/* A cloud: three soft rounds run together, drifting across from the left. Each is lower than the last, slower, and further on its way */
+.wt-cloud {
+  position: absolute;
+  top: calc(var(--n) * 6.5% - 5%);
+  left: -60%;
+  width: 54%;
+  height: 26%;
+  background:
+    radial-gradient(42% 60% at 30% 60%, var(--cloud) 0 50%, transparent 100%),
+    radial-gradient(38% 72% at 55% 44%, var(--cloud) 0 50%, transparent 100%),
+    radial-gradient(34% 56% at 77% 62%, var(--cloud) 0 50%, transparent 100%);
+  filter: blur(14px);
+  animation: wt-drift calc(130s + var(--n) * 21s) linear infinite;
+  animation-delay: calc(var(--n) * -41s - 20s);
+}
+
+@keyframes wt-drift {
+  to {
+    transform: translateX(315%);
+  }
+}
+
+/* (a sky that is not moving: a card's, or a window out of sight. Its clouds stand where they would be passing) */
+.wt-sky[data-still] .wt-cloud {
+  left: calc(var(--n) * 46% - 6%);
+  animation: none;
+}
+
+.wt-sun {
+  position: absolute;
+  top: -22%;
+  right: -10%;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(255 246 208 / 0.8), rgb(255 236 170 / 0.26) 45%, transparent 72%);
+  animation: wt-glow 9s ease-in-out infinite alternate;
+}
+
+@keyframes wt-glow {
+  to {
+    opacity: 0.78;
+    transform: scale(1.06);
+  }
+}
+
+.wt-sky canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- The places: a pane of glass over the sky */
 
 .wt-side {
-  flex: 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 280px;
   min-height: 0;
-  padding: 6px 10px 12px;
-  overflow-y: auto;
-  scrollbar-width: none;
+  padding: 64px 14px 0;
+  border-right: 0.5px solid rgb(255 255 255 / 0.16);
+  background: rgb(46 42 66 / 0.3);
+  -webkit-backdrop-filter: blur(34px) saturate(1.5);
+  backdrop-filter: blur(34px) saturate(1.5);
+}
+
+.wt-find {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  background: rgb(255 255 255 / 0.15);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), inset 0 0 0 0.5px rgb(255 255 255 / 0.14);
+  color: var(--wt-ink-3);
+  cursor: text;
+}
+
+.wt-find input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.wt-find input::placeholder {
+  color: var(--wt-ink-3);
+  opacity: 1;
+}
+
+.wt-find input:focus-visible {
+  outline: none;
+}
+
+.wt-find:focus-within {
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.8);
 }
 
 .wt-side ul {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  min-height: 0;
+  margin: 12px -14px 0;
+  padding: 2px 14px 14px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.wt-none {
+  padding: 12px 4px;
+  color: var(--wt-ink-2);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .wt-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 16px;
   width: 100%;
-  min-height: 96px;
-  padding: 10px 12px 9px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #1f5aa6, #3777c0);
-  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.2);
+  height: 100px;
+  padding: 9px 12px 10px 13px;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.3), 0 2px 8px rgb(0 0 0 / 0.14);
   color: #fff;
   text-align: left;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.22);
+  isolation: isolate;
   transition: transform 0.14s ease, box-shadow 0.14s ease;
-}
-
-.wt-card[data-sky='gray'] {
-  background: linear-gradient(180deg, #46586f, #647990);
-}
-
-.wt-card[data-sky='night'] {
-  background: linear-gradient(180deg, #0c1230, #283264);
 }
 
 .wt-card:hover {
   transform: translateY(-1px);
 }
 
+/* (the one that is picked: a bright rim, as the Mac draws it) */
 .wt-card[aria-current] {
-  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.9), 0 6px 18px rgb(0 0 0 / 0.3);
+  box-shadow: inset 0 0 0 2.5px rgb(255 255 255 / 0.82), 0 6px 18px rgb(0 0 0 / 0.26);
 }
 
 .wt-card__top,
@@ -129,34 +281,61 @@
 }
 
 .wt-card__top b {
-  font-size: 15px;
+  font-size: 19px;
   font-weight: 700;
-  line-height: 19px;
+  letter-spacing: -0.01em;
+  line-height: 23px;
 }
 
 .wt-card__top small {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 15px;
+  line-height: 17px;
 }
 
 .wt-card__temp {
-  font-size: 30px;
+  font-size: 38px;
   font-weight: 300;
   letter-spacing: -0.02em;
-  line-height: 30px;
+  line-height: 38px;
 }
 
 .wt-card__foot {
   align-items: flex-end;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 14px;
+  line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
 
 .wt-card__foot > :last-child {
   flex: none;
+}
+
+/* The button that puts the pane away and brings it back: at the pane's head, where the Mac's is */
+.wt-fold {
+  position: absolute;
+  top: 9px;
+  left: 232px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.14);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), inset 0 0 0 0.5px rgb(255 255 255 / 0.14);
+  color: #fff;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.wt-fold:hover {
+  background: rgb(255 255 255 / 0.24);
+}
+
+.wt-app:not([data-side]) .wt-fold {
+  left: 86px;
 }
 
 /* ---- The place that is picked */
@@ -171,9 +350,9 @@
 }
 
 .wt-col {
-  width: min(680px, 100% - 44px);
+  width: min(626px, 100% - 48px);
   margin: 0 auto;
-  padding: 8px 0 20px;
+  padding: 96px 0 26px;
 }
 
 .wt-head,
@@ -182,6 +361,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
 }
 
 .wt-msg {
@@ -195,33 +375,26 @@
 
 .wt-head h1,
 .wt-msg h1 {
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 32px;
+  font-size: 33px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 40px;
 }
 
 .wt-temp {
-  margin: -2px 0 0 12px !important;
-  font-size: 72px;
+  margin: -4px 0 0 14px !important;
+  font-size: 84px;
   font-weight: 200;
   letter-spacing: -0.04em;
-  line-height: 76px;
+  line-height: 86px;
 }
 
-.wt-says {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 20px;
-}
-
+.wt-feel,
 .wt-range {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 600;
-  line-height: 21px;
+  letter-spacing: -0.01em;
+  line-height: 26px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -240,27 +413,48 @@
   background: rgb(255 255 255 / 0.3);
 }
 
+/* The tiles: darker glass on the sky, four across */
+.wt-app {
+  --wt-tile: rgb(22 40 88 / 0.22);
+}
+
+.wt-app:is([data-kind='cloud'], [data-kind='fog'], [data-kind='rain'], [data-kind='storm'], [data-kind='snow']) {
+  --wt-tile: rgb(18 26 46 / 0.24);
+}
+
+.wt-app[data-light='dusk'] {
+  --wt-tile: rgb(52 56 120 / 0.3);
+}
+
+.wt-app[data-light='night'] {
+  --wt-tile: rgb(255 255 255 / 0.08);
+}
+
 .wt-tiles {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 26px;
+  grid-auto-rows: 143px;
+  grid-auto-flow: dense;
+  gap: 18px;
+  margin-top: 34px;
 }
 
 .wt-tile {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 150px;
+  min-height: 0;
   padding: 11px 13px 12px;
+  overflow: hidden;
   border-radius: 16px;
   background: var(--wt-tile);
   box-shadow: inset 0 0 0 0.5px var(--wt-edge);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
 }
 
 .wt-tile--wide {
-  grid-column: 1 / -1;
-  min-height: 0;
+  grid-column: span 2;
 }
 
 .wt-tile--tall {
@@ -270,37 +464,237 @@
 
 .wt-tile h2 {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 6px;
-  color: var(--wt-ink-2);
+  color: var(--wt-ink-3);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  letter-spacing: 0.035em;
   line-height: 14px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .wt-tile p {
   margin-top: auto;
+  padding-top: 4px;
   font-size: 12.5px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 15.5px;
+}
+
+.wt-tile p.wt-centre {
+  text-align: center;
 }
 
 .wt-big {
-  margin-top: 8px;
-  font-size: 30px;
-  font-weight: 400;
+  flex: none;
+  margin-top: 5px;
+  font-size: 28px;
+  font-weight: 500;
   letter-spacing: -0.02em;
-  line-height: 36px;
+  line-height: 30px;
   font-variant-numeric: tabular-nums;
 }
 
-/* The hours: a row that runs on to the right */
+.wt-mid {
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 19px;
+  white-space: nowrap;
+}
+
+/* How it feels against how it is: a line, a mark where it is, and a chip saying how far apart and which way */
+.wt-gap {
+  position: relative;
+  flex: none;
+  height: 5px;
+  margin-top: 11px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.2);
+}
+
+.wt-gap::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  right: 14%;
+  width: 3px;
+  height: 11px;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.wt-gap i {
+  position: absolute;
+  top: -6.5px;
+  right: calc(14% + 8px);
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #7fd0f3;
+  color: #0c2d4a;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+/* (warmer than it is: the mark stands further back, and the chip is on its other side) */
+.wt-gap[data-way='up']::after {
+  right: 30%;
+}
+
+.wt-gap[data-way='up'] i {
+  right: auto;
+  left: calc(70% + 6px);
+  background: #f6c05c;
+  color: #4a2c05;
+}
+
+.wt-gap[data-way='same'] i {
+  background: rgb(255 255 255 / 0.85);
+  color: #1c2a4a;
+}
+
+/* The wind: a compass ringed with ticks, an arrow through it from where the wind is coming, and the speed in its middle */
+.wt-compass {
+  position: relative;
+  flex: none;
+  align-self: center;
+  width: 92px;
+  height: 92px;
+  margin: 4px 0 2px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgb(255 255 255 / 0.34) 0 1deg, transparent 1deg 6deg);
+  -webkit-mask: radial-gradient(closest-side, transparent 0 82%, #000 83% 100%);
+  mask: radial-gradient(closest-side, transparent 0 82%, #000 83% 100%);
+}
+
+/* (the ring is drawn through a mask, which would hide anything inside it: the letters, arrow and speed lie over it instead) */
+.wt-tile:has(.wt-compass) {
+  position: relative;
+}
+
+.wt-tile .wt-dial {
+  position: absolute;
+  top: 31px;
+  left: calc(50% - 46px);
+  width: 92px;
+  height: 92px;
+}
+
+.wt-dial i {
+  position: absolute;
+  color: var(--wt-ink-2);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 10px;
+}
+
+.wt-dial i:nth-child(1) {
+  top: 9px;
+  left: calc(50% - 3.5px);
+}
+
+.wt-dial i:nth-child(2) {
+  top: calc(50% - 5px);
+  right: 10px;
+}
+
+.wt-dial i:nth-child(3) {
+  bottom: 9px;
+  left: calc(50% - 3px);
+}
+
+.wt-dial i:nth-child(4) {
+  top: calc(50% - 5px);
+  left: 10px;
+}
+
+.wt-dial svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wt-dial b {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 19px;
+}
+
+.wt-dial small {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 12px;
+}
+
+/* The hours ahead: what they are read as at the head, and the hours in a row that runs on to the right */
+.wt-cond {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wt-cond b,
+.wt-cond small {
+  display: block;
+}
+
+.wt-cond b {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 23px;
+}
+
+.wt-cond small {
+  color: var(--wt-ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 17px;
+}
+
+.wt-seg {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.14);
+}
+
+.wt-seg button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 28px;
+  border-radius: 14px;
+  color: rgb(255 255 255 / 0.8);
+}
+
+.wt-seg button[aria-pressed='true'] {
+  background: rgb(255 255 255 / 0.3);
+  color: #fff;
+}
+
 .wt-hours {
   display: flex;
-  gap: 4px;
-  margin: 10px -4px 0 !important;
+  flex: 1;
+  align-items: stretch;
+  gap: 2px;
+  margin: 8px -6px 0 !important;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -310,28 +704,17 @@
   flex: none;
   flex-direction: column;
   align-items: center;
-  width: 52px;
-  font-size: 13px;
+  justify-content: space-between;
+  min-width: 50px;
+  padding: 0 4px 1px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 17px;
+  line-height: 18px;
   white-space: nowrap;
 }
 
-.wt-hours svg {
-  margin-top: 9px;
-}
-
-.wt-hours small {
-  height: 13px;
-  color: #9fe3ff;
-  font-size: 10.5px;
-  font-weight: 700;
-  line-height: 13px;
-}
-
 .wt-hours b {
-  margin-top: 3px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -341,18 +724,19 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  margin-top: 6px !important;
+  min-height: 0;
+  margin-top: 4px !important;
 }
 
 .wt-days li {
   display: grid;
   flex: 1;
-  grid-template-columns: 46px 44px 34px minmax(0, 1fr) 34px;
+  grid-template-columns: 50px 42px 34px minmax(0, 1fr) 36px;
   align-items: center;
   column-gap: 6px;
-  min-height: 34px;
-  border-top: 0.5px solid var(--wt-edge);
-  font-size: 15px;
+  min-height: 0;
+  border-top: 0.5px solid rgb(255 255 255 / 0.22);
+  font-size: 16px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -370,13 +754,13 @@
 
 .wt-days__sky small {
   margin-top: 1px;
-  color: #9fe3ff;
-  font-size: 10px;
+  color: #8fe0ff;
+  font-size: 10.5px;
   font-weight: 700;
 }
 
 .wt-days__low {
-  color: var(--wt-ink-2);
+  color: rgb(255 255 255 / 0.58);
   text-align: right;
 }
 
@@ -389,7 +773,7 @@
   position: relative;
   height: 5px;
   border-radius: 3px;
-  background: rgb(0 0 0 / 0.22);
+  background: rgb(0 0 0 / 0.2);
 }
 
 .wt-bar i {
@@ -398,7 +782,7 @@
   bottom: 0;
   min-width: 6px;
   border-radius: 3px;
-  background: linear-gradient(90deg, #7fd4f5, #f6d66a);
+  background: linear-gradient(90deg, #6fd0f6, #7fe2d2);
 }
 
 .wt-bar b {
@@ -412,82 +796,42 @@
   box-shadow: 0 0 0 2px rgb(0 0 0 / 0.28);
 }
 
-/* The wind: a compass, the speed in its middle, and a needle from where the wind is coming */
-.wt-compass {
-  position: relative;
+/* The moon's face, and the sun's day */
+.wt-moon {
+  flex: none;
   align-self: center;
-  width: 84px;
-  height: 84px;
-  margin: 8px 0 6px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 5px rgb(255 255 255 / 0.14);
+  width: 76px;
+  height: 76px;
+  margin-top: 6px;
+  filter: drop-shadow(0 0 10px rgb(255 255 255 / 0.16));
 }
 
-.wt-compass i {
+.wt-sunpath {
+  position: relative;
+  display: block;
+  flex: none;
+  height: 40px;
+  margin: 2px -13px 0;
+}
+
+.wt-sunpath svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.wt-sunpath i {
   position: absolute;
-  color: var(--wt-ink-2);
-  font-size: 9.5px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: 10px;
-}
-
-.wt-compass i:nth-child(1) {
-  top: 8px;
-  left: calc(50% - 3.5px);
-}
-
-.wt-compass i:nth-child(2) {
-  top: calc(50% - 5px);
-  right: 9px;
-}
-
-.wt-compass i:nth-child(3) {
-  bottom: 8px;
-  left: calc(50% - 3px);
-}
-
-.wt-compass i:nth-child(4) {
-  top: calc(50% - 5px);
-  left: 9px;
-}
-
-.wt-needle {
-  position: absolute;
-  inset: 0;
-}
-
-.wt-needle::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: calc(50% - 4px);
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
   border-radius: 50%;
   background: #fff;
-}
-
-.wt-compass b {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 19px;
-  font-weight: 600;
-  line-height: 19px;
-}
-
-.wt-compass small {
-  font-size: 10.5px;
-  font-weight: 600;
-  line-height: 12px;
+  box-shadow: 0 0 8px 2px rgb(255 255 255 / 0.6);
 }
 
 .wt-foot {
-  margin-top: 16px !important;
+  margin-top: 18px !important;
   color: var(--wt-ink-2);
   font-size: 11.5px;
   font-weight: 500;
@@ -510,14 +854,27 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .wt-tile--wide,
   .wt-tile--tall {
     grid-column: 1 / -1;
-    grid-row: auto;
+  }
+
+  .wt-col {
+    padding-top: 78px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .wt-card {
     transition: none;
+  }
+
+  .wt-cloud {
+    left: calc(var(--n) * 46% - 6%);
+    animation: none;
+  }
+
+  .wt-sun {
+    animation: none;
   }
 }

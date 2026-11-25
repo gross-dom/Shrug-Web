@@ -211,3 +211,71 @@ export function sunOf(place: Place, at: number): { rise: number; set: number } |
   const toMs = (j: number) => (j + 0.5 - J1970) * DAY
   return { rise: toMs(noon - (set - noon)), set: toMs(set) }
 }
+
+// ---- What is worked out from what the service gives
+
+/** How it feels, in degrees Fahrenheit, by the Weather Service's own two sums: its wind chill where it is
+ * cold and there is wind (50° or under, over 3 mph), its heat index where it is hot and the humidity is
+ * known (80° or over); otherwise it feels as it is. */
+export function feelsLike(h: Pick<Hour, 'temp' | 'wind' | 'humidity'>): number {
+  const t = h.temp
+  if (t <= 50 && h.wind !== null && h.wind > 3) {
+    const v = Math.pow(h.wind, 0.16)
+    return 35.74 + 0.6215 * t - 35.75 * v + 0.4275 * t * v
+  }
+  if (t >= 80 && h.humidity !== null) {
+    const r = h.humidity
+    const index = -42.379 + 2.04901523 * t + 10.14333127 * r - 0.22475541 * t * r - 0.00683783 * t * t - 0.05481717 * r * r + 0.00122874 * t * t * r + 0.00085282 * t * r * r - 0.00000199 * t * t * r * r
+    return Math.max(t, index)
+  }
+  return t
+}
+
+export interface Moon {
+  /** Its phase, as it is called: Waning Gibbous. */
+  name: string
+  /** How far through its month it is, 0 (new) to 1 (new again): 0.5 is full. */
+  phase: number
+  /** How much of its face is lit, 0 to 1. */
+  lit: number
+}
+
+const MONTH = 29.530588853
+/** A new moon to count from: 6 January 2000, 18:14 UTC. */
+const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14)
+const PHASES = ['New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous', 'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent']
+
+/** The moon at a moment, reckoned from the length of its month (good to within some hours, which is closer than its name needs). */
+export function moonOf(at: number): Moon {
+  const days = (at - NEW_MOON) / 86_400_000
+  const phase = (((days % MONTH) + MONTH) % MONTH) / MONTH
+  // (the four named moments are a day about each quarter; the rest of the month is the four spans between them)
+  const eighth = phase * 8
+  const near = Math.round(eighth) % 8
+  const name = Math.abs(eighth - Math.round(eighth)) < 0.27 && near % 2 === 0 ? PHASES[near]! : PHASES[(Math.floor(eighth / 2) * 2 + 1) % 8]!
+  return { name, phase, lit: (1 - Math.cos(2 * Math.PI * phase)) / 2 }
+}
+
+/** The sky, as the window draws it: what is in it, and what light it is in. */
+export type SkyKind = 'clear' | 'some' | 'cloud' | 'fog' | 'rain' | 'snow' | 'storm'
+export type SkyLight = 'day' | 'dusk' | 'night'
+
+/** What is in the sky, from the service's words for it. */
+export function skyKind(says: string): SkyKind {
+  if (/thunder|t-?storm/i.test(says)) return 'storm'
+  if (/snow|sleet|flurr|blizzard|ice|wintry/i.test(says)) return 'snow'
+  if (/rain|drizzle|shower/i.test(says)) return 'rain'
+  if (/fog|haze|mist|smoke/i.test(says)) return 'fog'
+  if (/partly|mostly (sunny|clear)|few clouds/i.test(says)) return 'some'
+  if (/cloud|overcast/i.test(says)) return 'cloud'
+  return 'clear'
+}
+
+/** What light a place is in at a moment: day, night, or the three quarters of an hour about the sun's rising and setting. */
+export function skyLight(place: Place, at: number, day: boolean): SkyLight {
+  const sun = sunOf(place, at)
+  const NEAR = 45 * 60_000
+  if (sun && (Math.abs(at - sun.rise) < NEAR || Math.abs(at - sun.set) < NEAR)) return 'dusk'
+  if (sun) return at > sun.rise && at < sun.set ? 'day' : 'night'
+  return day ? 'day' : 'night'
+}
