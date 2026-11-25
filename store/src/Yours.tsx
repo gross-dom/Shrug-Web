@@ -177,7 +177,7 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
   const orders = (
     <>
       <h2 className="ui-sect">Purchase history</h2>
-      {purchases.length > 0 ? rows(purchases) : <p className="ui-none">Nothing yet. What you claim in the store is kept here.</p>}
+      {purchases.length > 0 ? rows(purchases) : <p className="ui-none">Nothing yet. What you buy in ArtStore, Books or Workspace is kept here.</p>}
       {asks.length > 0 && (
         <>
           <h2 className="ui-sect">Requests and reservations</h2>

@@ -1,3 +1,5 @@
+import type { Shelf } from '../shared/rules'
+
 // The desk this store is a window of, when it is one.
 //
 // On Shrug's own site the store is opened in a window of the desktop (src/apps/Store.tsx, in the desktop's
@@ -10,13 +12,18 @@
 // drawn, the layout is sized to the window (app.css, "In a window"), and moving about the store does not
 // add to the browser's history, which is the desk's.
 
+/** Which of the desk's windows these pages are in: one of the three stores (its shelf), or My VIP. */
+export type Room = Shelf | 'yours'
+
 export interface Desk {
   /** Lets down the desk's Log In, which says what it was opened for. */
-  logIn(why: 'store' | 'request'): void
+  logIn(why: 'store' | 'request' | 'price'): void
   /** Something happened here that the desk shows: points were spent, or someone signed out. */
   changed(): void
-  /** Where the store is now, for the window's bar. */
-  at(place: { section: 'store' | 'yours'; product: string | null }): void
+  /** Where these pages are now, for the window they are in. */
+  at(place: { section: 'store' | 'yours'; product: string | null }, room: Room): void
+  /** Opens another of the desk's windows: My VIP from a receipt in a store, a store from My VIP. */
+  open(room: Room): void
 }
 
 /** What the store leaves for the desk to ask of it. */

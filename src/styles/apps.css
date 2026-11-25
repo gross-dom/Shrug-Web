@@ -3261,6 +3261,35 @@
   min-width: 0;
 }
 
+/* A store's own name, at the head of its bar: it leads back to everything in it */
+.storebar__name {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0 10px;
+  margin-left: -10px;
+  border-radius: 8px;
+  color: #f5f5f7;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+button.storebar__name:not([aria-current]):hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* A line in the middle of the bar: what the store is, or where in My VIP this is */
+.storebar__says {
+  overflow: hidden;
+  color: #a1a1a8;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .storebar__seg {
   display: inline-flex;
   gap: 2px;
@@ -3333,6 +3362,85 @@
   border: 0;
   background: #0c0c0d;
   color-scheme: dark;
+}
+
+/* My VIP (apps/MyVip.tsx): the store's black window again, with the three doors to the stores along the
+   head of what is the member's */
+.myvip__body {
+  flex-direction: column;
+}
+
+.myvip__doors {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 28px 14px;
+  font-family: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.myvip__door {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 10px 14px 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  color: #f5f5f7;
+  text-align: left;
+}
+
+.myvip__door > span:nth-child(2) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.myvip__door b {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.myvip__door small {
+  overflow: hidden;
+  color: #a1a1a8;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.myvip__door > svg {
+  flex: none;
+  color: #6e6e73;
+}
+
+.myvip__icon {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+
+.myvip__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.myvip__door:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .myvip__door:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 }
 
 /* While a window is being dragged or sized, a frame takes no part: the pointer is the desk's until it is let go */

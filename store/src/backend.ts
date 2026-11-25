@@ -4,7 +4,8 @@ import type { Member, Needs, Order, Picture, Product, Update, Via } from '../sha
 // browser answers instead (demo.ts), in exactly these shapes.
 
 declare const __DEMO__: boolean
-export const DEMO = __DEMO__
+// (the desktop's own windows read the demo's stand-in too, from a build that does not say: there it is the demo)
+export const DEMO = typeof __DEMO__ === 'undefined' ? true : __DEMO__
 
 /** A member, with what My VIP shows of them besides. */
 export type Who = Member & { number: string; since: number | null; reason: string | null; emails: boolean; email: string; shipTo: string; picture?: Picture | null }

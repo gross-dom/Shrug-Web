@@ -70,7 +70,7 @@ export const isLP = (who: Account): boolean => who.status === 'member' && who.ro
 // ---- The sheet: let down by Log In itself, or by something locked that needs someone logged in
 
 /** What the sheet was opened for, where something locked opened it: it says so at its head. */
-export type Why = 'updates' | 'request' | 'post' | null
+export type Why = 'updates' | 'request' | 'post' | 'price' | 'booth' | null
 
 /** An LP has just logged in: when, and how many documents are theirs. The desk says so once (Surface.tsx). */
 export const unlocked = createStore<{ at: number; docs: number } | null>(null)

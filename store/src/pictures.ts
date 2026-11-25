@@ -22,7 +22,8 @@ export interface Shot {
   at?: string
 }
 
-const BASE = import.meta.env.BASE_URL
+// (the desktop's own windows read these too, for a shelf of covers: from there the store's pages are at /vip/store/)
+const BASE = import.meta.env.BASE_URL.endsWith('store/') ? import.meta.env.BASE_URL : '/vip/store/'
 
 /** Each photograph kept here, in the order it is shown: how wide its small file is, how wide and tall the
  * one a product's screen shows, and how wide its large one, if it has one. (Written by the script that
@@ -55,10 +56,15 @@ const KEPT: Record<string, Shot[]> = {
   'workspace chair': set('workspace-matte-black'),
   'workspace, ferrari red': set('workspace-ferrari-red'),
   'workspace chair, ferrari red': set('workspace-ferrari-red'),
+  'workspace, scuderia red': set('workspace-ferrari-red'),
   'art on acrylic': set('art-on-acrylic'),
+  // (the six pieces have no photographs of their own yet: the first two stand under the ones there are)
+  'art no. 1': set('art-on-acrylic').slice(0, 2),
+  'art no. 2': set('art-on-acrylic').slice(2, 4),
   // The cover's lettering is at its right-hand edge
   'ws catalog': set('ws-catalog', { 1: '88% 50%' }),
   'shrug 2027': set('shrug-2027'),
+  'in plain sight': set('shrug-2027'),
 }
 
 /** Every photograph of a product, the first first; empty where it has none. */

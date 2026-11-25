@@ -8,7 +8,6 @@ import { PdfIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { openPaper, paperOf } from '../os/papers'
 import { useStore } from '../os/store'
-import { openProduct } from './Store'
 import '../styles/desk/v1.css'
 import '../styles/desk/updates.css'
 
@@ -74,8 +73,8 @@ function Row({ doc, picked, onPick }: { doc: Doc; picked: boolean; onPick: () =>
             {busy ? 'Requesting…' : 'Request'}
           </button>
         ) : doc.state === 'locked' ? (
-          // One with a price in points: buying is the VIP Store's, so that is where it is unlocked
-          <button type="button" className="v-btn v-btn--grey v-btn--pill" aria-label={`Unlock ${doc.name} in VIP Store`} onClick={() => (onPick(), openProduct(doc.id), launchApp('store'))}>
+          // One with a price in points: what is a member's is in My VIP, so that is where it is unlocked
+          <button type="button" className="v-btn v-btn--grey v-btn--pill" aria-label={`Unlock ${doc.name} in My VIP`} onClick={() => (onPick(), launchApp('myvip'))}>
             Unlock
           </button>
         ) : (

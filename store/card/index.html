@@ -2941,9 +2941,11 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
   /** The way in to the store: one white button under the card. */
   function storeGo(when) {
-    const a = h('a', 'go' + (when ? ' ' + when : ''), 'Go to the store');
+    // In a window of the desk this page is My VIP's, and what follows the card is the rest of My VIP: their
+    // points, orders and address, and the ways in to the three stores (ArtStore, Books, Workspace)
+    const a = h('a', 'go' + (when ? ' ' + when : ''), DESK ? 'Continue to My VIP' : 'Go to the store');
     a.insertAdjacentHTML('beforeend', '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>');
-    a.href = 'store/';
+    a.href = DESK ? 'store/?k=yours' : 'store/';
     a.addEventListener('click', (e) => {
       // A new tab or window is the browser's to open
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;

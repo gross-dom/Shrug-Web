@@ -220,7 +220,49 @@ function FinderIcon() {
   )
 }
 
-/** VIP Store: black, with VIP in white capitals. */
+/** ArtStore: a white tile with an open book of colored leaves, after the Mac's Journal (no picture of that
+ * icon was supplied: this is drawn from its description, two violet leaves and two warm ones, fanned from a spine). */
+function ArtStoreIcon() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <Tile from="#ffffff" to="#f1f1f6">
+      <defs>
+        <linearGradient id={`${id}-a`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#5e5ce6" />
+          <stop offset="1" stopColor="#af52de" />
+        </linearGradient>
+        <linearGradient id={`${id}-b`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#bf5af2" />
+          <stop offset="1" stopColor="#ff375f" />
+        </linearGradient>
+        <linearGradient id={`${id}-c`} x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffd60a" />
+          <stop offset="1" stopColor="#ff9f0a" />
+        </linearGradient>
+        <linearGradient id={`${id}-d`} x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ff9f0a" />
+          <stop offset="1" stopColor="#ff453a" />
+        </linearGradient>
+      </defs>
+      <path d="M50 79C33 79 15 68 15 37C30 37 44 44 50 55Z" fill={`url(#${id}-a)`} />
+      <path d="M50 79C67 79 85 68 85 37C70 37 56 44 50 55Z" fill={`url(#${id}-c)`} />
+      <path d="M50 79C40 75 26 60 28 24C40 29 48 40 50 53Z" fill={`url(#${id}-b)`} fillOpacity=".88" />
+      <path d="M50 79C60 75 74 60 72 24C60 29 52 40 50 53Z" fill={`url(#${id}-d)`} fillOpacity=".88" />
+    </Tile>
+  )
+}
+
+/** Books: an open book, white on orange, after the Mac's own. */
+function BooksIcon() {
+  return (
+    <Tile from="#ffb23e" to="#ff8a00">
+      <path d="M21 33.5C31 29.5 41.5 30.5 48.8 36V73C41.5 68 31 67 21 70.5Z" fill="#fff" />
+      <path d="M79 33.5C69 29.5 58.5 30.5 51.2 36V73C58.5 68 69 67 79 70.5Z" fill="#fff" />
+    </Tile>
+  )
+}
+
+/** My VIP: black, with VIP in white capitals (it was the VIP Store's). */
 export function VipIcon() {
   return (
     <Tile from="#2a2a2e" to="#000000">
@@ -259,7 +301,9 @@ const ICONS: Record<AppId, () => ReactNode> = {
   about: ShrugIcon,
   wallpapers: () => <FolderIcon />,
   updates: () => <FolderIcon />,
-  store: VipIcon,
+  store: ArtStoreIcon,
+  books: BooksIcon,
+  myvip: VipIcon,
   preview: PreviewIcon,
   mail: MailIcon,
   quicktime: QuickTimeIcon,

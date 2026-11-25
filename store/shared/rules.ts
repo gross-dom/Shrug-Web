@@ -82,6 +82,22 @@ export interface Member {
 export type Kind = 'Book' | 'Chair' | 'Art' | 'Document' | 'Other'
 export type Status = 'Available' | 'Pre-order' | 'On request'
 
+// The shelves. There is one catalogue, and three places it is sold from, each with its own things and
+// nothing of the others': art in ArtStore, books in Books, chairs in Workspace. What a member has (their
+// card, points, orders, address) is in none of them: it is My VIP's. A shelf is only which kinds of thing
+// a place shows; who may see a thing, what it costs and how it is got are the same rules everywhere.
+export type Shelf = 'art' | 'books' | 'chairs'
+export const SHELF_KINDS: Record<Shelf, Kind[]> = { art: ['Art'], books: ['Book'], chairs: ['Chair'] }
+export const shelfOf = (asked: unknown): Shelf | null => (asked === 'art' || asked === 'books' || asked === 'chairs' ? asked : null)
+/** What a shelf holds, of what someone is shown. Asked of no shelf, everything. */
+export const onShelf = <P extends Pick<Product, 'kind'>>(products: P[], shelf: Shelf | null): P[] => (shelf ? products.filter((product) => SHELF_KINDS[shelf].includes(product.kind)) : products)
+
+/** A chair's price is for someone logged in: a visitor is shown the chair, and asked to log in for what it
+ * costs. The server leaves the figures out of what it sends a visitor (`unpriced`), so they are not in the page. */
+export const pricedOnlyLoggedIn = (product: Pick<Product, 'kind'>): boolean => product.kind === 'Chair'
+/** A product as a visitor is sent it: whole, or with no figures and `priceHidden` where its price is for someone logged in. */
+export const unpriced = (product: Product): Product => (pricedOnlyLoggedIn(product) ? { ...product, points: null, floor: null, postage: null, priceHidden: true } : product)
+
 export interface Product {
   id: string
   name: string
@@ -116,6 +132,8 @@ export interface Product {
   group?: string
   /** When it was added to the store, as a date and time: an update is dated by it. */
   added?: string | null
+  /** Sent to a visitor in place of the figures, for something whose price is for someone logged in (a chair). */
+  priceHidden?: boolean
 }
 
 /** An update: a document, as one member is shown it. Not for sale, so not in the store.

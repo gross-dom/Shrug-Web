@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { asksAddress, dueCents, fitPoints, fmtCents, fmtPoints, has, mostPoints, numberOf, onFile, POINTS_PER_DOLLAR, postageCents, priceCents, soldOut, wayOf, type Order, type Product } from '../shared/rules'
 import { CARD, type Backend, type Placed, type Shop } from './backend'
 import { Points } from './brand'
@@ -6,8 +6,7 @@ import { DESK } from './desk'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
 import { shotsOf, tileSizes, wholeSizes } from './pictures'
-import { Visiting } from './visiting'
-import { badgeOf, captionOf, editionOf, keptOf, owned, pointsOf, shortOf } from './words'
+import { badgeOf, captionOf, editionOf, keptOf, offCents, owned, pointsOf, shortOf } from './words'
 
 // One product to a screen: its pictures, then what it is and what it costs this member. The arrows on the
 // picture (and the arrow keys, and a finger drawn across it) page through that product's own pictures; the
@@ -41,22 +40,22 @@ export function Picture({ product, size, tile }: { product: Product; size: numbe
   )
 }
 
-/** A price beside a name: the points mark and the figure, "Free", or nothing for something with no price yet. */
-export function Price({ product, size = 16 }: { product: Product; size?: number }) {
-  // A visitor is shown the price in dollars: points are a member's
-  const visiting = useContext(Visiting)
+/** A price beside a name, in dollars: "$150", "Free", or nothing for something with no price yet. A chair's
+ * price is for someone logged in: a visitor is told so in its place. */
+export function Price({ product }: { product: Product; size?: number }) {
   const points = pointsOf(product)
-  return points === null ? null : points === 0 ? <>Free</> : visiting ? <>{fmtCents(priceCents(product))}</> : <Points n={points} size={size} />
+  if (product.priceHidden) return <span className="t-3">Log in for price</span>
+  return points === null ? null : points === 0 ? <>Free</> : <>{fmtCents(priceCents(product))}</>
 }
 
-/** What an order came to: the points, and whatever was paid by card besides. */
+/** What an order came to: what was paid, in dollars, and the points that were used besides. */
 export function Paid({ order, size = 15 }: { order: Pick<Order, 'points' | 'paid'>; size?: number }) {
   if (!order.points && !order.paid) return null
   return (
     <span className="pts-sum">
-      {order.points > 0 && <Points n={order.points} size={size} />}
-      {order.points > 0 && order.paid > 0 && <span> + </span>}
       {order.paid > 0 && <span>{fmtCents(Math.round(order.paid * 100))}</span>}
+      {order.points > 0 && order.paid > 0 && <span> + </span>}
+      {order.points > 0 && <Points n={order.points} size={size} />}
     </span>
   )
 }
@@ -251,31 +250,21 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
 
   // ---- The parts, as the screens have them
 
-  /** What it comes to: the points used, and whatever is left to pay by card. */
-  const total =
-    points > 0 ? (
-      <span className="pts-sum">
-        <Points n={points} size={18} />
-        {due > 0 && <span> + {fmtCents(due)}</span>}
-      </span>
-    ) : due > 0 ? (
-      fmtCents(due)
-    ) : (
-      'Free'
-    )
+  /** What it comes to, in dollars: the price, less what the points take off, and the postage. */
+  const total = price + postage === 0 ? 'Free' : fmtCents(due)
 
   const sums = (withRange: boolean, full: boolean) => (
     <dl className="ui-card rows">
       <div>
         <dt>Price</dt>
-        <dd>{price === 0 ? 'Free' : visiting ? fmtCents(priceCents(product)) : <Points n={Math.round(product.points ?? 0)} />}</dd>
+        <dd>{price === 0 ? 'Free' : fmtCents(price)}</dd>
       </div>
       {way === 'buy' && price > 0 && most > 0 && (
         <div className="pts">
-          <dt>Use points</dt>
-          <dd>
-            <Points n={points} />
-          </dd>
+          <dt>
+            <Points n={points} /> <span className="t-3">of your {fmtPoints(balance)}</span>
+          </dt>
+          <dd>{points > 0 ? `−${fmtCents(offCents(points))}` : fmtCents(0)}</dd>
         </div>
       )}
       {withRange && choosing && (
@@ -292,7 +281,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
               value={points}
               style={{ ['--at' as string]: `${most ? (points / most) * 100 : 0}%` }}
               aria-label={`Points to use, up to ${fmtPoints(most)}`}
-              aria-valuetext={`${fmtPoints(points)} points, ${fmtCents(due)} to pay`}
+              aria-valuetext={`${fmtPoints(points)} points, ${fmtCents(offCents(points))} off, ${fmtCents(due)} to pay`}
               onChange={(e) => setWanted(Number(e.target.value))}
             />
           </dd>
@@ -340,6 +329,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     // A visitor can buy what is paid for with money: the payment makes their account. Asking, reserving and
     // what costs nothing need someone for the order to belong to, so those are the way in instead
     // (in a window of the desk, the desk's Log In, which says what it was opened for)
+    // A chair's price is for someone logged in: the way to it is the way in
+    if (product.priceHidden) return DESK ? { text: 'Log in to see the price', act: () => DESK!.logIn('price') } : { text: 'Sign in to see the price', act: () => window.location.assign(`${CARD}?signin=store`) }
     if (visiting && !(way === 'buy' && due > 0)) {
       const what = way === 'request' ? 'request' : way === 'reserve' ? 'reserve' : 'claim'
       return DESK ? { text: `Log in to ${what}`, act: () => DESK!.logIn(way === 'request' ? 'request' : 'store') } : { text: `Open your pack to ${what}`, act: () => window.location.assign(CARD) }
@@ -347,9 +338,10 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     if (needsOption) return { text: label === 'Color' ? 'Choose a color' : 'Choose one', off: true }
     if (way === 'request') return { text: 'Request', act: order }
     if (way === 'reserve') return { text: 'Reserve', act: order }
-    const verb = product.status === 'Pre-order' ? 'Pre-order' : 'Claim'
-    if (points > 0) return { text: `${verb} for ${fmtPoints(points)} points${due > 0 ? ` + ${fmtCents(due)}` : ''}`, act: checkOut }
-    return { text: due > 0 ? `${verb === 'Claim' ? 'Buy' : verb} for ${fmtCents(due)}` : `${verb} for free`, act: checkOut }
+    const verb = product.status === 'Pre-order' ? 'Pre-order' : 'Buy'
+    // In dollars, as everything is: what is left to pay once the points they are using have come off
+    if (due > 0) return { text: `${verb} for ${fmtCents(due)}`, act: checkOut }
+    return { text: points > 0 ? `${verb} with ${fmtPoints(points)} points` : price + postage === 0 ? `${verb === 'Buy' ? 'Claim' : verb} for free` : `${verb} for ${fmtCents(0)}`, act: checkOut }
   })()
   const press = (
     <button type="button" className={`ui-btn${button.off ? ' off' : ''}`} data-busy={busy || undefined} disabled={button.off || busy} onClick={button.act}>
@@ -552,7 +544,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
               </div>
               {preorder}
               {swatches}
-              {way !== 'reserve' && sums(true, true)}
+              {way !== 'reserve' && !product.priceHidden && sums(true, true)}
               {caption && <p className="t-sm t-3">{caption}</p>}
               {mode === 'product' && said}
             </>
@@ -635,7 +627,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
             </div>
             {preorder}
             {swatches}
-            {way !== 'reserve' && sums(true, true)}
+            {way !== 'reserve' && !product.priceHidden && sums(true, true)}
             {said}
             {press}
             {caption && <p className="t-sm t-3">{caption}</p>}

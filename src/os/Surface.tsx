@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { AboutApp } from '../apps/About'
 import { FinderApp } from '../apps/Finder'
+import { BooksApp } from '../apps/Books'
 import { MailApp } from '../apps/Mail'
+import { MyVipApp } from '../apps/MyVip'
 import { MessagesApp } from '../apps/Messages'
 import { NotesApp } from '../apps/Notes'
 import { PhotoBoothApp } from '../apps/PhotoBooth'
@@ -47,6 +49,8 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   wallpapers: WallpapersApp,
   updates: UpdatesApp,
   store: StoreApp,
+  books: BooksApp,
+  myvip: MyVipApp,
   preview: PreviewApp,
   mail: MailApp,
   quicktime: QuickTimeApp,

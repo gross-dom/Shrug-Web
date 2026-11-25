@@ -1,10 +1,13 @@
 // The apps on the desktop: what each is called, how big its window opens and
 // how small it can get. The windows themselves are in src/apps.
 //
-// The VIP Store is one of them (design/v1): the store's own pages, in a window, last in the Dock. (It was a
-// link to the points site, which opened in a tab of its own.) An address can ask for it by name: `?open=vip`.
+// Four of them are where things are sold and kept (design/v1, and Dom's notes after testing it): ArtStore,
+// Books and Workspace each sell their own things and nothing else, and My VIP is what is a member's (their
+// pack and card, points, orders, address). All four show the store's own pages (store/) for what is bought
+// or kept, so there is one checkout. An address can ask for each by name: `?open=artstore`, `books`,
+// `workspace`, `vip`.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace' | 'books' | 'myvip'
 
 export interface Size {
   w: number
@@ -115,14 +118,41 @@ export const APPS: Record<AppId, AppSpec> = {
   // all the desk's height, so that a 1440 by 900 screen, the one it was drawn on, has it at its full size
   store: {
     id: 'store',
-    name: 'VIP Store',
-    blurb: 'Points, and what they buy',
+    name: 'ArtStore',
+    blurb: 'Six pieces, fifty of each',
     size: fit({ w: 0.78, h: 0.95 }, { w: 960, h: 640 }, { w: 1120, h: 720 }),
     min: { w: 960, h: 640 },
     nudge: { x: 0, y: -6 },
     resizable: true,
     lightsY: 30,
     dock: 6,
+  },
+  // Books: Shrug's five books, after the Mac's own Books: a sidebar and a shelf of covers, and a book's own
+  // page, which is the store's (src/apps/Books.tsx). A product's page does not scroll at 1120 by 720, so it
+  // opens at the store's size
+  books: {
+    id: 'books',
+    name: 'Books',
+    blurb: 'Five books from Shrug',
+    size: fit({ w: 0.78, h: 0.95 }, { w: 960, h: 640 }, { w: 1120, h: 720 }),
+    min: { w: 960, h: 640 },
+    nudge: { x: 12, y: -2 },
+    resizable: true,
+    lightsY: 26,
+    dock: 7,
+  },
+  // My VIP: what is a member's. Their pack is opened here, and their card, points, orders and address are
+  // kept here, with the doors to the three stores (src/apps/MyVip.tsx). Last in the Dock
+  myvip: {
+    id: 'myvip',
+    name: 'My VIP',
+    blurb: 'Your card, points and orders',
+    size: fit({ w: 0.78, h: 0.95 }, { w: 960, h: 640 }, { w: 1120, h: 720 }),
+    min: { w: 960, h: 640 },
+    nudge: { x: -12, y: -6 },
+    resizable: true,
+    lightsY: 30,
+    dock: 8,
   },
   // Workspace: the studio (design/v1-workspace). A color picker for the chair with one button: eight slabs,
   // and then the whole window in the color picked, with the chair on a turntable (src/apps/Workspace.tsx).
@@ -256,7 +286,7 @@ export const APP_IDS = Object.keys(APPS) as AppId[]
 export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
 
 /** The windows that are the desktop's alone, with nothing of theirs on a phone: an address that names one names nothing there. */
-export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'workspace']
+export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'workspace', 'books', 'myvip']
 
 /** The apps that are in the Dock only while they have something open, after its rule. */
 export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
@@ -274,9 +304,16 @@ export const ALIASES: Record<string, AppId> = {
   faqs: 'notes',
   faq: 'notes',
   'case-studies': 'terminal',
-  vip: 'store',
+  // (VIP was the store; it is what is a member's now, and the store that was the VIP Store is ArtStore)
+  vip: 'myvip',
+  'my-vip': 'myvip',
   'vip-store': 'store',
   shop: 'store',
+  art: 'store',
+  artstore: 'store',
+  'art-store': 'store',
+  'book-store': 'books',
+  bookstore: 'books',
   inbox: 'mail',
   email: 'mail',
   chair: 'workspace',

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fmtPoints } from '../shared/rules'
+import { fmtPoints, onShelf, shelfOf } from '../shared/rules'
 import { CARD, DEMO, server, shopOf, type Backend, type Placed, type Shop, type StoreAnswer } from './backend'
 import { PointsMark, Wordmark } from './brand'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
-import { DESK, type StoreInWindow } from './desk'
+import { DESK, type Room, type StoreInWindow } from './desk'
 import { Lock, NoCloud } from './icons'
 import { Picture, Price, ProductView, type Go } from './Product'
 import { Visiting } from './visiting'
@@ -23,6 +23,17 @@ import { YoursView } from './Yours'
 
 const backend: Backend = DEMO ? demo : server
 
+/** Which of the desk's windows this is, by the address it was opened at (?k=): one of the three stores, which
+ * shows its own shelf and nothing else, or My VIP, which shows what is the member's and no shelf at all. On
+ * its own site (no window) there is none: the whole store, and My VIP beside it, as before. */
+const ROOM: Room | null = (() => {
+  const asked = new URLSearchParams(window.location.search).get('k')
+  return asked === 'yours' ? 'yours' : shelfOf(asked)
+})()
+const SHELF = ROOM === 'yours' ? null : ROOM
+/** What each window calls itself. */
+const NAMES: Record<Room, string> = { art: 'ArtStore', books: 'Books', chairs: 'Workspace', yours: 'My VIP' }
+
 type Section = 'store' | 'yours'
 interface Place {
   section: Section
@@ -34,9 +45,13 @@ interface Place {
 function placeOf(search: string): Place {
   const asked = new URLSearchParams(search)
   const section = asked.get('s')
-  return { section: section === 'yours' ? 'yours' : 'store', product: asked.get('p') }
+  return { section: ROOM === 'yours' || (section === 'yours' && !ROOM) ? 'yours' : 'store', product: asked.get('p') }
 }
-const addressOf = (place: Place) => (place.section !== 'store' ? `?s=${place.section}` : place.product ? `?p=${encodeURIComponent(place.product)}` : './')
+/** (a window's address keeps which window it is) */
+const addressOf = (place: Place) => {
+  const said = [ROOM ? `k=${ROOM}` : '', place.section !== 'store' && !ROOM ? `s=${place.section}` : '', place.section === 'store' && place.product ? `p=${encodeURIComponent(place.product)}` : ''].filter(Boolean).join('&')
+  return said ? `?${said}` : './'
+}
 
 /** A phone's layout, under 740px across. */
 function usePhone() {
@@ -116,7 +131,7 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
   if (!products.length)
     return DESK ? (
       <main className="ui-door">
-        <h2 className="t-h2">Nothing in the store yet</h2>
+        <h2 className="t-h2">Nothing here yet</h2>
         <p className="t-words">New pieces land here first. We’ll email you when one does.</p>
       </main>
     ) : (
@@ -156,12 +171,12 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
   // The bar says where this is (Shrug VIP Store): the page itself goes straight to what is in it
   return phone ? (
     <main className="up-body" style={{ paddingBottom: 28 }}>
-      <h1 className="sr">Shrug VIP Store</h1>
+      <h1 className="sr">{SHELF ? NAMES[SHELF] : 'Shrug VIP Store'}</h1>
       {list}
     </main>
   ) : (
     <main className="ui-display">
-      <h1 className="sr">Shrug VIP Store</h1>
+      <h1 className="sr">{SHELF ? NAMES[SHELF] : 'Shrug VIP Store'}</h1>
       {list}
     </main>
   )
@@ -258,17 +273,22 @@ export function App() {
   const mover = useRef(move)
   mover.current = move
   useEffect(() => {
-    DESK?.at({ section: place.section, product: place.product })
+    if (ROOM) DESK?.at({ section: place.section, product: place.product }, ROOM)
   }, [place.section, place.product])
   useEffect(() => {
     if (!DESK) return
     const here = window as Window & { shrugStore?: StoreInWindow }
-    here.shrugStore = { go: (to) => mover.current({ section: to.section === 'yours' ? 'yours' : 'store', product: to.product }), reload: load }
+    here.shrugStore = { go: (to) => mover.current({ section: ROOM === 'yours' || (to.section === 'yours' && !ROOM) ? 'yours' : 'store', product: to.product }), reload: load }
     return () => {
       delete here.shrugStore
     }
   }, [load])
-  const go: Go = (to) => move(to.view === 'product' ? { section: 'store', product: to.id } : { section: to.view === 'yours' ? 'yours' : 'store', product: null })
+  const go: Go = (to) => {
+    // From a store's window, My VIP is another window; from My VIP's, the store is (the desk opens it)
+    if (DESK && ROOM && ROOM !== 'yours' && to.view === 'yours') return DESK.open('yours')
+    if (DESK && ROOM === 'yours' && to.view !== 'yours') return DESK.open('art')
+    move(to.view === 'product' ? { section: 'store', product: to.id } : { section: to.view === 'yours' ? 'yours' : 'store', product: null })
+  }
   const signout = async () => {
     await backend.signout()
     // In a window, who is logged in is the desk's to say: it is told, and asks these pages to look again
@@ -282,12 +302,16 @@ export function App() {
   }
 
   const visiting = answer.status === 'visitor'
-  const shop = answer.status === 'member' ? answer : answer.status === 'visitor' ? shopOf(answer) : null
+  const all = answer.status === 'member' ? answer : answer.status === 'visitor' ? shopOf(answer) : null
+  // What this window sells: its own shelf of what they are shown. (My VIP is drawn from everything: an order
+  // is of whatever it was, from whichever store)
+  const shop = all && { ...all, products: onShelf(all.products, SHELF) }
   const product = shop && place.section === 'store' ? (shop.products.find((p) => p.id === place.product) ?? null) : null
+  const storeName = SHELF ? NAMES[SHELF] : 'Store'
   useEffect(() => {
-    const names: Record<Section, string> = { store: product ? product.name : 'Store', yours: 'My VIP' }
+    const names: Record<Section, string> = { store: product ? product.name : storeName, yours: 'My VIP' }
     document.title = `${names[place.section]} · Shrug VIP`
-  }, [place.section, product])
+  }, [place.section, product, storeName])
 
   let body: JSX.Element
   /** What a visitor is told where only a member's things are: My VIP. */
@@ -329,7 +353,7 @@ export function App() {
   } else if (shop) {
     body =
       place.section === 'yours' ? (
-        <YoursView shop={shop} phone={phone} backend={backend} onChange={load} onSignOut={signout} />
+        <YoursView shop={all!} phone={phone} backend={backend} onChange={load} onSignOut={signout} />
       ) : product ? (
         <ProductView key={product.id} shop={shop} visiting={visiting} product={product} phone={phone} backend={backend} go={go} onPlaced={placed} />
       ) : (

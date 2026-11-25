@@ -41,6 +41,8 @@ const HEADS: Record<NonNullable<Why> | 'plain', { head: string; lead: string }> 
   updates: { head: 'Log in to open Updates', lead: 'Updates is for Shrug’s LPs. Start with your email.' },
   request: { head: 'Log in to request', lead: 'Start with your email. New here? This makes your account.' },
   post: { head: 'Log in to post', lead: 'Every photo on the wall has a name behind it. Yours is kept while you log in.' },
+  price: { head: 'Log in to see the price', lead: 'The chair’s price is for members. Start with your email. New here? This makes your account.' },
+  booth: { head: 'Log in to use Photo Booth', lead: 'Photo Booth is for members. Start with your email. New here? This makes your account.' },
 }
 
 const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five']
@@ -338,8 +340,8 @@ function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?
           {ACCOUNT_DEMO ? ' · demo' : ''}
         </small>
       </div>
-      <button type="button" className="account__row" onClick={() => (onDone(), launchApp('store'))}>
-        Open VIP Store
+      <button type="button" className="account__row" onClick={() => (onDone(), launchApp('myvip'))}>
+        Open My VIP
       </button>
       {isLP(account.get()) && (
         <button type="button" className="account__row" onClick={() => (onDone(), launchApp('updates'))}>

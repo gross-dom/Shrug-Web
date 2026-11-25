@@ -1,4 +1,4 @@
-import { dueCents, mayHave, numberOf, onFile, refusalOf, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
+import { dueCents, mayHave, numberOf, onFile, refusalOf, unpriced, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
 import { samplePdf } from '../shared/sample'
 import { save, type Asked, type Backend, type Failed, type Placed, type Who } from './backend'
 
@@ -23,8 +23,8 @@ export const PEOPLE: Record<string, { label: string; member: { name: string; fir
 /** Things the demo can be made to do, so that every state the store has can be seen. */
 export const SCENES: Record<string, string> = {
   normal: 'As it is',
-  soldout: 'The acrylic sold out',
-  kept: 'The acrylic kept to Shrug 1 LPs',
+  soldout: 'Art No. 1 sold out',
+  kept: 'Art No. 1 kept to Shrug 1 LPs',
   empty: 'Nothing in the store',
   down: 'The store does not answer',
   declined: 'A payment that fails',
@@ -39,15 +39,37 @@ const item = (id: string, name: string, more: Partial<Product>): Product => ({
 /** Where each product's one line goes, until Shrug has written them (Products → Description in Airtable). */
 const LINE = 'A one-line write-up goes here.'
 
-/** The store as Shrug has it. A chair is a product for each color (Workspace, Matte Black), and the
- * photographs are found by name (pictures.ts). */
+/** A chair, in one color: a product each (Workspace, Matte Black), as the store has them. Matte Black is
+ * $1,100 and a painted one $1,200; the floor and the postage are the samples the demo has always had. */
+const chair = (id: string, color: string, dollars: number, more: Partial<Product> = {}) => item(id, `Workspace, ${color}`, { kind: 'Chair', points: dollars * 10, floor: 500, postage: 70, needsAddress: true, description: LINE, ...more })
+/** One of the six art pieces: $150, in an edition of 50. Their names are Shrug's to give. */
+const art = (n: number, left = 50) => item(`art-${n}`, `Art No. ${n}`, { kind: 'Art', points: 1500, postage: 5, editionOf: 50, left, needsAddress: true, description: LINE })
+
+/** Everything that is sold, as Shrug has it: five books (Books), six art pieces (ArtStore), and the chair in
+ * each color (Workspace). The photographs are found by name (pictures.ts). The books' prices here are
+ * samples: Shrug's own are in Airtable. */
 const SHELVES: Product[] = [
   item('chromatic', 'Chromatic', { kind: 'Book', points: 400, needsAddress: true, description: LINE }),
-  item('chair', 'Workspace, Matte Black', { kind: 'Chair', points: 14500, floor: 500, postage: 70, editionOf: 5, left: 3, needsAddress: true, description: LINE }),
-  item('chair-red', 'Workspace, Ferrari Red', { kind: 'Chair', status: 'On request', points: 15000, floor: 1500, needsAddress: true, description: LINE }),
-  item('acrylic', 'Art on Acrylic', { kind: 'Art', points: 2800, floor: 75, postage: 5, editionOf: 10, left: 7, needsAddress: true, description: LINE }),
+  item('build-the-future', 'Build the Future', { kind: 'Book', status: 'Pre-order', points: 450, needsAddress: true, description: LINE }),
+  item('what-is-shrug', 'What is Shrug?', { kind: 'Book', points: 250, needsAddress: true, description: LINE }),
+  item('in-plain-sight', 'In Plain Sight', { kind: 'Book', status: 'Pre-order', points: 550, needsAddress: true, description: LINE }),
   item('catalog', 'WS Catalog', { kind: 'Book', points: 1000, needsAddress: true, description: LINE }),
-  item('2027', 'Shrug 2027', { kind: 'Book', status: 'Pre-order', points: 550, needsAddress: true, description: LINE }),
+  art(1, 43),
+  art(2),
+  art(3, 48),
+  art(4),
+  art(5),
+  art(6),
+  chair('chair-matte-black', 'Matte Black', 1100),
+  chair('chair-scuderia-red', 'Scuderia Red', 1200),
+  chair('chair-solar-orange', 'Solar Orange', 1200),
+  chair('chair-alexandrite', 'Alexandrite', 1200),
+  chair('chair-championship-green', 'Championship Green', 1200),
+  chair('chair-supersonic', 'Supersonic', 1200),
+  chair('chair-pearl-lavender', 'Pearl Lavender', 1200),
+  chair('chair-mantis-green', 'Mantis Green', 1200),
+  // A color of one's own: asked for, and written back about. No price is said until it is
+  item('chair-your-own', 'Workspace, Your Own Color', { kind: 'Chair', status: 'On request', needsAddress: true, description: LINE }),
 ].map((product, place) => ({ ...product, place }))
 
 /** An update is unlocked for 10 points by the people it was written for (Products → Points on its row). */
@@ -103,8 +125,8 @@ function shelves(store: StoreState): Product[] {
   if (store.scene === 'empty') return []
   return SHELVES.map((product) => ({
     ...product,
-    left: product.left === null ? null : product.id === 'acrylic' && store.scene === 'soldout' ? 0 : (store.left[product.id] ?? product.left),
-    visibleTo: product.id === 'acrylic' && store.scene === 'kept' ? ['Shrug 1 LPs'] : product.visibleTo,
+    left: product.left === null ? null : product.id === 'art-1' && store.scene === 'soldout' ? 0 : (store.left[product.id] ?? product.left),
+    visibleTo: product.id === 'art-1' && store.scene === 'kept' ? ['Shrug 1 LPs'] : product.visibleTo,
   }))
 }
 const papers = (store: StoreState) => (store.scene === 'empty' ? [] : PAPERS)
@@ -160,7 +182,8 @@ export const demo: Backend = {
     const store = kept()
     if (store.scene === 'down') return { error: 'server' }
     // Nobody signed in (or the card's "not on the list", which the demo has no account for): a visitor
-    if (!state.session || !member) return { status: 'visitor', products: shelves(store).filter((p) => mayHave(VISITOR, p)), stripeKey: '' }
+    // (and sent a chair without its figures, as the server sends it: its price is for someone logged in)
+    if (!state.session || !member) return { status: 'visitor', products: shelves(store).filter((p) => mayHave(VISITOR, p)).map(unpriced), stripeKey: '' }
     const orders = store.orders.filter((order) => order.who === member.id)
     const who: Who = { ...member, number: state.session.member?.number ?? '', since: state.session.member?.since ?? null, reason: state.session.reason ?? null, emails: state.session.emails !== false, email: state.session.email ?? 'sample@example.com', shipTo: store.shipTo }
     return {
@@ -181,6 +204,8 @@ export const demo: Backend = {
     const { member } = now()
     const product = shelves(kept()).find((p) => p.id === asked.product && mayHave(member ?? VISITOR, p))
     if (!product) return { error: 'hidden' }
+    // (a visitor cannot pay for what they are not shown the price of: api/pay.ts refuses the same)
+    if (!member && unpriced(product).priceHidden) return { error: 'anon' }
     return { ok: true, demo: true, cents: dueCents(product, member ? (asked.points ?? 0) : 0) }
   },
   async paid(_payment, asked) {

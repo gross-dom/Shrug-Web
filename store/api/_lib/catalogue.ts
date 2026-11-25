@@ -1,5 +1,5 @@
 import { all, F, files, list, num, str, T, type Row } from './airtable.js'
-import { mayHave, updateOf, VISITOR, type Kind, type Member, type Order, type OrderStatus, type Product, type Status, type Update } from '../../shared/rules.js'
+import { mayHave, unpriced, updateOf, VISITOR, type Kind, type Member, type Order, type OrderStatus, type Product, type Status, type Update } from '../../shared/rules.js'
 
 // The store's shelves and a member's orders, read from Airtable and put into the shapes the rules work with.
 
@@ -59,6 +59,8 @@ export async function shelvesForAVisitor(): Promise<Product[]> {
   return rows
     .map(productOf)
     .filter((product): product is Product => !!product && product.kind !== 'Document' && mayHave(VISITOR, product))
+    // (what is priced only for someone logged in, a chair, goes without its figures: they are not in the page)
+    .map(unpriced)
     .sort((a, b) => a.place - b.place || a.name.localeCompare(b.name))
 }
 
