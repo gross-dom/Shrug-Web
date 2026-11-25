@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { AboutApp } from '../apps/About'
 import { FinderApp } from '../apps/Finder'
 import { BooksApp } from '../apps/Books'
@@ -23,6 +23,7 @@ import { Dock } from './Dock'
 import { dockPoint } from './dom'
 import { focusFirst } from './focus'
 import { held } from './held'
+import { dockable, layout, placeOnDesk, toDock, type Spot } from './layout'
 import { AppIcon, FolderIcon, OnePagerIcon } from './icons'
 import { FilmIcon } from './icons-v1'
 import { MenuBar } from './MenuBar'
@@ -83,9 +84,10 @@ deskHolds(ON_DESK)
 
 function useDesk(): DeskItem[] {
   const who = useStore(account, (s) => (s.status === 'member' ? (s.roles.includes('LP') ? 'lp' : 'member') : s.status === 'checking' ? 'checking' : 'nobody'))
+  const onDesk = useStore(layout, (s) => s.desk)
   const locked = who !== 'lp'
-  return [
-    {
+  const files: Record<string, DeskItem> = {
+    updates: {
       id: 'updates',
       name: 'Updates',
       says: locked ? 'desktop icon, locked' : 'desktop icon',
@@ -100,8 +102,8 @@ function useDesk(): DeskItem[] {
       },
     },
     // A file: it opens in Preview (it was a link to a page elsewhere)
-    { id: 'one-pager', name: 'One-pager', says: 'desktop icon', icon: <OnePagerIcon />, open: openOnePager },
-    {
+    'one-pager': { id: 'one-pager', name: 'One-pager', says: 'desktop icon', icon: <OnePagerIcon />, open: openOnePager },
+    wallpapers: {
       id: 'wallpapers',
       name: 'Wallpapers',
       says: 'desktop icon',
@@ -113,9 +115,14 @@ function useDesk(): DeskItem[] {
       },
     },
     // A film is a file, and QuickTime Player is what opens it
-    { id: 'quicktime', name: 'Film', says: 'desktop icon', icon: <FilmIcon />, open: () => (showFilm(), launch('quicktime')) },
-    ...(['photobooth', 'spotify', 'youtube'] as const).map((id) => ({ id, name: APPS[id].name, says: 'desktop icon', icon: <AppIcon id={id} />, open: () => launch(id) })),
-  ].filter((item) => !ALSO_ON_DESK.includes(item.id as (typeof ALSO_ON_DESK)[number]) || !held(item.id as AppId))
+    quicktime: { id: 'quicktime', name: 'Film', says: 'desktop icon', icon: <FilmIcon />, open: () => (showFilm(), launch('quicktime')) },
+  }
+  // What is out on the desk, in the order the layout has it (os/layout.ts): the files and folders it comes
+  // with, the apps that live there, and any app that has been dragged out of the Dock
+  return onDesk
+    .filter((id) => !ALSO_ON_DESK.includes(id as (typeof ALSO_ON_DESK)[number]) || !held(id as AppId))
+    .map((id) => files[id] ?? (id in APPS ? { id, name: APPS[id as AppId].name, says: 'desktop icon', icon: <AppIcon id={id as AppId} />, open: () => launch(id as AppId) } : null))
+    .filter((item): item is DeskItem => !!item)
 }
 
 /** Opens an app out of its icon on the desk, and to the front. */
@@ -132,8 +139,9 @@ function DeskIcons() {
   useEffect(() => {
     if (opened) setPicked('updates')
   }, [opened])
-  /** What last pressed an icon, and whether that icon was already picked when it did. */
-  const press = useRef({ pointer: '', again: false })
+  /** What last pressed an icon, whether that icon was already picked when it did, and whether the press became a drag. */
+  const press = useRef({ pointer: '', again: false, dragged: false })
+  const spots = useStore(layout, (s) => s.at)
   useEffect(() => {
     if (!picked) return
     const away = (e: PointerEvent) => {
@@ -142,8 +150,11 @@ function DeskIcons() {
     document.addEventListener('pointerdown', away)
     return () => document.removeEventListener('pointerdown', away)
   }, [picked])
-  // How wide the icons are, all told, for what lands beside them (a notification): one line of them, or two
-  // on a screen too short for one (styles/os.css)
+  // Those with no place of their own are in the line down the right; one that has been dragged is where it was put
+  const lined = items.filter((item) => !spots[item.id])
+  const placed = items.filter((item) => spots[item.id])
+  // How wide the line of icons is, all told, for what lands beside it (a notification): one line of them, or
+  // two on a screen too short for one (styles/os.css)
   const desk = useRef<HTMLUListElement>(null)
   useLayoutEffect(() => {
     const el = desk.current
@@ -151,7 +162,7 @@ function DeskIcons() {
     if (!el || !os) return
     const measure = () => {
       const rects = [...el.querySelectorAll('.desk__item')].map((item) => item.getBoundingClientRect())
-      if (rects.length) os.style.setProperty('--desk-wide', `${Math.round(Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left)))}px`)
+      os.style.setProperty('--desk-wide', rects.length ? `${Math.round(Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left)))}px` : '0px')
     }
     measure()
     window.addEventListener('resize', measure)
@@ -159,41 +170,105 @@ function DeskIcons() {
       window.removeEventListener('resize', measure)
       os.style.removeProperty('--desk-wide')
     }
-  }, [items.length])
+  }, [lined.length])
+
+  /** A drag: the icon follows the pointer, and is left where it is let go: on the desk, or, for an app, in the Dock. */
+  const drag = (e: ReactPointerEvent<HTMLButtonElement>, id: string) => {
+    if (e.pointerType === 'touch' || e.button !== 0) return
+    const el = e.currentTarget
+    const from = { x: e.clientX, y: e.clientY }
+    const was = el.getBoundingClientRect()
+    const shelf = () => document.querySelector<HTMLElement>('.dock__shelf')
+    const overDock = (ev: PointerEvent) => {
+      const r = shelf()?.getBoundingClientRect()
+      return !!r && dockable(id) && ev.clientX >= r.left - 12 && ev.clientX <= r.right + 12 && ev.clientY >= r.top - 14
+    }
+    let moved = false
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - from.x
+      const dy = ev.clientY - from.y
+      if (!moved && Math.hypot(dx, dy) < 5) return
+      if (!moved) {
+        moved = true
+        press.current.dragged = true
+        el.setAttribute('data-dragging', '')
+        document.documentElement.setAttribute('data-wm-busy', '')
+      }
+      el.style.transform = `translate(${dx}px, ${dy}px)`
+      shelf()?.toggleAttribute('data-drop', overDock(ev))
+    }
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      if (!moved) return
+      el.style.transform = ''
+      el.removeAttribute('data-dragging')
+      document.documentElement.removeAttribute('data-wm-busy')
+      shelf()?.removeAttribute('data-drop')
+      if (ev.type === 'pointercancel') return
+      if (overDock(ev)) {
+        // Into the Dock, before whichever of its icons is to the right of where it was dropped
+        const before = [...(shelf()?.querySelectorAll<HTMLElement>('[data-dock-item]:not([data-guest])') ?? [])].filter((icon) => icon.getBoundingClientRect().left + icon.getBoundingClientRect().width / 2 < ev.clientX).length
+        return toDock(id as AppId, before)
+      }
+      // On the desk, where it was let go: kept on the screen, under the menu bar and over the Dock
+      const dockTop = shelf()?.getBoundingClientRect().top ?? window.innerHeight - 96
+      const left = Math.max(8, Math.min(window.innerWidth - was.width - 8, was.left + ev.clientX - from.x))
+      const top = Math.max(34, Math.min(dockTop - was.height - 8, was.top + ev.clientY - from.y))
+      placeOnDesk(id, { r: Math.round(window.innerWidth - left - was.width), t: Math.round(top) })
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+  }
+
+  const icon = (item: DeskItem, spot?: Spot) => (
+    <li key={item.id} className="desk__cell" style={spot ? { right: Math.max(8, spot.r), top: Math.max(34, spot.t) } : undefined}>
+      <button
+        type="button"
+        className="desk__item"
+        data-desk={item.id}
+        data-placed={spot ? '' : undefined}
+        data-picked={picked === item.id || undefined}
+        aria-label={`${item.name}, ${item.says}`}
+        aria-describedby={item.tip ? `desk-tip-${item.id}` : undefined}
+        onPointerDown={(e) => {
+          press.current = { pointer: e.pointerType, again: picked === item.id, dragged: false }
+          if (e.pointerType === 'mouse') setPicked(item.id)
+          drag(e, item.id)
+        }}
+        onClick={(e) => {
+          // (a press that became a drag has put the icon somewhere: it opens nothing)
+          if (press.current.dragged) return
+          // A mouse picks an icon with one click and opens it with the
+          // next, however long after (a double-click is the two together);
+          // a finger or the keyboard (a click with no count) opens at once
+          const { pointer, again } = press.current
+          if (pointer !== 'mouse' || e.detail === 0 || again) item.open()
+        }}
+      >
+        <span className="desk__icon">{item.icon}</span>
+        <span className="desk__name">{item.name}</span>
+      </button>
+      {item.tip && (
+        <span className="desk__tip" id={`desk-tip-${item.id}`} role="tooltip">
+          {item.tip}
+        </span>
+      )}
+    </li>
+  )
   return (
-    <ul ref={desk} className="desk" aria-label="On the desktop" style={{ '--desk-n': items.length } as CSSProperties}>
-      {items.map((item) => (
-        <li key={item.id} className="desk__cell">
-          <button
-            type="button"
-            className="desk__item"
-            data-desk={item.id}
-            data-picked={picked === item.id || undefined}
-            aria-label={`${item.name}, ${item.says}`}
-            aria-describedby={item.tip ? `desk-tip-${item.id}` : undefined}
-            onPointerDown={(e) => {
-              press.current = { pointer: e.pointerType, again: picked === item.id }
-              if (e.pointerType === 'mouse') setPicked(item.id)
-            }}
-            onClick={(e) => {
-              // A mouse picks an icon with one click and opens it with the
-              // next, however long after (a double-click is the two together);
-              // a finger or the keyboard (a click with no count) opens at once
-              const { pointer, again } = press.current
-              if (pointer !== 'mouse' || e.detail === 0 || again) item.open()
-            }}
-          >
-            <span className="desk__icon">{item.icon}</span>
-            <span className="desk__name">{item.name}</span>
-          </button>
-          {item.tip && (
-            <span className="desk__tip" id={`desk-tip-${item.id}`} role="tooltip">
-              {item.tip}
-            </span>
-          )}
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul ref={desk} className="desk" aria-label="On the desktop" style={{ '--desk-n': Math.max(1, lined.length) } as CSSProperties}>
+        {lined.map((item) => icon(item))}
+      </ul>
+      {placed.length > 0 && (
+        <ul className="desk-free" aria-label="On the desktop, where you put them">
+          {placed.map((item) => icon(item, spots[item.id]))}
+        </ul>
+      )}
+    </>
   )
 }
 

@@ -2349,3 +2349,39 @@ html[data-wm-busy] .dock__item .dock__label {
   box-shadow: var(--glass-edge);
   color: var(--glass-ink);
 }
+
+/* ---- Icons that have been moved (os/layout.ts). One dragged out of the line down the right is where it was
+   put: its place is its own, from the screen's right edge and its top. While it is being dragged it is over
+   everything, and takes no presses; the Dock says it will take an app that is held over it. ---- */
+
+.desk-free {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.desk-free .desk__cell {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.desk__item[data-dragging],
+.dock__item[data-dragging] {
+  position: relative;
+  z-index: 900;
+  opacity: 0.86;
+  pointer-events: none;
+  transition: none;
+}
+
+.desk__item {
+  touch-action: manipulation;
+}
+
+.dock__shelf[data-drop] {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 18px 40px rgba(4, 10, 50, 0.4);
+}

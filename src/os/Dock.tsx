@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNewReplies } from '../apps/state'
 import { APPS, GUEST_APPS, type AppId } from './apps'
-import { DOCK } from './held'
+import { FIXED, layout, placeOnDesk, toDock } from './layout'
 import { dockPoint, prefersReducedMotion } from './dom'
 import { AppIcon } from './icons'
 import { useStore } from './store'
@@ -19,6 +19,11 @@ import { activeApp, focusApp, focusWindow, openApp, wm } from './wm'
 //
 // After the apps, and a rule, are the apps that are here only while they have
 // something open: Preview, when a document is. With none open there is no rule.
+//
+// Which apps are here, and in what order, is the layout's (layout.ts). An icon
+// can be dragged along the Dock to another place in it, or up out of it onto
+// the desk, where it stays; an app's icon on the desk can be dragged in. The
+// first icon stays where it is, as the Finder's does on a Mac.
 
 /** How much the icon under the pointer grows, and how far the swell reaches. */
 const SWELL = 0.55
@@ -26,7 +31,9 @@ const REACH = 150
 
 export function Dock() {
   const compact = useStore(wm, (s) => s.compact)
-  const openApps = useStore(wm, (s) => [...DOCK, ...GUEST_APPS].filter((id) => s.wins[id].open).join(' '))
+  const DOCK = useStore(layout, (s) => s.dock)
+  const inDock = DOCK.join(' ')
+  const openApps = useStore(wm, (s) => [...(inDock.split(' ') as AppId[]), ...GUEST_APPS].filter((id) => s.wins[id].open).join(' '))
   const active = useStore(wm, activeApp)
   const unread = useNewReplies()
   const shelf = useRef<HTMLDivElement>(null)
@@ -77,7 +84,54 @@ export function Dock() {
     items[to]!.focus()
   }
 
-  const guests = GUEST_APPS.filter((id) => open.includes(id))
+  const guests = GUEST_APPS.filter((id) => open.includes(id) && !DOCK.includes(id))
+
+  /** A press that became a drag has moved the icon: the click that ends it opens nothing. */
+  const dragged = useRef(false)
+  /** A drag: the icon follows the pointer. Let go along the Dock, it takes that place; let go above it, it is out on the desk. */
+  const drag = (e: ReactPointerEvent<HTMLButtonElement>, id: AppId) => {
+    dragged.current = false
+    if (e.pointerType === 'touch' || e.button !== 0 || compact || id === FIXED || !DOCK.includes(id)) return
+    const el = e.currentTarget
+    const from = { x: e.clientX, y: e.clientY }
+    let moved = false
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - from.x
+      const dy = ev.clientY - from.y
+      if (!moved && Math.hypot(dx, dy) < 6) return
+      if (!moved) {
+        moved = true
+        dragged.current = true
+        el.setAttribute('data-dragging', '')
+        document.documentElement.setAttribute('data-wm-busy', '')
+        swell(null)
+      }
+      el.style.transform = `translate(${dx}px, ${dy}px)`
+    }
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      if (!moved) return
+      el.style.transform = ''
+      el.removeAttribute('data-dragging')
+      document.documentElement.removeAttribute('data-wm-busy')
+      const bar = shelf.current?.getBoundingClientRect()
+      if (ev.type === 'pointercancel' || !bar) return
+      if (ev.clientY < bar.top - 28) {
+        // Up out of the Dock: on the desk, where it was let go
+        const left = Math.max(8, Math.min(window.innerWidth - 100, ev.clientX - 46))
+        const top = Math.max(34, Math.min(bar.top - 100, ev.clientY - 40))
+        return placeOnDesk(id, { r: Math.round(window.innerWidth - left - 92), t: Math.round(top) })
+      }
+      // Along the Dock: before whichever of the others is to the right of where it was let go
+      const others = [...(shelf.current?.querySelectorAll<HTMLElement>('[data-dock-item]:not([data-guest])') ?? [])].filter((icon) => icon !== el)
+      toDock(id, others.filter((icon) => icon.getBoundingClientRect().left + icon.getBoundingClientRect().width / 2 < ev.clientX).length)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+  }
 
   const tile = (id: AppId) => (
     <button
@@ -86,11 +140,13 @@ export function Dock() {
       className="dock__item"
       data-dock-item
       data-dock-app={id}
+      data-guest={!DOCK.includes(id) || undefined}
       data-open={open.includes(id) || undefined}
       aria-current={active === id || undefined}
       data-hop={hopping === id || undefined}
       aria-label={`${APPS[id].name}: ${APPS[id].blurb}${id === 'messages' && unread ? `, ${unread} unread` : ''}`}
-      onClick={() => launch(id)}
+      onPointerDown={(e) => drag(e, id)}
+      onClick={() => !dragged.current && launch(id)}
     >
       <span className="dock__label" aria-hidden>
         {APPS[id].name}

@@ -178,7 +178,12 @@ export const deskHolds = (count: number) => void (onDesk = count)
  * they are laid out in, which runs the height of the desk however few they are), or where the stylesheet
  * puts them if they have not been drawn yet. */
 function deskIcons(viewport: Size): Rect {
-  const drawn = typeof document === 'undefined' ? [] : [...document.querySelectorAll<HTMLElement>('.desk__item')].map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0)
+  // (the line of them down the right: one that has been dragged off to a place of its own is not kept clear
+  // of, any more than a window on a Mac keeps clear of an icon)
+  const line = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('.desk')
+  const drawn = line ? [...line.querySelectorAll<HTMLElement>('.desk__item')].map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0) : []
+  // The desk is drawn, and every icon has been moved out of the line: there is nothing there to keep clear of
+  if (line && !drawn.length && line.isConnected && document.querySelector('.desk-free, .dock')) return { x: viewport.w, y: 0, w: 0, h: 0 }
   if (drawn.length) {
     const x = Math.min(...drawn.map((r) => r.left))
     const y = Math.min(...drawn.map((r) => r.top))
