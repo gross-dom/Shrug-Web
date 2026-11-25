@@ -218,7 +218,7 @@ const parts = {
       t = await fresh({ w, h, dpr: 1 }, 'still')
       const over = await lying(t.page, 'messages', '.desk__item')
       const chat = await t.page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"]'); const side = el.querySelector('.chat-side'); return { wide: Math.round(el.getBoundingClientRect().width), list: !!side && side.getBoundingClientRect().width > 120 } })
-      check(`windows: at ${w}x${h} the conversation opens beside the desk's icons, not on them, and keeps its list`, over.length === 3 && over.every((v) => v === 0) && chat.wide >= 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
+      check(`windows: at ${w}x${h} the conversation opens beside the desk's icons, not on them, and keeps its list`, over.length === A.DESK.length && over.every((v) => v === 0) && chat.wide >= 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
       await t.ctx.close()
     }
 

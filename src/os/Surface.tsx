@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { AboutApp } from '../apps/About'
 import { FinderApp } from '../apps/Finder'
 import { MailApp } from '../apps/Mail'
@@ -31,7 +31,7 @@ import { saver } from './saver'
 import { ScreenSaver } from './ScreenSaver'
 import { useStore } from './store'
 import { setTitle } from './title'
-import { activeApp, focusWindow, openApp, tileRect, wm } from './wm'
+import { activeApp, deskHolds, focusWindow, openApp, tileRect, wm } from './wm'
 import { WindowFrame } from './WindowFrame'
 
 // Everything on the desktop but its wallpaper: the menu bar, the things left
@@ -71,6 +71,12 @@ interface DeskItem {
  * Updates, the one-pager, Wallpapers, the Film, Photo Booth, Spotify, YouTube. The Updates folder is first:
  * it is always there, locked to everyone but Shrug's LPs. Portfolio is in the Dock. (One whose app has
  * nothing real in it yet is left off the live site: os/held.ts.) */
+/** What the desk has besides Updates, the one-pager and Wallpapers, where it is not left out for now (held.ts). */
+const ALSO_ON_DESK = ['quicktime', 'photobooth', 'spotify', 'youtube'] as const
+/** How many icons that makes. The window manager is told at once: a window can open before the desk is drawn. */
+const ON_DESK = 3 + ALSO_ON_DESK.filter((id) => !held(id)).length
+deskHolds(ON_DESK)
+
 function useDesk(): DeskItem[] {
   const who = useStore(account, (s) => (s.status === 'member' ? (s.roles.includes('LP') ? 'lp' : 'member') : s.status === 'checking' ? 'checking' : 'nobody'))
   const locked = who !== 'lp'
@@ -105,7 +111,7 @@ function useDesk(): DeskItem[] {
     // A film is a file, and QuickTime Player is what opens it
     { id: 'quicktime', name: 'Film', says: 'desktop icon', icon: <FilmIcon />, open: () => (showFilm(), launch('quicktime')) },
     ...(['photobooth', 'spotify', 'youtube'] as const).map((id) => ({ id, name: APPS[id].name, says: 'desktop icon', icon: <AppIcon id={id} />, open: () => launch(id) })),
-  ].filter((item) => !(item.id in APPS) || !held(item.id as AppId))
+  ].filter((item) => !ALSO_ON_DESK.includes(item.id as (typeof ALSO_ON_DESK)[number]) || !held(item.id as AppId))
 }
 
 /** Opens an app out of its icon on the desk, and to the front. */
@@ -132,8 +138,26 @@ function DeskIcons() {
     document.addEventListener('pointerdown', away)
     return () => document.removeEventListener('pointerdown', away)
   }, [picked])
+  // How wide the icons are, all told, for what lands beside them (a notification): one line of them, or two
+  // on a screen too short for one (styles/os.css)
+  const desk = useRef<HTMLUListElement>(null)
+  useLayoutEffect(() => {
+    const el = desk.current
+    const os = el?.closest<HTMLElement>('.os')
+    if (!el || !os) return
+    const measure = () => {
+      const rects = [...el.querySelectorAll('.desk__item')].map((item) => item.getBoundingClientRect())
+      if (rects.length) os.style.setProperty('--desk-wide', `${Math.round(Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left)))}px`)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => {
+      window.removeEventListener('resize', measure)
+      os.style.removeProperty('--desk-wide')
+    }
+  }, [items.length])
   return (
-    <ul className="desk" aria-label="On the desktop">
+    <ul ref={desk} className="desk" aria-label="On the desktop" style={{ '--desk-n': items.length } as CSSProperties}>
       {items.map((item) => (
         <li key={item.id} className="desk__cell">
           <button

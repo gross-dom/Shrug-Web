@@ -108,7 +108,8 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
     const cs = (sel) => getComputedStyle(w.querySelector(sel))
     const box = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), r: Math.round(r.right), b: Math.round(r.bottom) } }
     const body = w.querySelector('.vip__body')
-    const tiles = [...w.querySelectorAll('.vip-tile')]
+    // (the colorways: the window's second section, Photographs, is held to in desk-apps.cjs)
+    const tiles = [...w.querySelectorAll('.walls-tile')]
     const first = tiles[0]
     const cap = first.querySelector('.vip-tile__cap')
     const media = first.querySelector('.vip-tile__media')

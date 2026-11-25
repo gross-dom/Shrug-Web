@@ -118,10 +118,11 @@
 .notify {
   position: absolute;
   top: 38px;
-  right: 116px;
+  /* Beside the desk's icons, however wide they are (--desk-wide: the desktop measures them, Surface.tsx) */
+  right: calc(var(--desk-wide, 92px) + 24px);
   z-index: 750;
   width: 352px;
-  max-width: calc(100% - 128px);
+  max-width: calc(100% - var(--desk-wide, 92px) - 36px);
   pointer-events: none;
 }
 
@@ -846,7 +847,7 @@
 .desk-note {
   position: absolute;
   top: 40px;
-  right: 118px;
+  right: calc(var(--desk-wide, 92px) + 26px);
   z-index: 3;
   display: flex;
   align-items: center;
@@ -997,15 +998,29 @@
   position: absolute;
   top: 42px;
   right: 12px;
-  /* Down the right-hand side, and on a screen too short for them all in one line, a second line beside it */
   bottom: 96px;
   z-index: 2;
   display: flex;
+  /* Down the right-hand side, in one line: as far apart as a Mac puts them where the screen is tall enough
+     for them all (--desk-n of them, which the desktop says), and closer together on a shorter one, so that
+     they are still one line beside the windows. Only where that would bring them closer than 64px do they
+     go to a second line beside the first. (os/wm.ts, DESK_ICONS, says the same to the window manager.) */
   flex-flow: column wrap-reverse;
   align-content: flex-start;
   gap: 8px;
+  width: 92px;
+  --desk-pitch: clamp(64px, calc((100vh - 130px) / var(--desk-n, 3)), 99px);
   /* Under the windows, in their layer, which takes no presses of its own */
   pointer-events: auto;
+}
+
+/* (reckoned from the strip itself where a browser can, and not from the screen: the two differ where a
+   browser's own bars come and go) */
+@supports (height: 1cqh) {
+  .desk {
+    container-type: size;
+    --desk-pitch: clamp(64px, calc((100cqh + 8px) / var(--desk-n, 3)), 99px);
+  }
 }
 
 /* The widget on the desk, across from the icons: San Francisco, its time and its weather
@@ -1139,11 +1154,12 @@
   border-radius: 8px;
 }
 
+/* (an icon is what is left of its place in the line once its name is under it: 64 tall at a Mac's spacing) */
 .desk__icon {
   display: grid;
   place-items: center;
-  width: 68px;
-  height: 64px;
+  width: calc((var(--desk-pitch, 99px) - 35px) * 1.0625);
+  height: calc(var(--desk-pitch, 99px) - 35px);
   padding: 4px;
   border-radius: 8px;
 }

@@ -163,13 +163,34 @@ function shared(a: Rect, b: Rect) {
   return w > 0 && h > 0 ? w * h : 0
 }
 
-/** The icons left out on the desk, top right: where they are drawn, or where
- * the stylesheet puts them if they have not been drawn yet (the first window
- * can open before the desk has been laid out). */
+/** How the desk's icons are laid out (styles/os.css, .desk, says the same): down the right-hand side from
+ * under the menu bar to above the Dock, as far apart as a Mac puts them where the screen is tall enough
+ * for them all in one line, closer together on a shorter one, and in a second line beside the first only
+ * where they would otherwise be closer than `least`. */
+export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, least: 64, most: 99 }
+
+/** How many icons the desk has. The desktop says (Surface.tsx), as soon as it is loaded: the first window
+ * can open before the desk has been drawn, and has to know what it is keeping clear of. */
+let onDesk = 3
+export const deskHolds = (count: number) => void (onDesk = count)
+
+/** The icons left out on the desk, top right: where they are drawn (the icons themselves, not the strip
+ * they are laid out in, which runs the height of the desk however few they are), or where the stylesheet
+ * puts them if they have not been drawn yet. */
 function deskIcons(viewport: Size): Rect {
-  const el = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('.desk')
-  const r = el?.getBoundingClientRect()
-  return r && r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: viewport.w - 104, y: 42, w: 92, h: 298 }
+  const drawn = typeof document === 'undefined' ? [] : [...document.querySelectorAll<HTMLElement>('.desk__item')].map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0)
+  if (drawn.length) {
+    const x = Math.min(...drawn.map((r) => r.left))
+    const y = Math.min(...drawn.map((r) => r.top))
+    return { x, y, w: Math.max(...drawn.map((r) => r.right)) - x, h: Math.max(...drawn.map((r) => r.bottom)) - y }
+  }
+  const { top, right, bottom, wide, gap, least, most } = DESK_ICONS
+  const room = viewport.h - top - bottom + gap
+  const pitch = Math.max(least, Math.min(most, room / onDesk))
+  const each = Math.max(1, Math.min(onDesk, Math.floor(room / pitch)))
+  const lines = Math.ceil(onDesk / each)
+  const w = lines * wide + (lines - 1) * gap
+  return { x: viewport.w - right - w, y: top, w, h: each * pitch - gap }
 }
 
 /** The smallest screen the desk's widget is shown on: under it the room is the
