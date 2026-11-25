@@ -72,7 +72,7 @@ export const reachable = () => reach().kind !== 'doc'
 /** The site is built to be shown round, not yet to go live: the demo, in which nothing is sent or charged
  * (src/os/account.ts). */
 // (asked for with care: this file is also read when the site is built, where there is no such thing to ask)
-const DEMO = (import.meta.env as { VITE_ACCOUNT?: string } | undefined)?.VITE_ACCOUNT !== 'live'
+export const DEMO = (import.meta.env as { VITE_ACCOUNT?: string } | undefined)?.VITE_ACCOUNT !== 'live'
 
 /** The address asks for the editor's view (`?draft`): what Shrug has still to
  * supply (an FAQ's answer) is drawn as the note that says so.

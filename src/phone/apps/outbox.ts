@@ -1,4 +1,4 @@
-import { SITE } from '../../data/site'
+import { DEMO, SITE } from '../../data/site'
 import { createStore } from '../../os/store'
 
 // A message to Shrug, written on the phone: the one conversation in Messages
@@ -9,6 +9,12 @@ import { createStore } from '../../os/store'
 // takes the words and the files as a form. Until there is one, nothing is sent
 // anywhere and the message says so, the way Messages says a message has not
 // gone. It never says Delivered of something that was not.
+//
+// The demo is the one place that differs, as it does for everything else it
+// stands in for (codes, orders, payments): with nowhere to send it, a message
+// in the demo is shown as Delivered, so that the conversation can be tried to
+// its end, and is marked as the demo's (`demo`) so that whatever shows it can
+// say that nothing was sent.
 //
 // What is being written and what was sent are kept for as long as the tab is,
 // in the tab's own storage, as the visitor's notes are (notes-store.ts): a
@@ -46,6 +52,8 @@ export interface Sent {
   part: number
   /** Why it did not go: there is nowhere to send it yet, or the sending failed. */
   why: 'closed' | 'failed' | null
+  /** Shown as Delivered by the demo, which sent it nowhere. */
+  demo?: boolean
   /** When it was sent. */
   at: number
 }
@@ -79,7 +87,7 @@ function back(was: unknown): Sent | null {
   if (!m.text && !files.length) return null
   const at = typeof m.at === 'number' ? m.at : Date.now()
   const about = { ...(isText(m.subject) ? { subject: m.subject } : null), ...(m.details && typeof m.details === 'object' ? { details: m.details } : null) }
-  if (m.state === 'sent') return { id: m.id, ...about, text: m.text, files, state: 'sent', part: 1, why: null, at }
+  if (m.state === 'sent') return { id: m.id, ...about, text: m.text, files, state: 'sent', part: 1, why: null, at, ...(m.demo === true ? { demo: true } : null) }
   return { id: m.id, ...about, text: m.text, files, state: 'failed', part: 0, why: SITE.contact.inbox ? 'failed' : 'closed', at }
 }
 
@@ -98,7 +106,7 @@ function kept(): Pick<Outbox, 'draft' | 'sent'> {
 export const outbox = createStore<Outbox>({ ...kept(), picked: [], refused: null })
 
 /** What is kept of the conversation, as it is written to the tab's storage. */
-const keeping = (s: Outbox) => JSON.stringify({ draft: s.draft, sent: s.sent.map(({ id, subject, details, text, files, state, at }) => ({ id, subject, details, text, files: files.map(({ name, size }) => ({ name, size })), state, at })) })
+const keeping = (s: Outbox) => JSON.stringify({ draft: s.draft, sent: s.sent.map(({ id, subject, details, text, files, state, at, demo }) => ({ id, subject, details, text, files: files.map(({ name, size }) => ({ name, size })), state, at, demo })) })
 
 // Every change is kept as it is made (how much of a file has gone is no change to what is kept, and is
 // not written). A page that may not keep anything carries on without
@@ -167,8 +175,9 @@ const patch = (id: string, change: Partial<Sent>) => outbox.set((s) => ({ ...s, 
 function deliver(id: string, text: string, files: File[], about: Pick<Sent, 'subject' | 'details'> = {}) {
   const inbox = SITE.contact.inbox
   if (!inbox) {
-    // Nowhere to send it yet. It is said so after a moment, as a message that will not go is
-    setTimeout(() => patch(id, { state: 'failed', why: 'closed' }), 900)
+    // Nowhere to send it yet. It is said so after a moment, as a message that will not go is; in the demo
+    // it is shown as gone, and marked as the demo's
+    setTimeout(() => patch(id, DEMO ? { state: 'sent', part: 1, why: null, demo: true } : { state: 'failed', why: 'closed' }), 900)
     return
   }
   const body = new FormData()

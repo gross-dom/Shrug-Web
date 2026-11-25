@@ -10,13 +10,19 @@ export interface About {
   subject?: string
 }
 
-/** Whether Messages is showing the message to Shrug, in its conversation's place, and what it was started about. */
-export const writing = createStore<{ on: boolean; about: About | null }>({ on: false, about: null })
+/** Whether Messages is showing the message to Shrug, in its conversation's place (`on`); whether one has been
+ * begun and not put away (`kept`: it stays at the head of the list while another conversation is looked at,
+ * until its x is pressed); and what it was started about. */
+export const writing = createStore<{ on: boolean; kept: boolean; about: About | null }>({ on: false, kept: false, about: null })
 
 /** Opens Messages, to write to Shrug. (On a phone Messages has a compose button of its own, and is what opens.) */
 export function writeToShrug(about?: About) {
-  writing.set({ on: true, about: about ?? null })
+  writing.set((s) => ({ on: true, kept: true, about: about ?? s.about }))
   launchApp('messages')
 }
 
-export const stopWriting = () => writing.set((s) => (s.on ? { on: false, about: s.about } : s))
+/** Another conversation is looked at: the message to Shrug is kept as it was, at the head of the list. */
+export const stopWriting = () => writing.set((s) => (s.on ? { ...s, on: false } : s))
+
+/** The new message is put away: it is no longer in the list. (What was typed is the caller's to clear.) */
+export const discardWriting = () => writing.set({ on: false, kept: false, about: null })

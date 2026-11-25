@@ -6,8 +6,8 @@ import { Row } from '../kit/parts/Row'
 import { Window } from '../kit/window'
 import { useReturnFocus } from '../os/focus'
 import { useStore } from '../os/store'
-import { outbox } from '../phone/apps/outbox'
-import { stopWriting, writeToShrug, writing } from '../os/write'
+import { outbox, setDraft, unpick } from '../phone/apps/outbox'
+import { discardWriting, stopWriting, writeToShrug, writing } from '../os/write'
 import { geometry, isShowing, wm, type WM } from '../os/wm'
 import { chat } from './chat'
 import { ConversationAvatar, ConversationList, conversationName, ConversationPane, ConversationSearch, Details, GroupAvatar, type ListControl } from './chat-ui'
@@ -26,8 +26,17 @@ function Sidebar({ onPick }: { onPick: () => void }) {
   // The search field and the list under it: Return in the field opens the first thing found, the down arrow goes into the list
   const list = useRef<ListControl | null>(null)
   const on = useStore(writing, (s) => s.on)
+  const kept = useStore(writing, (s) => s.kept)
   const last = useStore(outbox, (s) => s.sent[s.sent.length - 1] ?? null)
+  // (a message that was begun is in the list until its x is pressed: one with words in it, after a reload too)
+  const begun = useStore(outbox, (s) => s.draft.trim().length > 0 || s.picked.length > 0)
   const start = () => (writeToShrug(), onPick())
+  /** The x: the new message is put away, and what was typed in it goes with it. */
+  const discard = () => {
+    for (const file of outbox.get().picked) unpick(file.id)
+    setDraft('')
+    discardWriting()
+  }
   return (
     <div className="chat-side" data-writing={on || undefined}>
       <div className="chat-side__top">
@@ -35,8 +44,9 @@ function Sidebar({ onPick }: { onPick: () => void }) {
       </div>
       {/* The message to Shrug is a conversation at the head of the list, once it has been started: a row as the
           others are. Before anything has been sent it is "New Message", with the plain face Messages gives a
-          recipient it has no picture of, and a way to put it away again */}
-      {(on || last) && (
+          recipient it has no picture of, and a way to put it away again. It stays there while another
+          conversation is looked at: only its x puts it away */}
+      {(on || kept || begun || last) && (
         <div className="conv-write">
           <Row
             className="conv"
@@ -60,8 +70,8 @@ function Sidebar({ onPick }: { onPick: () => void }) {
             onClick={start}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), start())}
           />
-          {on && !last && (
-            <button type="button" className="conv-write__x" aria-label="Discard the new message" onClick={stopWriting}>
+          {!last && (
+            <button type="button" className="conv-write__x" aria-label="Discard the new message" onClick={discard}>
               <X size={13} strokeWidth={2.2} aria-hidden />
             </button>
           )}

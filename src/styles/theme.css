@@ -134,8 +134,34 @@
 }
 
 .os[data-theme='dark'] .app.chat > .ss-window__side {
-  background: #2a2928;
+  background: #282727;
   border-right-color: rgba(0, 0, 0, 0.5);
+}
+
+/* (Apple's own, from Dom's screenshot of Messages in dark mode: the search field a lighter grey capsule on
+   the pane, with a bright upper edge; what comes in, in bubbles of #3b3b3d) */
+.os[data-theme='dark'] .chat-side .search {
+  background: #474649;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.3);
+  color: #a7a7ac;
+}
+
+.os[data-theme='dark'] .chat-side .search__input {
+  color: #fff;
+}
+
+.os[data-theme='dark'] .chat-side .search__input::placeholder {
+  color: #a7a7ac;
+}
+
+.os[data-theme='dark'] .chat-side .search:focus-within {
+  background: #505053;
+  box-shadow: inset 0 0 0 1px #0a84ff, 0 0 0 3px rgba(10, 132, 255, 0.3);
+}
+
+.os[data-theme='dark'] .app.chat .ss-thread {
+  --ss-them: #3b3b3d;
+  --ss-them-text: #fff;
 }
 
 .os[data-theme='dark'] .app.chat > .ss-window__main,

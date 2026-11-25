@@ -76,7 +76,7 @@ function Message({ m, email }: { m: Sent; email: string }) {
           </button>
         </span>
       )}
-      {m.state === 'sent' && email && <p className="im-note">Shrug reads every message. Replies come by email, to {email}.</p>}
+      {m.state === 'sent' && (m.demo ? <p className="im-note">Demo: nothing was sent.</p> : email ? <p className="im-note">Shrug reads every message. Replies come by email, to {email}.</p> : null)}
     </>
   )
 }
@@ -136,9 +136,10 @@ export function Write() {
             ))}
           </>
         )}
-        {!chosen ? (
+        {!chosen && typed ? null : !chosen ? (
+          // (a subject is offered until something is typed: whoever starts typing has a message, and the offer goes)
           <div className="im-pick" data-after={sent.length > 0 || undefined}>
-            <h2>{sent.length ? 'Something else?' : 'What’s this about?'}</h2>
+            <h2>{sent.length ? 'More to say?' : 'What’s this about?'}</h2>
             <div className="im-opts">
               {SUBJECTS.map((s) => (
                 <button key={s.id} type="button" className="im-opt" onClick={() => (setSubject(s.id), setTimeout(() => field.current?.focus(), 0))}>

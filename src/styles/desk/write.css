@@ -73,11 +73,20 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--im-ink-2);
   cursor: pointer;
 }
 
 .conv-write__x:hover {
+  background: var(--im-chip);
+}
+
+/* (on the row while it is the one being written, which is blue: white, as the row's words are) */
+.conv-write .conv[data-selected] ~ .conv-write__x {
+  color: #fff;
+}
+
+.conv-write .conv[data-selected] ~ .conv-write__x:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -88,10 +97,12 @@
   outline-offset: 2px;
 }
 
+/* (as tall as the pencil beside it, so that its words and the pencil are on one middle line) */
 .im-to {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  height: 32px;
   color: var(--im-ink-2);
   font-size: 13px;
 }
@@ -143,9 +154,10 @@
   gap: 16px;
 }
 
+/* (after what has been sent: set well clear of it, so the offer is not read as part of the last message) */
 .im-pick[data-after] {
   flex: none;
-  padding: 18px 0 8px;
+  padding: 40px 0 12px;
 }
 
 .im-pick h2 {
@@ -197,6 +209,11 @@
   padding: 14px;
   border-radius: 16px;
   background: var(--im-card);
+}
+
+/* (under what has been sent, a subject's form stands well clear of the last message and its receipt) */
+.im-body > :not(:first-child).im-form {
+  margin-top: 30px;
 }
 
 .im-form header {
