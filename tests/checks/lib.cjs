@@ -127,11 +127,62 @@ exports.weather = (ctx, as = {}) =>
  * player (its embed pages), so that nothing a check finds depends on Spotify or on the network: an episode is
  * "Stand-in episode <the last four of its id>", a playlist "Stand-in playlist …", with no cover, and the
  * player is an empty page. `as: 'down'` has Spotify fail. */
-exports.spotify = (ctx, as) =>
-  ctx.route('https://open.spotify.com/**', (route) => {
+const SPOTIFY_API = `(function () {
+  const api = {
+    createController(el, opts, made) {
+      const frame = document.createElement('iframe')
+      frame.src = 'https://open.spotify.com/embed/' + String(opts.uri).split(':').slice(1).join('/')
+      frame.width = '100%'
+      frame.height = String(opts.height || 152)
+      frame.title = 'Spotify Embed'
+      el.replaceWith(frame)
+      const heard = { ready: [], playback_update: [] }
+      const st = { uri: opts.uri, paused: true, at: 0, of: 600000, calls: [] }
+      let timer = null
+      const say = () => heard.playback_update.forEach((fn) => fn({ data: { isPaused: st.paused, isBuffering: false, duration: st.of, position: st.at } }))
+      const run = () => {
+        clearInterval(timer)
+        timer = setInterval(() => {
+          if (st.paused) return
+          st.at = Math.min(st.of, st.at + 1000)
+          say()
+        }, 250)
+      }
+      const controller = {
+        loadUri(uri) { st.calls.push('load ' + uri); st.uri = uri; st.at = 0; st.paused = true; say() },
+        play() { st.calls.push('play'); st.paused = false; say(); run() },
+        pause() { st.calls.push('pause'); st.paused = true; say() },
+        resume() { st.calls.push('resume'); st.paused = false; say(); run() },
+        togglePlay() { st.calls.push('toggle'); st.paused = !st.paused; say(); run() },
+        seek(seconds) { st.calls.push('seek ' + seconds); st.at = seconds * 1000; say() },
+        destroy() { st.calls.push('destroy'); clearInterval(timer); frame.remove() },
+        addListener(event, fn) { (heard[event] = heard[event] || []).push(fn) },
+      }
+      window.__spotify = st
+      setTimeout(() => { made(controller); setTimeout(() => { heard.ready.forEach((fn) => fn()); say() }, 30) }, 30)
+    },
+  }
+  if (typeof window.onSpotifyIframeApiReady === 'function') window.onSpotifyIframeApiReady(api)
+})()`
+
+/** A cover, as a stand-in: a small square of one color, which is one of a few by the picture's address. */
+const COVER = (url) => {
+  const tones = ['#7a5cc4', '#c4573f', '#3f8f8a', '#b08a2a', '#35508f', '#8f3b55']
+  let n = 0
+  for (const ch of url) n = (n * 31 + ch.charCodeAt(0)) >>> 0
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${tones[n % tones.length]}"/></svg>`
+}
+
+exports.spotify = async (ctx, as) => {
+  // (the covers are pictures on Spotify's servers: here each is a square of color)
+  for (const host of ['https://*.spotifycdn.com/**', 'https://*.scdn.co/**']) await ctx.route(host, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: COVER(route.request().url()) }))
+  return ctx.route('https://open.spotify.com/**', (route) => {
     if (as === 'down') return route.fulfill({ status: 503, contentType: 'text/plain', body: '' })
     const url = route.request().url()
     const headers = { 'access-control-allow-origin': '*' }
+    // (Spotify's iFrame API, as a stand-in: a controller that keeps what it was told to do in window.__spotify,
+    // and whose episode is ten minutes long and plays four times as fast as a clock)
+    if (/\/embed\/iframe-api\//.test(url)) return route.fulfill({ status: 200, headers, contentType: 'text/javascript', body: SPOTIFY_API })
     if (/\/oembed\?/.test(url)) {
       const of = /(episode|playlist)%2F([A-Za-z0-9]+)|(episode|playlist)\/([A-Za-z0-9]+)(?!.*oembed)/.exec(url)
       const kind = of ? of[1] || of[3] : 'episode'
@@ -140,6 +191,7 @@ exports.spotify = (ctx, as) =>
     }
     return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Spotify player (stand-in)</title><body style="margin:0;background:#282828"></body>' })
   })
+}
 
 /** Answers for YouTube, whose stills the YouTube window shows and whose player it frames, so that no check
  * depends on YouTube or on the network: a still is a small grey picture, and the player an empty page. */

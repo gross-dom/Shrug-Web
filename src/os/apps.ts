@@ -262,7 +262,7 @@ export const APPS: Record<AppId, AppSpec> = {
     id: 'spotify',
     name: 'Spotify',
     blurb: 'The listening room',
-    size: fit({ w: 0.7, h: 0.84 }, { w: 780, h: 520 }, { w: 1000, h: 660 }),
+    size: fit({ w: 0.8, h: 0.86 }, { w: 780, h: 520 }, { w: 1180, h: 720 }),
     min: { w: 780, h: 520 },
     nudge: { x: -10, y: 10 },
     resizable: true,

@@ -319,21 +319,41 @@
 }
 
 .yt-list header {
+  display: flex;
   flex: none;
-  padding: 12px 16px 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 12px 10px 16px;
   background: #212121;
+}
+
+.yt-list header > span {
+  min-width: 0;
 }
 
 .yt-list header b {
   display: block;
+  overflow: hidden;
   font-size: 20px;
   font-weight: 700;
   line-height: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.yt-list header span {
+.yt-list header span span {
   color: var(--yt-ink-2);
   font-size: 12px;
+}
+
+/* (Play all: the list from its top, as on a playlist's own page) */
+.yt-list header .yt-pill {
+  flex: none;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px 0 12px;
+  font-size: 13px;
 }
 
 .yt-list ol {

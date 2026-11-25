@@ -1,11 +1,12 @@
 import { EPISODES, PLAYLISTS } from '../data/listening'
 import { createStore } from './store'
 
-// What Spotify says of each thing in the listening room: its title and its cover. The Spotify window asks
-// when it opens, of Spotify's own oEmbed (open.spotify.com/oembed: public, and needing no key or login), from
-// the visitor's browser. What is told is kept for the visit, so that opening the window again asks nothing.
-// A link Spotify does not answer for is shown under a plain name (Episode 3, Playlist 1) and still plays: the
-// player is Spotify's own, and has the title in it.
+// What Spotify says of a thing in the listening room whose title is not written on its row
+// (src/data/listening.ts): its title and its cover. Every row Dom has supplied has its title written, so as
+// things stand nothing is asked; a link added later without one is asked for when the Spotify window opens,
+// of Spotify's own oEmbed (open.spotify.com/oembed: public, needing no key or login, and readable by any
+// page), from the visitor's browser. What is told is kept for the visit. A link Spotify does not answer for
+// is shown under a plain name (Episode 3, Playlist 1) and still plays: the player is Spotify's own.
 
 export interface Told {
   title: string
@@ -32,7 +33,8 @@ let asked = false
 export function askSpotify() {
   if (asked) return
   asked = true
-  const links = [...EPISODES, ...PLAYLISTS].map((row) => row.link).filter((link): link is string => !!link && !told.get()[link])
+  const untitled = [...EPISODES.filter((row) => !row.title), ...PLAYLISTS.filter((row) => !row.name)]
+  const links = untitled.map((row) => row.link).filter((link): link is string => !!link && !told.get()[link])
   for (const link of links)
     fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(link)}`)
       .then((answer) => (answer.ok ? (answer.json() as Promise<{ title?: unknown; thumbnail_url?: unknown }>) : null))

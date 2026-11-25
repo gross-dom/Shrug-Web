@@ -1,35 +1,43 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, Bookmark, ChevronLeft, ChevronRight, Clock, House, ListMusic, Mic, Music, Play, Search, Shuffle, SkipBack, SkipForward, TriangleAlert, X } from 'lucide-react'
+import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, House, ListMusic, Mic, Pause, Play, RotateCcw, RotateCw, Search, SkipBack, SkipForward, SquarePlay, X } from 'lucide-react'
 import { embedOf, EPISODES, LISTS, PLAYLISTS, type Episode, type Playlist } from '../data/listening'
 import { Window } from '../kit/window'
 import { askSpotify, told as spotifySays } from '../os/listening'
+import { clock, spotifyApi, uriOf, type Beat, type Controller } from '../os/spotify-player'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
 import '../styles/desk/spotify.css'
 
 // Spotify: the listening room (design/v1, "Spotify"), laid out as Spotify's own Mac app is in Dom's
 // screenshots of it: a black window; along its head the way back and on, Home, and one long search field;
-// under that three rounded panels on the black: Your Library at the left, the main pane, and along the foot
-// the bar where what is playing is.
+// under that rounded panels on the black: Your Library at the left, the main pane, and at the right the Now
+// playing view; and along the foot the bar where what is playing is.
 //
-// What it has is Shrug's: the podcast episodes its network is on, and playlists from the team. Playing is
-// Spotify's own embedded player, with nothing drawn over it: in the bar at the foot for one episode, and in
-// the main pane for a playlist, since the embed brings its own track list. A listener who is not signed in
-// to Spotify may hear previews, and the window says so. If the player does not arrive the lists still work:
-// each row can be opened in Spotify.
+// What it has is Shrug's: three playlists of podcast episodes (Tech, Culture, Infrastructure) and playlists
+// of songs from the team. Playing is Spotify's own embedded player. For an episode it is in the Now playing
+// view, and the bar at the foot is this window's own, drawn as Spotify draws its bar: back and on fifteen
+// seconds, the episode before and after, play and pause, and a line to drag along the episode. Its buttons
+// drive Spotify's player through Spotify's iFrame API (src/os/spotify-player.ts), and what it shows (where
+// the episode is, how long it is, whether it is playing) is what that player says. A playlist of songs is
+// Spotify's player in the main pane, since the embed brings its own track list and controls.
+//
+// Where Spotify's script does not arrive, the Now playing view holds the plain embedded player instead and
+// the bar's play button shows it; where no player arrives at all, the view says so, and each thing can be
+// opened in Spotify.
 //
 // It opens with something chosen: the first episode is in the bar at the foot, ready to play. The chips over
 // Your Library filter that list, as Spotify's do; the chips over Home filter Home.
 
 type At = { is: 'home' } | { is: 'podcasts'; list: number } | { is: 'playlists' } | { is: 'playlist'; id: string }
 const same = (a: At, b: At) => a.is === b.is && (a.is !== 'playlist' || (b.is === 'playlist' && a.id === b.id)) && (a.is !== 'podcasts' || (b.is === 'podcasts' && a.list === b.list))
-/** What a list of episodes is called: its own name, or until it has one its number (or plain Podcasts, where there is only one). */
-const listName = (n: number) => LISTS[n]?.name ?? (LISTS.length > 1 ? `Podcasts ${n + 1}` : 'Podcasts')
+const listName = (n: number) => LISTS[n]?.name ?? 'Podcasts'
+const inList = (n: number) => EPISODES.filter((e) => e.list === n)
 
 /** How long Spotify's player is waited for before the window says it did not load. */
 const WAIT = 12_000
+const STILL: Beat = { paused: true, buffering: false, at: 0, of: 0 }
 
-/** Spotify's player, in a frame. If it has not arrived in a while, the window is told so. */
+/** Spotify's player, in a plain frame. If it has not arrived in a while, the window is told so. */
 function Player({ src, title, tall, onFailed }: { src: string; title: string; tall?: boolean; onFailed: () => void }) {
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const failed = useRef(onFailed)
@@ -41,12 +49,38 @@ function Player({ src, title, tall, onFailed }: { src: string; title: string; ta
   return <iframe className={`sp-frame${tall ? ' sp-frame--tall' : ''}`} src={src} title={title} loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" onLoad={() => clearTimeout(timer.current)} />
 }
 
-/** A cover: Spotify's own picture where it has told of one, and until then the tone it stands on, with what it is drawn on it. */
+/** A picture that is taken away if it does not arrive, so that what it stands on is seen instead. */
+const Pic = ({ src }: { src: string }) => <img src={src} alt="" loading="lazy" draggable={false} onError={(e) => (e.currentTarget.hidden = true)} />
+
+/** A cover: Spotify's own picture where there is one, and until then the tone it stands on, with what it is drawn on it. */
 const Cover = ({ tone, size, list, src }: { tone: string; size?: number; list?: boolean; src?: string | null }) => (
   <span className="sp-cov" style={{ background: `linear-gradient(145deg, ${tone}, #1a1a1a)`, ...(size ? { width: size, height: size } : {}) }} aria-hidden>
-    {src ? <img src={src} alt="" loading="lazy" draggable={false} /> : list ? <ListMusic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} /> : <Mic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} />}
+    {list ? <ListMusic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} /> : <Mic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} />}
+    {src && <Pic src={src} />}
   </span>
 )
+
+/** The cover of a list of episodes: four of its episodes' covers, two by two, as Spotify makes a playlist's. */
+function Mosaic({ list, size }: { list: number; size?: number }) {
+  const covers = inList(list)
+    .map((e) => e.cover)
+    .filter((src): src is string => !!src)
+    .slice(0, 4)
+  return (
+    <span className="sp-cov sp-mosaic" style={{ background: 'linear-gradient(145deg, #1a7a4e, #0f4a32)', ...(size ? { width: size, height: size } : {}) }} aria-hidden>
+      {covers.length === 4 ? covers.map((src) => <Pic key={src} src={src} />) : <Mic size={size ? Math.round(size * 0.42) : 28} strokeWidth={1.7} />}
+    </span>
+  )
+}
+
+/** Fifteen seconds back, or on: Spotify's turning arrow with the number in it. */
+const Fifteen = ({ on }: { on?: boolean }) => (
+  <span className="sp-15" aria-hidden>
+    {on ? <RotateCw size={22} strokeWidth={1.6} /> : <RotateCcw size={22} strokeWidth={1.6} />}
+    <i>15</i>
+  </span>
+)
+
 const PLAYLIST_TONES = ['#7a5cc4', '#c4573f', '#3f8f8a', '#b08a2a']
 const toneOf = (p: Playlist) => PLAYLIST_TONES[PLAYLISTS.indexOf(p) % PLAYLIST_TONES.length]!
 
@@ -62,44 +96,133 @@ export function SpotifyApp() {
   /** What is in the bar at the foot. It opens on the first episode there is, so the bar is never empty. */
   const FIRST = (EPISODES.find((e) => e.link) ?? EPISODES[0])?.id ?? null
   const [playing, setPlaying] = useState<string | null>(FIRST)
-  /** Whether whoever is here chose it: an episode that was only set out for them says nothing about what it lacks. */
-  const [chose, setChose] = useState(false)
+  /** The Now playing view, at the right: where Spotify's own player for the episode is. (On a small screen it starts shut, and the bar's switch opens it.) */
+  const [side, setSide] = useState(() => typeof window === 'undefined' || window.innerWidth >= 1240)
+  /** How the episode's player is here: not yet; Spotify's player with its controller; its plain frame; or not at all. */
+  const [mode, setMode] = useState<'wait' | 'api' | 'frame' | 'failed'>('wait')
+  /** What the player last said: playing or not, where it is, how long the episode is. */
+  const [beat, setBeat] = useState<Beat>(STILL)
+  /** Whether the playlist's player (in the main pane) did not arrive. */
   const [failed, setFailed] = useState(false)
   const [again, setAgain] = useState(0)
   const main = useRef<HTMLElement>(null)
+  const host = useRef<HTMLDivElement>(null)
+  const ctl = useRef<Controller | null>(null)
+  /** What the controller has loaded, and whether it is to play as soon as it can. */
+  const loaded = useRef<string | null>(null)
+  const want = useRef(false)
 
   // What each is called, and its cover: written on its row, or as Spotify says (asked when the window opens)
   const says = useStore(spotifySays, (all) => all)
   useEffect(() => {
     if (shown) askSpotify()
   }, [shown])
-  const titleOf = (e: Episode) => e.title ?? (e.link ? says[e.link]?.title : undefined) ?? `Episode ${EPISODES.filter((other) => other.list === e.list).indexOf(e) + 1}`
+  const titleOf = (e: Episode) => e.title ?? (e.link ? says[e.link]?.title : undefined) ?? `Episode ${inList(e.list).indexOf(e) + 1}`
   const nameOf = (p: Playlist) => p.name ?? (p.link ? says[p.link]?.title : undefined) ?? `Playlist ${PLAYLISTS.indexOf(p) + 1}`
-  const coverOf = (row: { link: string | null }) => (row.link ? (says[row.link]?.cover ?? null) : null)
-  /** The columns the table has: only those some episode has something for. */
-  const cols = { guest: EPISODES.some((e) => e.guest), date: EPISODES.some((e) => e.date), length: EPISODES.some((e) => e.length) }
+  const coverOf = (row: { link: string | null; cover: string | null }) => row.cover ?? (row.link ? (says[row.link]?.cover ?? null) : null)
 
   const q = query.trim().toLowerCase()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const episodes = useMemo(() => EPISODES.filter((e) => !q || [titleOf(e), e.show, e.guest].some((text) => !!text && text.toLowerCase().includes(q))), [q, says])
+  const episodes = useMemo(() => EPISODES.filter((e) => !q || [titleOf(e), e.show].some((text) => !!text && text.toLowerCase().includes(q))), [q, says])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const playlists = useMemo(() => PLAYLISTS.filter((p) => !q || nameOf(p).toLowerCase().includes(q)), [q, says])
   const episode = playing ? (EPISODES.find((e) => e.id === playing) ?? null) : null
   const playlist = at.is === 'playlist' ? (PLAYLISTS.find((p) => p.id === at.id) ?? null) : null
-  const embed = episode ? embedOf(episode.link) : null
+  const uri = episode ? uriOf(episode.link) : null
+  const uriNow = useRef(uri)
+  uriNow.current = uri
 
-  // Nothing plays in a window that cannot be seen: closed or minimized, the player is taken away
+  // Spotify's player for the episode, and its controller. Nothing plays in a window that cannot be seen:
+  // closed or minimized, the player is taken away, and made again (not playing) when the window is back
   useEffect(() => {
-    if (shown) return setPlaying((was) => was ?? FIRST)
-    setPlaying(null)
-    setChose(false)
-  }, [shown, FIRST])
+    if (!shown) return
+    let gone = false
+    let made: Controller | null = null
+    setMode('wait')
+    void spotifyApi().then((api) => {
+      if (gone) return
+      const first = uriNow.current
+      if (!api || !host.current || !first) return setMode('frame')
+      const el = document.createElement('div')
+      host.current.replaceChildren(el)
+      api.createController(el, { uri: first, width: '100%', height: 352 }, (controller) => {
+        if (gone) return controller.destroy()
+        made = controller
+        ctl.current = controller
+        loaded.current = first
+        setMode('api')
+        controller.addListener('playback_update', (e) => {
+          const d = e.data ?? {}
+          const num = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 0)
+          if (!gone) setBeat({ paused: d.isPaused !== false, buffering: !!d.isBuffering, at: num(d.position), of: num(d.duration) })
+        })
+        controller.addListener('ready', () => {
+          if (gone) return
+          // (an episode picked while the player was on its way is the one it is given)
+          const now = uriNow.current
+          if (now && now !== loaded.current) {
+            loaded.current = now
+            controller.loadUri(now)
+          }
+          if (want.current) controller.play()
+        })
+      })
+    })
+    return () => {
+      gone = true
+      made?.destroy()
+      if (ctl.current === made) ctl.current = null
+      loaded.current = null
+      want.current = false
+      host.current?.replaceChildren()
+      setBeat(STILL)
+    }
+  }, [shown, again])
 
-  const play = (e: Episode) => {
-    setFailed(false)
-    setChose(true)
-    setPlaying(e.id)
+  // Another episode: the player is given it, and plays it if it was asked for by name
+  useEffect(() => {
+    const controller = ctl.current
+    if (!controller || !uri || loaded.current === uri) return
+    loaded.current = uri
+    setBeat(STILL)
+    controller.loadUri(uri)
+    if (want.current) controller.play()
+  }, [uri])
+
+  /** Play and pause. With no controller, Spotify's own player is in the Now playing view: that is shown. */
+  const toggle = () => {
+    const controller = ctl.current
+    if (!controller) return setSide(true)
+    want.current = beat.paused
+    controller.togglePlay()
   }
+  /** An episode asked for by name: it plays. Asked for again while it is the one in the bar, it is play and pause. */
+  const play = (e: Episode) => {
+    if (e.id === playing && ctl.current) return toggle()
+    want.current = true
+    setPlaying(e.id)
+    if (!ctl.current) setSide(true)
+  }
+  const seek = (to: number) => {
+    const controller = ctl.current
+    if (!controller || !beat.of) return
+    const at = Math.max(0, Math.min(beat.of - 1000, to))
+    setBeat((b) => ({ ...b, at }))
+    controller.seek(Math.round(at / 1000))
+  }
+  /** The episode before, or after, in the list this one is in. */
+  const step = (by: number) => {
+    if (!episode) return
+    const list = inList(episode.list)
+    const to = list[list.indexOf(episode) + by]
+    if (!to) return
+    want.current = want.current || !beat.paused
+    setPlaying(to.id)
+  }
+  const near = episode ? inList(episode.list) : []
+  const first = !!episode && near.indexOf(episode) <= 0
+  const last = !!episode && near.indexOf(episode) >= near.length - 1
+
   const go = (to: At) => {
     setFailed(false)
     setTrail((t) => (same(t.at, to) ? t : { past: [...t.past, t.at], at: to, ahead: [] }))
@@ -136,7 +259,7 @@ export function SpotifyApp() {
     <li key={e.id}>
       <button type="button" className={`sp-row${playing === e.id ? ' on' : ''}`} aria-pressed={playing === e.id} onClick={() => play(e)}>
         <span className="num">
-          {playing === e.id ? (
+          {playing === e.id && !beat.paused ? (
             <span className="sp-eq" aria-hidden>
               <i />
               <i />
@@ -151,25 +274,21 @@ export function SpotifyApp() {
           <b>{titleOf(e)}</b>
           {e.show ?? 'Podcast episode'}
         </span>
-        {cols.guest && <span>{e.guest}</span>}
-        {cols.date && <span>{e.date}</span>}
-        {cols.length && <span className="num">{e.length}</span>}
+        <span className="when">{e.date}</span>
+        <span className="num">{e.length}</span>
       </button>
     </li>
   )
   const table = (list: Episode[]) => (
-    <ol className="sp-rows" data-cols={[cols.guest && 'guest', cols.date && 'date', cols.length && 'length'].filter(Boolean).join(' ') || 'title'}>
+    <ol className="sp-rows">
       <li className="sp-row head" aria-hidden>
         <span>#</span>
         <span />
         <span>Title</span>
-        {cols.guest && <span>Who’s on it</span>}
-        {cols.date && <span>Date</span>}
-        {cols.length && (
-          <span>
-            <Clock size={14} strokeWidth={1.8} />
-          </span>
-        )}
+        <span className="when">Released</span>
+        <span>
+          <Clock size={14} strokeWidth={1.8} />
+        </span>
       </li>
       {list.map(rowOf)}
     </ol>
@@ -210,14 +329,10 @@ export function SpotifyApp() {
               LISTS.map((list, n) => (
                 <li key={list.id}>
                   <button type="button" className="sp-item" aria-current={(at.is === 'podcasts' && at.list === n) || undefined} onClick={() => go({ is: 'podcasts', list: n })}>
-                    <span className="sp-cov sp-cov--ep" aria-hidden>
-                      <Bookmark size={18} strokeWidth={0} fill="currentColor" />
-                    </span>
+                    <Mosaic list={n} size={48} />
                     <span>
-                      <b>{listName(n)}</b>
-                      <small>
-                        {EPISODES.filter((e) => e.list === n).length} episodes · Shrug’s network
-                      </small>
+                      <b>{list.name}</b>
+                      <small>Podcasts · {inList(n).length} episodes</small>
                     </span>
                   </button>
                 </li>
@@ -248,6 +363,14 @@ export function SpotifyApp() {
               </div>
               {only === 'all' && !q && (
                 <ul className="sp-tiles">
+                  {LISTS.map((list, n) => (
+                    <li key={list.id}>
+                      <button type="button" onClick={() => go({ is: 'podcasts', list: n })}>
+                        <Mosaic list={n} size={48} />
+                        <b>{list.name}</b>
+                      </button>
+                    </li>
+                  ))}
                   {PLAYLISTS.map((p) => (
                     <li key={p.id}>
                       <button type="button" onClick={() => go({ is: 'playlist', id: p.id })}>
@@ -256,7 +379,7 @@ export function SpotifyApp() {
                       </button>
                     </li>
                   ))}
-                  {EPISODES.slice(0, 4).map((e) => (
+                  {EPISODES.slice(0, Math.max(0, 8 - LISTS.length - PLAYLISTS.length)).map((e) => (
                     <li key={e.id}>
                       <button type="button" onClick={() => play(e)}>
                         <Cover tone={e.tone} size={48} src={coverOf(e)} />
@@ -275,8 +398,8 @@ export function SpotifyApp() {
                   <div key={n}>
                     <header className="sp-sect">
                       <span>
-                        <small>Shrug’s network, on air</small>
-                        <h1>{n < 0 ? 'Podcasts' : listName(n)}</h1>
+                        <small>Podcasts</small>
+                        <h1>{n < 0 ? 'Episodes' : listName(n)}</h1>
                       </span>
                       {n >= 0 && (
                         <button type="button" onClick={() => go({ is: 'podcasts', list: n })}>
@@ -306,18 +429,23 @@ export function SpotifyApp() {
           {at.is === 'podcasts' && (
             <>
               <header className="sp-hero" style={{ ['--tone' as string]: '#3a5a4a' }}>
-                <span className="sp-cov sp-cov--ep sp-cov--hero" aria-hidden>
-                  <Bookmark size={64} strokeWidth={0} fill="currentColor" />
-                </span>
+                <Mosaic list={at.list} />
                 <span>
                   <small>Podcasts</small>
-                  <h1>{LISTS[at.list]?.name ?? 'Shrug’s network, on air'}</h1>
+                  <h1>{listName(at.list)}</h1>
                   <p>
-                    <b>{listName(at.list)}</b> · {EPISODES.filter((e) => e.list === at.list).length} episodes
+                    <b>Shrug</b> · {inList(at.list).length} episodes
                   </p>
                 </span>
               </header>
-              <div className="sp-under">{episodes.some((e) => e.list === at.list) ? table(episodes.filter((e) => e.list === at.list)) : none}</div>
+              <div className="sp-under">
+                {inList(at.list)[0] && (
+                  <button type="button" className="sp-play" aria-label={`Play ${listName(at.list)}`} onClick={() => play((episode && episode.list === at.list ? episode : inList(at.list)[0])!)}>
+                    {episode && episode.list === at.list && !beat.paused ? <Pause size={22} strokeWidth={0} fill="currentColor" aria-hidden /> : <Play size={22} strokeWidth={0} fill="currentColor" aria-hidden />}
+                  </button>
+                )}
+                {episodes.some((e) => e.list === at.list) ? table(episodes.filter((e) => e.list === at.list)) : none}
+              </div>
             </>
           )}
           {at.is === 'playlists' && (
@@ -343,10 +471,7 @@ export function SpotifyApp() {
               </header>
               <div className="sp-under">
                 {embedOf(playlist.link) && !failed ? (
-                  <>
-                    <Player key={`${playlist.id}-${again}`} src={embedOf(playlist.link)!} title={`${nameOf(playlist)}, in Spotify’s player`} tall onFailed={() => setFailed(true)} />
-                    <p className="sp-tag">Previews, unless you’re signed in to Spotify</p>
-                  </>
+                  <Player key={`${playlist.id}-${again}`} src={embedOf(playlist.link)!} title={`${nameOf(playlist)}, in Spotify’s player`} tall onFailed={() => setFailed(true)} />
                 ) : (
                   <div className="sp-stand">
                     <span className="sp-play" aria-hidden>
@@ -368,65 +493,95 @@ export function SpotifyApp() {
             </>
           )}
         </section>
-      </div>
-      {/* The bar at the foot: what is playing, and Spotify's own player for it */}
-      <footer className={`sp-now${episode && embed && !failed ? ' embed' : ''}`}>
-        {episode && embed && !failed ? (
-          <>
-            <div className="sp-what">
-              <Cover tone={episode.tone} size={56} src={coverOf(episode)} />
-              <span>
-                <b>{titleOf(episode)}</b>
-                <small>{episode.show ?? 'Podcast episode'}</small>
-              </span>
-            </div>
-            <div className="sp-in">
-              <Player key={`${episode.id}-${again}`} src={embed} title={`${titleOf(episode)}, in Spotify’s player`} onFailed={() => setFailed(true)} />
-            </div>
-            <span className="sp-tag">Previews, unless you’re signed in to Spotify</span>
-          </>
-        ) : (
-          <>
-            <div className="sp-what">
-              {episode ? <Cover tone={episode.tone} size={56} src={coverOf(episode)} /> : <span className="sp-cov" style={{ width: 56, height: 56 }} aria-hidden><Music size={22} strokeWidth={1.7} /></span>}
-              <span>
-                <b>{episode ? titleOf(episode) : 'Pick something to play'}</b>
-                <small>{episode ? (episode.show ?? 'Podcast episode') : 'An episode, or a playlist.'}</small>
-              </span>
-            </div>
-            <div className="sp-ctl" aria-hidden={!(episode && (chose || failed)) || undefined}>
-              {episode && (chose || failed) ? (
-                <p role="status">
-                  <TriangleAlert size={14} strokeWidth={1.9} aria-hidden />
-                  {episode.link ? 'Spotify’s player didn’t load. Open the episode in Spotify, or try again.' : 'This episode has no link to Spotify yet.'}
-                  {episode.link && (
-                    <button type="button" className="sp-pill" onClick={() => (setFailed(false), setAgain((n) => n + 1))}>
+        {/* The Now playing view: Spotify's own player for the episode in the bar. Shut, it is kept (the episode
+            goes on playing) and only put out of sight */}
+        <aside className="sp-side" aria-label="Now playing" data-shut={!side || undefined} {...(side ? {} : { inert: '' })}>
+          <header>
+            <b>{episode ? listName(episode.list) : 'Now playing'}</b>
+            <button type="button" aria-label="Close the Now playing view" onClick={() => setSide(false)}>
+              <X size={18} strokeWidth={2} aria-hidden />
+            </button>
+          </header>
+          <div className="sp-player">
+            <div ref={host} className="sp-host" hidden={mode === 'frame' || mode === 'failed'} />
+            {mode === 'frame' && episode && embedOf(episode.link) && <Player key={`${episode.id}-${again}`} src={embedOf(episode.link)!} title={`${titleOf(episode)}, in Spotify’s player`} tall onFailed={() => setMode('failed')} />}
+            {(mode === 'failed' || (episode && !episode.link)) && (
+              <p className="sp-lost" role="status">
+                <b>{episode && !episode.link ? 'This episode has no link to Spotify yet' : 'Spotify’s player didn’t load'}</b>
+                {episode?.link && (
+                  <span>
+                    <button type="button" className="sp-pill" onClick={() => setAgain((n) => n + 1)}>
                       Try Again
                     </button>
-                  )}
-                  {episode.link && <Out href={episode.link} />}
-                </p>
-              ) : (
-                <>
-                  <span className="sp-keys">
-                    <Shuffle size={16} strokeWidth={1.9} />
-                    <SkipBack size={18} strokeWidth={0} fill="currentColor" />
-                    <i>
-                      <Play size={15} strokeWidth={0} fill="currentColor" />
-                    </i>
-                    <SkipForward size={18} strokeWidth={0} fill="currentColor" />
+                    <Out href={episode.link} />
                   </span>
-                  <span className="sp-line">
-                    <small>-:--</small>
-                    <i />
-                    <small>-:--</small>
-                  </span>
-                </>
-              )}
+                )}
+              </p>
+            )}
+          </div>
+          {episode && (
+            <div className="sp-about">
+              <b>{titleOf(episode)}</b>
+              <span>{episode.show ?? 'Podcast episode'}</span>
+              {(episode.date || episode.length) && <small>{[episode.date, episode.length].filter(Boolean).join(' · ')}</small>}
             </div>
-            <span />
-          </>
-        )}
+          )}
+        </aside>
+      </div>
+      {/* The bar at the foot: what is playing, and the buttons that play it */}
+      <footer className="sp-now">
+        <div className="sp-what">
+          {episode ? <Cover tone={episode.tone} size={56} src={coverOf(episode)} /> : <Cover tone="#333" size={56} />}
+          <span>
+            <b>{episode ? titleOf(episode) : 'Pick something to play'}</b>
+            <small>{episode ? (episode.show ?? 'Podcast episode') : 'An episode, or a playlist.'}</small>
+          </span>
+        </div>
+        <div className="sp-ctl" role="group" aria-label="Player controls">
+          <span className="sp-keys">
+            <button type="button" aria-label="Back 15 seconds" aria-disabled={!beat.of || undefined} onClick={() => seek(beat.at - 15_000)}>
+              <Fifteen />
+            </button>
+            <button type="button" aria-label="Previous episode" aria-disabled={first || undefined} onClick={() => step(-1)}>
+              <SkipBack size={18} strokeWidth={2.2} fill="currentColor" aria-hidden />
+            </button>
+            <button type="button" className="sp-go" aria-label={beat.paused ? 'Play' : 'Pause'} aria-disabled={!episode?.link || undefined} onClick={toggle}>
+              {beat.paused ? <Play size={16} strokeWidth={0} fill="currentColor" aria-hidden /> : <Pause size={16} strokeWidth={0} fill="currentColor" aria-hidden />}
+            </button>
+            <button type="button" aria-label="Next episode" aria-disabled={last || undefined} onClick={() => step(1)}>
+              <SkipForward size={18} strokeWidth={2.2} fill="currentColor" aria-hidden />
+            </button>
+            <button type="button" aria-label="Forward 15 seconds" aria-disabled={!beat.of || undefined} onClick={() => seek(beat.at + 15_000)}>
+              <Fifteen on />
+            </button>
+          </span>
+          <span className="sp-line">
+            <small>{clock(beat.at)}</small>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(1, Math.round(beat.of / 1000))}
+              step={1}
+              value={Math.round(beat.at / 1000)}
+              disabled={!beat.of}
+              aria-label="Where the episode is"
+              aria-valuetext={`${clock(beat.at)} of ${beat.of ? clock(beat.of) : (episode?.length ?? 'the episode')}`}
+              style={{ ['--at' as string]: beat.of ? `${(beat.at / beat.of) * 100}%` : '0%' }}
+              onChange={(e) => seek(Number(e.target.value) * 1000)}
+            />
+            <small>{beat.of ? clock(beat.of) : (episode?.length ?? '-:--')}</small>
+          </span>
+        </div>
+        <div className="sp-end">
+          <button type="button" aria-label="Now playing view" aria-pressed={side} onClick={() => setSide((was) => !was)}>
+            <SquarePlay size={18} strokeWidth={1.8} aria-hidden />
+          </button>
+          {episode?.link && (
+            <a href={episode.link} target="_blank" rel="noopener noreferrer" aria-label="Open this episode in Spotify">
+              <ArrowUpRight size={18} strokeWidth={1.9} aria-hidden />
+            </a>
+          )}
+        </div>
       </footer>
     </Window>
   )

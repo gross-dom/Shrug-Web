@@ -1,9 +1,11 @@
 /* Spotify (apps/Spotify.tsx): the listening room, drawn after Spotify's own Mac app as Dom's screenshots
    show it (a playlist, Home, a podcast's page, Podcasts). A black window. Along its head: the way back and
    on, Home in a round grey button, and one long search field. Under it, panels of #121212 with rounded
-   corners and a little black between them: Your Library, and the main pane, whose head is a wash of the
-   cover's color. Along the foot, on the black, the bar where what is playing is. White for what is named,
-   grey for what is said about it, Spotify's green for the one thing to press. */
+   corners and a little black between them: Your Library, the main pane, whose head is a wash of the
+   cover's color, and the Now playing view. Along the foot, on the black, the bar where what is playing is:
+   its cover and name, the buttons that play it over the line of where it is, and at the right the switch
+   for the Now playing view. White for what is named, grey for what is said about it, Spotify's green for
+   the one thing to press. */
 
 .ss-window.spwin {
   --ss-lights-y: 32px;
@@ -128,10 +130,12 @@
 }
 
 .sp {
+  position: relative;
   display: flex;
   flex: 1;
   gap: 8px;
   min-height: 0;
+  overflow: hidden;
   padding: 0 8px;
 }
 
@@ -148,7 +152,7 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  width: 250px;
+  width: 240px;
   min-height: 0;
   overflow-y: auto;
   padding: 16px 8px 8px;
@@ -250,12 +254,16 @@
   color: rgba(255, 255, 255, 0.86);
 }
 
-/* (the episodes, as Spotify draws Your Episodes: a green tile with a marker on it) */
-.sp-cov--ep {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(145deg, #1a7a4e, #0f4a32);
+/* (a list of episodes: four of their covers, two by two, as Spotify makes a playlist's own) */
+.sp-mosaic {
+  grid-template: 1fr 1fr / 1fr 1fr;
+  place-items: stretch;
   color: #1ed760;
+}
+
+.sp-mosaic > svg {
+  grid-area: 1 / 1 / -1 / -1;
+  place-self: center;
 }
 
 /* ---- The main pane */
@@ -455,10 +463,10 @@
   background: linear-gradient(rgba(0, 0, 0, 0.22), transparent 180px);
 }
 
-/* The table: a number, a cover, the title over its show, who is on it, when, how long */
+/* The table: a number, a cover, the title over its show, when it came out, how long it is */
 .sp-row {
   display: grid;
-  grid-template-columns: 28px 40px minmax(0, 1.5fr) minmax(0, 1fr) 80px 50px;
+  grid-template-columns: 28px 40px minmax(0, 1fr) 76px 82px;
   align-items: center;
   gap: 14px;
   width: 100%;
@@ -470,21 +478,40 @@
   text-align: left;
 }
 
-/* (a table with nothing to say in a column has no such column: the title has its room) */
-.sp-rows[data-cols='title'] .sp-row {
-  grid-template-columns: 28px 40px minmax(0, 1fr);
+/* (in a narrow pane the date gives its room to the title) */
+.sp-main {
+  container: spmain / inline-size;
 }
 
-/* Spotify's own cover, where it has told of one */
+@container spmain (max-width: 540px) {
+  .sp-row {
+    grid-template-columns: 28px 40px minmax(0, 1fr) 82px;
+  }
+
+  .sp-row .when {
+    display: none;
+  }
+}
+
+/* Spotify's own cover: it lies over what is drawn there until it arrives (and is taken away if it does not) */
 .sp-cov {
+  position: relative;
   overflow: hidden;
 }
 
 .sp-cov img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.sp-mosaic img {
+  position: static;
+  min-width: 0;
+  min-height: 0;
 }
 
 .sp-row > span {
@@ -620,6 +647,20 @@ button.sp-row:hover {
   color: #000;
 }
 
+.sp-play:has(svg.lucide-pause) {
+  padding-left: 0;
+}
+
+button.sp-play {
+  margin: 2px 0 18px 6px;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+button.sp-play:hover {
+  background: #3be477;
+  transform: scale(1.04);
+}
+
 .sp-pill {
   display: inline-flex;
   flex: none;
@@ -640,14 +681,6 @@ button.sp-row:hover {
   box-shadow: inset 0 0 0 1px #fff;
 }
 
-.sp-tag {
-  color: var(--sp-ink-2);
-  font-size: 11.5px;
-}
-
-.sp-under .sp-tag {
-  padding-top: 10px !important;
-}
 
 /* ---- The bar at the foot */
 
@@ -695,61 +728,316 @@ button.sp-row:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   min-width: 0;
-  color: #6a6a6a;
 }
 
-.sp-ctl p {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--sp-ink-2);
-  font-size: 13px;
-}
-
+/* The buttons: back fifteen, the one before, play in its white disc, the one after, on fifteen */
 .sp-keys {
   display: inline-flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
-.sp-keys i {
+.sp-keys button {
   display: grid;
   place-items: center;
   width: 32px;
   height: 32px;
-  padding-left: 2px;
   border-radius: 50%;
+  color: var(--sp-ink-2);
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+
+.sp-keys button:not([aria-disabled='true']):hover {
+  color: #fff;
+}
+
+.sp-keys button[aria-disabled='true'] {
+  color: #4d4d4d;
+}
+
+.sp-keys .sp-go {
+  background: #fff;
+  color: #000;
+}
+
+.sp-keys .sp-go:has(svg.lucide-play) {
+  padding-left: 2px;
+}
+
+.sp-keys .sp-go:not([aria-disabled='true']):hover {
+  color: #000;
+  transform: scale(1.06);
+}
+
+.sp-keys .sp-go[aria-disabled='true'] {
   background: #6a6a6a;
   color: #000;
 }
 
+.sp-15 {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.sp-15 i {
+  position: absolute;
+  font-size: 7.5px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* Where it is, the line to drag along it, and how long it is */
 .sp-line {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  max-width: 520px;
-  font-size: 11px;
+  max-width: 560px;
+  color: var(--sp-ink-2);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
 }
 
-.sp-line i {
+.sp-line small {
+  flex: none;
+  min-width: 34px;
+  font-size: inherit;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sp-line small:last-child {
+  text-align: left;
+}
+
+.sp-line input {
   flex: 1;
+  min-width: 0;
+  height: 12px;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sp-line input:disabled {
+  cursor: default;
+}
+
+.sp-line input::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
-  background: #4d4d4d;
+  background: linear-gradient(90deg, #fff var(--at), #4d4d4d var(--at));
 }
 
-.sp-now > .sp-tag {
-  justify-self: end;
-  text-align: right;
+.sp-line input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #fff var(--at), #4d4d4d var(--at));
 }
 
-.sp-in {
-  min-width: 0;
+.sp-line input:not(:disabled):hover::-webkit-slider-runnable-track,
+.sp-line input:focus-visible::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, var(--sp-green) var(--at), #4d4d4d var(--at));
+}
+
+.sp-line input:not(:disabled):hover::-moz-range-track,
+.sp-line input:focus-visible::-moz-range-track {
+  background: linear-gradient(90deg, var(--sp-green) var(--at), #4d4d4d var(--at));
+}
+
+.sp-line input::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sp-line input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+}
+
+.sp-line input:not(:disabled):hover::-webkit-slider-thumb,
+.sp-line input:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.sp-line input:not(:disabled):hover::-moz-range-thumb,
+.sp-line input:focus-visible::-moz-range-thumb {
+  opacity: 1;
+}
+
+/* At the right: the Now playing view's switch (green, with a dot under it, while the view is open), and the way out to Spotify */
+.sp-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.sp-end :where(button, a) {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--sp-ink-2);
+}
+
+.sp-end :where(button, a):hover {
+  color: #fff;
+}
+
+.sp-end button[aria-pressed='true'] {
+  color: var(--sp-green);
+}
+
+.sp-end button[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ---- The Now playing view: Spotify's own player for the episode, and what the episode is */
+
+.sp-side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 276px;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--sp-panel);
+  scrollbar-width: none;
+}
+
+/* (shut, it is kept, so that what is playing plays on, and put where it is neither seen nor reached) */
+.sp-side[data-shut] {
+  position: absolute;
+  top: 0;
+  left: -400px;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sp-side > header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 56px;
+  padding: 0 8px 0 16px;
+}
+
+.sp-side > header b {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-side > header button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--sp-ink-2);
+}
+
+.sp-side > header button:hover {
+  background: var(--sp-hover);
+  color: #fff;
+}
+
+.sp-player {
+  flex: none;
+  padding: 0 12px;
+}
+
+.sp-host:not([hidden]) {
+  min-height: 352px;
+  border-radius: 12px;
+  background: #282828;
+}
+
+.sp-host iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+}
+
+.sp-lost {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 4px !important;
+  color: var(--sp-ink-2);
+  font-size: 13.5px;
+}
+
+.sp-lost b {
+  color: var(--sp-ink);
+  font-size: 15px;
+}
+
+.sp-lost span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sp-about {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 16px 16px 20px;
+}
+
+.sp-about b {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.sp-about span {
+  color: var(--sp-ink-2);
+  font-size: 14px;
+}
+
+.sp-about small {
+  padding-top: 6px;
+  color: var(--sp-ink-2);
+  font-size: 12px;
 }
 
 @media (prefers-reduced-motion: reduce) {

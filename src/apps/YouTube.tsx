@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Check, Clapperboard, RectangleHorizontal, Search, Share2, TriangleAlert, X } from 'lucide-react'
+import { ArrowUpRight, Check, Clapperboard, Play, RectangleHorizontal, Search, Share2, TriangleAlert, X } from 'lucide-react'
 import { PLAYLIST, VIDEOS } from '../data/videos'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
@@ -14,6 +14,10 @@ import '../styles/desk/youtube.css'
 // length on it. Theater mode puts the list away and gives the player the window's width, as YouTube's does.
 // The player is YouTube's own embed, with nothing drawn over it. A video whose owner does not allow it on
 // other sites says so, with a link to watch it on YouTube.
+//
+// It plays when the window opens, with its sound off (a browser lets a video start by itself only so), from
+// the first of the list; a video that is picked plays with its sound. When one ends the next begins, as a
+// playlist does, and Play all starts the list from its top.
 
 /** Where YouTube's player is served from: the address it has for sites that set no cookies until it plays. */
 const HOST = 'https://www.youtube-nocookie.com'
@@ -39,6 +43,8 @@ export function YouTubeApp() {
   const shown = useStore(wm, (s) => s.wins.youtube.open && !s.wins.youtube.minimized)
   const [at, setAt] = useState(0)
   const [started, setStarted] = useState(false)
+  /** Whether it plays without its sound: it does when it started by itself, and not once something was picked. */
+  const [muted, setMuted] = useState(true)
   const [refused, setRefused] = useState(false)
   const [query, setQuery] = useState('')
   const [copied, setCopied] = useState(false)
@@ -46,6 +52,8 @@ export function YouTubeApp() {
   const [theater, setTheater] = useState(false)
   const wide = !theater
   const frame = useRef<HTMLIFrameElement>(null)
+  const answered = useRef(false)
+  const ended = useRef<string | null>(null)
   const video = VIDEOS[at]!
   const [said, setSaid] = useState<Record<string, Said>>(kept)
   /** A video's title and channel: as written on its row, or as YouTube's player has said, or its place in the list. */
@@ -53,10 +61,21 @@ export function YouTubeApp() {
   const channelOf = (v: (typeof VIDEOS)[number]) => v.channel ?? (v.id ? said[v.id]?.channel : undefined) ?? null
 
   useEffect(() => setRefused(false), [at])
-  // Nothing plays in a window that cannot be seen: closed or minimized, the player is taken away
+  // The window is opened: the video plays, with its sound off. And nothing plays in a window that cannot be
+  // seen: closed or minimized, the player is taken away
   useEffect(() => {
-    if (!shown) setStarted(false)
+    if (shown) return setStarted(true)
+    setStarted(false)
+    setMuted(true)
   }, [shown])
+  /** A video that is picked: it plays, with its sound. */
+  const pick = (i: number) => {
+    setMuted(false)
+    setAt(i)
+    setStarted(true)
+  }
+  const next = useRef(() => {})
+  next.current = () => setAt((was) => (was + 1 < VIDEOS.length ? was + 1 : was))
 
   // YouTube's player says what happens in it, to whoever asks: it is asked, and listened to for a refusal
   useEffect(() => {
@@ -65,7 +84,18 @@ export function YouTubeApp() {
       if (e.origin !== HOST || e.source !== frame.current?.contentWindow || typeof e.data !== 'string') return
       try {
         const told = JSON.parse(e.data) as { event?: string; info?: unknown }
+        // (the player has answered: it is now asked to say when a video ends, and when one may not be played)
+        if (!answered.current) {
+          answered.current = true
+          for (const what of ['onStateChange', 'onError']) frame.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: [what], id: 1, channel: 'widget' }), HOST)
+        }
         if (told.event === 'onError' && REFUSED.includes(Number(told.info))) setRefused(true)
+        // A video that has ended: the next one in the list begins
+        const state = told.event === 'onStateChange' ? told.info : told.event === 'infoDelivery' ? (told.info as { playerState?: unknown } | null)?.playerState : undefined
+        if (state === 0 && ended.current !== video.id) {
+          ended.current = video.id
+          next.current()
+        }
         // The player says what it is playing: its title, and whose it is. That is what the window calls it from then on
         const data = (told.info as { videoData?: { video_id?: unknown; title?: unknown; author?: unknown } } | null)?.videoData
         if (data && data.video_id === video.id && typeof data.title === 'string' && data.title.trim()) {
@@ -85,8 +115,18 @@ export function YouTubeApp() {
         // Not something of the player's
       }
     }
+    answered.current = false
+    ended.current = null
     window.addEventListener('message', heard)
-    return () => window.removeEventListener('message', heard)
+    // (the player is told it is listened to, until it answers: it may not be ready the moment its page loads)
+    const ask = setInterval(() => {
+      if (answered.current) return clearInterval(ask)
+      frame.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), HOST)
+    }, 500)
+    return () => {
+      window.removeEventListener('message', heard)
+      clearInterval(ask)
+    }
   }, [started, video.id])
 
   const place = `${at + 1} / ${VIDEOS.length}`
@@ -148,8 +188,8 @@ export function YouTubeApp() {
             ) : video.id && started ? (
               <iframe
                 ref={frame}
-                key={video.id}
-                src={`${HOST}/embed/${video.id}?autoplay=1&rel=0&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+                key={`${video.id}${muted ? '-quiet' : ''}`}
+                src={`${HOST}/embed/${video.id}?autoplay=1${muted ? '&mute=1' : ''}&rel=0&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
                 title={`${titleOf(video, at)}, in YouTube’s player`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
@@ -158,7 +198,7 @@ export function YouTubeApp() {
               />
             ) : video.id ? (
               // Nothing of YouTube's is fetched until a video is asked for: its still, and a button
-              <button type="button" className="yt-start" aria-label={`Play ${titleOf(video, at)}`} onClick={() => setStarted(true)}>
+              <button type="button" className="yt-start" aria-label={`Play ${titleOf(video, at)}`} onClick={() => pick(at)}>
                 <img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt="" />
                 <span className="yt-pbtn" aria-hidden>
                   <svg viewBox="0 0 68 48" width="68" height="48">
@@ -216,15 +256,21 @@ export function YouTubeApp() {
         {wide && (
           <aside className="yt-list" aria-label={PLAYLIST.name}>
             <header>
-              <b>{PLAYLIST.name}</b>
               <span>
-                {PLAYLIST.by} · {place}
+                <b>{PLAYLIST.name}</b>
+                <span>
+                  {PLAYLIST.by} · {place}
+                </span>
               </span>
+              <button type="button" className="yt-pill yt-pill--white" onClick={() => pick(0)}>
+                <Play size={15} strokeWidth={0} fill="currentColor" aria-hidden />
+                Play all
+              </button>
             </header>
             <ol>
               {found.map(({ v, i }) => (
                 <li key={i}>
-                  <button type="button" className={`yt-item${i === at ? ' on' : ''}`} aria-current={i === at || undefined} onClick={() => (setAt(i), setStarted(true))}>
+                  <button type="button" className={`yt-item${i === at ? ' on' : ''}`} aria-current={i === at || undefined} onClick={() => pick(i)}>
                     <span className="n" aria-hidden>
                       {i === at ? '▶' : i + 1}
                     </span>
