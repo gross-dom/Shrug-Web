@@ -158,7 +158,7 @@ async function terminal(browser) {
   // window of its own, as any of the others is
   await type('open')
   const offered = (await lines()).slice(-1)[0].replace(/^open: what\? /, '').replace(/\.$/, '').split(', ')
-  const windows = { portfolio: 'finder', faqs: 'notes', vip: 'store', chat: 'messages', about: 'about' }
+  const windows = { portfolio: 'finder', faqs: 'notes', vip: 'myvip', chat: 'messages', about: 'about' }
   const opened = []
   for (const name of offered) {
     await type(`open ${name}`)
@@ -167,12 +167,12 @@ async function terminal(browser) {
     await p.click('[data-dock-app="terminal"]')
     await p.waitForTimeout(500)
   }
-  check('open <app>: each of the five it offers opens its window, VIP the store’s', offered.join() === 'portfolio,faqs,vip,chat,about' && opened.join() === offered.map((name) => `${name}:${windows[name]}`).join(), opened.join())
+  check('open <app>: each of the five it offers opens its window, VIP My VIP’s', offered.join() === 'portfolio,faqs,vip,chat,about' && opened.join() === offered.map((name) => `${name}:${windows[name]}`).join(), opened.join())
   const pagesBefore = t.ctx.pages().length
   await type('open vip')
   await p.waitForTimeout(1200)
-  const handed = { said: (await lines()).slice(-1)[0], links: await p.locator('.wf[data-app="terminal"] .term__link', { hasText: 'open vip' }).count(), front: await front(), path: await p.evaluate(() => { try { return document.querySelector('.wf[data-app="store"] iframe')?.contentWindow?.location?.pathname ?? null } catch { return null } }) }
-  check('open vip: says it is opening, and opens the VIP Store window on the store: no link, and no tab', handed.said === 'opening vip.' && handed.links === 0 && handed.front === 'store' && handed.path === '/vip/store/' && t.ctx.pages().length === pagesBefore && (await p.locator('.wf[data-app="photos"]').count()) === 0, JSON.stringify(handed))
+  const handed = { said: (await lines()).slice(-1)[0], links: await p.locator('.wf[data-app="terminal"] .term__link', { hasText: 'open vip' }).count(), front: await front(), path: await p.evaluate(() => { try { return document.querySelector('.wf[data-app="myvip"] iframe')?.contentWindow?.location?.pathname ?? null } catch { return null } }) }
+  check('open vip: says it is opening, and opens My VIP’s window on the store’s own pages: no link, and no tab', handed.said === 'opening vip.' && handed.links === 0 && handed.front === 'myvip' && handed.path === '/vip/store/' && t.ctx.pages().length === pagesBefore && (await p.locator('.wf[data-app="photos"]').count()) === 0, JSON.stringify(handed))
   await p.click('[data-dock-app="terminal"]')
   await p.waitForTimeout(500)
   await type('open photos')

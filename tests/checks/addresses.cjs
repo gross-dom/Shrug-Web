@@ -91,8 +91,9 @@ const check = (name, ok, detail = '') => {
     if (app && app !== 'home') check(`…with no Lock Screen on the way`, !v.seenLock.v)
     await v.t.ctx.close()
   }
-  // and on the desktop (where an address that asks for VIP by name opens the store's window, with the conversation)
-  for (const [tail, want] of [['?open=Portfolio;FAQs', 'finder,messages,notes'], ['case-studies', 'messages,terminal'], ['?open=vip', 'messages,store'], ['?open=VIP-Store;faqs', 'messages,notes,store'], ['?open=photos,portfolio', 'finder,messages'], ['?phone=0', 'messages'], ['?PHONE', null], ['?phone=off&open=faqs', 'messages,notes']]) {
+  // and on the desktop (where an address that asks for VIP by name opens My VIP, and one that asks for a store
+  // by a name it has or had opens that store, each with the conversation)
+  for (const [tail, want] of [['?open=Portfolio;FAQs', 'finder,messages,notes'], ['case-studies', 'messages,terminal'], ['?open=vip', 'messages,myvip'], ['?open=my-vip', 'messages,myvip'], ['?open=VIP-Store;faqs', 'messages,notes,store'], ['?open=artstore', 'messages,store'], ['?open=books', 'books,messages'], ['?open=workspace', 'messages,workspace'], ['?open=photos,portfolio', 'finder,messages'], ['?phone=0', 'messages'], ['?PHONE', null], ['?phone=off&open=faqs', 'messages,notes']]) {
     v = await visit('desktop', tail, 1500)
     const got = await v.t.page.evaluate(() => (document.querySelector('.dock') ? [...document.querySelectorAll('.wf[data-app]')].filter((w) => !w.hasAttribute('inert') && getComputedStyle(w).visibility !== 'hidden').map((w) => w.getAttribute('data-app')).sort().join() : null))
     check(`desktop ${tail} -> ${want ?? 'the iPhone'}`, got === want, String(got))

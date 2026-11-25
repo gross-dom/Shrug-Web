@@ -100,7 +100,7 @@ const check = (name, ok, detail = '') => {
   await p.locator('.menubar__login').click()
   await p.waitForTimeout(300)
   let acct = await p.evaluate(() => ({ name: document.querySelector('.account').getAttribute('aria-label'), who: [...document.querySelectorAll('.account__who b, .account__who small')].map((el) => el.textContent).join(' / '), rows: [...document.querySelectorAll('.account__row')].map((r) => r.firstChild.textContent.trim()), points: document.querySelector('.account__row small').textContent, links: document.querySelectorAll('.account a').length }))
-  check('logged in, the sheet has who they are, their points, the store (a row that opens its window: nothing here is a link), their name and picture, and Log Out', acct.name === 'Your account' && acct.who === 'Riley Chen / Member' && acct.rows.join(' | ') === 'Points | Open VIP Store | Edit Name and Picture… | Log Out' && /^100 pts · \$10/.test(acct.points) && acct.links === 0, JSON.stringify(acct))
+  check('logged in, the sheet has who they are, their points, My VIP (a row that opens its window: nothing here is a link), their name and picture, and Log Out', acct.name === 'Your account' && acct.who === 'Riley Chen / Member' && acct.rows.join(' | ') === 'Points | Open My VIP | Edit Name and Picture… | Log Out' && /^100 pts · \$10/.test(acct.points) && acct.links === 0, JSON.stringify(acct))
   await p.keyboard.press('Escape')
 
   // ---- a reload keeps them in; Log Out; and the next time they are texted at the number they gave
@@ -155,7 +155,7 @@ const check = (name, ok, detail = '') => {
   await p.locator('.menubar__login').click()
   await p.waitForTimeout(300)
   acct = await p.evaluate(() => ({ who: [...document.querySelectorAll('.account__who b, .account__who small')].map((el) => el.textContent).join(' / '), rows: [...document.querySelectorAll('.account__row')].map((r) => r.firstChild.textContent.trim()), points: document.querySelector('.account__row small').textContent }))
-  check('an LP’s sheet says which funds, and has the way to Updates', acct.who === 'Jordan Avery / LP · Shrug 2, Shrug 4' && acct.rows.join(' | ') === 'Points | Open VIP Store | Open Updates | Edit Name and Picture… | Log Out' && /^8,400 pts · \$840/.test(acct.points), JSON.stringify(acct))
+  check('an LP’s sheet says which funds, and has the way to Updates', acct.who === 'Jordan Avery / LP · Shrug 2, Shrug 4' && acct.rows.join(' | ') === 'Points | Open My VIP | Open Updates | Edit Name and Picture… | Log Out' && /^8,400 pts · \$840/.test(acct.points), JSON.stringify(acct))
   check('nothing went wrong on the way', t.errors.length === 0, t.errors.join(' | '))
   await t.ctx.close()
 

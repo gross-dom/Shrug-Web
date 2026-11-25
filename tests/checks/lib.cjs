@@ -66,7 +66,9 @@ exports.DOCK = [
   ['terminal', 'Case Studies', 'Private. Ask nicely.'],
   ['mail', 'Mail', 'Twenty exchanges that led to something'],
   ['workspace', 'Workspace', 'The chair, in every color'],
-  ['store', 'VIP Store', 'Points, and what they buy'],
+  ['store', 'ArtStore', 'Six pieces, fifty of each'],
+  ['books', 'Books', 'Five books from Shrug'],
+  ['myvip', 'My VIP', 'Your card, points and orders'],
 ]
 exports.DOCK_IDS = exports.DOCK.map(([id]) => id)
 

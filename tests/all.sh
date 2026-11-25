@@ -40,7 +40,8 @@ run "portfolio and FAQs"             node portfolio-faqs.cjs $BASE
 run "terminal and VIP"               node terminal-vip.cjs $BASE
 run "wallpapers"                     node wallpapers.cjs $BASE
 run "log in and LP Updates"          node account.cjs $BASE
-run "VIP Store, in its window"       node store-window.cjs $BASE
+run "ArtStore, Books and My VIP"     node store-window.cjs $BASE
+run "icons dragged, layout kept"     node layout.cjs $BASE
 run "Updates, Preview, the one-pager" node preview.cjs $BASE
 run "Mail"                           node mail.cjs $BASE
 run "the desk's apps, and a message" node desk-apps.cjs $BASE

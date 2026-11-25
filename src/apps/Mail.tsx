@@ -338,7 +338,7 @@ export function MailApp() {
   const list = (found: Exchange[]) => {
     let under = ''
     return (
-      <ol className="ml-list" role="listbox" aria-label={`${splitName}: ${found.length === 1 ? 'one exchange' : `${found.length} exchanges`}`} aria-activedescendant={found[cursor] ? `mail-${found[cursor]!.id}` : undefined}>
+      <ol className="ml-list" tabIndex={0} role="listbox" aria-label={`${splitName}: ${found.length === 1 ? 'one exchange' : `${found.length} exchanges`}`} aria-activedescendant={found[cursor] ? `mail-${found[cursor]!.id}` : undefined}>
         {found.map((x, i) => {
           const group = groupOf(x.date)
           const head = group !== under
@@ -728,7 +728,7 @@ function Shortcuts({ onClose }: { onClose: () => void }) {
         <h2>
           <Keyboard size={15} strokeWidth={1.7} aria-hidden />
           Keyboard shortcuts
-          <button type="button" aria-label="Close" onClick={onClose}>
+          <button type="button" aria-label="Close: esc" onClick={onClose}>
             <K>esc</K>
           </button>
         </h2>

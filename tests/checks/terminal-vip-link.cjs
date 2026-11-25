@@ -12,7 +12,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   const leaves = (l) => !!l && l.tag === 'A' && l.href === POINTS && l.target === '_blank' && /\bnoreferrer\b/.test(l.rel)
   const noVip = (p) => p.evaluate(() => document.querySelectorAll('.wf[data-app="photos"], .wf[data-app="vip"], .sb-slot[data-app="photos"], .sb-slot[data-app="vip"], [data-dock-app="photos"]').length === 0)
 
-  // ================= the desktop: VIP is the store, in a window, by every route
+  // ================= the desktop: where VIP was a link there are windows now. The drops lead to ArtStore; VIP by name is My VIP
   let t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still' })
   let p = t.page
   await arrived(p)
@@ -38,7 +38,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await p.locator('.wf[data-app="messages"] .chat__thread .chat-link').click()
   await p.waitForTimeout(1500)
   let now = await store(p)
-  check('desktop: pressed, it opens the VIP Store window, in front, on the store, and no tab', now.open && now.front === 'store' && now.path === '/vip/store/' && tabs() === before && (await noVip(p)), JSON.stringify(now))
+  check('desktop: pressed, it opens ArtStore’s window, in front, on the store, and no tab', now.open && now.front === 'store' && now.path === '/vip/store/' && tabs() === before && (await noVip(p)), JSON.stringify(now))
   await shut(p)
 
   // About Shrug counts the drops with the rest; that row is VIP's, and opens the store as VIP does
@@ -54,7 +54,7 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await p.locator('.wf[data-app="about"] button.about__fact', { hasText: 'Drops' }).click()
   await p.waitForTimeout(1500)
   now = await store(p)
-  check('desktop: pressed, it opens the VIP Store window, and no tab', now.open && now.front === 'store' && tabs() === before, JSON.stringify(now))
+  check('desktop: pressed, it opens ArtStore’s window, and no tab', now.open && now.front === 'store' && tabs() === before, JSON.stringify(now))
 
   // The menus: the Go menu has it with the Dock's apps, the Window menu lists its window while it is open
   const menus = {}
@@ -66,13 +66,19 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
     await p.keyboard.press('Escape'); await p.waitForTimeout(200)
   }
   const links = Object.values(menus).flat().filter((item) => item && /^link .*VIP|Photos|Videos/.test(item))
-  check('desktop: in the menus VIP is the store, an app like the others: in the Go menu, in the Window menu while open, and nowhere a link', menus.go.includes('item VIP Store') && menus.window.includes('item VIP Store') && menus.app.includes('item Quit VIP Store') && links.length === 0, JSON.stringify(menus))
+  check('desktop: in the menus the stores are apps like the others: ArtStore, Books and My VIP in the Go menu, ArtStore in the Window menu while open, and nowhere a link', ['item ArtStore', 'item Books', 'item My VIP'].every((item) => menus.go.includes(item)) && menus.window.includes('item ArtStore') && menus.app.includes('item Quit ArtStore') && links.length === 0, JSON.stringify(menus))
   await shut(p)
   await p.click('[data-menu-title="go"]'); await p.waitForTimeout(250)
-  await p.locator('[data-menu="go"] [data-menu-item]', { hasText: 'VIP Store' }).click()
+  await p.locator('[data-menu="go"] [data-menu-item]', { hasText: 'ArtStore' }).click()
   await p.waitForTimeout(1500)
   now = await store(p)
-  check('desktop: the Go menu’s VIP Store opens the window', now.open && now.front === 'store', JSON.stringify(now))
+  check('desktop: the Go menu’s ArtStore opens the window', now.open && now.front === 'store', JSON.stringify(now))
+  await p.click('[data-menu-title="go"]'); await p.waitForTimeout(250)
+  await p.locator('[data-menu="go"] [data-menu-item]', { hasText: 'My VIP' }).click()
+  await p.waitForTimeout(1500)
+  const mine = await p.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, doors: document.querySelectorAll('.wf[data-app="myvip"] .myvip__door').length }))
+  check('desktop: the Go menu’s My VIP opens its window, with the doors to the stores', mine.front === 'myvip' && mine.doors === 3, JSON.stringify(mine))
+  await p.locator('.wf[data-app="myvip"] .wf__light[data-kind="close"]').click(); await p.waitForTimeout(500)
 
   // A desk kept by the site as it was long ago, with a window it no longer has (a tab left open over a change,
   // then reloaded): the windows the site has come back, the store among them, and nothing comes back for the other

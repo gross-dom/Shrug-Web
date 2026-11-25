@@ -263,7 +263,9 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
 
   // Their card, as the card page draws it. Pressed, it goes there
   const card = (
-    <a className="mc-link" href={CARD} aria-label="Your card. Open it">
+    <a className="mc-link" href={CARD}>
+      {/* (said first, and what is on the card after it: a link's name holds the words it shows) */}
+      <span className="sr">Your card. Open it. </span>
       <div className={`mc m-${stock}`}>
         <div className="mc-top">
           <Wordmark lockup="shrug" height={15} />

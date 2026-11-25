@@ -166,8 +166,9 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const at = all.findIndex((p) => p.id === product.id)
   const way = wayOf(product)
   const shots = shotsOf(product)
-  // What the member had when this was opened: the sums stay theirs while they are looked at
-  const [balance] = useState(shop.member.points)
+  // What the member has to spend. It stays as it was once something is bought here, so that the receipt's
+  // sums are the ones that were paid; until then it follows what they have now (below)
+  const [balance, setBalance] = useState(shop.member.points)
   const most = mostPoints({ points: balance }, product)
   const [option, setOption] = useState(product.options.length === 1 ? product.options[0]! : '')
   // To begin with every point it will take is used: that is its best price, and the member can ease them off
@@ -186,6 +187,14 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   /** Which of its pictures is on show. */
   const [seen, setSeen] = useState(0)
   const swipe = useRef<number | null>(null)
+
+  // Someone who logs in while they are looking at this, or spends points in another of the desk's stores,
+  // is shown their own sums: every point they have now, to begin with
+  useEffect(() => {
+    if (done || busy || shop.member.points === balance) return
+    setBalance(shop.member.points)
+    setWanted(mostPoints({ points: shop.member.points }, product))
+  }, [shop.member.points]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const points = way === 'buy' ? fitPoints({ points: balance }, product, wanted) : 0
   const price = priceCents(product)

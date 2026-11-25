@@ -243,7 +243,7 @@ function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?
     const words = HEADS[why ?? 'plain']
     return (
       <form className="account__form" onSubmit={sendEmail} noValidate>
-        <h3 className="account__head">{words.head}</h3>
+        <h2 className="account__head">{words.head}</h2>
         <p className="account__lead">{says ?? words.lead}</p>
         <label className="account__field">
           <span className="sr-only">Email address</span>
@@ -267,7 +267,7 @@ function Sheet({ who, why, says, onDone }: { who: Member | null; why: Why; says?
     const linked = adding && who?.via === 'link'
     return (
       <form className="account__form" onSubmit={sendPhone} noValidate>
-        <h3 className="account__head">{!adding ? 'What’s your number?' : linked ? `Welcome${who?.first ? `, ${who.first}` : ''}` : who?.needs.phone ? 'Email confirmed' : 'A new number'}</h3>
+        <h2 className="account__head">{!adding ? 'What’s your number?' : linked ? `Welcome${who?.first ? `, ${who.first}` : ''}` : who?.needs.phone ? 'Email confirmed' : 'A new number'}</h2>
         <p className="account__lead">
           {!adding
             ? 'We’ll text you a six-digit code. This number is how you’ll log in from now on.'
@@ -377,7 +377,7 @@ function CodeStep({ stage, who, email, code, busy, told, onTyped, onAgain }: { s
   const inbox = stage.kind === 'inbox'
   return (
     <div className="account__form">
-      <h3 className="account__head">{inbox ? 'Check your inbox' : 'Enter the code'}</h3>
+      <h2 className="account__head">{inbox ? 'Check your inbox' : 'Enter the code'}</h2>
       <p className="account__lead">{inbox ? `We emailed six digits to ${hidden((who?.email ?? email).trim())} to confirm it’s you.` : stage.phone ? `Texted to ${pretty(stage.phone)}.` : `Texted to your number ending in ${stage.to ?? '••'}.`}</p>
       <Code value={code} bad={!!told && code.length === 6} busy={busy} label={inbox ? 'The six digits we emailed' : 'The six digits we texted'} onChange={onTyped} />
       {told && (
@@ -401,7 +401,7 @@ function Paused({ until, what, onOver, onHelp }: { until: number; what: 'number'
   const left = useLeft(until)
   return (
     <div className="account__form">
-      <h3 className="account__head">Too many tries</h3>
+      <h2 className="account__head">Too many tries</h2>
       <p className="account__lead">To keep your account safe, new codes are paused for this {what}.</p>
       <button type="button" className="account__go" disabled={left > 0} onClick={onOver}>
         {left > 0 ? `Try again in ${clock(left)}` : 'Try Again'}
@@ -449,7 +449,7 @@ function Profile({ who, first, onSaved }: { who: Member; first: boolean; onSaved
   const mine = 'url' in picture ? picture.url : null
   return (
     <form className="account__form" onSubmit={save} noValidate>
-      <h3 className="account__head">{first ? 'Make it yours' : 'Name and picture'}</h3>
+      <h2 className="account__head">{first ? 'Make it yours' : 'Name and picture'}</h2>
       <label className="account__field">
         <span className="account__label">Display name</span>
         <input ref={field} type="text" autoComplete="nickname" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />

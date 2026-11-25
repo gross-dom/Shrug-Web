@@ -38,7 +38,7 @@ function Cover({ book, n }: { book: Product; n: number }) {
   const shot = shotsOf(book)[0]
   if (shot) return <img src={shot.small} alt="" loading="lazy" decoding="async" draggable={false} style={shot.at ? { objectPosition: shot.at } : undefined} />
   return (
-    <span className="bk-drawn" style={{ background: `linear-gradient(160deg, ${TONES[n % TONES.length]}, #101114)` }}>
+    <span className="bk-drawn" aria-hidden style={{ background: `linear-gradient(160deg, ${TONES[n % TONES.length]}, #101114)` }}>
       <b>{book.name}</b>
       <small>Shrug</small>
     </span>
@@ -135,7 +135,7 @@ export function BooksApp() {
                       <Cover book={b} n={books.indexOf(b)} />
                     </span>
                     <b>{b.name}</b>
-                    <small>{b.status === 'Pre-order' ? 'Pre-order' : 'Shrug'}</small>
+                    <small>Shrug</small>
                     <span className="bk-pill" data-mine={orderOf(b) ? '' : undefined}>
                       {tagOf(b, orderOf(b))}
                     </span>

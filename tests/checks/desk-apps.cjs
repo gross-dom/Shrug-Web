@@ -85,28 +85,97 @@ const check = (name, ok, detail = '') => {
   if (wasMin) { await p.locator('[data-dock-app="quicktime"]').click(); await p.waitForTimeout(600); await close(p, 'quicktime') }
   check('closed, it leaves the Dock', (await dock(p)) === A.DOCK_IDS.join(' '), await dock(p))
 
-  // ---- Spotify
+  // ---- Spotify: laid out as Spotify is (Dom's screenshots of it are the look)
   await openFromDesk(p, 'spotify')
-  const sp = await p.evaluate(() => { const w = document.querySelector('.wf[data-app="spotify"]'); return { side: [...w.querySelectorAll('.sp-side button')].map((b) => b.textContent.trim()).slice(0, 2).join(' | '), lists: w.querySelectorAll('.sp-side button.pl').length, head: w.querySelector('.sp-main h1').textContent, rows: w.querySelectorAll('button.sp-row').length, bar: w.querySelector('.sp-bar').innerText.replace(/\s*\n\s*/g, ' / '), frames: w.querySelectorAll('iframe').length } })
-  check('Spotify opens 1000 by 660: Podcasts and Playlists in its sidebar, seven episodes listed, and a bar that asks for one to be picked', (await sizeOf(p, 'spotify')) === '1000x660' && sp.side === 'Podcasts | Playlists' && sp.lists === 4 && sp.head === 'Podcasts' && sp.rows === 7 && /^Pick an episode or a playlist to play\. \/ Plays through Spotify$/.test(sp.bar) && sp.frames === 0, JSON.stringify(sp))
-  await p.locator('.wf[data-app="spotify"] button.sp-row').nth(2).click()
+  const S = '.wf[data-app="spotify"]'
+  const sp = () =>
+    p.evaluate((S) => {
+      const w = document.querySelector(S)
+      const dark = (el) => { const m = /rgba?\((\d+), (\d+), (\d+)/.exec(getComputedStyle(el).backgroundColor); return !!m && +m[1] < 40 && +m[2] < 40 && +m[3] < 40 }
+      return {
+        view: w.querySelector('.sp-main').getAttribute('aria-label'),
+        lib: [...w.querySelectorAll('.sp-lib .sp-item')].map((b) => `${b.innerText.replace(/\s*\n\s*/g, '/')}${b.getAttribute('aria-current') ? '*' : ''}`),
+        home: w.querySelector('.spbar__home').getAttribute('aria-current'),
+        search: w.querySelector('.sp-search input').placeholder,
+        back: w.querySelector('.spbar__nav button[aria-label="Back"]').getAttribute('aria-disabled'),
+        tiles: w.querySelectorAll('.sp-tiles > li').length,
+        sects: [...w.querySelectorAll('.sp-sect')].map((x) => x.innerText.replace(/\s*\n\s*/g, '/')).join(' | '),
+        cards: w.querySelectorAll('.sp-card').length,
+        rows: w.querySelectorAll('button.sp-row').length,
+        on: [...w.querySelectorAll('button.sp-row')].findIndex((r) => r.classList.contains('on')),
+        eq: !!w.querySelector('.sp-row.on .sp-eq'),
+        hero: w.querySelector('.sp-hero')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
+        stand: w.querySelector('.sp-stand')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
+        tag: w.querySelector('.sp-main .sp-tag')?.textContent ?? null,
+        now: w.querySelector('.sp-now').innerText.replace(/\s*\n\s*/g, ' / '),
+        frames: w.querySelectorAll('iframe').length,
+        panels: dark(w.querySelector('.sp-lib')) && dark(w.querySelector('.sp-main')) && dark(w.querySelector('.sp-now')),
+      }
+    }, S)
+  let so = await sp()
+  check('Spotify opens 1000 by 660 on Home: the way back and on, Home and one long search field along its head', (await sizeOf(p, 'spotify')) === '1000x660' && so.view === 'Home' && so.home === 'page' && so.search === 'What do you want to play?' && so.back === 'true', JSON.stringify(so))
+  check('it is three dark panels: Your Library (the podcasts, then each playlist), the main pane, and the bar at the foot where what is playing is', so.panels && so.lib.length === 5 && /^Podcasts\/7 episodes/.test(so.lib[0]) && so.lib.slice(1).every((l) => /\/Playlist · Shrug$/.test(l)), JSON.stringify(so.lib))
+  check('Home has its tiles and its sections, Podcasts and Playlists, each with Show all; nothing is playing, and nothing of Spotify’s is fetched', so.tiles === 8 && so.sects === 'Shrug’s network, on air/Podcasts/Show all | From the team/Playlists/Show all' && so.cards === 4 && /^Nothing playing \/ Pick an episode or a playlist to play\./.test(so.now) && /Plays through Spotify$/.test(so.now) && so.frames === 0, JSON.stringify(so))
+  await p.locator(`${S} .sp-lib .sp-item`).first().click()
   await p.waitForTimeout(400)
-  const picked = await p.evaluate(() => { const w = document.querySelector('.wf[data-app="spotify"]'); return { on: [...w.querySelectorAll('button.sp-row')].findIndex((r) => r.classList.contains('on')), eq: !!w.querySelector('.sp-row.on .sp-eq'), bar: w.querySelector('.sp-bar').innerText.replace(/\s*\n\s*/g, ' / '), frames: w.querySelectorAll('iframe').length } })
-  check('an episode picked is marked in the list; with no link to Spotify yet, the bar says so and nothing of Spotify’s is fetched', picked.on === 2 && picked.eq && /has no link to Spotify yet/.test(picked.bar) && picked.frames === 0, JSON.stringify(picked))
-  await p.locator('.wf[data-app="spotify"] .sp-side button.pl').nth(1).click()
+  so = await sp()
+  check('Podcasts, from the library: its page under its name, the seven episodes in a table, and the way back lit', so.view === 'Podcasts' && so.hero === 'Podcasts / Shrug’s network, on air / Shrug · 7 episodes' && so.rows === 7 && so.back === null && /\*$/.test(so.lib[0]), JSON.stringify(so))
+  await p.locator(`${S} button.sp-row`).nth(2).click()
   await p.waitForTimeout(400)
-  const list = await p.evaluate(() => { const w = document.querySelector('.wf[data-app="spotify"]'); return { head: w.querySelector('.sp-main h1').textContent, pane: w.querySelector('.sp-embed')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? '', on: w.querySelector('.sp-side button.pl.on') ? 1 : 0 } })
-  check('a playlist is the main pane’s: Spotify’s own player goes there, and it says a listener who is not signed in hears previews', list.on === 1 && /Spotify’s embedded player/.test(list.pane) && /Previews, unless you’re signed in to Spotify/.test(list.pane), JSON.stringify(list))
+  so = await sp()
+  check('an episode picked is marked in the table and named in the bar at the foot; with no link to Spotify yet, the bar says so and nothing is fetched', so.on === 2 && so.eq && /has no link to Spotify yet/.test(so.now) && so.frames === 0, JSON.stringify(so))
+  await p.locator(`${S} .sp-lib .sp-item`).nth(2).click()
+  await p.waitForTimeout(400)
+  so = await sp()
+  check('a playlist is the main pane’s: its page, where Spotify’s own player goes', /^Public Playlist \/ /.test(so.hero ?? '') && /^Spotify’s own player goes here \/ /.test(so.stand ?? '') && /\*$/.test(so.lib[2]), JSON.stringify(so))
+  await p.locator(`${S} .spbar__nav button[aria-label="Back"]`).click()
+  await p.waitForTimeout(300)
+  check('Back goes to where it was: Podcasts', (await sp()).view === 'Podcasts', (await sp()).view)
+  await p.locator(`${S} .sp-search input`).fill('zzzz')
+  await p.waitForTimeout(300)
+  const nothing = await p.locator(`${S} .sp-none`).first().innerText()
+  check('the search field searches the room, and says when nothing in it is called that', (await sp()).rows === 0 && nothing === 'Nothing in the room is called that.', nothing)
   await close(p, 'spotify')
 
-  // ---- YouTube
+  // ---- YouTube: its watch page
   await openFromDesk(p, 'youtube')
-  const yt = await p.evaluate(() => { const w = document.querySelector('.wf[data-app="youtube"]'); return { sub: w.querySelector('.ytbar__sub').textContent, items: w.querySelectorAll('.yt-item').length, on: [...w.querySelectorAll('.yt-item')].findIndex((i) => i.classList.contains('on')), head: w.querySelector('.yt-list header').innerText.replace(/\s*\n\s*/g, ' / '), info: w.querySelector('.yt-info').innerText.replace(/\s*\n\s*/g, ' / '), frames: w.querySelectorAll('iframe').length, ratio: (() => { const r = w.querySelector('.yt-player').getBoundingClientRect(); return Math.round((r.width / r.height) * 100) / 100 })() } })
-  check('YouTube opens 1100 by 664: the player, sixteen by nine, with the list of twelve beside it, the first picked', (await sizeOf(p, 'youtube')) === '1100x664' && yt.sub === 'Videos the team loves' && yt.items === 12 && yt.on === 0 && yt.head === 'Videos the team loves / Shrug · 1 of 12' && yt.ratio === 1.78, JSON.stringify(yt))
-  check('under the player: the video’s title, its channel and place, and why it is here; nothing of YouTube’s is fetched until one is played', /· 1 of 12 \/ Why it’s here/i.test(yt.info) && yt.frames === 0, yt.info)
-  await p.locator('.wf[data-app="youtube"] .yt-item').nth(3).click()
+  const Y = '.wf[data-app="youtube"]'
+  const yt = () =>
+    p.evaluate((Y) => {
+      const w = document.querySelector(Y)
+      const r = w.querySelector('.yt-player').getBoundingClientRect()
+      return {
+        mark: w.querySelector('.ytbar__mark').getAttribute('aria-label'),
+        search: w.querySelector('.yt-search input').getAttribute('aria-label'),
+        menu: w.querySelector('.ytbar__menu').getAttribute('aria-label'),
+        items: w.querySelectorAll('.yt-item').length,
+        on: [...w.querySelectorAll('.yt-item')].findIndex((i) => i.classList.contains('on')),
+        head: w.querySelector('.yt-list header')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
+        h1: w.querySelector('.yt-col h1')?.textContent,
+        under: w.querySelector('.yt-under').innerText.replace(/\s*\n\s*/g, ' / '),
+        why: w.querySelector('.yt-why').innerText.replace(/\s*\n\s*/g, ' / '),
+        frames: w.querySelectorAll('iframe').length,
+        ratio: Math.round((r.width / r.height) * 100) / 100,
+        radius: getComputedStyle(w.querySelector('.yt-player')).borderRadius,
+        still: !!w.querySelector('.yt-item .yt-th'),
+      }
+    }, Y)
+  let yo = await yt()
+  check('YouTube opens 1100 by 664 as its watch page: its mark and a search field along the head, the rounded player sixteen by nine, and the list of twelve at the right, the first picked', (await sizeOf(p, 'youtube')) === '1100x664' && yo.mark === 'YouTube' && yo.search === 'Search Videos the team loves' && yo.items === 12 && yo.on === 0 && yo.head === 'Videos the team loves / Shrug · 1 / 12' && yo.ratio === 1.78 && yo.radius === '12px' && yo.still, JSON.stringify(yo))
+  check('under the player: the title, the channel and its place, and what the team says of it; nothing of YouTube’s is fetched until one is played', !!yo.h1 && /· 1 \/ 12/.test(yo.under) && /^Why it’s here \/ /.test(yo.why) && yo.frames === 0, JSON.stringify({ under: yo.under, why: yo.why }))
+  await p.locator(`${Y} .yt-item`).nth(3).click()
   await p.waitForTimeout(300)
-  check('a video picked in the list is the one shown', (await p.evaluate(() => document.querySelector('.wf[data-app="youtube"] .yt-list header span').textContent)) === 'Shrug · 4 of 12')
+  yo = await yt()
+  check('a video picked in the list is the one shown', yo.on === 3 && yo.head === 'Videos the team loves / Shrug · 4 / 12', JSON.stringify({ on: yo.on, head: yo.head }))
+  await p.locator(`${Y} .yt-search input`).fill('zzzz')
+  await p.waitForTimeout(300)
+  check('the search filters the list, and says when nothing in it is called that', (await p.locator(`${Y} .yt-item`).count()) === 0 && (await p.locator(`${Y} .yt-none`).innerText()) === 'Nothing in the list is called that.', '')
+  await p.locator(`${Y} .yt-search button[aria-label="Clear"]`).click()
+  await p.waitForTimeout(200)
+  await p.locator(`${Y} .ytbar__menu`).click()
+  await p.waitForTimeout(300)
+  const wide = await p.evaluate((Y) => ({ says: document.querySelector(`${Y} .ytbar__menu`).getAttribute('aria-label'), list: document.querySelector(`${Y} .yt-list`) ? getComputedStyle(document.querySelector(`${Y} .yt-list`)).display : 'none' }), Y)
+  check('the menu at the head puts the list away, for the player alone', wide.says === 'Show the list' && wide.list === 'none', JSON.stringify(wide))
   await close(p, 'youtube')
 
   // ---- Wallpapers: Photographs
@@ -167,16 +236,46 @@ const check = (name, ok, detail = '') => {
   p = t.page
   await p.waitForTimeout(1600)
   await openFromDesk(p, 'photobooth')
-  const pb = (p) => p.evaluate(() => { const w = document.querySelector('.wf[data-app="photobooth"]'); const b = w.querySelector('.pb'); return { stage: b.dataset.stage, msg: w.querySelector('.pb-msg')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null, shutter: w.querySelector('.pb-shutter')?.getAttribute('aria-label') ?? null, ctl: [...w.querySelectorAll('.pb-ctl button')].map((x) => x.getAttribute('aria-label') ?? x.textContent.trim()).join(' | '), strip: w.querySelector('.pb-strip').innerText.replace(/\s*\n\s*/g, ' / '), wall: w.querySelectorAll('.pb-th').length, toast: w.querySelector('.pb-toast')?.textContent ?? null, line: w.querySelector('.pb-line')?.textContent ?? null } })
+  const pb = (p) =>
+    p.evaluate(() => {
+      const w = document.querySelector('.wf[data-app="photobooth"]')
+      const b = w.querySelector('.pb')
+      return {
+        stage: b.dataset.stage,
+        msg: w.querySelector('.pb-msg')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
+        shutter: w.querySelector('.pb-shutter')?.getAttribute('aria-label') ?? null,
+        ctl: [...w.querySelectorAll('.pb-ctl button')].map((x) => (x.getAttribute('aria-label') ?? x.textContent.trim()) + (x.getAttribute('aria-pressed') === 'true' ? '*' : '') + (x.disabled || x.getAttribute('aria-disabled') === 'true' ? ' (off)' : '')).join(' | '),
+        strip: w.querySelector('.pb-strip')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
+        wall: w.querySelectorAll('.pb-th').length,
+        toast: w.querySelector('.pb-toast')?.textContent ?? null,
+        order: [...b.children].map((c) => c.className.split(' ')[0]).join(' '),
+        cam: !!w.querySelector('video.pb-cam'),
+      }
+    })
+  const logIn = async (p) => {
+    await p.locator('.account input[type=email]').fill('riley@example.test')
+    await p.keyboard.press('Enter'); await p.waitForTimeout(900)
+    await p.keyboard.type('4155550134'); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
+    await p.keyboard.type('246810'); await p.waitForTimeout(1500)
+    await p.keyboard.type('Riley Chen'); await p.locator('.account__go').click(); await p.waitForTimeout(1800)
+  }
   let b = await pb(p)
-  check('Photo Booth opens 780 by 660 asking for the camera, saying what happens next and that nothing is saved or posted', (await sizeOf(p, 'photobooth')) === '780x660' && b.stage === 'ask' && b.msg === 'Photo Booth would like to use your camera / Your browser will ask next. Nothing is saved or posted until you choose to. / Allow Camera' && b.shutter === 'Take photo, unavailable', JSON.stringify(b))
-  check('with nothing posted yet the wall says so', b.strip === 'No photos yet. Take one and be first on the wall.' && b.wall === 0, b.strip)
+  check('Photo Booth opens 780 by 660, and is for someone logged in: a visitor is shown the door, and the camera is not asked for', (await sizeOf(p, 'photobooth')) === '780x660' && b.stage === 'door' && b.msg === 'Log in to use Photo Booth / Photo Booth is for members. Logging in makes your account, and the camera is asked for after. / Log In' && !b.cam && b.shutter === 'Take photo, unavailable', JSON.stringify(b))
+  check('it is laid out as the Mac’s: the picture, the strip under it, and one bar with the view’s switch, the shutter and Effects', b.order === 'pb-view pb-strip pb-ctl' && /^Four to a sheet \| One photo\* \| A film: not in this booth \(off\) \| Take photo, unavailable \(off\)/.test(b.ctl), JSON.stringify({ order: b.order, ctl: b.ctl }))
+  check('with nothing posted yet the wall says so', b.strip === 'No photos yet. Take one and be first on the wall.' && b.wall === 0, String(b.strip))
+  await p.locator('.pb-msg .pb-btn').click()
+  await p.waitForTimeout(500)
+  const door = await p.evaluate(() => ({ head: document.querySelector('.account__head')?.textContent, lead: document.querySelector('.account__lead')?.textContent }))
+  check('its Log In lets down the desk’s sheet, which says what for', door.head === 'Log in to use Photo Booth' && /^Photo Booth is for members\./.test(door.lead ?? ''), JSON.stringify(door))
+  await logIn(p)
+  b = await pb(p)
+  check('logged in, it asks for the camera, saying what happens next and that nothing is saved or posted', b.stage === 'ask' && b.msg === 'Photo Booth would like to use your camera / Your browser will ask next. Nothing is saved or posted until you choose to. / Allow Camera', JSON.stringify(b))
   await p.locator('.pb-msg .pb-btn').click()
   await p.waitForSelector('.pb[data-stage="live"] video.pb-cam', { timeout: 15000 })
   await p.waitForTimeout(800)
   b = await pb(p)
   const mirror = await p.evaluate(() => getComputedStyle(document.querySelector('.pb-cam')).transform)
-  check('allowed, the camera is live, shown as a mirror shows it, with Effects and the shutter', b.stage === 'live' && b.ctl === 'Effects | Take photo' && /^matrix\(-1, 0, 0, 1/.test(mirror), JSON.stringify({ b, mirror }))
+  check('allowed, the camera is live, shown as a mirror shows it, with the shutter and Effects', b.stage === 'live' && /\| Take photo \| Effects$/.test(b.ctl) && /^matrix\(-1, 0, 0, 1/.test(mirror), JSON.stringify({ b, mirror }))
   await p.locator('.pb-ctl .pb-btn', { hasText: 'Effects' }).click()
   await p.waitForTimeout(500)
   const fx = await p.evaluate(() => { const g = document.querySelector('.pb-fx'); return { names: [...g.querySelectorAll('small')].map((s) => s.textContent).join(' '), on: g.querySelector('.on small')?.textContent, role: g.getAttribute('role'), live: g.querySelectorAll('video').length } })
@@ -186,28 +285,21 @@ const check = (name, ok, detail = '') => {
   check('one picked is what the camera is seen through', /sepia/.test(await p.evaluate(() => document.querySelector('.pb-cam').style.filter)))
   await p.locator('.pb-shutter').click()
   await p.waitForTimeout(400)
-  const counting = await p.evaluate(() => ({ stage: document.querySelector('.pb').dataset.stage, n: document.querySelector('.pb-count b')?.textContent, shutter: document.querySelector('.pb-shutter')?.getAttribute('aria-label') }))
-  check('the shutter counts down from three, and is Cancel while it does', counting.stage === 'count' && counting.n === '3' && counting.shutter === 'Cancel', JSON.stringify(counting))
+  const counting = await p.evaluate(() => ({ stage: document.querySelector('.pb').dataset.stage, n: document.querySelector('.pb-count')?.innerText.replace(/\s+/g, ' '), on: document.querySelector('.pb-count b.on')?.textContent, shutter: document.querySelector('.pb-shutter')?.getAttribute('aria-label'), bar: getComputedStyle(document.querySelector('.pb-ctl')).backgroundColor }))
+  const red = /rgb\((\d+), (\d+), (\d+)\)/.exec(counting.bar)
+  check('the shutter counts down from three: the bar turns red and counts, and the camera in it cancels', counting.stage === 'count' && counting.n === '3 2 1' && counting.on === '3' && counting.shutter === 'Cancel' && !!red && +red[1] > 180 && +red[2] < 110 && +red[3] < 110, JSON.stringify(counting))
   await p.waitForSelector('.pb[data-stage="review"] img.pb-photo', { timeout: 10000 })
   await p.waitForTimeout(500)
   b = await pb(p)
   const shot = await p.evaluate(() => { const img = document.querySelector('.pb-photo'); return { jpeg: img.src.startsWith('data:image/jpeg'), w: img.naturalWidth } })
   check('then the photo, to look at: Retake, Post to the Wall, Save', b.stage === 'review' && b.ctl === 'Retake | Post to the Wall | Save' && shot.jpeg && shot.w > 300, JSON.stringify({ b, shot }))
   const [saved] = await Promise.all([p.waitForEvent('download'), p.locator('.pb-ctl .pb-btn', { hasText: 'Save' }).click()])
-  check('Save hands the photo over as a file, without logging in', /^Photo Booth \d{4}-\d\d-\d\d\.jpg$/.test(saved.suggestedFilename()), saved.suggestedFilename())
-  // posting needs someone logged in: the menu bar's sheet, and the photo is kept meanwhile
+  check('Save hands the photo over as a file', /^Photo Booth \d{4}-\d\d-\d\d\.jpg$/.test(saved.suggestedFilename()), saved.suggestedFilename())
   await p.locator('.pb-btn--post').click()
-  await p.waitForTimeout(500)
-  const asked = await p.evaluate(() => ({ head: document.querySelector('.account__head')?.textContent, lead: document.querySelector('.account__lead')?.textContent, stage: document.querySelector('.pb').dataset.stage, photo: !!document.querySelector('.pb-photo') }))
-  check('Post to the Wall, logged out, lets down Log In, which says what for; the photo is kept', asked.head === 'Log in to post' && /^Every photo on the wall has a name behind it\. Yours is kept while you log in\.$/.test(asked.lead ?? '') && asked.stage === 'review' && asked.photo, JSON.stringify(asked))
-  await p.locator('.account input[type=email]').fill('riley@example.test')
-  await p.keyboard.press('Enter'); await p.waitForTimeout(900)
-  await p.keyboard.type('4155550134'); await p.keyboard.press('Enter'); await p.waitForTimeout(900)
-  await p.keyboard.type('246810'); await p.waitForTimeout(1500)
-  await p.keyboard.type('Riley Chen'); await p.locator('.account__go').click(); await p.waitForTimeout(1600)
+  await p.waitForTimeout(1200)
   b = await pb(p)
   const first = await p.evaluate(() => { const th = document.querySelector('.pb-th'); return { name: th?.querySelector('small')?.textContent.trim(), fresh: th?.classList.contains('new'), says: th?.querySelector('button')?.getAttribute('aria-label') } })
-  check('logged in, it is posted at once: on the wall, first, with their name and picture, and the booth says it can be removed', b.wall === 1 && /Riley Chen$/.test(first.name ?? '') && first.fresh && b.toast === 'Posted. You can remove it any time.' && /^A photo by Riley Chen, \d{1,2} \w+ \d{4}$/.test(first.says ?? ''), JSON.stringify({ b, first }))
+  check('Post to the Wall posts it at once: on the wall, first, with their name and picture, and the booth says it can be removed', b.wall === 1 && /Riley Chen$/.test(first.name ?? '') && first.fresh && b.toast === 'Posted. You can remove it any time.' && /^A photo by Riley Chen, \d{1,2} \w+ \d{4}$/.test(first.says ?? ''), JSON.stringify({ b, first }))
   await p.locator('.pb-th button').first().click()
   await p.waitForTimeout(500)
   b = await pb(p)
@@ -217,6 +309,23 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(600)
   b = await pb(p)
   check('Remove takes it off the wall', b.wall === 0 && b.toast === 'Removed from the wall.', JSON.stringify(b))
+  // four to a sheet
+  if (b.stage !== 'live') { await p.locator('.pb-ctl .pb-btn', { hasText: 'Camera' }).click().catch(() => {}); await p.waitForTimeout(600) }
+  await p.locator('.pb-seg button').first().click()
+  await p.waitForTimeout(300)
+  b = await pb(p)
+  check('the switch at the left of the bar is one photo or four to a sheet; a film is not taken here, and says so', /^Four to a sheet\* \| One photo \| A film: not in this booth \(off\) \| Take four photos \| Effects$/.test(b.ctl), b.ctl)
+  await p.locator('.pb-shutter').click()
+  await p.waitForSelector('.pb[data-stage="review"] img.pb-photo', { timeout: 30000 })
+  await p.waitForTimeout(400)
+  const four = await p.evaluate(() => { const img = document.querySelector('.pb-photo'); return { w: img.naturalWidth, h: img.naturalHeight } })
+  check('four are taken, one after another, and set on one sheet', four.w > 300 && four.h > 300, JSON.stringify(four))
+  // logging out puts the camera away: it is a member's
+  await p.locator('.menubar__login').click()
+  await p.locator('.account__row', { hasText: 'Log Out' }).click()
+  await p.waitForTimeout(1000)
+  b = await pb(p)
+  check('logged out, Photo Booth is the door again and the camera is put away', b.stage === 'door' && !b.cam, JSON.stringify(b))
   check('nothing went wrong on the way (Photo Booth)', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
   await booth.close()
@@ -227,6 +336,9 @@ const check = (name, ok, detail = '') => {
   p = t.page
   await p.waitForTimeout(1600)
   await openFromDesk(p, 'photobooth')
+  await p.locator('.pb-msg .pb-btn').click()
+  await p.waitForTimeout(400)
+  await logIn(p)
   await p.locator('.pb-msg .pb-btn').click()
   await p.waitForSelector('.pb[data-stage="refused"]', { timeout: 15000 })
   b = await pb(p)

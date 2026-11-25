@@ -191,7 +191,7 @@
 }
 
 .ml-tabs button {
-  color: #8a8b92;
+  color: #6d6e75;
   font-size: 15px;
   font-weight: 400;
   white-space: nowrap;
@@ -230,6 +230,9 @@
   overflow-y: auto;
   padding-bottom: 18px;
   scrollbar-width: thin;
+  /* (it can hold the keyboard, so that a list longer than the window can be scrolled with it; the row it is
+     on is what shows where the keyboard is, as in Superhuman) */
+  outline: none;
 }
 
 .ml-row {

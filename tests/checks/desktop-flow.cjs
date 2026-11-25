@@ -40,7 +40,7 @@ const { chromium } = require('playwright')
   const mark = await page.evaluate(() => { const el = document.querySelector('[data-menu-mark]'); const shrug = '¯\\_(ツ)_/¯'; const rest = document.body.innerText.split(shrug).length - 1; return { text: el?.textContent.trim(), drawn: !!el?.querySelector('svg'), times: rest } })
   ok('the corner of the menu bar is the shrug emoticon, and that is the only place it is', mark.text === '¯\\_(ツ)_/¯' && !mark.drawn && mark.times === 1, JSON.stringify(mark))
   // The Dock: air between its icons. The one-pager, which it kept after a rule at its end, is a file on the desk
-  // (its tiles are the apps lib.cjs lists, VIP Store last among them, an app as they are)
+  // (its tiles are the apps lib.cjs lists, the stores and My VIP last among them, apps as the others are)
   const dock = await page.evaluate(() => {
     const icons = [...document.querySelectorAll('.dock__item .dock__icon')].map((el) => el.getBoundingClientRect())
     const apps = icons.slice(0, 5)
@@ -194,15 +194,17 @@ const { chromium } = require('playwright')
   await page.click('[data-dock-app="terminal"]'); await page.waitForTimeout(500)
   await page.keyboard.type('y'); await page.keyboard.press('Enter'); await page.waitForTimeout(400)
   ok('the terminal answers a yes with what can be read now, and asks for nothing', /two are public/.test(await page.locator('.term__log').innerText()) && (await page.locator('.term__link').count()) === 3 && !/email/i.test(await page.locator('.term__log').innerText()))
-  // ---- VIP Store: in the Dock where VIP was, and an app like the others. It was a link to the points site; it is
-  // the store in a window now, the store's own pages in a frame under the window's bar (store-window.cjs walks them)
+  // ---- ArtStore: in the Dock after Workspace, with Books and My VIP after it, and an app like the others. Where
+  // VIP was a link to the points site there are the stores in windows now, the store's own pages in a frame
+  // under each window's bar (store-window.cjs walks them)
   const vip = await page.evaluate(() => {
     const items = [...document.querySelectorAll('.dock [data-dock-item]')]
     const b = document.querySelector('.dock [data-dock-app="store"]')
-    return b && { tag: b.tagName, at: items.indexOf(b), of: items.length, last: b.nextElementSibling === null, afterApps: b.previousElementSibling?.getAttribute('data-dock-app'), name: b.getAttribute('aria-label'), label: b.querySelector('.dock__label').textContent.trim(), tile: !!b.querySelector('.dock__icon svg.app-icon'), links: document.querySelectorAll('.dock a').length, open: b.hasAttribute('data-open') }
+    return b && { tag: b.tagName, at: items.indexOf(b), of: items.length, last: items[items.length - 1].getAttribute('data-dock-app'), afterApps: b.previousElementSibling?.getAttribute('data-dock-app'), name: b.getAttribute('aria-label'), label: b.querySelector('.dock__label').textContent.trim(), tile: !!b.querySelector('.dock__icon svg.app-icon'), links: document.querySelectorAll('.dock a').length, open: b.hasAttribute('data-open') }
   })
-  ok('VIP Store is the last icon in the Dock, under its own tile and name', !!vip && vip.at === DOCK.length - 1 && vip.of === DOCK.length && vip.last && vip.afterApps === DOCK_IDS[DOCK.length - 2] && vip.label === 'VIP Store' && vip.tile, JSON.stringify(vip))
-  ok('it is an app as the others are: a button that says what it holds, and nothing in the Dock is a link', !!vip && vip.tag === 'BUTTON' && vip.name === 'VIP Store: Points, and what they buy' && vip.links === 0 && !vip.open, JSON.stringify(vip))
+  const AT = DOCK_IDS.indexOf('store')
+  ok('ArtStore is in the Dock after Workspace, under its own tile and name, with Books after it and My VIP last', !!vip && vip.at === AT && vip.of === DOCK.length && vip.last === 'myvip' && vip.afterApps === 'workspace' && DOCK_IDS[AT + 1] === 'books' && vip.label === 'ArtStore' && vip.tile, JSON.stringify(vip))
+  ok('it is an app as the others are: a button that says what it holds, and nothing in the Dock is a link', !!vip && vip.tag === 'BUTTON' && vip.name === 'ArtStore: Six pieces, fifty of each' && vip.links === 0 && !vip.open, JSON.stringify(vip))
   const front = () => page.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.dataset.app ?? null, open: [...document.querySelectorAll('.wf[data-app]')].filter((w) => !w.hasAttribute('inert') && getComputedStyle(w).visibility !== 'hidden').map((w) => w.dataset.app).sort().join(), dot: document.querySelector('.dock [data-dock-app="store"]').hasAttribute('data-open'), title: document.title }))
   const tabs = ctx.pages().length
   await page.click('.dock [data-dock-app="store"]')
@@ -210,23 +212,24 @@ const { chromium } = require('playwright')
   await shop.locator('.ui-prod').first().waitFor({ timeout: 20000 })
   await page.waitForTimeout(500)
   const now = await front()
-  ok('clicked, it opens a window on this desk, in front, with a dot under its icon, and no tab', now.front === 'store' && /store/.test(now.open) && now.dot && /^VIP Store/.test(now.title) && ctx.pages().length === tabs, JSON.stringify(now))
+  ok('clicked, it opens a window on this desk, in front, with a dot under its icon, and no tab', now.front === 'store' && /store/.test(now.open) && now.dot && /^ArtStore/.test(now.title) && ctx.pages().length === tabs, JSON.stringify(now))
   const held = await page.evaluate(() => {
     const w = document.querySelector('.wf[data-app="store"]')
     const f = w.querySelector('iframe.storewin__frame')
     const r = w.getBoundingClientRect(), fr = f.getBoundingClientRect(), bar = w.querySelector('.ss-window__bar').getBoundingClientRect()
-    const seg = [...w.querySelectorAll('.storebar__seg button')].map((b) => `${b.textContent.trim()}${b.getAttribute('aria-current') ? '*' : ''}`).join(' ')
-    return { w: Math.round(r.width), h: Math.round(r.height), path: f.contentWindow.location.pathname, same: f.contentWindow.location.origin === location.origin, seg, mark: !!w.querySelector('.storebar__mark svg'), wallet: !!w.querySelector('.storebar__wallet'), barH: Math.round(bar.height), under: Math.round(fr.top - bar.bottom), fills: Math.abs(fr.width - r.width) <= 2 && Math.abs(fr.bottom - r.bottom) <= 2 }
+    const name = w.querySelector('.storebar__name')
+    return { w: Math.round(r.width), h: Math.round(r.height), path: f.contentWindow.location.pathname, room: f.contentWindow.location.search, same: f.contentWindow.location.origin === location.origin, name: `${name?.textContent.trim()}${name?.getAttribute('aria-current') ? '*' : ''}`, says: w.querySelector('.storebar__says')?.textContent.trim(), wallet: !!w.querySelector('.storebar__wallet'), barH: Math.round(bar.height), under: Math.round(fr.top - bar.bottom), fills: Math.abs(fr.width - r.width) <= 2 && Math.abs(fr.bottom - r.bottom) <= 2 }
   })
   ok('the window opens at the size the store was drawn for, with the store\'s own pages in it, served by this site', held.w === 1120 && held.h === 720 && held.path === '/vip/store/' && held.same && held.fills, JSON.stringify(held))
-  ok('its bar is one row, sixty tall, with the frame straight under it: the store\'s name, Store and My VIP as a switch with Store picked, and no balance for a visitor', held.mark && held.seg === 'Store* My VIP' && !held.wallet && held.barH === 60 && Math.abs(held.under) <= 1, JSON.stringify(held))
+  ok('its bar is one row, sixty tall, with the frame straight under it: the store\'s name, what it sells, and no balance for a visitor', held.name === 'ArtStore*' && held.says === 'Six pieces. Fifty of each.' && held.room === '?k=art' && !held.wallet && held.barH === 60 && Math.abs(held.under) <= 1, JSON.stringify(held))
   const inside = await shop.locator('body').evaluate(() => ({ bar: !!document.querySelector('.ui-top'), demo: !!document.querySelector('.demo'), products: document.querySelectorAll('.ui-prod').length, dollars: [...document.querySelectorAll('.ui-prod')].every((p) => /\$\d/.test(p.textContent)), points: [...document.querySelectorAll('.ui-prod')].some((p) => /\bpts\b|points/i.test(p.textContent)) }))
-  ok('the pages in it are drawn without a bar of their own, and a visitor is shown prices in dollars', !inside.bar && !inside.demo && inside.products >= 4 && inside.dollars && !inside.points, JSON.stringify(inside))
-  // The switch in the bar sends the pages in the frame; they do not load again to get there
-  await page.click('.wf[data-app="store"] .storebar__seg button:has-text("My VIP")'); await page.waitForTimeout(600)
-  const mine = await page.evaluate(() => ({ seg: [...document.querySelectorAll('.wf[data-app="store"] .storebar__seg button')].map((b) => `${b.textContent.trim()}${b.getAttribute('aria-current') ? '*' : ''}`).join(' '), search: document.querySelector('.storewin__frame').contentWindow.location.search }))
-  ok('My VIP in the bar takes the frame there, and the bar says where it is', mine.seg === 'Store My VIP*' && /s=yours/.test(mine.search), JSON.stringify(mine))
-  await page.click('.wf[data-app="store"] .storebar__seg button:has-text("Store")'); await page.waitForTimeout(600)
+  ok('the pages in it are drawn without a bar of their own, and prices are in dollars', !inside.bar && !inside.demo && inside.products === 6 && inside.dollars && !inside.points, JSON.stringify(inside))
+  // A piece opened is the frame's own page; the name in the bar brings the six back, and the pages do not load again to get there
+  await shop.locator('.ui-prod').first().click(); await page.waitForTimeout(600)
+  const piece = await page.evaluate(() => ({ name: document.querySelector('.wf[data-app="store"] .storebar__name').getAttribute('aria-current'), search: document.querySelector('.storewin__frame').contentWindow.location.search }))
+  await page.click('.wf[data-app="store"] .storebar__name'); await page.waitForTimeout(600)
+  const six = await page.evaluate(() => ({ name: document.querySelector('.wf[data-app="store"] .storebar__name').getAttribute('aria-current'), search: document.querySelector('.storewin__frame').contentWindow.location.search }))
+  ok('a piece opened is its own page in the frame, and the name in the bar leads back to all of them', /^\?k=art&p=/.test(piece.search) && piece.name === null && six.search === '?k=art' && six.name === 'page', JSON.stringify({ piece, six }))
   // A press inside the frame is a press on the window: it comes to the front
   await page.click('.dock [data-dock-app="terminal"]'); await page.waitForTimeout(500)
   const behind = await front()
@@ -234,7 +237,7 @@ const { chromium } = require('playwright')
   ok('a press inside the store brings its window to the front', behind.front === 'terminal' && (await front()).front === 'store', JSON.stringify(behind))
   // From the keyboard it is a stop along the Dock like any other, and Return comes to it
   await page.click('.dock [data-dock-app="terminal"]'); await page.waitForTimeout(400)
-  await page.focus(`[data-dock-app="${DOCK_IDS[DOCK.length - 2]}"]`); await page.keyboard.press('ArrowRight')
+  await page.focus(`[data-dock-app="${DOCK_IDS[DOCK_IDS.indexOf('store') - 1]}"]`); await page.keyboard.press('ArrowRight')
   const onIt = await page.evaluate(() => document.activeElement?.getAttribute('data-dock-app'))
   await page.keyboard.press('Enter'); await page.waitForTimeout(500)
   ok('the arrow keys along the Dock stop on it, and Return brings its window forward', onIt === 'store' && (await front()).front === 'store' && ctx.pages().length === tabs, JSON.stringify({ onIt }))
