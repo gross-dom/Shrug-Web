@@ -1,3 +1,4 @@
+import { MORE_COLORS } from '../shared/colors'
 import type { Product } from '../shared/rules'
 
 // A product's photographs. The ones Shrug has supplied are kept with the pages (store/public/pictures), each
@@ -73,6 +74,8 @@ const KEPT: Record<string, Shot[]> = {
   'workspace, supersonic': drawn('supersonic'),
   'workspace, pearl lavender': drawn('pearl-lavender'),
   'workspace, mantis green': drawn('mantis-green'),
+  // (and each of the sixteen more)
+  ...Object.fromEntries(MORE_COLORS.map((color) => [`workspace, ${color.name.toLowerCase()}`, drawn(color.id)])),
   'art on acrylic': set('art-on-acrylic'),
   // (the six pieces have no photographs of their own yet: the first two stand under the ones there are)
   'art no. 1': set('art-on-acrylic').slice(0, 2),

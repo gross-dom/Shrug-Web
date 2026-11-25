@@ -6,7 +6,7 @@ import { DESK } from './desk'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
 import { shotsOf, tileSizes, wholeSizes } from './pictures'
-import { nameIn } from './room'
+import { NAMES, nameIn, ROOM } from './room'
 import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shortOf } from './words'
 
 // One product to a screen: its pictures, then what it is and what it costs this member. The arrows on the
@@ -496,7 +496,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     <>
       {done?.account === 'theirs' && <p className="t-sm t-2">That email already has an account, so this order is in its My VIP. Log in to see it.</p>}
       <a className="ui-btn" href="./" onClick={(e) => (e.preventDefault(), go({ view: 'store' }))}>
-        Back to the store
+        {/* (in a window of the desk, by the window's own name) */}
+        Back to {ROOM && ROOM !== 'yours' ? NAMES[ROOM] : 'the store'}
       </a>
       <a className="ui-btn sec" href="?s=yours" onClick={(e) => (e.preventDefault(), go({ view: 'yours' }))}>
         View in My VIP

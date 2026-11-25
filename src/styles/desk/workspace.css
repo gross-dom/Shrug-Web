@@ -70,10 +70,6 @@
   white-space: nowrap;
 }
 
-.wxwin.buying .wxbar__back {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .wxbar__wallet {
   min-height: 32px;
   font-size: 13px;
@@ -128,6 +124,8 @@
   position: relative;
   display: flex;
   min-height: 0;
+  /* (the studio, and a sheet let down over the window, reach up under the bar) */
+  overflow: visible;
   background: none;
 }
 
@@ -224,9 +222,26 @@
   transform: translateX(-50%);
 }
 
-.fl-slab.own {
-  background: repeating-linear-gradient(135deg, #ebe9e3 0 14px, #dedbd3 14px 28px);
+/* The sixteen more: a slab of all of them at once, four by four */
+.fl-slab.more {
+  background: #e7e5df;
   color: #141414;
+}
+
+.fl-mosaic {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  left: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.fl-mosaic i {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.14);
 }
 
 /* Chosen, a slab floods the window: it grows to fill it, and the others give way */
@@ -254,14 +269,27 @@
 
 /* ---- The studio */
 
+/* It is the whole window: it reaches up under the bar (which is laid over it), so that the color is from edge
+   to edge and nothing of the chair is cut off at the bar's foot. The chair is as tall as the window has room
+   for (--st-h), and everything set about it is measured from that. */
 .fl {
+  --bar: 48px;
   position: relative;
   display: flex;
   flex: 1;
   align-items: center;
   justify-content: center;
   min-width: 0;
+  margin-top: calc(var(--bar) * -1);
   overflow: hidden;
+  container: studio / size;
+}
+
+/* (how tall the foot is, and so how tall the chair can be: said on what is in the studio, which is what can
+   be measured against the studio's own size) */
+.fl > * {
+  --st-foot: 150px;
+  --st-h: min(470px, calc(100cqh - 168px));
 }
 
 .st-light {
@@ -288,7 +316,7 @@
 
 .fl-word {
   position: absolute;
-  top: 14px;
+  top: calc(var(--bar) + 14px);
   right: 0;
   left: 0;
   display: flex;
@@ -310,15 +338,6 @@
   mix-blend-mode: screen;
 }
 
-.st-stand {
-  position: absolute;
-  top: 10px;
-  left: 40px;
-  font-size: 11px;
-  font-weight: 500;
-  opacity: 0.72;
-}
-
 .st-stage {
   display: contents;
 }
@@ -330,23 +349,63 @@
   visibility: hidden;
 }
 
+/* A photograph picked fills the window. One wide enough is cropped to it; a narrower one is set whole, on a
+   blur of itself. A shade under the controls, and a lighter one under the bar, keep both read on any picture */
 .st-photo {
   position: absolute;
-  bottom: 152px;
-  left: 50%;
-  max-width: 560px;
-  height: 424px;
-  border-radius: 16px;
+  inset: 0;
+  overflow: hidden;
+  background: #0c0c0d;
+}
+
+.st-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.st-photo__back {
+  object-fit: cover;
+  filter: blur(34px) brightness(0.62);
+  transform: scale(1.18);
+}
+
+.st-photo__pic {
+  object-fit: cover;
+}
+
+.st-photo[data-fit='whole'] .st-photo__pic {
+  top: var(--bar);
+  /* (a picture's own height is not the room between its top and its foot: it is said outright) */
+  height: calc(100% - var(--bar) - var(--st-foot) + 14px);
   object-fit: contain;
-  box-shadow: 0 24px 50px -16px rgba(0, 0, 0, 0.5);
-  transform: translateX(-50%);
+}
+
+.st-photo[data-fit='fill'] .st-photo__back {
+  display: none;
+}
+
+.st-photo__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0) 96px), linear-gradient(to top, rgba(0, 0, 0, 0.84), rgba(0, 0, 0, 0.56) 120px, rgba(0, 0, 0, 0) 300px);
+  pointer-events: none;
+}
+
+/* (over a photograph there is no name behind the chair, no light and no floor) */
+.fl[data-photo] > .fl-word,
+.fl[data-photo] > .st-light,
+.fl[data-photo] > .st-floor {
+  display: none;
 }
 
 /* The chair's pictures, down the right-hand side: the 3D chair first, then its photographs */
 .st-shots {
   position: absolute;
-  top: 74px;
+  top: calc(var(--bar) + 26px);
   right: 40px;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -382,6 +441,18 @@
   object-fit: cover;
 }
 
+/* Over a photograph the strip stands on a shade of its own, so that it is seen on any picture */
+.fl[data-photo] .st-shot {
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.st-shot {
+  cursor: pointer;
+}
+
 .st-shot[aria-pressed='true'] {
   outline: 2.5px solid currentColor;
   outline-offset: 2px;
@@ -389,11 +460,11 @@
 
 .st-ring {
   position: absolute;
-  bottom: 164px;
+  bottom: calc(var(--st-foot) + 14px);
   left: 50%;
-  width: 400px;
-  height: 74px;
-  margin-left: -200px;
+  width: calc(var(--st-h) * 0.851);
+  height: calc(var(--st-h) * 0.157);
+  margin-left: calc(var(--st-h) * -0.4255);
   border: 1.5px dashed currentColor;
   border-radius: 50%;
   opacity: 0.34;
@@ -403,11 +474,11 @@
 /* The chair's place: the drawing, and over it the 3D chair once it has been drawn */
 .st-table {
   position: absolute;
-  bottom: 146px;
+  bottom: calc(var(--st-foot) - 4px);
   left: 50%;
-  width: 520px;
-  height: 470px;
-  margin-left: -260px;
+  width: calc(var(--st-h) * 1.1064);
+  height: var(--st-h);
+  margin-left: calc(var(--st-h) * -0.5532);
   cursor: grab;
   outline: none;
   touch-action: none;
@@ -425,8 +496,10 @@
 
 .st-table .st-still {
   position: absolute;
-  bottom: 12px;
+  bottom: 2.5%;
   left: 50%;
+  width: auto;
+  height: 94%;
   transform: translateX(-50%);
   transition: opacity 0.3s ease;
 }
@@ -450,7 +523,7 @@
 
 .st-turn {
   position: absolute;
-  bottom: 134px;
+  bottom: calc(var(--st-foot) - 16px);
   left: 50%;
   display: inline-flex;
   align-items: center;
@@ -471,11 +544,25 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
-.fl-info {
+/* The foot: the color's name at the left, the tray of colors in the middle, the price and its button at the
+   right. In a narrow window they are two rows (the name and the button, then the tray), and the chair is
+   set that much higher, so that none of them lies over another */
+.st-foot {
   position: absolute;
-  bottom: 36px;
+  right: 40px;
+  bottom: 22px;
   left: 40px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 18px;
+}
+
+.fl-info {
+  min-width: 0;
   max-width: 300px;
+  padding-bottom: 10px;
 }
 
 .fl-info h2 {
@@ -492,13 +579,18 @@
   opacity: 0.86;
 }
 
+.st-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+
 .st-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   height: 22px;
-  margin-top: 10px;
-  margin-right: 4px;
   padding: 0 9px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.3);
@@ -510,56 +602,13 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
-.st-own {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 290px;
-  height: 44px;
-  margin-top: 12px;
-  padding: 0 14px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #141414;
-  font-size: 14px;
-}
-
-.st-own i {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
-}
-
-.st-own input {
-  flex: 1;
-  min-width: 0;
-  color: #141414;
-}
-
-.st-own input::placeholder {
-  color: #6b6a66;
-}
-
-.st-own:focus-within {
-  box-shadow: 0 0 0 2px #141414;
-}
-
-.wxwin .st-own input:focus-visible {
-  outline: none;
-}
-
 /* The colors, and under them who owns one */
 .fl-pick {
-  position: absolute;
-  bottom: 18px;
-  left: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  transform: translateX(-50%);
+  gap: 8px;
+  min-width: 0;
 }
 
 .fl-owners {
@@ -604,13 +653,14 @@
   }
 }
 
+/* (tall enough that the dot which is picked, lifted and a little larger, sits inside it and not on its edge) */
 .fl-dock {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 60px;
-  padding: 0 14px;
-  border-radius: 22px;
+  height: 70px;
+  padding: 0 16px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.34);
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.6), 0 10px 30px -8px rgba(0, 0, 0, 0.3);
   -webkit-backdrop-filter: blur(20px);
@@ -624,11 +674,18 @@
   height: 36px;
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16), 0 2px 5px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
   transition: transform 0.2s ease;
 }
 
+@media (hover: hover) {
+  .fl-dot:not(.on):hover {
+    transform: translateY(-3px);
+  }
+}
+
 .fl-dot.on {
-  transform: translateY(-8px) scale(1.18);
+  transform: translateY(-6px) scale(1.16);
 }
 
 .fl-dot.on::after {
@@ -643,18 +700,54 @@
   background: currentColor;
 }
 
-.fl-dot.own {
+/* The sixteen more, in one dot: every color at once, until one of them is picked and it wears that one */
+.fl-dot.more {
   background: conic-gradient(#f4640a, #f6c915, #3bbf6b, #2f7ee8, #8a4be0, #d42a22, #f4640a);
 }
 
 .fl-buy {
-  position: absolute;
-  right: 40px;
-  bottom: 36px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  justify-self: end;
   gap: 10px;
+  padding-bottom: 10px;
+}
+
+@container studio (max-width: 900px) {
+  .fl > * {
+    --st-foot: 214px;
+    --st-h: min(470px, calc(100cqh - 232px));
+  }
+
+  .st-foot {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 12px;
+  }
+
+  .fl-info {
+    max-width: none;
+    padding-bottom: 0;
+  }
+
+  .fl-info h2 {
+    font-size: 28px;
+  }
+
+  .fl-buy {
+    flex-direction: row;
+    align-items: center;
+    padding-bottom: 0;
+  }
+
+  .fl-pick {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .st-shots {
+    right: 20px;
+  }
 }
 
 .fl-buy b {
@@ -681,6 +774,30 @@
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.45);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+/* Under the pointer it lifts: it is the one thing here to press */
+@media (hover: hover) {
+  .fl-btn:not([aria-disabled='true']):hover {
+    box-shadow: 0 12px 26px -8px rgba(0, 0, 0, 0.55);
+    filter: brightness(1.12);
+    transform: translateY(-2px) scale(1.03);
+  }
+
+  .fl.dark .fl-btn:not([aria-disabled='true']):hover {
+    filter: brightness(0.94);
+  }
+}
+
+.fl-btn:not([aria-disabled='true']):active {
+  transform: scale(0.98);
+}
+
+.fl-btn[aria-disabled='true'] {
+  cursor: default;
 }
 
 .fl.dark .fl-btn {
@@ -713,19 +830,6 @@
   gap: 16px;
   min-height: 0;
   padding: 6px 28px 24px;
-}
-
-.ow header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.ow h1 {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
 }
 
 .ow-grid {
@@ -776,11 +880,6 @@
   opacity: 0.96;
 }
 
-.ow-note {
-  color: #5d5c58;
-  font-size: 12px;
-}
-
 /* ---- BTS: how a chair is made, as a wall of pictures and films. Columns of tiles of different heights,
    each with one line under it: laid out as a wall, where Notable Owners is a grid of cards */
 
@@ -791,25 +890,6 @@
   overflow-y: auto;
   padding: 6px 40px 40px;
   outline: none;
-}
-
-.bts header {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  padding-bottom: 22px;
-}
-
-.bts h1 {
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 1;
-}
-
-.bts header p {
-  font-size: 14px;
-  opacity: 0.86;
 }
 
 .bts-wall {
@@ -830,6 +910,7 @@
   width: 100%;
   border-radius: 18px;
   text-align: left;
+  cursor: pointer;
 }
 
 .bts-pic {
@@ -888,23 +969,28 @@
   line-height: 1.35;
 }
 
+/* A picture of the wall, large: over the whole window (it is the window's own, not the wall's, so it is in
+   the same place wherever the wall has been scrolled to). Nothing is written on it. A small x in its corner,
+   a press anywhere off the picture, or Escape puts it away */
 .bts-look {
   position: absolute;
-  inset: 0;
-  z-index: 4;
+  inset: -48px 0 0;
+  z-index: 6;
   display: grid;
   place-items: center;
-  padding: 28px 40px;
-  background: rgba(12, 12, 13, 0.86);
+  padding: 44px 56px;
+  border-radius: inherit;
+  background: rgba(12, 12, 13, 0.9);
   color: #f5f5f7;
+  cursor: zoom-out;
 }
 
 .bts-look figure {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 100%;
-  max-height: 100%;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   margin: 0;
 }
 
@@ -913,8 +999,9 @@
 .bts-none {
   display: block;
   max-width: 100%;
-  max-height: 520px;
+  max-height: 100%;
   border-radius: 14px;
+  cursor: default;
 }
 
 .bts-none {
@@ -925,17 +1012,128 @@
   font-size: 14px;
 }
 
-.bts-look figcaption {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  font-size: 14px;
+/* The small round x that puts a sheet away, as a Mac draws one */
+.wx-x {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.36);
+  color: #fff;
+  cursor: pointer;
 }
 
-.bts-look .pill {
-  background: rgba(255, 255, 255, 0.16);
-  color: #f5f5f7;
+.wx-x:hover {
+  background: rgba(120, 120, 128, 0.56);
+}
+
+.bts-look > .wx-x {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* ---- The sixteen more colors: a sheet over the window, four by four */
+
+.wx-more {
+  position: absolute;
+  inset: -48px 0 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border-radius: inherit;
+  background: rgba(12, 12, 13, 0.4);
+}
+
+.mc-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(560px, 100%);
+  max-height: 100%;
+  padding: 20px 22px 22px;
+  overflow-y: auto;
+  border-radius: 22px;
+  background: rgba(250, 250, 250, 0.94);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 30px 70px -14px rgba(0, 0, 0, 0.55);
+  color: #141414;
+  -webkit-backdrop-filter: blur(30px) saturate(1.6);
+  backdrop-filter: blur(30px) saturate(1.6);
+}
+
+.mc-sheet header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mc-sheet h2 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.mc-sheet header p {
+  margin-top: 3px;
+  color: #5d5c58;
+  font-size: 13px;
+}
+
+.mc-sheet .wx-x {
+  background: rgba(120, 120, 128, 0.2);
+  color: #3c3c43;
+}
+
+.mc-sheet .wx-x:hover {
+  background: rgba(120, 120, 128, 0.34);
+}
+
+.mc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mc-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 6px 9px;
+  border-radius: 14px;
+  color: #141414;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+
+.mc-swatch i {
+  width: 100%;
+  aspect-ratio: 1.5;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18), 0 6px 14px -8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.16s ease;
+}
+
+@media (hover: hover) {
+  .mc-swatch:hover {
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  .mc-swatch:hover i {
+    transform: scale(1.04);
+  }
+}
+
+.mc-swatch[aria-pressed='true'] {
+  background: rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 0 0 2px #141414;
 }
 
 /* ---- Buying: the store's own page for the chair, in this window */

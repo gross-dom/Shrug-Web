@@ -637,3 +637,103 @@ input.ui-in[aria-invalid='true'] {
 .up .ui-how {
   grid-template-columns: minmax(0, 1fr);
 }
+
+/* ---- Drawn in a color. Workspace keeps a chair's color through its checkout (room.ts: `tint`): the ground is
+   the color, every word on it is the one ink that is read there (white or near-black: nothing is set in a
+   paler one, which would not be), and what stands on it is a shade or a tint of it. ---- */
+
+html[data-tint],
+html[data-tint] body {
+  background: var(--tint);
+}
+
+html[data-tint] .ui,
+html[data-tint] .up {
+  --bg: var(--tint);
+  --text: var(--tint-ink);
+  --text-2: var(--tint-ink);
+  --text-3: var(--tint-ink);
+  --gold: var(--tint-ink);
+  --red: var(--tint-ink);
+}
+
+html[data-tint='dark'] .ui,
+html[data-tint='dark'] .up {
+  --surface: rgba(0, 0, 0, 0.2);
+  --surface-2: rgba(0, 0, 0, 0.3);
+  --surface-3: rgba(0, 0, 0, 0.38);
+  --line: rgba(255, 255, 255, 0.22);
+}
+
+html[data-tint='light'] .ui,
+html[data-tint='light'] .up {
+  --surface: rgba(255, 255, 255, 0.36);
+  --surface-2: rgba(255, 255, 255, 0.52);
+  --surface-3: rgba(255, 255, 255, 0.64);
+  --line: rgba(0, 0, 0, 0.16);
+}
+
+/* The one thing to press: dark on a light color, light on a dark one */
+html[data-tint='light'] .ui-btn {
+  background: #141414;
+  color: #fff;
+  text-shadow: none;
+  box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.5);
+}
+
+html[data-tint='dark'] .ui-btn {
+  background: #fff;
+  color: #141414;
+  text-shadow: none;
+  box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.5);
+}
+
+html[data-tint] .ui-btn.sec {
+  background: var(--surface-2);
+  color: var(--tint-ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+html[data-tint] .ui-btn.off {
+  background: var(--surface);
+  color: var(--tint-ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+  opacity: 0.7;
+}
+
+html[data-tint] .ui-note {
+  background: var(--surface-2);
+  color: var(--tint-ink);
+}
+
+html[data-tint] .ui-earned {
+  background: var(--surface-2);
+}
+
+html[data-tint] .ui-check {
+  background: var(--tint-ink);
+  color: var(--tint);
+}
+
+html[data-tint] input.ui-in,
+html[data-tint] .ui-area {
+  background: var(--surface-2);
+  color: var(--tint-ink);
+}
+
+html[data-tint] input.ui-in::placeholder,
+html[data-tint] .ui-area::placeholder {
+  color: var(--tint-ink);
+  opacity: 0.72;
+}
+
+html[data-tint] .ui-badge,
+html[data-tint] .ui-badge.gold {
+  background: var(--surface-2);
+  color: var(--tint-ink);
+}
+
+html[data-tint] .ui-badge.on {
+  background: var(--tint-ink);
+  color: var(--tint);
+}

@@ -13,6 +13,13 @@
 // What a chair costs is not here: it is the store's to say (Matte Black from $1,100, a painted one from
 // $1,200), and it is said only to someone logged in. Still Shrug's to supply: which colors are in stock, the
 // one line about each color, photographs of each, and the owners who have agreed to be named.
+//
+// Beyond the eight the studio opens on there are sixteen more, each made to order and each with a name of
+// its own (store/shared/colors.ts, which the store reads too: a chair in each is a product there). They are
+// picked from a grid, and from then on are a color like any other. (There is no "color of your own" any
+// more: every color the chair comes in has a name.)
+
+import { MORE_COLORS } from '../../store/shared/colors'
 
 export interface Paint {
   id: string
@@ -28,6 +35,8 @@ export interface Paint {
   line: string | null
   /** The chair in this color, in the store: what Buy opens. */
   product: string
+  /** One of the sixteen more colors, picked from the grid and not from the tray. */
+  more?: boolean
 }
 
 /** A file of the real chair, if there is one: a scan or a modelled chair as a .glb, served by the site
@@ -47,80 +56,16 @@ export const PAINTS: Paint[] = [
   { id: 'mantis-green', name: 'Mantis Green', color: '#6fd12a', stock: 'order', line: null, product: 'chair-mantis-green' },
 ]
 
-/** A color of the visitor's own: always a request, never charged for here. */
-export const OWN = { id: 'own', name: 'Your own', start: '#1f8a7a' }
+/** The sixteen more: each made to order, and each a chair of its own in the store. */
+export const MORE: Paint[] = MORE_COLORS.map((c) => ({ id: c.id, name: c.name, color: c.color, stock: 'order', line: null, product: `chair-${c.id}`, more: true }))
+
+/** Every color the chair comes in. */
+export const ALL_PAINTS: Paint[] = [...PAINTS, ...MORE]
 
 /** The ground the app stands on before a color is picked. */
 export const PAPER = '#f3f2ee'
 
-// ---- Reading a color someone types: a hex, a RAL code, or a name
-
-/** The RAL Classic colors people ask for by number, and what each is called. (A working table, to be checked against a fan deck.) */
-const RAL: Record<string, [string, string]> = {
-  '1003': ['#f9a800', 'Signal yellow'],
-  '1015': ['#e6d2b5', 'Light ivory'],
-  '1021': ['#eec900', 'Rape yellow'],
-  '1023': ['#f0ca00', 'Traffic yellow'],
-  '2004': ['#e25303', 'Pure orange'],
-  '2009': ['#de5307', 'Traffic orange'],
-  '3000': ['#a72920', 'Flame red'],
-  '3003': ['#8d1d2c', 'Ruby red'],
-  '3020': ['#c1121c', 'Traffic red'],
-  '4005': ['#76689a', 'Blue lilac'],
-  '4008': ['#844c82', 'Signal violet'],
-  '5002': ['#00387b', 'Ultramarine blue'],
-  '5005': ['#005387', 'Signal blue'],
-  '5010': ['#004f7c', 'Gentian blue'],
-  '5012': ['#0089b6', 'Light blue'],
-  '5015': ['#007cb0', 'Sky blue'],
-  '5018': ['#058b8c', 'Turquoise blue'],
-  '5024': ['#6093ac', 'Pastel blue'],
-  '6005': ['#0f4336', 'Moss green'],
-  '6018': ['#48a43f', 'Yellow green'],
-  '6019': ['#b7d9b1', 'Pastel green'],
-  '6029': ['#006f3d', 'Mint green'],
-  '6033': ['#1f8a7a', 'Mint turquoise'],
-  '7016': ['#383e42', 'Anthracite gray'],
-  '7035': ['#c5c7c4', 'Light gray'],
-  '7037': ['#7a7b7a', 'Dusty gray'],
-  '8017': ['#442f29', 'Chocolate brown'],
-  '9001': ['#e9e0d2', 'Cream'],
-  '9003': ['#ecece7', 'Signal white'],
-  '9005': ['#0e0e10', 'Jet black'],
-  '9010': ['#f1ece1', 'Pure white'],
-  '9016': ['#f1f0ea', 'Traffic white'],
-}
-
-/** What was typed, as a color: its value, and what to call it. Null where it names none (the studio stays as it was). */
-export function readColor(typed: string): { color: string; name: string } | null {
-  const text = typed.trim()
-  if (!text) return null
-  const hex = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text)
-  if (hex) {
-    const digits = hex[1]!.length === 3 ? hex[1]!.replace(/./g, '$&$&') : hex[1]!
-    return { color: `#${digits.toLowerCase()}`, name: `#${digits.toUpperCase()}` }
-  }
-  const ral = /^ral\s*-?\s*(\d{4})\b/i.exec(text)
-  if (ral) {
-    const found = RAL[ral[1]!]
-    return found ? { color: found[0], name: `RAL ${ral[1]} ${found[1]}` } : null
-  }
-  // A name: one of the RAL names, or anything a browser knows as a color ("teal", "hot pink")
-  // (a name is found however its gray is spelled)
-  const plain = (name: string) => name.toLowerCase().replace(/grey/g, 'gray')
-  const named = Object.entries(RAL).find(([, [, name]]) => plain(name) === plain(text))
-  if (named) return { color: named[1][0], name: `RAL ${named[0]} ${named[1][1]}` }
-  if (typeof document === 'undefined') return null
-  const probe = document.createElement('span')
-  probe.style.color = text.replace(/\s+/g, '')
-  if (!probe.style.color) return null
-  document.body.append(probe)
-  const rgb = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(getComputedStyle(probe).color)
-  probe.remove()
-  if (!rgb) return null
-  const color = `#${[1, 2, 3].map((i) => Number(rgb[i]).toString(16).padStart(2, '0')).join('')}`
-  return { color, name: text.replace(/\b\w/g, (letter) => letter.toUpperCase()) }
-}
+// ---- Words on a color
 
 /** How light a color is, as the contrast of words on it is reckoned (WCAG's relative luminance); `white` is how much white is laid over it first. */
 function lightOf(color: string, white = 0) {

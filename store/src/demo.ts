@@ -1,4 +1,5 @@
 import { awardFor, dueCents, mayHave, numberOf, onFile, refusalOf, unpriced, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
+import { MORE_COLORS } from '../shared/colors'
 import { samplePdf } from '../shared/sample'
 import { save, type Asked, type Backend, type Failed, type Placed, type Who } from './backend'
 
@@ -71,8 +72,8 @@ const SHELVES: Product[] = [
   chair('chair-supersonic', 'Supersonic', 1200),
   chair('chair-pearl-lavender', 'Pearl Lavender', 1200),
   chair('chair-mantis-green', 'Mantis Green', 1200),
-  // A color of one's own: asked for, and written back about. No price is said until it is
-  item('chair-your-own', 'Workspace, Your Own Color', { kind: 'Chair', status: 'On request', needsAddress: true, description: LINE }),
+  // The sixteen more colors (shared/colors.ts): each made to order, at a painted chair's price
+  ...MORE_COLORS.map((color) => chair(`chair-${color.id}`, color.name, 1200)),
 ].map((product, place) => ({ ...product, place }))
 
 /** An update is unlocked for 10 points by the people it was written for (Products → Points on its row). */

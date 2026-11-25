@@ -6,7 +6,7 @@ import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demo
 import { DESK, type StoreInWindow } from './desk'
 import { Lock, NoCloud } from './icons'
 import { Picture, Price, ProductView, type Go } from './Product'
-import { NAMES, nameIn, ROOM, SHELF } from './room'
+import { NAMES, nameIn, ROOM, SHELF, tint } from './room'
 import { Visiting } from './visiting'
 import { badgeOf } from './words'
 import { YoursView } from './Yours'
@@ -268,7 +268,7 @@ export function App() {
   useEffect(() => {
     if (!DESK) return
     const here = window as Window & { shrugStore?: StoreInWindow }
-    here.shrugStore = { go: (to) => mover.current({ section: ROOM === 'yours' || (to.section === 'yours' && !ROOM) ? 'yours' : 'store', product: to.product }), reload: load }
+    here.shrugStore = { go: (to) => mover.current({ section: ROOM === 'yours' || (to.section === 'yours' && !ROOM) ? 'yours' : 'store', product: to.product }), reload: load, tint }
     return () => {
       delete here.shrugStore
     }

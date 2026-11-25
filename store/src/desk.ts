@@ -31,6 +31,8 @@ export interface StoreInWindow {
   go(place: { section: 'store' | 'yours'; product: string | null }): void
   /** Whoever is logged in has changed, or what they have: ask the server again. */
   reload(): void
+  /** Draw these pages in a color (Workspace's: a chair's own), or as they come. */
+  tint(color: string | null): void
 }
 
 export const DESK: Desk | null = (() => {

@@ -1,28 +1,30 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { Check, ChevronLeft, FileText, Play, Rotate3d } from 'lucide-react'
-import { fmtCents, priceCents, wayOf } from '../../store/shared/rules'
+import { ChevronLeft, Play, Rotate3d, X } from 'lucide-react'
+import { fmtCents, priceCents } from '../../store/shared/rules'
 import { shotsOf } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
-import { inkOn, MAKING, OWN, OWNERS, PAINTS, PAPER, readColor, shadedOn, type Making, type Paint } from '../data/workspace'
+import { ALL_PAINTS, inkOn, MAKING, MORE, OWNERS, PAINTS, PAPER, shadedOn, type Making, type Paint } from '../data/workspace'
 import { TEMPLATED } from '../data/site'
 import { Window } from '../kit/window'
-import { account, askLogIn, logIn } from '../os/account'
+import { account, askLogIn } from '../os/account'
 import { prefersReducedMotion } from '../os/dom'
 import { useShelf, wantShop } from '../os/shop'
 import { useStore } from '../os/store'
 import { pick, picked } from '../os/workspace'
 import { wm } from '../os/wm'
-import { askStore, Balance, StoreFrame, type FrameHandle } from './storefront'
+import { addressOf, Balance, StoreFrame, type FrameHandle } from './storefront'
 import type { Stage } from './workspace/stage'
 import { ChairStill } from './workspace/Still'
 import '../styles/desk/workspace.css'
 
-// Workspace: the studio (design/v1-workspace, and Dom's notes after testing it). The chair is chosen here
-// and bought here. It opens on a slab for each color and one for a color of your own. Pick one and the
-// whole window becomes a studio in that color: a lit cove, the color's name set huge behind the chair, the
-// chair itself on a turntable with photographs of it beside, the colors in a small glass dock of dots with
-// who owns one under them, and the price and one button. The price is said to someone logged in. Buy opens
-// the store's own page for that chair inside this window (storefront.tsx): the same checkout as everywhere,
+// Workspace: the studio (design/v1-workspace, and Dom's notes after testing it, twice). The chair is chosen
+// here and bought here. It opens, every time, on the colors: a slab for each of the eight it is known by, and
+// one that opens the sixteen more. Pick one and the whole window becomes a studio in that color: a lit cove
+// from edge to edge (the window's bar is laid over it), the color's name set huge behind the chair, the
+// chair itself on a turntable with photographs of it beside (one picked fills the window, under a shade the
+// controls can still be read on), the colors in a small glass tray of dots with who owns one under them,
+// and the price and one button. The price is said to someone logged in. Buy opens the store's own page for
+// that chair inside this window (storefront.tsx), in that chair's color: the same checkout as everywhere,
 // in dollars, with their points to bring it down and their address already on file.
 //
 // Two more things are in its bar: BTS, a wall of how a chair is made, and Notable Owners. Each has a way back.
@@ -30,13 +32,13 @@ import '../styles/desk/workspace.css'
 // The chair is a 3D model, turned by dragging (workspace/stage.ts). Until it has loaded, and wherever a
 // browser cannot draw in 3D, a drawing of the chair in the same paint stands where it will be.
 
-/** A color as the studio holds it: one of the paints, or the visitor's own. */
+/** A color as the studio holds it. */
 interface Chosen {
   id: string
   name: string
   color: string
   shift?: string[]
-  paint: Paint | null
+  paint: Paint
 }
 
 const chosenOf = (paint: Paint): Chosen => ({ id: paint.id, name: paint.name, color: paint.color, shift: paint.shift, paint })
@@ -48,9 +50,8 @@ const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eig
 const real = (text: string) => !text.startsWith('[')
 const OWNERS_SHOWN = TEMPLATED ? OWNERS : OWNERS.filter((owner) => real(owner.name))
 const MAKING_SHOWN = TEMPLATED ? MAKING : MAKING.filter((piece) => piece.src && real(piece.says))
-
-// ---- What has been asked for (a color of their own), in the demo: kept in this browser, by who asked
-
+/** A photograph wide enough to fill the window whole; a narrower one is set whole on a blur of itself. */
+const WIDE = 1.25
 
 type View = 'first' | 'studio' | 'owners' | 'bts' | 'buy'
 
@@ -61,31 +62,32 @@ export function WorkspaceApp() {
     if (open) wantShop()
   }, [open])
   const who = useStore(account, (s) => s)
-  const sheet = useStore(logIn, (s) => s.open)
   const kept = useStore(picked, (s) => s)
   const shelf = useShelf('chairs')
-  const [view, setView] = useState<View>(kept ? 'studio' : 'first')
-  const [own, setOwn] = useState(() => ({ typed: kept?.id === OWN.id ? (kept.typed ?? '') : '', color: kept?.id === OWN.id ? kept.color : OWN.start }))
+  // It opens on the colors, every time it is opened: choosing one is what Workspace is for. (The color last
+  // picked is still kept: it is the one the Dock's icon wears.)
+  const [view, setView] = useState<View>('first')
+  useEffect(() => {
+    if (open) setView('first')
+  }, [open])
   const [flood, setFlood] = useState<string | null>(null)
   const [hover, setHover] = useState<string | null>(null)
-  /** A request that could not be sent. */
-  const [failed, setFailed] = useState(false)
-  const [busy, setBusy] = useState(false)
+  /** The sixteen more colors, let down as a grid to pick from. */
+  const [more, setMore] = useState(false)
   /** Which of the chair's pictures is on the stage: the 3D chair (null), or one of its photographs. */
   const [shot, setShot] = useState<number | null>(null)
   /** A film or photograph of the wall, opened large. */
   const [look, setLook] = useState<Making | null>(null)
-  const waiting = useRef<'request' | 'price' | null>(null)
   const frame = useRef<FrameHandle>(null)
   const [framed, setFramed] = useState(false)
 
-  const chosen: Chosen | null = !kept ? null : kept.id === OWN.id ? { id: OWN.id, name: OWN.name, color: own.color, paint: null } : (PAINTS.map(chosenOf).find((c) => c.id === kept.id) ?? null)
-  const email = who.status === 'member' ? who.email : null
+  const chosen: Chosen | null = kept ? (ALL_PAINTS.map(chosenOf).find((c) => c.id === kept.id) ?? null) : null
+  const member = who.status === 'member'
   useEffect(() => setShot(null), [chosen?.id])
   /** Where the bar's way back leads, and what from: the studio if a color is picked, or the slabs. */
   const home: View = chosen ? 'studio' : 'first'
 
-  const choose = (c: Chosen) => pick({ id: c.id, color: c.color, shift: c.shift, typed: c.id === OWN.id ? own.typed : undefined })
+  const choose = (c: Chosen) => pick({ id: c.id, color: c.color, shift: c.shift })
   /** From a slab: the slab grows to fill the window, and the studio is there when it has. A cut, for a visitor who has asked for less motion. */
   const enter = (c: Chosen) => {
     choose(c)
@@ -93,73 +95,43 @@ export function WorkspaceApp() {
     setFlood(c.id)
     setTimeout(() => (setFlood(null), setView('studio')), 420)
   }
-  const type = (typed: string) => {
-    const read = readColor(typed)
-    const color = read?.color ?? own.color
-    setOwn({ typed, color })
-    pick({ id: OWN.id, color, typed })
+  /** One of the sixteen more, picked from the grid: the studio is in it. */
+  const pickMore = (c: Chosen) => {
+    choose(c)
+    setMore(false)
+    setView('studio')
   }
 
   // ---- A chair in one of the colors: what the store says of it, and the way to its page
 
-  const product = chosen?.paint ? (shelf?.products.find((p) => p.id === chosen.paint!.product) ?? null) : null
+  const product = chosen ? (shelf?.products.find((p) => p.id === chosen.paint.product) ?? null) : null
   /** Its price, as it is said: only to someone logged in, and never one the store has not given. */
   const price = product && !product.priceHidden && product.points ? `From ${fmtCents(priceCents(product))}` : null
   // (its photographs: a color that has none yet has the chair drawn in the store's pages, and here the chair itself)
   const shots = product ? shotsOf(product).filter((s) => !s.drawn) : []
+  const photo = shot !== null ? (shots[shot] ?? null) : null
+  /** The store's page for a chair, in that chair's color. */
+  const pageOf = (c: Chosen) => `${addressOf('chairs', c.paint.product)}&c=${c.color.slice(1)}`
   const buy = () => {
-    if (!chosen?.paint) return
+    if (!chosen) return
     setView('buy')
-    if (framed) frame.current?.go(chosen.paint.product)
+    if (framed) frame.current?.to(pageOf(chosen))
     else setFramed(true)
   }
-  const seePrice = () => {
+  const enquire = () => {
     if (!chosen) return
-    waiting.current = 'price'
-    askLogIn('price', `${chosen.name} is kept while you log in. Start with your email.`)
+    askLogIn('price', `${chosen.name} is kept while you log in.`)
   }
 
-  // ---- A color of their own: asked for
-
-  /** The chair in a color of one's own, as the store has it: a thing that is asked for, and never bought outright. */
-  const ownProduct = shelf?.products.find((p) => p.kind === 'Chair' && wayOf(p) === 'request') ?? null
-  /** Their request for one, once it is made. It is an order in the store, so Shrug has it and it is in My VIP;
-   * the store keeps one request of a thing each. */
-  const ownAsked = ownProduct ? (shelf?.orders.find((o) => o.productId === ownProduct.id && o.status !== 'Refunded') ?? null) : null
-  const isAsked = !!ownAsked
-  const request = async () => {
-    if (!chosen || chosen.id !== OWN.id || isAsked || busy) return
-    if (!email) {
-      // The color is kept while they log in, and the request is sent when they have
-      waiting.current = 'request'
-      return askLogIn('request', 'Your color is kept while you log in. Start with your email.')
-    }
-    waiting.current = null
-    if (!ownProduct) return setFailed(true)
-    setBusy(true)
-    setFailed(false)
-    // What is asked for: the color as they gave it, and its value
-    const typed = own.typed.trim()
-    const option = (typed && typed.toLowerCase() !== own.color ? `${typed} (${own.color})` : own.color).slice(0, 60)
-    const answer = await askStore(ownProduct.id, option)
-    setBusy(false)
-    if (answer === 'failed') setFailed(true)
-  }
-  // Logged in with a request waiting: it is sent, as they asked. The sheet put away without logging in: it waits no longer
-  useEffect(() => {
-    if (!waiting.current || sheet) return
-    if (email && waiting.current === 'request') void request()
-    else waiting.current = null
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email, sheet])
-
-  const coloured = view === 'studio' && !!chosen
-  const ink = view === 'buy' ? '#f5f5f7' : coloured ? inkOn(chosen.color) : '#141414'
+  const coloured = (view === 'studio' || view === 'buy') && !!chosen
+  // Over a photograph the words are white, on the shade laid under them
+  const ink = view === 'studio' && photo ? '#fff' : coloured ? inkOn(chosen.color) : '#141414'
   const dark = ink === '#fff'
-  const cove = view === 'buy' ? '#0c0c0d' : coloured ? ground(chosen) : PAPER
+  // (at checkout a shifting paint is its one color: the store's page, which is drawn in it, has one ground)
+  const cove = view === 'buy' && chosen ? chosen.color : coloured ? ground(chosen) : PAPER
   // How the chips are set off from the ground: on paper a little darker; on a color a little lighter, as the
   // design has them, unless white words could not then be read on one (data/workspace.ts)
-  const chips = view === 'buy' ? ' dark buying' : !coloured ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
+  const chips = view === 'studio' && photo ? ' dark shade' : !coloured ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
   /** Who owns one, as the studio says it under the colors: owners of this color first. */
   const owners = chosen ? [...OWNERS_SHOWN.filter((o) => o.paint === chosen.id), ...OWNERS_SHOWN.filter((o) => o.paint !== chosen.id)] : OWNERS_SHOWN
 
@@ -199,7 +171,7 @@ export function WorkspaceApp() {
   )
 
   return (
-    <Window className={`app wxwin${chips}`} lightsSize="large" lead={bar} body={{ className: 'wxwin__body' }} style={{ background: cove, color: ink }}>
+    <Window className={`app wxwin${chips}${view === 'buy' ? ' buying' : ''}`} lightsSize="large" lead={bar} body={{ className: 'wxwin__body' }} style={{ background: cove, color: ink }}>
       {view === 'first' && (
         <div className="wx-first" data-flood={flood ? '' : undefined}>
           <div className="fl-head">
@@ -211,40 +183,56 @@ export function WorkspaceApp() {
             <p>Pick one and the studio changes with you.</p>
           </div>
           <div className="fl-slabs" role="group" aria-label="Colors">
-            {[...PAINTS.map(chosenOf), { id: OWN.id, name: OWN.name, color: own.color, paint: null } as Chosen].map((c) => {
-              const mine = c.id === OWN.id
+            {PAINTS.map(chosenOf).map((c) => {
               const big = hover === c.id && !flood
               return (
                 <button
                   key={c.id}
                   type="button"
-                  className={`fl-slab eight${mine ? ' own' : ''}${big ? ' big' : ''}${flood === c.id ? ' flood' : ''}`}
-                  style={mine ? undefined : { background: ground(c), color: inkOn(c.color) }}
+                  className={`fl-slab eight${big ? ' big' : ''}${flood === c.id ? ' flood' : ''}`}
+                  style={{ background: ground(c), color: inkOn(c.color) }}
                   onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(c.id)}
                   onPointerLeave={() => setHover(null)}
                   onFocus={() => setHover(c.id)}
                   onBlur={() => setHover(null)}
                   onClick={() => enter(c)}
                 >
-                  {big && !mine && <ChairStill className="ch" paint={c.color} shift={c.shift} width={150} />}
+                  {big && <ChairStill className="ch" paint={c.color} shift={c.shift} width={150} />}
                   <b>{c.name}</b>
-                  <small>{c.paint ? stockOf(c.paint) : 'On request'}</small>
+                  <small>{stockOf(c.paint)}</small>
                 </button>
               )
             })}
+            {/* The sixteen more: a slab of all of them at once, which lets the grid down */}
+            <button type="button" className="fl-slab eight more" aria-haspopup="dialog" onClick={() => setMore(true)}>
+              <span className="fl-mosaic" aria-hidden>
+                {MORE.map((paint) => (
+                  <i key={paint.id} style={{ background: paint.color }} />
+                ))}
+              </span>
+              <b>{MORE.length} more colors</b>
+              <small>Made to order</small>
+            </button>
           </div>
         </div>
       )}
       {view === 'studio' && chosen && (
-        <div className={`fl st${chips}`}>
+        <div className={`fl st${chips}`} data-photo={photo ? '' : undefined}>
           <span className="st-light" aria-hidden />
           <span className="st-floor" aria-hidden />
           <Word name={chosen.name} />
-          {TEMPLATED && <span className="st-stand">A drawn model of the chair. A scan of the real one can take its place.</span>}
           <div className="st-stage" data-shot={shot !== null || undefined}>
-            <Turntable color={chosen.color} shift={chosen.shift} matte={chosen.paint?.finish === 'matte'} name={chosen.name} live={shown && shot === null} />
-            {shot !== null && shots[shot] && <img className="st-photo" src={shots[shot]!.full} srcSet={shots[shot]!.set} sizes="520px" alt={`${chosen.name}: photograph ${shot + 1} of ${shots.length}`} draggable={false} />}
+            <Turntable color={chosen.color} shift={chosen.shift} matte={chosen.paint.finish === 'matte'} name={chosen.name} live={shown && shot === null} />
           </div>
+          {/* A photograph picked fills the window, under a shade the controls can still be read on. One too
+              narrow to fill it is set whole, on a blur of itself */}
+          {photo && (
+            <div className="st-photo" data-fit={(photo.aspect ?? 1) >= WIDE ? 'fill' : 'whole'}>
+              <img className="st-photo__back" src={photo.small} alt="" aria-hidden draggable={false} />
+              <img className="st-photo__pic" src={photo.full} srcSet={photo.set} sizes="1100px" alt={`${chosen.name}: photograph ${shot! + 1} of ${shots.length}`} draggable={false} />
+              <span className="st-photo__shade" aria-hidden />
+            </div>
+          )}
           {/* The chair's pictures, beside it: the 3D chair, and each photograph there is of it in this color */}
           {shots.length > 0 && (
             <div className="st-shots" role="group" aria-label={`Pictures of the chair in ${chosen.name}`}>
@@ -259,118 +247,80 @@ export function WorkspaceApp() {
               ))}
             </div>
           )}
-          <div className="fl-info">
-            <h2>{chosen.name}</h2>
-            {chosen.id === OWN.id ? (
-              <>
-                <p>Name it, or give a hex or RAL code. The studio follows.</p>
-                <label className="st-own">
-                  <i style={{ background: own.color }} aria-hidden />
-                  <input type="text" value={own.typed} placeholder="RAL 6033 Mint turquoise" aria-label="Your own color: a name, a hex or a RAL code" spellCheck={false} autoComplete="off" onChange={(e) => type(e.target.value)} />
-                </label>
-              </>
-            ) : (
-              <>
-                {(chosen.paint?.line || chosen.shift) && (
-                  <p>
-                    {chosen.paint?.line}
-                    {chosen.shift ? `${chosen.paint?.line ? ' ' : ''}Turn it to see it shift.` : ''}
-                  </p>
-                )}
+          <div className="st-foot">
+            <div className="fl-info">
+              <h2>{chosen.name}</h2>
+              {(chosen.paint.line || chosen.shift) && (
+                <p>
+                  {chosen.paint.line}
+                  {chosen.shift ? `${chosen.paint.line ? ' ' : ''}Turn it to see it shift.` : ''}
+                </p>
+              )}
+              <div className="st-tags">
                 {chosen.shift && <span className="st-tag">Color-shifting</span>}
-                <span className="st-tag">{chosen.paint?.stock === 'now' ? 'Available now' : 'Made to order'}</span>
-              </>
-            )}
-          </div>
-          <div className="fl-pick">
-            <div className="fl-dock" role="group" aria-label="Colors">
-              {PAINTS.map(chosenOf).map((c) => (
-                <button key={c.id} type="button" className={`fl-dot${chosen.id === c.id ? ' on' : ''}`} style={{ background: ground(c), color: ink }} aria-label={c.name} aria-pressed={chosen.id === c.id} onClick={() => choose(c)} />
-              ))}
-              <button type="button" className={`fl-dot own${chosen.id === OWN.id ? ' on' : ''}`} style={{ color: ink }} aria-label="Your own color" aria-pressed={chosen.id === OWN.id} onClick={() => choose({ id: OWN.id, name: OWN.name, color: own.color, paint: null })} />
+                <span className="st-tag">{chosen.paint.stock === 'now' ? 'Available now' : 'Made to order'}</span>
+              </div>
             </div>
-            {/* Who owns one, under the colors: on the way to buying it */}
-            {owners.length > 0 && (
-              <button type="button" className="fl-owners" onClick={() => setView('owners')}>
-                <span className="fl-faces" aria-hidden>
-                  {owners.slice(0, 4).map((owner, i) => {
-                    const paint = PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
-                    return <i key={i} style={{ background: ground(paint) }} />
-                  })}
-                </span>
-                <span>
-                  Owned by <b>{owners.slice(0, 2).map((owner) => owner.name).join(', ')}</b>
-                  {owners.length > 2 ? ` and ${owners.length - 2} more` : ''}
-                </span>
-              </button>
-            )}
-          </div>
-          <div className="fl-buy">
-            {chosen.id === OWN.id ? (
-              <>
-                <b className="num">On request</b>
-                <button type="button" className="fl-btn" aria-disabled={isAsked || busy || undefined} onClick={() => void request()}>
-                  {isAsked ? (
-                    <>
-                      <Check size={16} strokeWidth={2.4} aria-hidden />
-                      Requested
-                    </>
-                  ) : busy ? (
-                    'Requesting…'
-                  ) : (
-                    'Request'
-                  )}
+            <div className="fl-pick">
+              <div className="fl-dock" role="group" aria-label="Colors">
+                {PAINTS.map(chosenOf).map((c) => (
+                  <button key={c.id} type="button" className={`fl-dot${chosen.id === c.id ? ' on' : ''}`} style={{ background: ground(c), color: ink }} aria-label={c.name} aria-pressed={chosen.id === c.id} onClick={() => choose(c)} />
+                ))}
+                {/* The sixteen more, in one dot: it wears the one that is picked, when one of them is */}
+                <button
+                  type="button"
+                  className={`fl-dot more${chosen.paint.more ? ' on' : ''}`}
+                  style={chosen.paint.more ? { background: chosen.color, color: ink } : { color: ink }}
+                  aria-label={chosen.paint.more ? `More colors. ${chosen.name} is picked` : 'More colors'}
+                  aria-haspopup="dialog"
+                  onClick={() => setMore(true)}
+                />
+              </div>
+              {/* Who owns one, under the colors: on the way to buying it. (Nobody is said to own one of the sixteen more.) */}
+              {owners.length > 0 && !chosen.paint.more && (
+                <button type="button" className="fl-owners" onClick={() => setView('owners')}>
+                  <span className="fl-faces" aria-hidden>
+                    {owners.slice(0, 4).map((owner, i) => {
+                      const paint = PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
+                      return <i key={i} style={{ background: ground(paint) }} />
+                    })}
+                  </span>
+                  <span>
+                    Owned by <b>{owners.slice(0, 2).map((owner) => owner.name).join(', ')}</b>
+                    {owners.length > 2 ? ` and ${owners.length - 2} more` : ''}
+                  </span>
                 </button>
-                <small role={failed ? 'alert' : undefined}>
-                  {isAsked ? `Requested${ownAsked?.option ? `: ${ownAsked.option}` : ''}. We’ll write to you about it.` : failed ? 'That could not be sent. Try again in a moment.' : 'Always made to order. No charge now.'}
-                </small>
-              </>
-            ) : !shelf ? (
-              <>
-                <b className="num" aria-hidden>
-                   
-                </b>
+              )}
+            </div>
+            <div className="fl-buy">
+              {!shelf ? (
                 <button type="button" className="fl-btn" aria-disabled="true">
                   One moment…
                 </button>
-                <small> </small>
-              </>
-            ) : price ? (
-              <>
-                <b className="num">{price}</b>
-                <button type="button" className="fl-btn" onClick={buy}>
-                  {chosen.paint?.stock === 'now' ? 'Buy' : 'Order'}
-                </button>
-                <small>{chosen.paint?.stock === 'now' ? 'Available now.' : 'Made to order.'} Your points bring it down.</small>
-              </>
-            ) : email ? (
-              // Logged in, and the store has no price for this one (or is not answering): it can be opened all the same
-              <>
+              ) : price ? (
+                <>
+                  <b className="num">{price}</b>
+                  <button type="button" className="fl-btn" onClick={buy}>
+                    {chosen.paint.stock === 'now' ? 'Buy' : 'Order'}
+                  </button>
+                </>
+              ) : member ? (
+                // Logged in, and the store has no price for this one (or is not answering): it can be opened all the same
                 <button type="button" className="fl-btn" aria-disabled={!product || undefined} onClick={() => product && buy()}>
                   {product ? 'See this chair' : 'Not available just now'}
                 </button>
-                <small>{chosen.paint?.stock === 'now' ? 'Available now.' : 'Made to order.'}</small>
-              </>
-            ) : (
-              <>
-                <button type="button" className="fl-btn" onClick={seePrice}>
-                  Log in to see the price
+              ) : (
+                <button type="button" className="fl-btn" onClick={enquire}>
+                  Log in to enquire
                 </button>
-                <small>The chair’s price is for members. Logging in is free.</small>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
       {view === 'owners' && (
         <div className="ow">
-          <header>
-            <h1>People who own one</h1>
-            <span className="pill pill--quiet">
-              <FileText size={13} strokeWidth={2} aria-hidden />
-              Notable Owners opens in Preview once it is written
-            </span>
-          </header>
+          <h1 className="sr-only">Notable Owners</h1>
           <div className="ow-grid">
             {OWNERS_SHOWN.map((owner, i) => {
               const paint = PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
@@ -386,15 +336,11 @@ export function WorkspaceApp() {
               )
             })}
           </div>
-          <p className="ow-note">Only owners who have agreed to be named appear. Each card takes its owner’s color.</p>
         </div>
       )}
       {view === 'bts' && (
         <div className="bts" data-autofocus tabIndex={-1}>
-          <header>
-            <h1>BTS</h1>
-            <p>How a chair is made, in pictures and film.</p>
-          </header>
+          <h1 className="sr-only">BTS: how a chair is made</h1>
           <ol className="bts-wall">
             {MAKING_SHOWN.map((piece) => (
               <li key={piece.id} className={`bts-tile ${piece.shape}`}>
@@ -412,54 +358,109 @@ export function WorkspaceApp() {
               </li>
             ))}
           </ol>
-          {look && (
-            <div className="bts-look" role="dialog" aria-label={look.says} onClick={(e) => e.target === e.currentTarget && setLook(null)} onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), setLook(null))}>
-              <figure>
-                {look.kind === 'video' && look.src ? (
-                  <video src={look.src} poster={look.poster ?? undefined} controls autoPlay playsInline />
-                ) : look.src ? (
-                  <img src={look.src} alt={look.says} draggable={false} />
-                ) : (
-                  <span className="bts-none" style={{ background: `linear-gradient(150deg, ${look.tone ?? '#26272b'}, #0f1012)` }}>
-                    This film has not been supplied yet.
-                  </span>
-                )}
-                <figcaption>
-                  {look.says}
-                  <button type="button" className="pill" autoFocus onClick={() => setLook(null)}>
-                    Done
-                  </button>
-                </figcaption>
-              </figure>
-            </div>
-          )}
         </div>
       )}
-      {/* Buying: the store's own page for this chair, in this window. The colors along its foot are the other
-          chairs; "View all" comes back to the studio */}
+      {/* A picture of the wall, large: over the whole window, wherever the wall is scrolled to. It is put away
+          by its x, by a press anywhere off the picture, or by Escape */}
+      {view === 'bts' && look && <Look piece={look} onClose={() => setLook(null)} />}
+      {/* The sixteen more colors, to pick from */}
+      {more && <More picked={chosen?.id ?? null} onPick={pickMore} onClose={() => setMore(false)} />}
+      {/* Buying: the store's own page for this chair, in this window and in its color. The colors along its
+          foot are the other chairs; "View all" comes back to the studio */}
       {framed && (
         <div className="wx-buy" hidden={view !== 'buy'}>
           <StoreFrame
             ref={frame}
             room="chairs"
             title="Workspace: buying a chair"
-            first={`/vip/store/?k=chairs&p=${encodeURIComponent(chosen?.paint?.product ?? '')}`}
+            first={chosen ? pageOf(chosen) : addressOf('chairs')}
             onAt={(place) => {
               if (!place.product) return setView((now) => (now === 'buy' ? 'studio' : now))
-              // The chair in a color of one's own is asked for in the studio, where the color is given: picked
-              // along the foot of the store's page, it leads back there
-              if (ownProduct && place.product === ownProduct.id) {
-                choose({ id: OWN.id, name: OWN.name, color: own.color, paint: null })
-                return setView('studio')
+              // Another color picked along the foot of the store's page: the studio follows, and so does the page's own color
+              const paint = ALL_PAINTS.find((p) => p.product === place.product)
+              if (paint && paint.id !== picked.get()?.id) {
+                choose(chosenOf(paint))
+                frame.current?.tint(paint.color)
               }
-              // Another color picked along the foot of the store's page: the studio follows
-              const paint = PAINTS.find((p) => p.product === place.product)
-              if (paint && paint.id !== picked.get()?.id) choose(chosenOf(paint))
             }}
           />
         </div>
       )}
     </Window>
+  )
+}
+
+/** The sixteen more colors: a grid of four by four, each a swatch with its name. One picked is the studio's. */
+function More({ picked: on, onPick, onClose }: { picked: string | null; onPick: (c: Chosen) => void; onClose: () => void }) {
+  const sheet = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const first = sheet.current?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? sheet.current?.querySelector<HTMLElement>('.mc-swatch')
+    first?.focus()
+  }, [])
+  return (
+    <div className="wx-more" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div
+        ref={sheet}
+        className="mc-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="More colors"
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') e.stopPropagation(), onClose()
+        }}
+      >
+        <header>
+          <div>
+            <h2>More colors</h2>
+            <p>{MORE.length} more, each made to order.</p>
+          </div>
+          <button type="button" className="wx-x" aria-label="Close" onClick={onClose}>
+            <X size={14} strokeWidth={2.6} aria-hidden />
+          </button>
+        </header>
+        <div className="mc-grid" role="group" aria-label="Colors">
+          {MORE.map(chosenOf).map((c) => (
+            <button key={c.id} type="button" className="mc-swatch" aria-pressed={on === c.id} onClick={() => onPick(c)}>
+              <i style={{ background: c.color }} aria-hidden />
+              <span>{c.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** A picture or a film of the wall, large. Nothing is written on it: the wall says what each one is. */
+function Look({ piece, onClose }: { piece: Making; onClose: () => void }) {
+  const x = useRef<HTMLButtonElement>(null)
+  useEffect(() => x.current?.focus(), [])
+  return (
+    <div
+      className="bts-look"
+      role="dialog"
+      aria-modal="true"
+      aria-label={piece.says}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') e.stopPropagation(), onClose()
+      }}
+    >
+      <figure onClick={(e) => e.target === e.currentTarget && onClose()}>
+        {piece.kind === 'video' && piece.src ? (
+          <video src={piece.src} poster={piece.poster ?? undefined} controls autoPlay playsInline />
+        ) : piece.src ? (
+          <img src={piece.src} alt={piece.says} draggable={false} />
+        ) : (
+          <span className="bts-none" style={{ background: `linear-gradient(150deg, ${piece.tone ?? '#26272b'}, #0f1012)` }}>
+            This film has not been supplied yet.
+          </span>
+        )}
+      </figure>
+      <button ref={x} type="button" className="wx-x" aria-label="Close" onClick={onClose}>
+        <X size={14} strokeWidth={2.6} aria-hidden />
+      </button>
+    </div>
   )
 }
 

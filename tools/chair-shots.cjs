@@ -13,7 +13,8 @@ const os = require('os')
 
 const BASE = process.argv[2] || 'http://127.0.0.1:4273/'
 const OUT = path.join(__dirname, '..', 'store', 'public', 'pictures')
-/** The colors with no photographs: the name its dot in the studio has, and the name its files go by. */
+/** The colors with no photographs: the name its dot in the studio has, and the name its files go by. Six of
+ * the eight the studio opens on, and every one of the sixteen more (store/shared/colors.ts, read here as text). */
 const COLORS = [
   ['Solar Orange', 'solar-orange'],
   ['Alexandrite', 'alexandrite'],
@@ -22,8 +23,9 @@ const COLORS = [
   ['Pearl Lavender', 'pearl-lavender'],
   ['Mantis Green', 'mantis-green'],
 ]
+const MORE = [...fs.readFileSync(path.join(__dirname, '..', 'store', 'shared', 'colors.ts'), 'utf8').matchAll(/\{ id: '([^']+)', name: '([^']+)', color: '#[0-9a-f]{6}' \}/g)].map((m) => [m[2], m[1]])
 // Nothing but the chair on its ground: the name behind it, the note, the strip and the words are left out
-const BARE = '.fl-word, .st-turn, .st-shots, .st-stand, .fl-info, .fl-pick, .fl-buy, .wxbar > *, .st-ring { visibility: hidden !important } .notify, .desk-note { display: none !important }'
+const BARE = '.fl-word, .st-turn, .st-shots, .st-foot, .wxbar > *, .st-ring { visibility: hidden !important } .notify, .desk-note, .wx-more { display: none !important }'
 
 ;(async () => {
   const browser = await chromium.launch()
@@ -36,17 +38,26 @@ const BARE = '.fl-word, .st-turn, .st-shots, .st-stand, .fl-info, .fl-pick, .fl-
   await page.waitForSelector(`${W} .st-table[data-3d]`, { timeout: 30000 })
   await page.addStyleTag({ content: BARE })
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'chair-'))
-  for (const [name, slug] of COLORS) {
-    // (the dots are out of sight by now: each is pressed as the page would press it)
-    await page.evaluate(([W, name]) => document.querySelector(`${W} .fl-dot[aria-label="${name}"]`).click(), [W, name])
+  for (const [name, slug] of [...COLORS, ...MORE]) {
+    // (the dots are out of sight by now: each is pressed as the page would press it. One of the sixteen more
+    // is picked from the grid the last dot lets down)
+    await page.evaluate(([W, name]) => {
+      const dot = document.querySelector(`${W} .fl-dot[aria-label="${name}"]`)
+      if (dot) return dot.click()
+      document.querySelector(`${W} .fl-dot.more`).click()
+    }, [W, name])
+    if (MORE.some(([more]) => more === name)) {
+      await page.waitForSelector(`${W} .mc-swatch`, { state: 'attached', timeout: 8000 })
+      await page.evaluate(([W, name]) => [...document.querySelectorAll(`${W} .mc-swatch`)].find((b) => b.textContent.trim() === name).click(), [W, name])
+    }
     await page.waitForTimeout(2600)
     // A square about the chair, within the window
     const clip = await page.evaluate((W) => {
       const t = document.querySelector(`${W} .st-table`).getBoundingClientRect()
       const w = document.querySelector(`${W} .ss-window`).getBoundingClientRect()
-      const side = 470
+      const side = Math.min(470, Math.round(t.height))
       const x = Math.max(w.left, Math.min(w.right - side, t.left + t.width / 2 - side / 2))
-      return { x, y: w.bottom - 606, width: side, height: side }
+      return { x, y: Math.max(w.top, t.bottom - side + 10), width: side, height: side }
     }, W)
     const png = path.join(tmp, `${slug}.png`)
     await page.screenshot({ path: png, clip })
