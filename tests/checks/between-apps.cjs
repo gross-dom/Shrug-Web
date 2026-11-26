@@ -245,7 +245,7 @@ const touchOf = (t) => ({
     const p = t.page
     await A.unlock(p); await p.waitForTimeout(700)
     const dock = await p.evaluate(() => [...document.querySelectorAll('.sb-dock .sb-icon')].map((el) => `${el.tagName === 'A' ? 'link' : 'app'} ${el.getAttribute('aria-label').replace(/,.*/, '')}`))
-    say(JSON.stringify(dock) === '["app Messages","app Contacts","app Notes","link VIP"]', 'the Dock holds Messages, Contacts and Notes, and VIP, which is a link and no app', JSON.stringify(dock))
+    say(JSON.stringify(dock) === '["app Messages","app Contacts","app Notes","link Workspace"]', 'the Dock holds Messages, Contacts and Notes, and Workspace, which is a link (to its store) and no app', JSON.stringify(dock))
     const TOP = '.sb-slot[data-front] .ios-page[data-pos="top"]'
     await A.at(p, 'messages', [], null, 900)
     let exit = p.locator(`${TOP} .ios-bar button`, { hasText: 'Exit' })

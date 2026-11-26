@@ -83,12 +83,12 @@ exports.DESK = [
   ['youtube', 'YouTube, desktop icon'],
 ]
 
-/** Where VIP leads: the points site's address, as the site itself has it (`SITE.points` in src/data/site.ts). */
-exports.POINTS = /\bpoints: '([^']+)'/.exec(fs.readFileSync(path.join(S, '..', 'src', 'data', 'site.ts'), 'utf8'))[1]
-
-/** Answers for the points site, so that a check which follows VIP there asks nothing of the network and
- * finds a page whether or not that site is up: an empty page of that address. */
-exports.points = (ctx) => ctx.route(exports.POINTS + '**', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>The points site</title>' }))
+/** The three stores as a phone has them (`SITE.stores` in src/data/site.ts): the store's own pages for each,
+ * on the site itself, by the name of the desktop's window for it. A phone opens them in a tab of their own.
+ * (VIP, a link to the old points site, was where they are: Dom took it out on 26 Nov.) */
+exports.STORES = { workspace: 'vip/store/?k=chairs', store: 'vip/store/?k=art', books: 'vip/store/?k=books' }
+/** One of them, as an address on the site at `base`. */
+exports.storeAt = (base, which) => new URL(exports.STORES[which], base).href
 
 /** Presses something that should open a tab of its own, and says where the tab went: its address, whether
  * it was given no way back to the page that opened it (`alone`), or null if no tab opened. The tab is closed. */
@@ -224,7 +224,6 @@ exports.open = async (browser, opts = {}) => {
   if (opts.weather !== false) await exports.weather(ctx, opts.weather)
   if (opts.spotify !== false) await exports.spotify(ctx, opts.spotify)
   await exports.youtube(ctx)
-  await exports.points(ctx)
   const page = await ctx.newPage()
   const errors = []
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))

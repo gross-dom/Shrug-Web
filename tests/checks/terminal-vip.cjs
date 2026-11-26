@@ -336,15 +336,15 @@ async function terminal(browser) {
   await p.waitForTimeout(300)
   const still = await A.state(p)
   check('phone: Escape empties the line and stays in the app', (await app.locator('.term__input').inputValue()) === '' && still.place?.app === 'terminal', JSON.stringify(still.place))
-  // VIP is no app on the phone either: open vip stays in the terminal and hands over the link to the points site
+  // VIP is no app on the phone either: open vip stays in the terminal and hands over the three stores, each a link to the store's own page
   await app.locator('.term__input').fill('open vip')
   await app.locator('.term__input').press('Enter')
   await p.waitForTimeout(1200)
   const vipLine = await app.locator('.term__link').last().evaluate((a) => ({ words: a.childNodes[0].textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel, tall: Math.round(a.getBoundingClientRect().height) }))
-  check('phone: open vip launches nothing: the terminal stays, with a link to the points site tall enough for a finger', (await A.state(p)).place?.app === 'terminal' && vipLine.words === 'open vip' && vipLine.href === A.POINTS && vipLine.target === '_blank' && vipLine.rel === 'noopener noreferrer' && vipLine.tall >= 40 && /vip is on the points site:/.test(await app.locator('.term__log').innerText()), JSON.stringify({ place: (await A.state(p)).place, vipLine }))
+  check('phone: open vip launches nothing: the terminal stays, with a link to each of the three stores, tall enough for a finger', (await A.state(p)).place?.app === 'terminal' && vipLine.words === 'open books' && vipLine.href === A.storeAt(BASE, 'books') && vipLine.target === '_blank' && vipLine.rel === 'noopener' && vipLine.tall >= 40 && /the stores open in a tab of their own:\s+open workspace\s+open artstore\s+open books/.test((await app.locator('.term__log').innerText()).replace(/, in a new tab/g, '')), JSON.stringify({ place: (await A.state(p)).place, vipLine, log: (await app.locator('.term__log').innerText()).slice(-200) }))
   const vipTab = await A.tabFrom(t.ctx, () => app.locator('.term__link').last().tap())
   await p.waitForTimeout(600)
-  check('phone: tapped, it opens the points site in a tab of its own, and the phone is still in the terminal', !!vipTab && vipTab.url === A.POINTS && vipTab.alone === true && (await A.state(p)).place?.app === 'terminal' && (await p.locator('.sb-slot[data-app="photos"]').count()) === 0, JSON.stringify(vipTab))
+  check('phone: tapped, it opens that store in a tab of its own, and the phone is still in the terminal', !!vipTab && vipTab.url === A.storeAt(BASE, 'books') && vipTab.alone === true && (await A.state(p)).place?.app === 'terminal' && (await p.locator('.sb-slot[data-app="photos"]').count()) === 0, JSON.stringify(vipTab))
   // every app help offers opens something. The phone has no About Shrug: Shrug's own card in Contacts opens
   const term = p.locator('.sb-slot[data-app="terminal"]')
   const reached = []

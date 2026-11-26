@@ -1,12 +1,13 @@
 // VIP's checks, run by terminal-vip.cjs (which hands over its helpers). On the desktop VIP is the store, in a
 // window (design/v1): these hold to it opening that window by every route there is besides the Dock's own icon
 // (which desktop-flow.cjs presses) and an address (addresses.cjs), and to nothing there being a link away. On
-// a phone VIP is still the way to the points site (`SITE.points` in src/data/site.ts): a link, in a tab of its
-// own, and nowhere an app. And they hold to the two windows that are laid out with the classes VIP's window
+// a phone VIP is nowhere an app, and no longer a link to the old points site: where it was are the three stores
+// (`SITE.stores` in src/data/site.ts), each a link to the store's own page, in a tab of its own. And they hold to the two windows that are laid out with the classes VIP's window
 // once had, Wallpapers and Updates.
 
 exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
-  const POINTS = A.POINTS
+  /** Where the Drops conversation's link leads on a phone: ArtStore, as the store's own page. */
+  const POINTS = A.storeAt(BASE, 'store')
   /** A link as these checks ask of one: where it goes, that it opens a tab that cannot reach back, and what it says. */
   const linkOf = (a) => ({ tag: a.tagName, href: a.getAttribute('href'), target: a.target, rel: a.rel, says: (a.getAttribute('aria-label') ?? a.textContent).replace(/\s+/g, ' ').trim() })
   const leaves = (l) => !!l && l.tag === 'A' && l.href === POINTS && l.target === '_blank' && /\bnoreferrer\b/.test(l.rel)
@@ -217,16 +218,16 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await p.waitForSelector(`${front} .chat-link`, { timeout: 15000 })
   await p.waitForTimeout(1000)
   const said = await p.evaluate((front) => { const a = document.querySelector(`${front} .chat__thread .chat-link`); return { bubbles: [...document.querySelectorAll(`${front} .chat__thread .ss-bubble`)].map((b) => b.textContent.trim()), link: { tag: a.tagName, words: a.childNodes[0].textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel, says: a.textContent } } }, front)
-  check('phone: the Drops conversation says what it said, and its link to VIP is a link to the points site, in a new tab', said.bubbles[0] === 'Your drop is out for delivery.' && leaves(said.link) && said.link.says === 'See who got one in VIP, opens in a new tab', JSON.stringify(said))
+  check('phone: the Drops conversation says what it said, and its link to VIP is a link to ArtStore (the store’s own page), in a new tab', said.bubbles[0] === 'Your drop is out for delivery.' && leaves(said.link) && said.link.says === 'See who got one in VIP, opens in a new tab', JSON.stringify(said))
   const fromPhone = await A.tabFrom(t.ctx, () => p.locator(`${front} .chat__thread .chat-link`).tap())
   await p.waitForTimeout(700)
   const after = await A.state(p)
-  check('phone: tapped, it opens the points site in a tab of its own; the phone stays in the conversation, and no app opens for VIP', !!fromPhone && fromPhone.url === POINTS && fromPhone.alone === true && after.place?.app === 'messages' && after.place.stack.join() === 'c:drops' && (await noVip(p)), JSON.stringify({ fromPhone, place: after.place }))
-  // The Home Screen: VIP where it was, drawn as an app is, and not one
+  check('phone: tapped, it opens ArtStore in a tab of its own; the phone stays in the conversation, and no app opens for VIP', !!fromPhone && fromPhone.url === POINTS && fromPhone.alone === true && after.place?.app === 'messages' && after.place.stack.join() === 'c:drops' && (await noVip(p)), JSON.stringify({ fromPhone, place: after.place }))
+  // The Home Screen: Workspace where VIP was, drawn as an app is, and not one
   await A.at(p, null, [])
   const dock = await p.evaluate(() => { const items = [...document.querySelectorAll('.sb-dock > .sb-icon')]; const tile = (el) => { const r = el.querySelector('.sb-icon__tile').getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } }; return { names: items.map((el) => `${el.tagName === 'A' ? 'link' : 'app'} ${el.getAttribute('aria-label').replace(/, \d+ unread$/, '')}`), tiles: items.map(tile), full: document.querySelector('.sb-dock').hasAttribute('data-full'), named: getComputedStyle(items.at(-1).querySelector('.sb-icon__name')).display } })
   const gaps = dock.tiles.slice(1).map((tile, i) => tile.x - dock.tiles[i].x)
-  check('phone: the Dock is Messages, Contacts and Notes, then VIP, which is a link', dock.names.join(' | ') === 'app Messages | app Contacts | app Notes | link VIP, opens in a new tab', dock.names.join(' | '))
+  check('phone: the Dock is Messages, Contacts and Notes, then Workspace, which is a link (VIP is gone from it)', dock.names.join(' | ') === 'app Messages | app Contacts | app Notes | link Workspace, opens in a new tab', dock.names.join(' | '))
   check('phone: its tile is the size of theirs, on their line and as far from the last of them as they are from each other, the four from end to end of the Dock', dock.full && dock.tiles.every((tile) => tile.w === dock.tiles[0].w && tile.h === dock.tiles[0].h && tile.y === dock.tiles[0].y) && Math.max(...gaps) - Math.min(...gaps) <= 1 && dock.named === 'none', JSON.stringify(dock.tiles))
   await shot(p, 'vip-phone-home')
   check('phone: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))

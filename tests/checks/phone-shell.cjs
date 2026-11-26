@@ -627,9 +627,9 @@ const touchOf = (t) => ({
     await A.unlock(p)
     const one = await p.evaluate(() => { const a = [...document.querySelectorAll('.sb-home a.sb-icon')][0]; return { drag: a.draggable, name: a.textContent.replace(/\s+/g, ' ').trim() } })
     say(one.drag === false && /One-pager, opens in a new tab/.test(one.name), 'the One-pager icon says where it goes and cannot be dragged off', JSON.stringify(one))
-    // (VIP, in the Dock, is the other icon that is a link: the Dock shows no names, so it says so on the link itself)
+    // (Workspace, in the Dock, is a link too: the Dock shows no names, so it says so on the link itself)
     const vip = await p.evaluate(() => { const a = document.querySelector('.sb-dock a.sb-icon'); return a && { drag: a.draggable, name: a.getAttribute('aria-label'), href: a.href, target: a.target, shown: getComputedStyle(a.querySelector('.sb-icon__name')).display } })
-    say(!!vip && vip.drag === false && vip.name === 'VIP, opens in a new tab' && vip.href === A.POINTS && vip.target === '_blank' && vip.shown === 'none', 'the VIP icon says where it goes too (the points site, in a new tab), and cannot be dragged off', JSON.stringify(vip))
+    say(!!vip && vip.drag === false && vip.name === 'Workspace, opens in a new tab' && vip.href === A.storeAt(BASE, 'workspace') && vip.target === '_blank' && vip.shown === 'none', 'the Workspace icon says where it goes too (the chair’s store, in a new tab), and cannot be dragged off', JSON.stringify(vip))
     const words = await p.evaluate(() => document.querySelector('.sb-chat__count .sr-only').textContent)
     say(/No one has replied yet|\d+ of 89 ha(s|ve) replied/.test(words) && !/^1 of 89 have/.test(words), 'the widget counts in a sentence', words)
     // the first banner of a visit is not held back

@@ -1,4 +1,8 @@
 // Site-wide facts and links.
+
+/** This site's own address, where there is a browser to ask (the pages a phone is sent to are on it). */
+const HERE = typeof window === 'undefined' ? '' : window.location.origin
+
 export const SITE = {
   name: 'Shrug',
   legalName: 'Shrug Capital',
@@ -12,11 +16,15 @@ export const SITE = {
   /** Where the site lives. The link preview's addresses are written from this (vite.config.ts). */
   url: 'https://www.shrug.vc/',
   onePager: 'https://docsend.com/view/4659mp7f5ci9zdxa',
-  /** The points site: a member's card, and the store their points are spent in. (Its testing address,
-   * until it has a domain of its own.) It is where VIP leads: VIP is a link to it wherever it appears,
-   * in the Dock of the desktop and of the iPhone, and opens in a tab of its own. */
-  points: 'https://shrug-store.vercel.app/',
-  store: 'https://shrug-store.vercel.app/store/',
+  /** The three stores, as a phone has them for now (Dom, 26 Nov: the phone's own are still to be built, and
+   * the link to VIP, the old points site, is gone). Each is the store's own pages for it, on this site
+   * (store/), which already fit a phone; a phone opens them in a tab of their own, as it opens the
+   * one-pager. On the desktop each is a window of its own (`app`), and nothing here is followed. */
+  stores: [
+    { app: 'workspace', name: 'Workspace', href: `${HERE}/vip/store/?k=chairs` },
+    { app: 'store', name: 'ArtStore', href: `${HERE}/vip/store/?k=art` },
+    { app: 'books', name: 'Books', href: `${HERE}/vip/store/?k=books` },
+  ] as const,
   /** How a visitor gets hold of Shrug for real: a number to text
    * (international form, '+1...') or an address to email. Neither is known
    * yet, so both are null and `reach` falls back on the one-pager. The day

@@ -2,7 +2,6 @@
 //   node phone-apps.cjs [base url] [only: contacts|notes|vip|terminal|settings|messages]
 const { chromium } = require('playwright')
 const path = require('path')
-const { points } = require('./lib.cjs')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
 const only = process.argv[3]
 const out = path.join(__dirname, '..', 'audit', 'shots')
@@ -170,11 +169,10 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     await ctx.close()
   })
 
-  // ---- VIP: not an app. It is the points site (a link in the Dock: phone-flow.cjs), and nothing opens an app of that name ----
+  // ---- VIP: not an app, and no longer a link either (the three stores are links: phone-flow.cjs). Nothing opens an app of that name ----
   await run('vip', async () => {
     const fresh = async (tail) => {
       const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, isMobile: true })
-      await points(ctx)
       const page = await ctx.newPage()
       page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
       page.on('pageerror', (e) => errors.push(String(e)))
@@ -239,7 +237,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     await page.goto(base + '?open=settings'); await sleep(2200)
     const at = await page.evaluate(() => ({ locked: !!document.querySelector('.sb-lock:not([data-leaving])'), app: history.state?.shrug?.app ?? null, front: document.querySelector('.sb-slot[data-front]')?.getAttribute('data-app') ?? null, icons: [...document.querySelectorAll('.sb-home .sb-icon__name')].map((el) => el.textContent.trim()) }))
     say(!at.locked && at.app === null && at.front === null, 'an address that asks for Settings opens the phone on its Home Screen: there is no such app', JSON.stringify({ locked: at.locked, app: at.app }))
-    say(!at.icons.some((name) => /Settings/.test(name)) && at.icons.some((name) => /^VIP/.test(name)) && at.icons.some((name) => /^Case Studies/.test(name)), 'and the Home Screen has no Settings icon among its apps', at.icons.join(' | '))
+    say(!at.icons.some((name) => /Settings/.test(name)) && !at.icons.some((name) => /^VIP/.test(name)) && ['Workspace', 'ArtStore', 'Books', 'Case Studies'].every((store) => at.icons.some((name) => name.startsWith(store))), 'and the Home Screen has no Settings icon among its apps (nor VIP: the three stores are there)', at.icons.join(' | '))
     await page.locator('.sb-search').tap(); await sleep(800)
     await page.locator('.ph input[aria-label*="Search" i]').last().fill('settings'); await sleep(700)
     const hits = await page.locator('.ph .spot-row').allTextContents()

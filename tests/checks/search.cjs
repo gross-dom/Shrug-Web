@@ -37,7 +37,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   // ---- UX-13: what comes first ----
   const firsts = [
     ['portfolio', 'Contacts'], ['Portfolio', 'Contacts'], ['companies', 'Contacts'], ['contacts', 'Contacts'], ['faqs', 'Notes'], ['faq', 'Notes'], ['questions', 'Notes'],
-    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'VIP'], ['vip', 'VIP'], ['VIP', 'VIP'], ['points', 'VIP'], ['merch', 'VIP'], ['terminal', 'Case Studies'],
+    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'ArtStore'], ['vip', 'ArtStore'], ['VIP', 'ArtStore'], ['points', 'ArtStore'], ['merch', 'ArtStore'], ['workspace', 'Workspace'], ['chair', 'Workspace'], ['books', 'Books'], ['terminal', 'Case Studies'],
     ['one-pager', 'One-pager'], ['one pager', 'One-pager'], ['onepager', 'One-pager'], ['deck', 'One-pager'],
     ['contact', 'Get in Touch'], ['email', 'Get in Touch'], ['reach', 'Get in Touch'], ['pitch', 'Get in Touch'], ['apply', 'Get in Touch'], ['intro', 'Get in Touch'],
     ['varda', 'Varda'], ['kevin', 'Kevin Olusola'], ['akash', 'Akash Nigam'],
@@ -89,17 +89,17 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await A.shot(t.page, 'fix-s2-search-shrug')
   await type(t, 'drops')
   r = await read(t.page)
-  // VIP is the points site: found first by its name and by the site's word for what it is about, as the link it is in
-  // the Dock. The drops themselves were what its app held, and with the app gone there is no list of them to find
-  check('"drops": VIP first, a link to the points site in a new tab, with where it goes under its name', r.top?.title === 'VIP' && r.top.tag === 'A' && r.top.href === A.POINTS && r.top.target === '_blank' && r.top.sub === new URL(A.POINTS).hostname.replace(/^www\./, ''), JSON.stringify(r.top))
-  check('"drops": no drop is listed, and no group of them; the conversation of that name is under Messages', !r.groups.some((g) => g.name === 'VIP') && !titles(r).some((title) => /Billboards|Deep Tech Mat|Shrug Calendar|VC Puzzle/.test(title)) && r.groups.find((g) => g.name === 'Messages')?.rows.some((x) => x.title === 'Drops'), r.groups.map((g) => g.name + ':' + g.rows.map((x) => x.title).join('/')).join(' '))
+  // ArtStore is what VIP was: found first by its names and by the site's word for what it is about, as the link it is
+  // on the Home Screen. The drops themselves were what VIP's app held, and with the app gone there is no list of them to find
+  check('"drops": ArtStore first, a link to the store’s own page in a new tab, with what it sells under its name', r.top?.title === 'ArtStore' && r.top.tag === 'A' && r.top.href === A.storeAt(BASE, 'store') && r.top.target === '_blank' && r.top.sub === 'Six pieces, fifty of each', JSON.stringify(r.top))
+  check('"drops": no drop is listed, and no group of them; the conversation of that name is under Messages', !r.groups.some((g) => g.name === 'VIP' || g.name === 'ArtStore') && !titles(r).some((title) => /Billboards|Deep Tech Mat|Shrug Calendar|VC Puzzle/.test(title)) && r.groups.find((g) => g.name === 'Messages')?.rows.some((x) => x.title === 'Drops'), r.groups.map((g) => g.name + ':' + g.rows.map((x) => x.title).join('/')).join(' '))
   await type(t, 'deep')
   r = await read(t.page)
   check('"deep": the companies of that vertical, and no drop of that name', titles(r).includes('Varda') && !titles(r).includes('Deep Tech Mat') && r.top?.title !== 'Deep Tech Mat', `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 120)}`)
   for (const q of ['photos', 'videos', 'albums']) {
     await type(t, q)
     r = await read(t.page)
-    check(`"${q}": VIP is not found by what its app held`, r.top?.title !== 'VIP' && !titles(r).includes('VIP'), `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 80)}`)
+    check(`"${q}": neither VIP nor a store is found by what VIP's app held`, !['VIP', 'ArtStore', 'Books', 'Workspace'].includes(r.top?.title) && !titles(r).some((title) => ['VIP', 'ArtStore', 'Books', 'Workspace'].includes(title)), `${r.top?.title ?? 'no top'} · ${titles(r).join('/').slice(0, 80)}`)
   }
   await type(t, 'appl')
   r = await read(t.page)
@@ -165,7 +165,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await type(t, 'vip')
   const toPoints = await A.tabFrom(t.ctx, () => t.page.keyboard.press('Enter'))
   await t.sleep(700)
-  check('Return on VIP opens the points site in a tab of its own; search closes, and no app opens', !!toPoints && toPoints.url === A.POINTS && toPoints.alone === true && !(await t.page.$('.spot:not([data-leaving])')) && (await A.state(t.page)).place?.app == null, JSON.stringify({ toPoints, place: (await A.state(t.page)).place }))
+  check('Return on "vip" opens ArtStore, the store’s own page, in a tab of its own; search closes, and no app opens', !!toPoints && toPoints.url === A.storeAt(BASE, 'store') && toPoints.alone === true && !(await t.page.$('.spot:not([data-leaving])')) && (await A.state(t.page)).place?.app == null, JSON.stringify({ toPoints, place: (await A.state(t.page)).place }))
 
   // ---- AX-11: what the field and the list say ----
   await openSearch(t)

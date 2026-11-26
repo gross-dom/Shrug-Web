@@ -99,16 +99,16 @@ const check = (name, ok, detail = '') => {
     check(`desktop ${tail} -> ${want ?? 'the iPhone'}`, got === want, String(got))
     await v.t.ctx.close()
   }
-  // /vip is not the desk. It is the store's own pages, which this site serves under that name: the card and its
-  // pack at /vip/, the store at /vip/store/. They are what the window's frame holds, and where a phone is sent.
+  // /vip is not the desk. It is the store's own pages, which this site serves under that name: the card's page
+  // (where someone signs in for it; it has no pack any more) at /vip/, the store at /vip/store/. They are what the window's frame holds, and where a phone is sent.
   // Asked for without its slash, the card's page is sent to the address with it, so that what it links to is found
   {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } })
     const page = await ctx.newPage()
     await page.goto(BASE + 'vip', { waitUntil: 'load' })
     await page.waitForSelector('#stage', { timeout: 20000 })
-    const card = await page.evaluate(() => ({ path: location.pathname, desk: !!document.querySelector('.os, .dock'), pack: !!document.querySelector('#stage #pack'), title: document.title }))
-    check('/vip is the card and its pack, at /vip/, and not the desk', /\/vip\/$/.test(card.path) && !card.desk && card.pack && card.title === 'Shrug VIP', JSON.stringify(card))
+    const card = await page.evaluate(() => ({ path: location.pathname, desk: !!document.querySelector('.os, .dock'), signIn: document.querySelector('#stage #tearBtn')?.textContent.replace(/\s+/g, ' ').trim() ?? null, foil: [...document.querySelectorAll('#stage .pk-top, #stage .pk-low, #stage .pegtip')].filter((el) => el.getBoundingClientRect().width > 0).length, title: document.title }))
+    check('/vip is the card’s page, at /vip/, and not the desk: where someone signs in for it, with no pack drawn on it', /\/vip\/$/.test(card.path) && !card.desk && card.signIn === 'Sign in' && card.foil === 0 && card.title === 'Shrug VIP', JSON.stringify(card))
     await page.goto(BASE + 'vip/store/', { waitUntil: 'load' })
     await page.waitForSelector('.ui-prod', { timeout: 20000 })
     const shop = await page.evaluate(() => ({ desk: !!document.querySelector('.os, .dock'), bar: !!document.querySelector('.ui-top'), products: document.querySelectorAll('.ui-prod').length, title: document.title }))

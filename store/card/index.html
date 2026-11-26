@@ -261,6 +261,13 @@ html.is-scroll .page { touch-action: pan-y pinch-zoom; }
 }
 .pegtip.is-behind { opacity: 0; transition: none; } /* the torn top has lifted off the peg and hides it */
 
+/* THERE IS NO PACK ANY MORE (Dom, 26 Nov: "this should just be removed"). What is left of it is its strip,
+   which was always where someone signs in: the button, then the email field, then the six cells of the
+   code. The foil, its shadow and the peg it hung by are not drawn, and nothing swings. (Their rules, and
+   the opening's, are still below: they are not reached, and go when this page's sign-in is redrawn.) */
+.pk-top, .pk-low, .rig .shadow, .rig .lip, .pegtip { display: none !important; }
+.rig, .rig .swing, .rig .bat, .rig .tilt { animation: none !important; transform: none !important; }
+
 /* The pack is two pieces of foil with the tear strip between them, so it can come apart. */
 .pack { position: absolute; left: 0; top: 0; width: 330px; height: 500px; pointer-events: auto; }
 /* A sealed pack can be taken hold of, below the strip, and swung (see "a hand on the pack" in app.js). */
@@ -1049,7 +1056,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   </header>
 
   <main class="main">
-    <h1 class="sr">Shrug member card. Apply or redeem.</h1>
+    <h1 class="sr">Shrug member card. Sign in.</h1>
     <div class="stage" id="stage" data-view="pack" data-mode="cta" data-phase="idle">
       <div class="fx fx-back" aria-hidden="true">
         <div class="rays rays-a"></div>
@@ -1098,7 +1105,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
                 </div>
                 <div class="tear" id="tear">
                   <button class="tear-btn" id="tearBtn" type="button">
-                    <span class="tear-strip tear-word">Apply / Redeem</span>
+                    <span class="tear-strip tear-word">Sign in</span>
                     <span class="tear-tab" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h8M6.5 2.5 10 6l-3.5 3.5"></path></svg></span>
                   </button>
                 </div>
@@ -1116,14 +1123,14 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       </div>
 
       <div class="shelf" id="shelf" aria-live="polite">
-        <p class="label" id="shelfHead">Apply/Redeem to open</p>
+        <p class="label" id="shelfHead">Sign in with your email</p>
       </div>
     </div>
   </main>
 
   <footer class="bot">
     <div class="bot-l" id="botL" aria-live="polite"><span class="only-wide">One card per member. Silver, gold or black. No swaps.</span><span class="only-compact">One card per member. No swaps.</span></div>
-    <div class="bot-r" id="botR"><button class="linkbtn" type="button">Sign in</button></div>
+    <div class="bot-r" id="botR"></div>
   </footer>
 </div>
 <noscript><p class="noscript">This page needs JavaScript to show your card. Turn it on and reload.</p></noscript>
@@ -1493,7 +1500,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   /** The tab says where things stand, for a tab in the background and for a screen reader. */
   function title() {
     const t = S.view === 'card' ? (S.who && S.who.status === 'member' ? 'Your card' : 'Applied') : S.mode === 'code' ? 'Enter your code' : S.mode === 'tear' ? 'Tear here' : '';
-    document.title = t ? t + ' · Shrug' : 'Shrug · Apply / Redeem';
+    document.title = t ? t + ' · Shrug' : 'Shrug · Sign in';
   }
 
   // ------------------------------------------------------------------- layout
@@ -1507,7 +1514,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
   const STAGE_W = 390; // the stage is drawn at this size and scaled to fit
   const STAGE_H = 650; // pack, gap, and the tallest thing the shelf holds while someone is typing
-  const GROUP_H = 576; // pack plus its one-line label: what gets centred
+  const GROUP_H = 576; // a card plus its one-line label: what gets centred
+  const SIGN_H = 300; // and with no card up: the strip, 52 down, and the label under it (there is no pack any more)
   const LAND_W = 760; // sideways: the stage, and a column to its right
   const LAND_H = 540;
   const COL_X = 410; // where that column starts and how wide it is, in the stage's own pixels
@@ -1667,7 +1675,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       if (footY + footH + padB > hgt + 0.5) docH = Math.ceil(footY + footH + padB);
     } else {
       st.setProperty('--stage-x', '0px');
-      const base = card ? 496 : 540; // where the shelf starts, in the stage's pixels: under a card, a clear step below it
+      const base = card ? 496 : 142; // where the shelf starts, in the stage's pixels: under a card, a clear step below it; else under the strip
       const tuck = card ? 28 : 28; // how far it can come up before it touches what hangs above it
       const least = typing && kind === 'compact' ? STAGE_H : 0; // room for three lines before a keyboard arrives
       let lift = 0;
@@ -1692,7 +1700,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       // not drop the field they are typing in.
       if (typing) { need = Math.max(need, L.reserve); L.reserve = need; } else L.reserve = 0;
       st.setProperty('--shelf-top', (base - lift).toFixed(0) + 'px');
-      const mid = barT + (hgt - barT - barB - GROUP_H * scale) / 2;
+      const mid = barT + (hgt - barT - barB - (card ? GROUP_H : SIGN_H) * scale) / 2;
       top = Math.max(ceiling, Math.min(mid, soft - need * scale));
       if (top + need * scale > hard + 0.5) top = Math.max(padT, hard - need * scale); // on a desktop, on into the footer's margin
       if (top + need * scale > hard + 0.5) docH = Math.ceil(top + need * scale + padB); // and after that the page grows
@@ -1737,7 +1745,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
     // The wall's rays meet behind the middle of what is on show: the pack (500 tall, from the top
     // of the stage) or the card (444 tall, 14 down).
-    const rayY = top + (card ? 236 : 250) * scale;
+    const rayY = top + (card ? 236 : 81) * scale; // (behind the middle of the card, or of the strip)
     if (pan && Math.abs(top - L.top) < 0.5 && Math.abs(rayY - L.rayY) < 0.5) return;
     if (pan && L.top >= 0 && !reduced) {
       page.classList.add('is-panning');
@@ -1774,7 +1782,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
   const P = { th: 0, om: 0, raf: 0, knocks: 0, lastKnock: 0, settling: false, hold: null }; // hold: the pointer that has hold of it, if one has
   /** Only a sealed pack swings, and not for someone who has asked for less motion. */
-  const swings = () => !reduced && S.view === 'pack' && S.mode === 'cta' && !S.opening;
+  const swings = () => false; // (nothing hangs, so nothing swings: there is no pack any more)
 
   function kick(v, byHand) {
     if (!swings()) return;
@@ -2081,8 +2089,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       botR.append(linkBtn('Skip to your card', skipTear));
     } else {
       botL.append(h('span', 'only-wide', 'One card per member. Silver, gold or black. No swaps.'), h('span', 'only-compact', 'One card per member. No swaps.'));
-      // Someone who has had their pack does not have to open another: they sign in, and their card is there
-      botR.append(S.direct ? linkBtn('Back', () => { showLanding(); const strip = $('tearBtn'); if (strip) strip.focus({ preventScroll: true }); }) : linkBtn('Sign in', signIn));
+      // (the strip is Sign in now, so the footer has no second one: only the way back from the field)
+      if (S.direct) botR.append(linkBtn('Back', () => { showLanding(); const strip = $('tearBtn'); if (strip) strip.focus({ preventScroll: true }); }));
     }
     if (L.kind === 'land') place(true); // sideways, the footer's depth is part of the layout
   }
@@ -2209,9 +2217,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   const whyNot = (r) => (r.error === 'offline' ? 'No connection. Check it and try again.' : r.error === 'timeout' ? 'That took too long. Try again.' : JAMMED);
 
   function quip() {
-    const how = (coarse ? 'Tap' : 'Click') + ' Apply/Redeem to open'; // sealed until they sign in: it is a button, so say so
+    const how = 'Sign in with your email'; // (there is no pack to open: the strip is where someone signs in)
     if (S.out) return 'Signed out. ' + how; // the session ran out, or was ended somewhere else
-    return P.knocks >= 7 ? "It's the gold bit" : P.knocks >= 3 ? "Shaking won't open it" : how;
+    return how;
   }
 
   function showLanding() {
@@ -2220,7 +2228,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     S.direct = false;
     setMode('cta');
     if (fresh) {
-      stripButton('Apply / Redeem', onStrip);
+      stripButton('Sign in', onStrip);
       footer('anon');
     }
     setShelf(label(quip()));
@@ -3708,10 +3716,10 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 
   /** A pack arrives on its peg from above, and swings once it is on. */
   function dropIn() {
-    if (reduced) {
-      if (S.view === 'pack') setPhase('idle');
-      return;
-    }
+    // (nothing drops in and swings any more: there is no pack. The strip is simply there)
+    if (S.view === 'pack') setPhase('idle');
+    return;
+    // eslint-disable-next-line no-unreachable
     setPhase('dropin');
     setTimeout(() => {
       if (S.view !== 'pack' || stage.dataset.phase !== 'dropin') return;

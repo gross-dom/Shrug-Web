@@ -20,7 +20,8 @@ import { DOCKED, ON_HOME, PHONE } from './apps'
 import { companyOf, GROUP_VIEW, MY_CARD } from './apps/routes'
 import { COLOR, carried, chrome, grounds, setTone } from './chrome'
 import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
-import { OnePagerIcon, PhoneIcon, VipIcon } from './icons'
+import { OnePagerIcon, PhoneIcon } from './icons'
+import { AppIcon } from '../os/icons'
 import { haptic } from './native'
 import { settings } from './settings'
 import { Spotlight } from './Spotlight'
@@ -381,8 +382,13 @@ function HomeIcon({ id }: { id: PhoneApp }) {
   )
 }
 
-/** A link dressed as an app: the one-pager, and VIP (the points site), each of which opens in a tab of its
- * own. It is named on the link itself as well as under its tile, since the Dock shows no names. */
+/** The stores on a phone: Workspace in the Dock, where VIP was, and the other two on the Home Screen. */
+const DOCK_STORE = SITE.stores[0]
+const HOME_STORES = SITE.stores.slice(1)
+
+/** A link dressed as an app: the one-pager, and the three stores (the store's own pages, until the phone has
+ * stores of its own), each of which opens in a tab of its own. It is named on the link itself as well as
+ * under its tile, since the Dock shows no names. */
 function LinkIcon({ name, href, children }: { name: string; href: string; children: ReactNode }) {
   return (
     <a className="sb-icon" href={href} target="_blank" rel="noopener noreferrer" draggable={false} aria-label={`${name}, opens in a new tab`}>
@@ -525,6 +531,12 @@ function Home() {
         <LinkIcon name="One-pager" href={SITE.onePager}>
           <OnePagerIcon />
         </LinkIcon>
+        {/* Two of the three stores, in the two places the row had left; the third is in the Dock, where VIP was */}
+        {HOME_STORES.map((shop) => (
+          <LinkIcon key={shop.app} name={shop.name} href={shop.href}>
+            <AppIcon id={shop.app} />
+          </LinkIcon>
+        ))}
         {ON_HOME.slice(1).map((id) => (
           <HomeIcon key={id} id={id} />
         ))}
@@ -533,13 +545,14 @@ function Home() {
         <Search size={12} strokeWidth={3} aria-hidden />
         Search
       </button>
-      {/* The apps, and after them VIP, which is a link as the one-pager is: it leads to the points site */}
+      {/* The apps, and after them Workspace, which is a link as the one-pager is: it leads to the chair's own
+          store. (VIP was here, a link to the old points site: Dom took it out on 26 Nov) */}
       <nav className="sb-dock" aria-label="Dock" data-full={DOCKED.length + 1 >= 4 || undefined}>
         {DOCKED.map((id) => (
           <HomeIcon key={id} id={id} />
         ))}
-        <LinkIcon name="VIP" href={SITE.points}>
-          <VipIcon />
+        <LinkIcon name={DOCK_STORE.name} href={DOCK_STORE.href}>
+          <AppIcon id={DOCK_STORE.app} />
         </LinkIcon>
       </nav>
     </div>

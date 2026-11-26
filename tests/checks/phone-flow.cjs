@@ -2,7 +2,7 @@
 //   node phone-flow.cjs [base url]
 const { chromium } = require('playwright')
 const path = require('path')
-const { POINTS, points, tabFrom } = require('./lib.cjs')
+const { storeAt, tabFrom } = require('./lib.cjs')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
 const out = path.join(__dirname, '..', 'audit', 'shots')
 ;(async () => {
@@ -11,7 +11,6 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, isMobile: true })
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write'])
   // (VIP leads off the site, to the points site: this answers in its place, so nothing here asks the network)
-  await points(ctx)
   const page = await ctx.newPage()
   const cdp = await ctx.newCDPSession(page)
   const errors = []
@@ -63,7 +62,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   await touch.swipe([note.x + note.width / 2, note.y + note.height / 2], [note.x + note.width / 2, note.y - 260], 150); await sleep(900)
   let s = await at()
   say(!s.locked && s.app === null, 'a swipe up opens it onto the Home Screen, even one that starts on a notification')
-  say((await page.locator('.sb-dock button.sb-icon').count()) === 3 && (await page.locator('.sb-dock a.sb-icon').count()) === 1 && s.replies >= 1 && s.badge === String(s.replies), 'the Dock holds three apps and VIP, and the badge on Messages counts the replies that have come in', `badge ${s.badge}, ${s.replies} replies`)
+  say((await page.locator('.sb-dock button.sb-icon').count()) === 3 && (await page.locator('.sb-dock a.sb-icon').count()) === 1 && s.replies >= 1 && s.badge === String(s.replies), 'the Dock holds three apps and Workspace (a link), and the badge on Messages counts the replies that have come in', `badge ${s.badge}, ${s.replies} replies`)
   say((await page.locator('.sb-widget--wide').count()) === 1 && (await page.locator('.sb-folder').count()) === 2, 'the newest reply as a widget, and the Portfolio and FAQs folders')
 
   // ---- Every app opens out of its icon and goes home on a flick ----
@@ -76,13 +75,17 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     say(open && (await at()).app === null, `${label} opens out of its icon, and a flick of the home bar sends it back`)
   }
 
-  // ---- VIP is in the Dock with them and is no app: it is a link to the points site, in a tab of its own ----
+  // ---- The three stores are on the phone as links, each to the store's own page for it, in a tab of its own:
+  // Workspace in the Dock, where VIP was, and ArtStore and Books on the Home Screen after the one-pager. VIP,
+  // the link to the old points site, is gone ----
+  const stores = await page.evaluate(() => ({ home: [...document.querySelectorAll('.sb-grid > a.sb-icon')].map((a) => `${a.getAttribute('aria-label')} -> ${a.href}`), vip: [...document.querySelectorAll('.sb-home a.sb-icon')].filter((a) => /^VIP\b/.test(a.getAttribute('aria-label') ?? '') || /shrug-store\.vercel\.app/.test(a.href)).length, drawn: [...document.querySelectorAll('.sb-grid > a.sb-icon')].every((a) => !!a.querySelector('.sb-icon__tile svg')) }))
+  say(stores.home.length === 3 && /^One-pager, opens in a new tab -> /.test(stores.home[0]) && stores.home[1] === `ArtStore, opens in a new tab -> ${storeAt(base, 'store')}` && stores.home[2] === `Books, opens in a new tab -> ${storeAt(base, 'books')}` && stores.vip === 0 && stores.drawn, 'ArtStore and Books are on the Home Screen after the one-pager, each a link to the store’s own page under its own tile; there is no VIP link any more', JSON.stringify(stores))
   const vip = await page.evaluate(() => { const a = document.querySelector('.sb-dock a.sb-icon'); return a && { last: a === a.parentElement.lastElementChild, name: a.getAttribute('aria-label'), href: a.href, target: a.target, rel: a.rel, drawn: !!a.querySelector('.sb-icon__tile svg'), drag: a.draggable } })
-  say(!!vip && vip.last && vip.name === 'VIP, opens in a new tab' && vip.href === POINTS && vip.target === '_blank' && /\bnoopener\b/.test(vip.rel) && /\bnoreferrer\b/.test(vip.rel) && vip.drawn && vip.drag === false, 'VIP is the last icon in the Dock, under its own tile: a link to the points site that says it opens in a new tab', JSON.stringify(vip))
+  say(!!vip && vip.last && vip.name === 'Workspace, opens in a new tab' && vip.href === storeAt(base, 'workspace') && vip.target === '_blank' && /\bnoopener\b/.test(vip.rel) && /\bnoreferrer\b/.test(vip.rel) && vip.drawn && vip.drag === false, 'Workspace is the last icon in the Dock, under its own tile: a link to the chair’s own store that says it opens in a new tab', JSON.stringify(vip))
   const went = await tabFrom(ctx, () => page.locator('.sb-dock a.sb-icon').tap())
   await sleep(900)
   s = await at()
-  say(!!went && went.url === POINTS && went.alone === true && s.app === null && !s.locked && (await page.locator('.sb-slot[data-app="photos"]').count()) === 0, 'a tap on it opens the points site in a tab of its own, and no app on the phone', JSON.stringify({ went, app: s.app, cards: s.cards }))
+  say(!!went && went.url === storeAt(base, 'workspace') && went.alone === true && s.app === null && !s.locked && (await page.locator('.sb-slot[data-app="photos"]').count()) === 0, 'a tap on it opens that store in a tab of its own, and no app on the phone', JSON.stringify({ went, app: s.app, cards: s.cards }))
 
   // ---- The App Switcher ----
   await page.locator('.sb-icon[aria-label^="Notes"]').first().tap(); await sleep(1000)

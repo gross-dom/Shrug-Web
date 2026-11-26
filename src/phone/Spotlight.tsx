@@ -10,9 +10,9 @@ import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
 import { ABOUT, reach, SITE } from '../data/site'
 import { APPS } from '../os/apps'
-import { LogoDisc } from '../os/icons'
+import { AppIcon, LogoDisc } from '../os/icons'
 import { useStore } from '../os/store'
-import { OnePagerIcon, PhoneIcon, VipIcon } from './icons'
+import { OnePagerIcon, PhoneIcon } from './icons'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { contactsFor, conversationView, FAQS_FOLDER, GROUP_VIEW, MY_CARD, noteView } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
@@ -145,10 +145,15 @@ const ALSO: Record<PhoneApp, string[]> = {
 /** What the one-pager answers to besides its name. */
 const ONE_PAGER = { names: ['one-pager', 'one pager', 'onepager'], words: ['deck', 'summary', 'overview', 'pdf', 'docsend', 'memo'] }
 
-/** What VIP answers to: its name and the site's own word for what it is about (the drops), and a little
- * less surely the words for what the points site holds. It is in the Dock among the apps and is found
- * among them, as the one-pager is; like the one-pager it is a link, and leaves for a tab of its own. */
-const VIP = { names: ['VIP', 'drops'], words: ['points', 'store', 'merch'] }
+/** What each of the three stores answers to: its name (and for ArtStore the site's own words for it, VIP and
+ * the drops), and a little less surely the words for what it sells. They are among the apps, on the Home
+ * Screen and in the Dock, and are found among them, as the one-pager is; like the one-pager each is a
+ * link, and leaves for a tab of its own. */
+const STORE_WORDS: Record<string, { names: string[]; words: string[] }> = {
+  workspace: { names: ['Workspace', 'W/S', 'chair'], words: ['chairs', 'store', 'seat', 'desk'] },
+  store: { names: ['ArtStore', 'Art Store', 'VIP', 'drops'], words: ['art', 'store', 'points', 'merch'] },
+  books: { names: ['Books'], words: ['book', 'store', 'read', 'library'] },
+}
 
 /** What someone types who wants to get hold of Shrug. */
 const REACH = ['contact', 'get in touch', 'touch', 'email', 'e-mail', 'mail', 'reach', 'reach out', 'pitch', 'apply', 'application', 'intro', 'introduction', 'talk', 'call', 'phone', 'meet', 'meeting', 'hello', 'submit', 'raise', 'raising', 'fundraise', 'fundraising']
@@ -175,7 +180,7 @@ function follow(href: string) {
 }
 
 /** A link that sits among the apps, under a tile of its own: where it goes is the line under its name. */
-const linkOut = (key: string, score: number, title: ReactNode, href: string, icon: ReactNode): Hit => ({
+const linkOut = (key: string, score: number, title: ReactNode, href: string, icon: ReactNode, says?: string): Hit => ({
   key,
   kind: 'app',
   score,
@@ -185,7 +190,7 @@ const linkOut = (key: string, score: number, title: ReactNode, href: string, ico
     </span>
   ),
   title,
-  subtitle: hostOf(href),
+  subtitle: says ?? hostOf(href),
   href,
   open: () => follow(href),
 })
@@ -254,11 +259,12 @@ function find(raw: string, replied: number): Found {
     const line = name !== PHONE[id].label && name !== blurb ? `${name} · ${blurb}` : blurb
     apps.push({ key: `app:${id}`, kind: 'app', score: named >= 0 ? named : also >= 0 ? 1.5 + also : 4 + said, lead: tile(id), title: <Marked text={PHONE[id].label} q={q} />, subtitle: <Marked text={line} q={q} />, open: () => launch(id) })
   })
-  // VIP is in the Dock among the apps, and is found among them: it is the points site, and opens as a link does
-  {
-    const named = best(VIP.names, q)
-    const word = named < 0 && q.length >= 3 ? best(VIP.words, q) : -1
-    if (named >= 0 || (word >= 0 && word <= 1)) apps.push(linkOut('link:vip', named >= 0 ? named : 1.25 + word, <Marked text="VIP" q={q} />, SITE.points, <VipIcon />))
+  // The three stores are among the apps, and are found among them: each is the store's own page, and opens as a link does
+  for (const shop of SITE.stores) {
+    const { names, words } = STORE_WORDS[shop.app]!
+    const named = best(names, q)
+    const word = named < 0 && q.length >= 3 ? best(words, q) : -1
+    if (named >= 0 || (word >= 0 && word <= 1)) apps.push(linkOut(`link:${shop.app}`, named >= 0 ? named : 1.25 + word, <Marked text={shop.name} q={q} />, shop.href, <AppIcon id={shop.app} />, APPS[shop.app].blurb))
   }
   // The one-pager is on the Home Screen among the apps, and is found among them
   {

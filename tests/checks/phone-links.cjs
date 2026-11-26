@@ -1,7 +1,7 @@
 // What search on the Home Screen opens, and where the keyboard goes when a screen is pushed.
 const { chromium } = require('playwright')
 const path = require('path')
-const { POINTS, points, tabFrom } = require('./lib.cjs')
+const { storeAt, tabFrom } = require('./lib.cjs')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
 ;(async () => {
   const browser = await chromium.launch()
@@ -10,7 +10,6 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   const errors = []
   const ctx = await browser.newContext({ viewport: { width: 393, height: 760 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true })
   // (VIP leads off the site, to the points site: this answers in its place)
-  await points(ctx)
   const page = await ctx.newPage()
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   page.on('pageerror', (e) => errors.push(String(e)))
@@ -43,15 +42,16 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   say((await st()).stacks.notes.join() === 'f:faqs', 'and Back from it is the FAQs list')
   await home()
 
-  // VIP is found among the apps, and is the link it is in the Dock: the points site in a tab of its own, and no app
+  // The stores are found among the apps, and are the links they are on the Home Screen: "vip" finds ArtStore,
+  // which is what VIP was, as the store's own page in a tab of its own, and no app
   await page.locator('.sb-search').tap(); await sleep(800)
   await page.locator('.ph input[aria-label*="Search" i]').last().fill('vip'); await sleep(700)
   const vip = await page.locator('.ph .spot-row[data-top]').evaluate((a) => ({ tag: a.tagName, title: a.querySelector('.spot-row__title').textContent, href: a.href, target: a.target, rel: a.rel, says: a.textContent.replace(/\s+/g, ' ').trim(), tile: !!a.querySelector('.spot-tile svg') })).catch(() => null)
-  say(!!vip && vip.tag === 'A' && vip.title === 'VIP' && vip.href === POINTS && vip.target === '_blank' && /\bnoopener\b/.test(vip.rel) && /\bnoreferrer\b/.test(vip.rel) && /, opens in a new tab$/.test(vip.says) && vip.tile, 'search finds VIP first, under its tile: a link to the points site that says it opens in a new tab', JSON.stringify(vip))
+  say(!!vip && vip.tag === 'A' && vip.title === 'ArtStore' && vip.href === storeAt(base, 'store') && vip.target === '_blank' && /\bnoopener\b/.test(vip.rel) && /\bnoreferrer\b/.test(vip.rel) && /, opens in a new tab$/.test(vip.says) && vip.tile, 'search for "vip" finds ArtStore first, under its tile: a link to the store’s own page that says it opens in a new tab', JSON.stringify(vip))
   const went = await tabFrom(ctx, () => page.locator('.ph a.spot-row[data-top]').tap())
   await sleep(1200)
   s = await st()
-  say(!!went && went.url === POINTS && went.alone === true && (s?.app ?? null) === null && (await page.locator('.sb-slot[data-front], .sb-slot[data-app="photos"]').count()) === 0 && (await page.locator('.ph .spot-row').count()) === 0, 'pressed, it opens there in a tab of its own; search closes, and no app has opened', JSON.stringify({ went, app: s?.app ?? null, rows: await page.locator('.ph .spot-row').count() }))
+  say(!!went && went.url === storeAt(base, 'store') && went.alone === true && (s?.app ?? null) === null && (await page.locator('.sb-slot[data-front], .sb-slot[data-app="photos"]').count()) === 0 && (await page.locator('.ph .spot-row').count()) === 0, 'pressed, it opens there in a tab of its own; search closes, and no app has opened', JSON.stringify({ went, app: s?.app ?? null, rows: await page.locator('.ph .spot-row').count() }))
   // The drops were what the VIP app held: search no longer lists them, since there is nowhere on the phone to open one
   await page.locator('.sb-search').tap(); await sleep(800)
   await page.locator('.ph input[aria-label*="Search" i]').last().fill('billboards'); await sleep(700)
