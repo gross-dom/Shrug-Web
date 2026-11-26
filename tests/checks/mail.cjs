@@ -24,7 +24,7 @@ const check = (name, ok, detail = '') => {
     p.evaluate((M) => {
       const w = document.querySelector(M)
       const rows = [...w.querySelectorAll('.ml-row')]
-      return { rows: rows.length, on: rows.findIndex((r) => r.classList.contains('on')), tabs: [...w.querySelectorAll('.ml-tabs button')].map((b) => `${b.firstChild.textContent.trim()} ${b.querySelector('small').textContent}${b.classList.contains('on') ? '*' : ''}`).join(' | '), thread: !!w.querySelector('.ml-thread'), zero: !!w.querySelector('.ml-zero'), said: w.querySelector('.ml-said')?.textContent ?? null, pal: w.querySelectorAll('.ml-pal').length, held: document.activeElement?.className ?? '' }
+      return { rows: rows.length, on: rows.findIndex((r) => r.classList.contains('on')), tabs: [...w.querySelectorAll('.ml-tabs button[role="tab"]')].map((b) => `${b.firstChild.textContent.trim()} ${b.querySelector('small').textContent}${b.classList.contains('on') ? '*' : ''}`).join(' | '), place: (() => { const h = w.querySelector('.ml-tabs--place h2'); return h ? `${h.firstChild.textContent.trim()} ${h.querySelector('small').textContent}` : null })(), pill: w.querySelector('.mlbar__pill')?.textContent.trim() ?? null, thread: !!w.querySelector('.ml-thread'), zero: !!w.querySelector('.ml-zero'), said: w.querySelector('.ml-said')?.textContent ?? null, pal: w.querySelectorAll('.ml-pal').length, held: document.activeElement?.className ?? '' }
     }, M)
   const key = async (k, wait = 180) => { await p.keyboard.press(k); await p.waitForTimeout(wait) }
 
@@ -101,14 +101,17 @@ const check = (name, ok, detail = '') => {
   const firstId = await p.evaluate((M) => document.querySelector(`${M} .ml-row.on`).id, M)
   await key('e', 300)
   s = await inbox()
-  check('E marks the conversation done: it leaves the inbox for a Done split, which is there now', s.rows === 19 && /All 19\*/.test(s.tabs) && /Done 1/.test(s.tabs) && s.said === 'Marked Done. Z brings it back.' && !(await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
-  await p.locator(`${M} .ml-tabs button`, { hasText: 'Done' }).click(); await p.waitForTimeout(250)
+  check('E marks the conversation done: it leaves the inbox, and Done is not put among the splits along the top (it is gone to with G then E)', s.rows === 19 && /All 19\*/.test(s.tabs) && !/Done/.test(s.tabs) && s.place === null && s.said === 'Marked Done. Z brings it back.' && !(await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
+  await key('g'); await key('e', 300)
   s = await inbox()
-  check('the Done split has it', s.rows === 1 && /Done 1\*/.test(s.tabs) && (await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify(s))
-  await key('g'); await key('i', 250)
+  const back = await p.evaluate((M) => document.querySelector(`${M} .ml-tabs__back`)?.getAttribute('aria-label'), M)
+  check('G then E goes to Done, which has it: the bar says Done in the splits’ place, with the way back to the inbox, and the window’s title says so too', s.rows === 1 && s.tabs === '' && s.place === 'Done 1' && back === 'Back to the inbox' && /^Done \(1\) - Mail$/.test(s.pill ?? '') && (await p.evaluate(([M, id]) => !!document.querySelector(`${M} #${id}`), [M, firstId])), JSON.stringify({ ...s, back }))
+  await p.locator(`${M} .ml-tabs__back`).click(); await p.waitForTimeout(250)
+  s = await inbox()
+  check('its back arrow is the inbox again', s.rows === 19 && /All 19\*/.test(s.tabs) && s.place === null, JSON.stringify(s))
   await key('z', 300)
   s = await inbox()
-  check('Z brings it back to the inbox, and with nothing done the Done split goes', s.rows === 20 && /All 20\*/.test(s.tabs) && !/Done/.test(s.tabs) && s.said === 'Moved back to the inbox.', JSON.stringify(s))
+  check('Z brings it back to the inbox', s.rows === 20 && /All 20\*/.test(s.tabs) && !/Done/.test(s.tabs) && s.said === 'Moved back to the inbox.', JSON.stringify(s))
   await key('s', 250)
   s = await inbox()
   const starred = await p.evaluate((M) => ({ star: !!document.querySelector(`${M} .ml-row.on .ml-star`), tabs: [...document.querySelectorAll(`${M} .ml-tabs button`)].map((b) => b.firstChild.textContent.trim()).join(' ') }), M)
@@ -124,12 +127,43 @@ const check = (name, ok, detail = '') => {
   await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(1600)
   await p.click('.dock [data-dock-app="mail"]'); await p.waitForSelector(`${M}[data-open] .ml-row`, { timeout: 15000 }); await p.waitForTimeout(500)
   s = await inbox()
-  check('what was marked done is still done after a reload', s.rows === 19 && /Done 1/.test(s.tabs), s.tabs)
-  await p.locator(`${M} .ml-tabs button`, { hasText: 'Done' }).click(); await p.waitForTimeout(250)
+  check('what was marked done is still done after a reload', s.rows === 19 && !/Done/.test(s.tabs), s.tabs)
+  await key('g'); await key('e', 300)
+  check('and is in Done', (await inbox()).place === 'Done 1', JSON.stringify(await inbox()))
   await key('Shift+E', 300)
+  s = await inbox()
+  check('Shift E, in Done, puts it back: with nothing left in it, Done gives way to the inbox', s.rows === 20 && s.place === null && /All 20\*/.test(s.tabs), JSON.stringify(s))
+
+  // ---- done from inside a conversation: on to the next one, not back to the list
+  await key('g'); await key('i', 250)
+  const order = await p.evaluate((M) => [...document.querySelectorAll(`${M} .ml-row`)].slice(0, 4).map((r) => r.querySelector('.s em').textContent), M)
+  await key('Enter', 400)
+  const openedOn = await p.evaluate((M) => document.querySelector(`${M} .ml-col h1`)?.textContent, M)
+  await key('e', 400)
+  let on = await p.evaluate((M) => ({ thread: !!document.querySelector(`${M} .ml-thread`), head: document.querySelector(`${M} .ml-col h1`)?.textContent ?? null, said: document.querySelector(`${M} .ml-said`)?.textContent ?? null }), M)
+  check('E inside a conversation marks it done and goes straight on to the next one, as Superhuman does (not back to the list)', openedOn === order[0] && on.thread && on.head === order[1] && on.said === 'Marked Done. Z brings it back.', JSON.stringify({ order, openedOn, on }))
+  await p.locator(`${M} .ml-does button[aria-label="Mark done"]`).click(); await p.waitForTimeout(400)
+  on = await p.evaluate((M) => ({ thread: !!document.querySelector(`${M} .ml-thread`), head: document.querySelector(`${M} .ml-col h1`)?.textContent ?? null }), M)
+  check('and so does its Mark Done button', on.thread && on.head === order[2], JSON.stringify(on))
+  await key('Escape', 300)
+  s = await inbox()
+  check('back in the list, the two are gone from it and it is on the one that was open', s.rows === 18 && !s.thread && (await p.evaluate((M) => document.querySelector(`${M} .ml-row.on .s em`)?.textContent, M)) === order[2], JSON.stringify(s))
+  await key('g'); await key('e', 300)
+  await key('Shift+E', 300); await key('Shift+E', 300)
   await key('g'); await key('i', 250)
   s = await inbox()
-  check('Shift E, in Done, puts it back', s.rows === 20 && !/Done/.test(s.tabs), s.tabs)
+  check('(both put back)', s.rows === 20, JSON.stringify(s))
+
+  // ---- the row under the pointer is the row it is on, at once
+  const rowBox = await p.locator(`${M} .ml-row`).nth(5).boundingBox()
+  await p.mouse.move(rowBox.x + 260, rowBox.y + rowBox.height / 2, { steps: 3 }); await p.waitForTimeout(120)
+  const swept = await p.evaluate((M) => { const rows = [...document.querySelectorAll(`${M} .ml-row`)]; const lit = (r) => getComputedStyle(r).backgroundColor !== 'rgba(0, 0, 0, 0)'; return { on: rows.findIndex((r) => r.classList.contains('on')), hovered: rows.findIndex((r) => r.matches(':hover')), keys: document.querySelector(`${M} .ml`).hasAttribute('data-keys'), acts: !!rows[5].querySelector('.ml-acts') } }, M)
+  check('the pointer over a row makes it the row Mail is on (lit by the pointer itself, with what can be done to it at its end)', swept.on === 5 && swept.hovered === 5 && !swept.keys && swept.acts, JSON.stringify(swept))
+  await key('j', 200)
+  const byKeys = await p.evaluate((M) => { const rows = [...document.querySelectorAll(`${M} .ml-row`)]; return { on: rows.findIndex((r) => r.classList.contains('on')), keys: document.querySelector(`${M} .ml`).hasAttribute('data-keys'), under: getComputedStyle(rows[5]).backgroundColor } }, M)
+  check('a key takes the list back from the pointer: J moves on, and the row the pointer is lying on is not lit', byKeys.on === 6 && byKeys.keys && byKeys.under === 'rgba(0, 0, 0, 0)', JSON.stringify(byKeys))
+  await p.mouse.move(8, 8); await p.waitForTimeout(100)
+  await key('g'); await key('i', 250)
 
   // ---- a conversation
   await key('j'); await key('Enter', 400)
@@ -144,12 +178,13 @@ const check = (name, ok, detail = '') => {
       back: w.querySelector('.ml-back')?.getAttribute('aria-label'),
       pane: w.querySelector('.ml-pane').getAttribute('aria-label'),
       pill: w.querySelector('.mlbar__pill').textContent.trim(),
-      reply: w.querySelector('.ml-reply')?.innerText.replace(/\s*\n\s*/g, ' / '),
+      reply: w.querySelector('.ml-reply')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? null,
+      banner: /These twenty are for reading/.test(w.innerText),
     }
   }, M)
   check('Return opens the one it is on: a column with its subject, and one line on what it led to under a label', thread.head === 'Re: [Company] seed round' && /^(investment|intro|hire|drop) \/ \S/.test(thread.led ?? '') && thread.back === 'Back to inbox', JSON.stringify(thread))
   check('its earlier emails are a line each and its newest is open, a card of its own; over it Share, Mark done, the command palette and the way on (no clock); and the pane is still about the sender', thread.folded >= 1 && thread.open === 1 && thread.does === 'Share | Mark done | Command | Previous conversation | Next conversation' && thread.pane === 'About the sender', JSON.stringify(thread))
-  check('under it: the twenty are for reading, and Reply to Shrug', /^These twenty are for reading\. A reply is a new message to Shrug\. \/ Reply to Shrug/.test(thread.reply ?? ''), thread.reply)
+  check('nothing is written along its foot: no banner under the conversation (a reply is R, or the arrow on an email)', thread.reply === null && !thread.banner, JSON.stringify({ reply: thread.reply, banner: thread.banner }))
   await p.locator(`${M} .ml-msg.fold`).first().click()
   await p.waitForTimeout(200)
   check('an earlier email opens out when it is pressed', (await p.evaluate((M) => ({ closed: document.querySelectorAll(`${M} .ml-msg.fold`).length, open: document.querySelectorAll(`${M} article.ml-msg`).length }), M)).open === 2)

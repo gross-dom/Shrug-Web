@@ -226,6 +226,41 @@
   color: var(--ml-ink-2);
 }
 
+/* Done is not among the splits: gone to (G then E), its name stands in their place, with the way back */
+.ml-tabs--place {
+  align-items: center;
+  gap: 10px;
+}
+
+.ml-tabs--place h2 {
+  color: var(--ml-ink);
+  font-size: 15px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.ml-tabs--place h2 small {
+  margin-left: 4px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 1px;
+}
+
+.ml-tabs .ml-tabs__back {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: -4px;
+  border-radius: 6px;
+  color: var(--ml-ink-3);
+}
+
+.ml-tabs .ml-tabs__back:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ml-ink);
+}
+
 .ml-tools {
   display: flex;
   flex: none;
@@ -316,9 +351,19 @@
   content: none;
 }
 
-.ml-row.on {
+/* The row it is on. Under the pointer that is the row the pointer is over, and it is lit by the pointer
+   itself, in the frame the pointer arrives (the window's own note of where it is follows a frame behind:
+   Mail.tsx). The row it has left lets go of its tint over a moment rather than at once, so that a pointer
+   crossing the list draws one movement down it, not twenty rows switched on and off. Under the keyboard
+   (data-keys) a row is on or it is not, and the row the pointer was left lying on is not lit. */
+.ml-row.on,
+.ml:not([data-keys]) .ml-row:hover {
   background: var(--ml-tint);
   box-shadow: inset 3px 0 0 var(--ml-violet);
+}
+
+.ml:not([data-keys]) .ml-row:not(.on):not(:hover) {
+  transition: background-color 0.16s ease-out, box-shadow 0.16s ease-out;
 }
 
 .ml-row > b {
@@ -628,10 +673,6 @@
   color: var(--ml-ink);
 }
 
-.ml-go:hover {
-  filter: brightness(1.08);
-}
-
 /* ---- A conversation: a column in the middle of the list's place */
 
 .ml-thread {
@@ -873,48 +914,6 @@ article.ml-msg[data-at] .ml-mini,
   margin-top: 0;
 }
 
-.ml-reply {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: min(632px, calc(100% - 150px));
-  height: 44px;
-  margin: auto auto 0;
-  padding: 0 14px 0 30px;
-  background: #fff;
-  box-shadow: 0 1px 9px rgba(0, 0, 0, 0.09), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
-  color: var(--ml-ink-3);
-  font-size: 12.5px;
-}
-
-.ml-reply span {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ml-go {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 8px 0 10px;
-  border-radius: 5px;
-  background: var(--ml-violet);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.ml-go .k {
-  background: rgba(255, 255, 255, 0.24);
-  color: #fff;
-}
 
 /* ---- Search: the splits' place is a field, with a violet edge at the window's own */
 
@@ -1261,6 +1260,10 @@ article.ml-msg[data-at] .ml-mini,
   .ml-said,
   .ml-led[data-lit] {
     animation: none;
+  }
+
+  .ml .ml-row {
+    transition: none;
   }
 }
 

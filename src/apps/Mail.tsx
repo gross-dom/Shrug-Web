@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Trash2, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
@@ -194,6 +194,11 @@ export function MailApp() {
   const [hint, setHint] = useState(false)
   const [tip, setTip] = useState(true)
   const g = useRef(0)
+  /** Whether it was the pointer that last moved the row it is on (and where the pointer is), not the keyboard. */
+  const swept = useRef(false)
+  const pointer = useRef<{ x: number; y: number } | null>(null)
+  /** The row the pane is about while the pointer crosses the list: the last one it rested on. */
+  const [rested, setRested] = useState<string | null>(null)
 
   const q = (query ?? '').trim().toLowerCase()
   /** Which split an exchange is under: Done once it is marked done (it has left the inbox), Starred if it is starred, or its own. */
@@ -207,8 +212,10 @@ export function MailApp() {
   const cursor = Math.min(at, Math.max(0, rows.length - 1))
   const thread = open ? (EXCHANGES.find((x) => x.id === open) ?? null) : null
   const count = (id: Split) => EXCHANGES.filter((x) => under(x, id)).length
-  /** The splits along the bar: Done is there once something has been marked done, and Starred once something is starred. */
-  const splits: { id: Split; label: string }[] = [...SPLITS, ...(done.length ? [{ id: 'done' as const, label: 'Done' }] : []), ...(starred.length || split === 'starred' ? [{ id: 'starred' as const, label: 'Starred' }] : [])]
+  /** The splits along the bar: the inbox's, and Starred once something is starred. Done is not among them: it
+   * is somewhere G then E goes (and the command palette's Go to Done), as it is in Superhuman, and while it is
+   * where this is the bar says so in the splits' place. */
+  const splits: { id: Split; label: string }[] = [...SPLITS, ...(starred.length || split === 'starred' ? [{ id: 'starred' as const, label: 'Starred' }] : [])]
   // (the last of Done brought back to the inbox: Done is no longer a place to be)
   useEffect(() => {
     if (split === 'done' && !done.length) setSplit('all')
@@ -225,10 +232,21 @@ export function MailApp() {
   useEffect(() => {
     if (!over && query === null && !composing) back()
   }, [over, query, open, zero, unfolded, composing])
-  // The row the keyboard is on is kept in sight
+  // The row the keyboard is on is kept in sight. (One the pointer brought it to is in sight already, and a
+  // list that moved under the pointer would put a different row under it.)
   useEffect(() => {
+    if (swept.current) return
     root.current?.querySelector('.ml-row.on')?.scrollIntoView({ block: 'nearest' })
   }, [cursor, split, q, open])
+  // The pane at the right is about the row it is on. Under the keyboard that is at once; under a pointer
+  // crossing the list it is the row the pointer comes to rest on, so that the pane is not a different person
+  // for every row on the way.
+  const onRow = rows[cursor]?.id ?? null
+  useEffect(() => {
+    if (!swept.current) return setRested(onRow)
+    const timer = setTimeout(() => setRested(onRow), 90)
+    return () => clearTimeout(timer)
+  }, [onRow])
   // And so is the split that is picked, where there are more splits than the bar is wide
   useEffect(() => {
     root.current?.querySelector('.ml-tabs .on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
@@ -295,8 +313,16 @@ export function MailApp() {
         if (on === done.includes(x.id)) return say(on ? 'It is in Done already.' : 'It is in the inbox already.')
         markDone(x.id, on)
         undone.current = on ? x.id : null
-        // Done with, it is put away: the list is what is left
-        if (thread) setOpen(null)
+        // Done with from inside it, the next conversation is what is read next, as in Superhuman: the one that
+        // was under it in the list or, from the last of them, the one over it. Only with none left is it the list.
+        if (thread) {
+          const now = rows.findIndex((r) => r.id === x.id)
+          const next = now < 0 ? null : (rows[now + 1] ?? rows[now - 1] ?? null)
+          // (it leaves the list it was in, unless that list is a search's or Starred, which keep what is done)
+          const leaves = !q && split !== 'starred'
+          if (next) show(next), setAt(Math.max(0, rows.indexOf(next) - (leaves && rows.indexOf(next) > now ? 1 : 0)))
+          else setOpen(null)
+        }
         return say(on ? 'Marked Done. Z brings it back.' : 'Moved back to the inbox.')
       }
       case 'star': {
@@ -413,7 +439,29 @@ export function MailApp() {
     if (!does) return
     e.preventDefault()
     e.stopPropagation()
+    // (the keyboard has the list now: the row the pointer happens to be lying on is not lit for it)
+    swept.current = false
+    root.current?.setAttribute('data-keys', '')
     run(does)
+  }
+  /** The pointer has moved: the list is its own again, and the row under it is the row it is on. */
+  const onPointer = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse') return
+    pointer.current = { x: e.clientX, y: e.clientY }
+    root.current?.removeAttribute('data-keys')
+  }
+  /** The row under the pointer becomes the row it is on. */
+  const sweepTo = (i: number) => {
+    swept.current = true
+    if (i !== cursor) setAt(i)
+  }
+  /** The list has been scrolled under a pointer that is lying still: the row now under it is the row it is on. */
+  const onListScroll = () => {
+    const where = pointer.current
+    if (!where || !swept.current) return
+    const row = document.elementFromPoint(where.x, where.y)?.closest<HTMLElement>('.ml-row')
+    const i = row?.parentElement ? [...row.parentElement.querySelectorAll('.ml-row')].indexOf(row) : -1
+    if (i >= 0) sweepTo(i)
   }
 
   // A message the keyboard has moved to is opened out, and brought into sight
@@ -422,9 +470,9 @@ export function MailApp() {
     root.current?.querySelector(`[data-email="${message}"]`)?.scrollIntoView({ block: 'nearest' })
   }, [message, thread])
 
-  const splitName = splits.find((s) => s.id === split)?.label ?? 'All'
-  /** Who the pane at the right is about: whoever the conversation open, or the row the keyboard is on, is from. */
-  const about = thread ?? rows[cursor] ?? null
+  const splitName = split === 'done' ? 'Done' : (splits.find((s) => s.id === split)?.label ?? 'All')
+  /** Who the pane at the right is about: whoever the conversation open, or the row it is on, is from. */
+  const about = thread ?? (swept.current ? rows.find((x) => x.id === rested) : undefined) ?? rows[cursor] ?? null
 
   // The title bar: one long pill, as a browser's tab would be, saying where this is
   const bar = (
@@ -439,7 +487,20 @@ export function MailApp() {
     </div>
   )
 
-  const tabs = (
+  const tabs =
+    split === 'done' ? (
+      // Done is not one of the splits: gone to (G then E), the bar says that this is Done, and has the way back
+      <div className="ml-tabs ml-tabs--place">
+        <button type="button" className="ml-tabs__back" aria-label="Back to the inbox" data-tip="Inbox" data-keys="G I" onClick={() => (run('inbox'), back())}>
+          <ArrowLeft size={14} strokeWidth={1.8} aria-hidden />
+        </button>
+        <h2 className="on">
+          Done
+          <span className="sr-only">, </span>
+          <small>{count('done')}</small>
+        </h2>
+      </div>
+    ) : (
     <div className="ml-tabs" role="tablist" aria-label="Splits">
       {splits.map((s) => (
         <button key={s.id} type="button" role="tab" aria-selected={split === s.id} className={split === s.id ? 'on' : undefined} onClick={() => (setSplit(s.id), setOpen(null), setZero(false), setAt(0), back())}>
@@ -466,7 +527,7 @@ export function MailApp() {
   const list = (found: Exchange[]) => {
     let under = ''
     return (
-      <ol className="ml-list" tabIndex={0} role="listbox" aria-label={`${splitName}: ${found.length === 1 ? 'one exchange' : `${found.length} exchanges`}`} aria-activedescendant={found[cursor] ? `mail-${found[cursor]!.id}` : undefined}>
+      <ol className="ml-list" tabIndex={0} role="listbox" onScroll={onListScroll} aria-label={`${splitName}: ${found.length === 1 ? 'one exchange' : `${found.length} exchanges`}`} aria-activedescendant={found[cursor] ? `mail-${found[cursor]!.id}` : undefined}>
         {found.map((x, i) => {
           const group = groupOf(x.date)
           const head = group !== under
@@ -479,7 +540,7 @@ export function MailApp() {
               aria-selected={i === cursor}
               className={`ml-row${i === cursor ? ' on' : ''}${unread.includes(x.id) ? ' unread' : ''}`}
               data-group={head ? group : undefined}
-              onPointerMove={(e) => e.pointerType === 'mouse' && i !== cursor && setAt(i)}
+              onPointerMove={(e) => e.pointerType === 'mouse' && sweepTo(i)}
               onClick={() => (setAt(i), show(x))}
             >
               <b>
@@ -630,7 +691,7 @@ export function MailApp() {
 
   return (
     <Window className={`app mailwin${zero ? ' zero' : ''}`} lightsSize="large" lead={bar} body={{ className: 'mailwin__body' }}>
-      <div ref={root} className="ml" data-zero={zero || undefined} data-autofocus tabIndex={0} role="application" aria-label="Mail: twenty exchanges that led to something. Press ? for its keys." onKeyDown={onKey}>
+      <div ref={root} className="ml" data-zero={zero || undefined} data-autofocus tabIndex={0} role="application" aria-label="Mail: twenty exchanges that led to something. Press ? for its keys." onKeyDown={onKey} onPointerMove={onPointer}>
         {zero && <img className="ml-photo" src="/wallpapers/lagoon.webp" alt="" />}
         {zero ? (
           <div className="ml-main ml-zero">
@@ -830,13 +891,6 @@ function Thread({ x, message, unfolded, lit, done, starred, onFold, onBack, onRe
             ),
           )}
         </div>
-      </div>
-      <div className="ml-reply">
-        <span>These twenty are for reading. A reply is a new message to Shrug.</span>
-        <button type="button" className="ml-go" onClick={onReply}>
-          <Reply size={13} strokeWidth={2} aria-hidden />
-          Reply to Shrug <K>R</K>
-        </button>
       </div>
     </div>
   )
