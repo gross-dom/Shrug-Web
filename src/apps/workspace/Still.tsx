@@ -8,6 +8,6 @@
 /** The picture's own shape: 600 by 800. */
 const SHAPE = 0.75
 
-export function ChairStill({ paint, width = 320, className, label }: { /** The color's id: "scuderia-red". */ paint: string; width?: number; className?: string; label?: string }) {
-  return <img className={className} src={`/workspace/chairs/${paint}.webp`} width={width} height={Math.round(width / SHAPE)} alt={label ?? ''} aria-hidden={label ? undefined : true} draggable={false} decoding="async" />
+export function ChairStill({ paint, width = 320, className, label, held }: { /** The color's id: "scuderia-red". */ paint: string; width?: number; className?: string; label?: string; /** It is kept on the page unseen until it is wanted, and is then to be there at once: drawn in the frame it is shown in, not the one after. */ held?: boolean }) {
+  return <img className={className} src={`/workspace/chairs/${paint}.webp`} width={width} height={Math.round(width / SHAPE)} alt={label ?? ''} aria-hidden={label ? undefined : true} draggable={false} decoding={held ? 'sync' : 'async'} />
 }

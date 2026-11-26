@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { ChevronLeft, Play, Rotate3d, X } from 'lucide-react'
 import { fmtCents, priceCents } from '../../store/shared/rules'
-import { shotsOf } from '../../store/src/pictures'
+import { pagesOf, shotsOf } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
 import { ALL_PAINTS, inkOn, MAKING, MORE, OWNERS, PAINTS, PAPER, shadedOn, type Making, type Paint } from '../data/workspace'
 import { FINISH_WORDS, type Finish } from '../../store/shared/colors'
@@ -171,7 +171,9 @@ export function WorkspaceApp() {
   /** Its price, as it is said: only to someone logged in, and never one the store has not given. */
   const price = product && !product.priceHidden && product.points ? `From ${fmtCents(priceCents(product))}` : null
   // (its photographs: a color that has none yet has the chair drawn in the store's pages, and here the chair itself)
-  const shots = product ? shotsOf(product).filter((s) => !s.drawn) : []
+  // Its photographs, a page each beside the 3D chair: a wide one fills the window by itself, and two tall
+  // ones share it, side by side (the order, and which share, are the store's: pagesOf in store/src/pictures.ts)
+  const shots = product ? pagesOf(shotsOf(product).filter((s) => !s.drawn)) : []
   const photo = shot !== null ? (shots[shot] ?? null) : null
   /** The store's page for a chair, in that chair's color. */
   const pageOf = (c: Chosen) => `${addressOf('chairs', c.paint.product)}&c=${c.color.slice(1)}`
@@ -255,7 +257,8 @@ export function WorkspaceApp() {
                   onBlur={() => setHover(null)}
                   onClick={() => enter(c)}
                 >
-                  {big && <ChairStill className="ch" paint={c.id} width={168} />}
+                  {/* Each slab holds its chair from the start, loaded and unseen, so that it is there the moment the pointer is */}
+                  <ChairStill className="ch" paint={c.id} width={168} held />
                   <b>{c.name}</b>
                   <small>{stockOf(c.paint)}</small>
                 </button>
@@ -285,9 +288,11 @@ export function WorkspaceApp() {
           {/* A photograph picked fills the window, under a shade the controls can still be read on. One too
               narrow to fill it is set whole, on a blur of itself */}
           {photo && (
-            <div className="st-photo" data-fit={(photo.aspect ?? 1) >= WIDE ? 'fill' : 'whole'}>
-              <img className="st-photo__back" src={photo.small} alt="" aria-hidden draggable={false} />
-              <img className="st-photo__pic" src={photo.full} srcSet={photo.set} sizes="1100px" alt={`${chosen.name}: photograph ${shot! + 1} of ${shots.length}`} draggable={false} />
+            <div className="st-photo" data-fit={photo.length > 1 ? 'pair' : (photo[0]!.aspect ?? 1) >= WIDE ? 'fill' : 'whole'}>
+              {photo.length === 1 && <img className="st-photo__back" src={photo[0]!.small} alt="" aria-hidden draggable={false} />}
+              {photo.map((one, n) => (
+                <img key={one.full} className="st-photo__pic" src={one.full} srcSet={one.set} sizes={photo.length > 1 ? '550px' : '1100px'} alt={`${chosen.name}: photograph ${shots.slice(0, shot!).flat().length + n + 1} of ${shots.flat().length}`} draggable={false} />
+              ))}
               <span className="st-photo__shade" aria-hidden />
             </div>
           )}
@@ -298,11 +303,16 @@ export function WorkspaceApp() {
                 <Rotate3d size={18} strokeWidth={1.9} aria-hidden />
                 <span>3D</span>
               </button>
-              {shots.map((s, n) => (
-                <button key={s.full} type="button" className="st-shot" aria-pressed={shot === n} aria-label={`Photograph ${n + 1} of ${shots.length}`} onClick={() => setShot(n)}>
-                  <img src={s.small} alt="" loading="lazy" draggable={false} />
-                </button>
-              ))}
+              {shots.map((page, n) => {
+                const from = shots.slice(0, n).flat().length + 1
+                return (
+                  <button key={page[0]!.full} type="button" className="st-shot" data-pair={page.length > 1 || undefined} aria-pressed={shot === n} aria-label={page.length > 1 ? `Photographs ${from} and ${from + 1} of ${shots.flat().length}` : `Photograph ${from} of ${shots.flat().length}`} onClick={() => setShot(n)}>
+                    {page.map((one) => (
+                      <img key={one.full} src={one.small} alt="" loading="lazy" draggable={false} />
+                    ))}
+                  </button>
+                )
+              })}
             </div>
           )}
           <div className="st-foot" ref={foot}>

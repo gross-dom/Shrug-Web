@@ -218,7 +218,10 @@
 
 /* The chair on the slab under the pointer: the chair the studio turns, in that color (workspace/Still.tsx).
    It stands on a slab of its own paint, so a soft light is put behind it, as the studio puts one behind the
-   chair, and its own shadow under it: a white chair is then still a chair on a white slab. */
+   chair, and its own shadow under it: a white chair is then still a chair on a white slab.
+   Every slab holds its chair from the start, loaded and unseen, and it is shown the moment the pointer is on
+   the slab: nothing is fetched then and nothing fades in, the slab widening is what uncovers it. It leaves a
+   little more softly than it came, with the slab closing over it. */
 .fl-slab .ch {
   position: absolute;
   bottom: 84px;
@@ -226,8 +229,14 @@
   max-width: none;
   transform: translateX(-50%);
   filter: drop-shadow(0 10px 18px rgb(0 0 0 / 0.2));
+  opacity: 0;
   pointer-events: none;
-  animation: fl-ch 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition: opacity 0.16s ease;
+}
+
+.fl-slab.big .ch {
+  opacity: 1;
+  transition: none;
 }
 
 .fl-slab.big::before {
@@ -240,13 +249,6 @@
   transform: translateX(-50%);
   background: radial-gradient(closest-side, rgb(255 255 255 / 0.24), rgb(255 255 255 / 0));
   pointer-events: none;
-}
-
-@keyframes fl-ch {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
-  }
 }
 
 /* The sixteen more: a slab of all of them at once, four by four */
@@ -413,6 +415,16 @@
   display: none;
 }
 
+/* Two tall photographs share the window, side by side, a hair apart: between them they fill it, where one
+   alone would be cut to a strip of itself or stand in the middle of a dim surround (Dom, 26 Nov) */
+.st-photo[data-fit='pair'] .st-photo__pic {
+  width: calc(50% - 1.5px);
+}
+
+.st-photo[data-fit='pair'] .st-photo__pic + .st-photo__pic {
+  left: auto;
+}
+
 .st-photo__shade {
   position: absolute;
   inset: 0;
@@ -466,6 +478,16 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* (two tall photographs that share a page share its place in the strip, half each) */
+.st-shot[data-pair] {
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+}
+
+.st-shot[data-pair] img {
+  min-width: 0;
 }
 
 /* Over a photograph the strip stands on a shade of its own, so that it is seen on any picture */
@@ -842,7 +864,7 @@
   }
 
   .fl-slab .ch {
-    animation: none;
+    transition: none;
   }
 }
 
