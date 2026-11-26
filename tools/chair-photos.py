@@ -2,6 +2,7 @@
 """The chair's photographs, brought in from the folder Shrug keeps its selects in.
 
     python3 -I tools/chair-photos.py "<…/Website Selects>" [--check]
+    python3 tools/chair-photos.py --views
 
 The folder has one folder per colourway, named as the launch list names it, and in each:
 
@@ -29,7 +30,9 @@ What a photograph is a view of is read from chair-photo-views.json beside this s
 ({"<color id>/gallery/01__X": "from behind"}), which is written by hand, and only where the view is plain
 to see.
 
---check reads the folder and reports on it without copying anything.
+--check reads the folder and reports on it without copying anything. --views needs no folder: it writes the
+views in chair-photo-views.json into the list as it stands (and takes out any that file no longer has), for
+when the photographs are already in and only what is said of them has changed.
 
 Needs Pillow. Run it with -I: the folder is someone else's.
 """
@@ -120,7 +123,33 @@ def listed(folder):
     return sorted(f for f in os.listdir(folder) if re.search(r'\.jpe?g$', f, re.I) and not f.startswith('.'))
 
 
+def views_only():
+    """What each photograph is a view of, written into the list as it stands."""
+    views = json.load(open(VIEWS)) if os.path.exists(VIEWS) else {}
+    manifest = json.load(open(MANIFEST))
+    known, said = set(), 0
+    for color, kept in manifest.items():
+        for one in [p for slide in kept['gallery'] for p in slide['photos']] + kept['checkout']:
+            key = f"{color}/{one['file']}"
+            known.add(key)
+            if views.get(key):
+                one['view'] = views[key]
+                said += 1
+            else:
+                one.pop('view', None)
+    with open(MANIFEST, 'w') as out:
+        json.dump(manifest, out, indent=1, sort_keys=True)
+        out.write('\n')
+    print(f'{said} of {len(known)} photographs say what they are a view of')
+    for key in sorted(set(views) - known):
+        print(f'  {key}: no such photograph')
+    for key in sorted(known - set(views)):
+        print(f'  {key}: no view said')
+
+
 def main():
+    if '--views' in sys.argv:
+        return views_only()
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     check = '--check' in sys.argv
     if len(args) != 1 or not os.path.isdir(args[0]):
