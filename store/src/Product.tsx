@@ -7,7 +7,7 @@ import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
 import { shotsOf, tileSizes, wholeSizes } from './pictures'
 import { NAMES, nameIn, ROOM } from './room'
-import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shipsOf, shortOf } from './words'
+import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shipsOf, shipsWhen, shortOf } from './words'
 
 // One product to a screen: its pictures, then what it is and what it costs this member. The arrows on the
 // picture (and the arrow keys, and a finger drawn across it) page through that product's own pictures; the
@@ -33,7 +33,9 @@ function swatchOf(option: string): { name: string; color: string | null } {
 export function Picture({ product, size, tile }: { product: Product; size: number; tile?: boolean }) {
   const shot = shotsOf(product)[0]
   return shot ? (
-    <img src={tile ? shot.full : shot.small} srcSet={tile ? shot.set : undefined} sizes={tile ? tileSizes(shot) : undefined} alt="" decoding="async" loading="lazy" style={shot.at ? { objectPosition: shot.at } : undefined} />
+    // (a thing on a plain ground is shown whole in a tile, on that ground: a tile is taller than the picture, and
+    // would otherwise cut the sides off a wide piece)
+    <img src={tile ? shot.full : shot.small} srcSet={tile ? shot.set : undefined} sizes={tile ? tileSizes(shot) : undefined} alt="" decoding="async" loading="lazy" style={tile && shot.ground ? { objectFit: 'contain', background: shot.ground } : shot.at ? { objectPosition: shot.at } : undefined} />
   ) : (
     <span className="t-3">
       <KindIcon kind={product.kind} size={size} width={size > 40 ? 1.1 : size > 22 ? 1.2 : 1.6} />
@@ -406,9 +408,12 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const caption = way !== 'buy' && asked ? `${way === 'request' ? 'We’ll write to you about it.' : 'We’ll let you know when it’s ready.'} It is in My VIP.` : ''
   // A pre-order says when it is sent, where Shrug has said. One with a price is paid for now, so it is not
   // "reserved"; one with none yet is only kept for them
-  const sent = shipsOf(product)
+  // (one that is paid for now says when it is sent: the day Shrug has named, or in two to three weeks. One only
+  // kept for them, with no price yet, says a day only if there is one)
+  const sent = shipsWhen(product)
+  const dated = shipsOf(product)
   const preorder = product.status === 'Pre-order' && !asked && !bought && (
-    <p className="t-words">{way === 'reserve' ? `Reserve a copy and we’ll let you know when it’s ready.${sent ? ` It ships ${sent}.` : ''}` : sent ? `Ships ${sent}.` : 'We’ll email you when it ships.'}</p>
+    <p className="t-words">{way === 'reserve' ? `Reserve a copy and we’ll let you know when it’s ready.${dated ? ` It ships ${dated}.` : ''}` : sent ? `Ships ${sent}.` : 'We’ll email you when it ships.'}</p>
   )
   const said = error && (
     <p className="ui-note" role="alert">
@@ -423,7 +428,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         <>
           {/* A photograph is shown whole, and the same picture, out of focus, fills the tile behind it: a tall
               one and a wide one sit alike. A picture made to fill its place (a chair in its studio) fills it */}
-          {!shot.fills && <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />}
+          {shot.ground ? <span className="ui-media-ground" style={{ background: shot.ground }} aria-hidden="true" /> : !shot.fills && <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />}
           <img className={`ui-media-pic${shot.fills ? ' fills' : ''}`} key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shot.drawn ? `${product.name}: picture ${seen + 1} of ${shots.length}, made from its model` : shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
         </>
       ) : (
@@ -462,7 +467,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
       </span>
       <div style={{ display: 'flex', flexDirection: 'column', gap: phone ? 6 : 8 }}>
         <h1 className="t-title">{done.order.status === 'Requested' ? 'Requested.' : done.order.status === 'Pre-order' ? (done.order.points || done.order.paid ? 'Pre-ordered.' : 'Reserved.') : 'It’s yours.'}</h1>
-        <p className="t-words">{done.order.status === 'Requested' ? 'We’ll write to you about it.' : done.order.status === 'Pre-order' ? (sent ? `It ships ${sent}. We’ll email you when it is on its way.` : 'We’ll let you know when it’s ready.') : 'We’ll email you when it is on its way.'}</p>
+        <p className="t-words">{done.order.status === 'Requested' ? 'We’ll write to you about it.' : done.order.status === 'Pre-order' ? ((done.order.paid || done.order.points ? sent : dated) ? `It ships ${done.order.paid || done.order.points ? sent : dated}. We’ll email you when it is on its way.` : 'We’ll let you know when it’s ready.') : 'We’ll email you when it is on its way.'}</p>
       </div>
       <dl className="ui-card rows">
         <div>

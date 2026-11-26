@@ -54,10 +54,11 @@ const art = (n: number, left = 50) => item(`art-${n}`, `Art No. ${n}`, { kind: '
  * samples: Shrug's own are in Airtable. */
 const SHELVES: Product[] = [
   book('chromatic', 'Chromatic', 40),
-  // (the two pre-orders' sending dates are samples, as the prices are: Shrug's own go in the catalogue)
-  book('build-the-future', 'Build the Future', 45, { status: 'Pre-order', shipsOn: '2027-02-15' }),
+  // (the two pre-orders are sent in two to three weeks, Dom's word of 26 Nov: neither has a day named, as
+  // none has in Shrug's catalogue yet. Where one is, Products → Ships on, the day is what is said)
+  book('build-the-future', 'Build the Future', 45, { status: 'Pre-order' }),
   book('what-is-shrug', 'What is Shrug?', 25),
-  book('in-plain-sight', 'In Plain Sight', 55, { status: 'Pre-order', shipsOn: '2027-04-05' }),
+  book('in-plain-sight', 'In Plain Sight', 55, { status: 'Pre-order' }),
   book('catalog', 'WS Catalog', 100),
   art(1, 43),
   art(2),

@@ -36,8 +36,8 @@ export function productOf(row: Row): Product | null {
     left: num(f[F.product.left]),
     limited: f[F.product.limited] === true,
     needsAddress: f[F.product.needsAddress] === true,
-    // (a pre-order's sending date has no column in the catalogue yet: until Shrug adds one, none is said)
-    shipsOn: null,
+    // (a pre-order's sending day, where Shrug has named one: Products → Ships on, a date, "2027-02-15")
+    shipsOn: /^\d{4}-\d{2}-\d{2}$/.test(str(f[F.product.shipsOn])) ? str(f[F.product.shipsOn]) : null,
     place: num(f[F.product.place]) ?? 9999,
     listed: f[F.product.listed] === true,
     group: str(f[F.product.group]),

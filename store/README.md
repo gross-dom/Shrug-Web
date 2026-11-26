@@ -219,6 +219,8 @@ The base is **Shrug**. The store reads it afresh on every visit, so a change the
     to their browser.
   - `Points` (the price: 10 to the dollar), `Floor` (the least paid in dollars) and `Postage` are the
     cost. `Status` is Available, Pre-order, On request or Hidden.
+  - `Ships on` is for a Pre-order: the day it is sent, which the store says on its page, its receipt
+    and beside the order. Left empty, the store says "Ships in 2–3 weeks".
   - `Edition of` and `Left` make a numbered edition ("Edition of 10 · 7 left", and each one sold is
     numbered 4/10). `Left` alone is a plain limit, and reaches Sold out at 0. `Limited supply` is only
     the label.

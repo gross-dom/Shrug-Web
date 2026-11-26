@@ -97,7 +97,7 @@ const book = rec(T.products, { [P.name]: 'Chromatic', [P.kind]: 'Book', [P.statu
 const chair = rec(T.products, { [P.name]: 'Workspace Chair', [P.kind]: 'Chair', [P.status]: 'Available', [P.visibleTo]: ['Everyone'], [P.points]: 10000, [P.floor]: 450, [P.postage]: 70, [P.options]: 'Black, Stone, White', [P.limited]: true, [P.place]: 2 })
 const red = rec(T.products, { [P.name]: 'Workspace Chair, Ferrari Red', [P.kind]: 'Chair', [P.status]: 'On request', [P.visibleTo]: ['Everyone'], [P.points]: 15000, [P.floor]: 1500, [P.place]: 3 })
 const art = rec(T.products, { [P.name]: 'Art on Acrylic', [P.kind]: 'Art', [P.status]: 'Available', [P.visibleTo]: ['Everyone'], [P.points]: 2800, [P.floor]: 75, [P.postage]: 5, [P.editionOf]: 3, [P.left]: 2, [P.place]: 4 })
-const next = rec(T.products, { [P.name]: 'Shrug 2027', [P.kind]: 'Book', [P.status]: 'Pre-order', [P.visibleTo]: ['Everyone'], [P.place]: 6 })
+const next = rec(T.products, { [P.name]: 'Shrug 2027', [P.kind]: 'Book', [P.status]: 'Pre-order', [P.visibleTo]: ['Everyone'], [P.place]: 6, [P.shipsOn]: '2027-02-15' })
 const update4 = rec(T.products, { [P.name]: 'Shrug 4 LP Update', [P.kind]: 'Document', [P.status]: 'Available', [P.visibleTo]: ['Everyone'], [P.points]: 0, [P.file]: [{ url: 'https://files.example.test/u4.pdf', filename: 'Shrug 4.pdf', type: 'application/pdf' }], [P.place]: 7 })
 const update1 = rec(T.products, { [P.name]: 'Shrug 1 LP Update', [P.kind]: 'Document', [P.status]: 'Available', [P.visibleTo]: ['Shrug 1 LPs'], [P.points]: 0, [P.place]: 8 })
 rec(T.products, { [P.name]: 'Not out yet', [P.kind]: 'Other', [P.status]: 'Hidden', [P.visibleTo]: ['Everyone'], [P.points]: 1 })
@@ -156,6 +156,7 @@ check('a forged session is nobody', (await call('forged', 'me', 'GET')).body.sta
 // A visitor: nobody signed in
 const visitor = (await call('nobody', 'store', 'GET')).body
 check('a visitor is shown the store: what is for everyone, in order, and nothing of anybody\'s', visitor.status === 'visitor' && visitor.products.map((p) => p.name).join('|') === 'Chromatic|Workspace Chair|Workspace Chair, Ferrari Red|Art on Acrylic|Shrug 2027' && !('member' in visitor) && !('updates' in visitor) && !('orders' in visitor), JSON.stringify(visitor).slice(0, 300))
+check('a pre-order says the day it is sent, where the catalogue names one (Products → Ships on), and nothing else has one', visitor.products.find((p) => p.name === 'Shrug 2027')?.shipsOn === '2027-02-15' && visitor.products.filter((p) => p.name !== 'Shrug 2027').every((p) => p.shipsOn === null), JSON.stringify(visitor.products.map((p) => [p.name, p.shipsOn])))
 check('and no document, hidden thing or thing for nobody', !JSON.stringify(visitor).match(/Update|Not out yet|For nobody/))
 check('a visitor can order nothing and fetch no file; and to pay, they have to say where the receipt goes', (await call('nobody', 'order', 'POST', { product: book.id })).body.error === 'anon' && (await call('nobody', 'pay', 'POST', { product: book.id, points: 0 })).body.error === 'email' && (await call('nobody', 'file', 'GET', null, `?product=${update4.id}`)).body.error === 'anon')
 

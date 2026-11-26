@@ -57,6 +57,7 @@ export const F = {
     place: 'fld6yXcQRnqjkQc7w',
     listed: 'fldxK7H44CRxDVOTy',
     group: 'fldEo9R1TCFpL8GMz',
+    shipsOn: 'fld7WpIP3MThADfH8',
   },
   order: {
     reference: 'fldgPuTLwX6GcDsk1',

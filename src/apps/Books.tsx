@@ -3,7 +3,7 @@ import { BookOpen, ChevronLeft, Library } from 'lucide-react'
 import { fmtCents, priceCents, soldOut, wayOf, type Order, type Product } from '../../store/shared/rules'
 import { editionOf, EDITIONS } from '../data/editions'
 import { shotsOf } from '../../store/src/pictures'
-import { shipsOf } from '../../store/src/words'
+import { shipsWhen } from '../../store/src/words'
 import { Window } from '../kit/window'
 import { useShelf, wantShop } from '../os/shop'
 import { useStore } from '../os/store'
@@ -205,8 +205,8 @@ export function BooksApp() {
                       </span>
                       <b>{b.name}</b>
                       <small>Made by Shrug</small>
-                      {/* (a pre-order says when it is sent, where Shrug has said) */}
-                      {shipsOf(b, true) && <small className="bk-ships">Ships {shipsOf(b, true)}</small>}
+                      {/* (a pre-order says when it is sent: the day Shrug has named, or in two to three weeks) */}
+                      {shipsWhen(b, true) && <small className="bk-ships">Ships {shipsWhen(b, true)}</small>}
                       <span className="sr-only">
                         {n + 1} of {books.length}
                       </span>

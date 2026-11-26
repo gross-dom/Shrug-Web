@@ -14,12 +14,23 @@ export interface Badge {
 const SHIPS = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 const SHIPS_SHORT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 
+/** How long a pre-order takes to be sent, where Shrug has not named a day (Dom, 26 Nov): the words after "Ships". */
+export const SHIPS_IN = 'in 2–3 weeks'
+
 /** The day a pre-order is sent, as it is written: "February 15, 2027" (or, where there is little room, "Feb 15, 2027").
- * Nothing where Shrug has not said. */
+ * Nothing where Shrug has not named a day (Products → Ships on). */
 export function shipsOf(product: Pick<Product, 'status' | 'shipsOn'> | null | undefined, short = false): string | null {
   if (!product || product.status !== 'Pre-order' || !product.shipsOn) return null
   const day = new Date(`${product.shipsOn}T12:00:00Z`)
   return Number.isNaN(day.getTime()) ? null : (short ? SHIPS_SHORT : SHIPS).format(day)
+}
+
+/** When a pre-order is sent, as the words after "Ships": the day Shrug has named, or else how long it takes
+ * ("in 2–3 weeks"). Said where it is offered and on its receipt; an order looked at later has only a day, if one
+ * was named, since "in 2–3 weeks" is from the day it was placed. Nothing for what is not a pre-order. */
+export function shipsWhen(product: Pick<Product, 'status' | 'shipsOn'> | null | undefined, short = false): string | null {
+  if (!product || product.status !== 'Pre-order') return null
+  return shipsOf(product, short) ?? SHIPS_IN
 }
 
 /** Whether a member has bought it (a request or a reservation is not having it). */

@@ -26,6 +26,9 @@ export interface Shot {
   /** It was made to fill whatever shows it: its subject is in its middle with room all round, so a place of
    * another shape shows the middle of it, edge to edge, where a photograph is shown whole. */
   fills?: boolean
+  /** It is a thing on a plain ground (a piece on white): it is shown whole, on a tile painted that same
+   * color, so that the ground runs to the tile's edges and nothing dim is set round it. */
+  ground?: string
 }
 
 // (the desktop's own windows read these too, for a shelf of covers: from there the store's pages are at /vip/store/)
@@ -39,6 +42,12 @@ const SIZES: Record<string, number[][]> = {
   'workspace-matte-black': [[570, 1350, 1800, 1800], [570, 1350, 1800, 1800], [507, 1200, 1800, 1600]],
   'workspace-ferrari-red': [[507, 1200, 1800, 1601], [507, 1200, 1800, 1601], [681, 1613, 1800, 2116]],
   'art-on-acrylic': [[608, 1440, 1800, 1920], [760, 1800, 1012, 2400], [760, 1800, 1013, 2400], [760, 1800, 1183, 2400]],
+  // (the five pieces, as Dom supplied them on 26 Nov: each a product shot on white, and a close look at it)
+  'art-america-must-win': [[760, 1254, 1254], [760, 840, 840]],
+  'art-becoming-steve-jobs': [[760, 1254, 1254], [760, 800, 800]],
+  'art-outatime': [[760, 1254, 1254], [728, 728, 728]],
+  'art-return-of-the-jedi': [[760, 1254, 1254], [760, 840, 840]],
+  'art-tesla-flying': [[760, 1254, 1254], [760, 784, 784]],
   'ws-catalog': [[760, 1734, 1220], [760, 1800, 1012, 2400], [760, 1800, 1008, 2400], [760, 1800, 1011, 2400]],
   'shrug-2027': [[608, 1122, 1402], [608, 1122, 1402]],
 }
@@ -54,6 +63,10 @@ const set = (slug: string, at: Record<number, string> = {}): Shot[] =>
       at: at[n + 1],
     }
   })
+
+/** One of the art pieces: its product shot (the piece whole, on white) and a close look at it. The piece is
+ * shown whole, on a tile of its own white; the close look fills whatever shows it. */
+const piece = (slug: string): Shot[] => set(slug).map((shot, n) => (n === 0 ? { ...shot, ground: '#fdfdfd' } : { ...shot, fills: true }))
 
 /** The chair in a color, as a product picture: Dom's model of it in that color's paint, stood in a white
  * studio and taken from behind at a three-quarter (where the color is) and from in front
@@ -84,9 +97,13 @@ const KEPT: Record<string, Shot[]> = {
   // (and each of the sixteen more)
   ...Object.fromEntries(MORE_COLORS.map((color) => [`workspace, ${color.name.toLowerCase()}`, mock(color.id)])),
   'art on acrylic': set('art-on-acrylic'),
-  // (the six pieces have no photographs of their own yet: the first two stand under the ones there are)
-  'art no. 1': set('art-on-acrylic').slice(0, 2),
-  'art no. 2': set('art-on-acrylic').slice(2, 4),
+  // (five of the six pieces have their photographs, Dom's of 26 Nov; they are numbered here in the order of
+  // their names, until Shrug says which is which and what each is called. The sixth has none yet)
+  'art no. 1': piece('art-america-must-win'),
+  'art no. 2': piece('art-becoming-steve-jobs'),
+  'art no. 3': piece('art-outatime'),
+  'art no. 4': piece('art-return-of-the-jedi'),
+  'art no. 5': piece('art-tesla-flying'),
   // The cover's lettering is at its right-hand edge
   'ws catalog': set('ws-catalog', { 1: '88% 50%' }),
   'shrug 2027': set('shrug-2027'),
@@ -105,7 +122,8 @@ export function shotsOf(product: Pick<Product, 'name' | 'picture' | 'pictures'>)
  * the picture fills it, so one that is wider than the tile is drawn wider than the tile is. */
 export function tileSizes(shot: Shot): string | undefined {
   if (!shot.set || !shot.aspect) return undefined
-  const over = Math.max(1, shot.aspect / 0.8)
+  // (one shown whole on its own ground is never drawn wider than the tile)
+  const over = shot.ground ? 1 : Math.max(1, shot.aspect / 0.8)
   const vw = (share: number) => `${Math.round(share * over)}vw`
   return `(max-width: 739px) ${vw(50)}, (min-width: 1700px) ${vw(25)}, ${vw(33)}`
 }
