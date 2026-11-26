@@ -631,7 +631,7 @@ const touchOf = (t) => ({
     const vip = await p.evaluate(() => { const a = document.querySelector('.sb-dock a.sb-icon'); return a && { drag: a.draggable, name: a.getAttribute('aria-label'), href: a.href, target: a.target, shown: getComputedStyle(a.querySelector('.sb-icon__name')).display } })
     say(!!vip && vip.drag === false && vip.name === 'Workspace, opens in a new tab' && vip.href === A.storeAt(BASE, 'workspace') && vip.target === '_blank' && vip.shown === 'none', 'the Workspace icon says where it goes too (the chair’s store, in a new tab), and cannot be dragged off', JSON.stringify(vip))
     const words = await p.evaluate(() => document.querySelector('.sb-chat__count .sr-only').textContent)
-    say(/No one has replied yet|\d+ of 89 ha(s|ve) replied/.test(words) && !/^1 of 89 have/.test(words), 'the widget counts in a sentence', words)
+    say(/No one has replied yet|\d+ of 80 ha(s|ve) replied/.test(words) && !/^1 of 80 have/.test(words), 'the widget counts in a sentence', words)
     // the first banner of a visit is not held back
     const first = await p.waitForSelector('.sb-banner .sb-note', { timeout: 12000 }).then(() => true).catch(() => false)
     say(first, 'the first reply to land on the Home Screen drops in as a banner, early in the visit')

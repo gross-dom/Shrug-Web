@@ -478,7 +478,7 @@ const ringOf = (page) =>
         check('About at its own size is as tall as what is in it: no band of nothing at its foot', m.foot >= 11 && m.foot <= 16, `foot ${m.foot}px`)
         check('About says more about Shrug: when it started, who runs it and which fund this is (and no longer what it backs)', m.facts.join(' / ') === 'Started / Partners / Fund', m.facts.join(' / '))
         // (each opens the window that holds what it counts; the drops are ArtStore's, which is a window of the desk now)
-        check('About has two rows to be pressed, Portfolio and Testimonials, and no link among them', m.rows.length === 2 && /^Portfolio ?100\+ Companies$/.test(m.rows[0]) && /^Testimonials ?89$/.test(m.rows[1]), m.rows.join(' / '))
+        check('About has two rows to be pressed, Portfolio and Testimonials, and no link among them', m.rows.length === 2 && /^Portfolio ?100\+ Companies$/.test(m.rows[0]) && /^Testimonials ?80$/.test(m.rows[1]), m.rows.join(' / '))
         check('About has no shrug emoticon in it', !m.emoticon && !(await t.page.$('.wf[data-app="about"] .about__mark')))
         check('About: the one-pager is a button (it opens in Preview) and says nothing of a new tab', m.links.includes('One-pager'), m.links.join(' / '))
       }

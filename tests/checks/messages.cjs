@@ -73,7 +73,7 @@ async function desk(browser) {
   say(!!asked && asked.under === 'Shrug' && asked.says === 'Delivered' && asked.waits && asked.by === '0.7s', 'under Shrug’s question, "Delivered" waits for the bubble to land, as it does under the visitor’s', JSON.stringify(asked))
   // The offer of every reply has room of its own at the head of the thread: the day over the first message starts under it
   const offer = await p.evaluate((W) => { const pill = document.querySelector(`${W} .chat__all[data-show]`); const day = document.querySelector(`${W} .chat-stamp`); if (!pill || !day) return null; const cs = getComputedStyle(pill); return { says: pill.textContent.trim(), clear: Math.round(day.getBoundingClientRect().top - pill.getBoundingClientRect().bottom), glass: cs.backdropFilter || cs.webkitBackdropFilter } }, W)
-  say(!!offer && /^Load all 89 replies$/.test(offer.says) && offer.clear >= 8 && /blur/.test(offer.glass), 'the offer of every reply sits clear above the day the conversation begins with, on glass of its own', JSON.stringify(offer))
+  say(!!offer && /^Load all 80 replies$/.test(offer.says) && offer.clear >= 8 && /blur/.test(offer.glass), 'the offer of every reply sits clear above the day the conversation begins with, on glass of its own', JSON.stringify(offer))
   // nothing moves under the checks that follow
   await pick(p, 'view', 'Pause Replies')
   // Paused, the head of the thread says so, where that offer was, and whoever was writing holds still
@@ -147,7 +147,7 @@ async function desk(browser) {
   await p.fill(`${W} .search__input`, 'maggie norris')
   await p.waitForTimeout(400)
   const yet = await found()
-  say(yet.length === 1 && yet[0].row === 'p:88' && yet[0].yet && yet[0].said === 'Hasn’t replied yet', 'DK-5 someone who has not replied yet is found by name, marked "Hasn’t replied yet"', JSON.stringify(yet))
+  say(yet.length === 1 && yet[0].row === 'p:79' && yet[0].yet && yet[0].said === 'Hasn’t replied yet', 'DK-5 someone who has not replied yet is found by name, marked "Hasn’t replied yet"', JSON.stringify(yet))
   await p.fill(`${W} .search__input`, 'sounding board')
   await p.waitForTimeout(400)
   const none = await p.evaluate((W) => { const l = document.querySelector(`${W} .conv-list`); const n = document.querySelector(`${W} .conv-none`); return { rows: l.querySelectorAll('[data-row]').length, strays: [...l.children].filter((c) => !c.matches('[role="option"], [role="group"]')).length, none: n?.textContent.trim(), role: n?.getAttribute('role'), inList: !!l.querySelector('.conv-none, .side-empty') } }, W)
@@ -230,7 +230,7 @@ async function desk(browser) {
   await p.waitForTimeout(500)
   const det = await p.evaluate((W) => { const d = document.querySelector(`${W} .chat-details`); return { in: d.contains(document.activeElement), on: document.activeElement?.textContent.trim(), stops: d.querySelectorAll('.details__person[tabindex="0"]').length, people: d.querySelectorAll('.details__person').length, name: document.querySelector(`${W} .chat-id`).getAttribute('aria-label'), dialog: d.getAttribute('aria-label') } }, W)
   say(det.in && det.on === 'Pause Replies', 'AX-7 details take the keyboard in, on their first control', JSON.stringify(det))
-  say(det.stops === 1 && det.people === 89, 'AX-7 eighty-nine people are one Tab stop', `${det.stops} of ${det.people}`)
+  say(det.stops === 1 && det.people === 80, 'AX-7 eighty people are one Tab stop', `${det.stops} of ${det.people}`)
   say(det.name === 'Testimonials. Details' && det.dialog === 'Testimonials details', 'AX-23 one name for Details', `${det.name} / ${det.dialog}`)
   await p.focus(`${W} .details__person[tabindex="0"]`)
   await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown')
@@ -251,7 +251,7 @@ async function desk(browser) {
   await pick(p, 'view', 'Show Every Reply')
   await p.waitForTimeout(1200)
   const allTold = await p.evaluate((W) => document.querySelector(`${W} .chat__pane > [role="status"]`).textContent.trim(), W)
-  say(allTold === 'All 89 have replied.', 'AX-8 …and that everyone has', allTold)
+  say(allTold === 'All 80 have replied.', 'AX-8 …and that everyone has', allTold)
   await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); s.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -900 })); s.scrollTop = 600 }, W)
   await p.waitForTimeout(500)
   say((await p.locator(`${W} .chat__new[data-show]`).count()) === 1, 'DK-4 (setup) scrolled back: the pill shows')
@@ -276,7 +276,7 @@ async function desk(browser) {
     const lastReply = rows.map((r, i) => (r.querySelector('[data-person]') ? i : -1)).filter((i) => i >= 0).pop()
     return { shrugs, links: document.querySelectorAll(`${W} .chat__thread .chat-link`).length, people: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, after: rows.slice(lastReply + 1).map((r) => r.textContent.trim()), mark: /ツ/.test(document.querySelector(`${W} .chat__thread`).textContent) }
   }, W)
-  say(end.people === 89 && end.shrugs.join(' | ') === 'ok be honest. | what’s it actually like working with us?' && end.links === 0 && !end.mark && end.after.every((x) => /^(sent from far up|Delivered)$/.test(x)), 'UX-23 the last reply is the end of it: Shrug says nothing after it, and nothing in it leads elsewhere', JSON.stringify(end))
+  say(end.people === 80 && end.shrugs.join(' | ') === 'ok be honest. | what’s it actually like working with us?' && end.links === 0 && !end.mark && end.after.every((x) => /^(sent from far up|Delivered)$/.test(x)), 'UX-23 the last reply is the end of it: Shrug says nothing after it, and nothing in it leads elsewhere', JSON.stringify(end))
   say(A.realErrors(t.errors).length === 0, 'desktop: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 
@@ -297,12 +297,12 @@ async function desk(browser) {
   await p.keyboard.press('ArrowDown')
   await p.waitForTimeout(400)
   const passed = await p.evaluate((W) => ({ people: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, row: document.querySelector(`${W} .conv[data-selected]`)?.dataset.row, yet: document.querySelector(`${W} .conv[data-selected]`)?.hasAttribute('data-yet') }), W)
-  say(passed.row === 'p:88' && passed.yet && passed.people < 89, 'DK-5 the arrows pass over someone still to reply without hurrying anyone', JSON.stringify(passed))
+  say(passed.row === 'p:79' && passed.yet && passed.people < 80, 'DK-5 the arrows pass over someone still to reply without hurrying anyone', JSON.stringify(passed))
   // …and pressed: every reply is brought in, and theirs is gone to
   await p.keyboard.press('Enter')
   await p.waitForTimeout(1600)
-  const brought = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`).getBoundingClientRect(); const b = document.querySelector(`${W} .chat__thread [data-person="88"]`)?.getBoundingClientRect(); const row = document.querySelector(`${W} [data-row="p:88"]`); return { people: document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length, inView: !!b && b.top >= s.top - 2 && b.bottom <= s.bottom + 2, yet: row?.hasAttribute('data-yet'), said: row?.querySelector('.ss-row__preview')?.textContent.trim() } }, W)
-  say(brought.people === 89 && brought.inView && !brought.yet && brought.said === 'Founder of Aidaly', 'DK-5 pressed, everyone’s replies are brought in and theirs is gone to', JSON.stringify(brought))
+  const brought = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`).getBoundingClientRect(); const b = document.querySelector(`${W} .chat__thread [data-person="79"]`)?.getBoundingClientRect(); const row = document.querySelector(`${W} [data-row="p:79"]`); return { people: document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length, inView: !!b && b.top >= s.top - 2 && b.bottom <= s.bottom + 2, yet: row?.hasAttribute('data-yet'), said: row?.querySelector('.ss-row__preview')?.textContent.trim() } }, W)
+  say(brought.people === 80 && brought.inView && !brought.yet && brought.said === 'Founder of Aidaly', 'DK-5 pressed, everyone’s replies are brought in and theirs is gone to', JSON.stringify(brought))
   await p.fill(`${W} .search__input`, '')
   // The details close on what changes the thread under them, so that it is seen
   await p.click(`${W} .chat-id`)
@@ -316,7 +316,7 @@ async function desk(browser) {
   await p.locator(`${W} .details__row`, { hasText: 'Show Every Reply' }).click()
   await p.waitForTimeout(900)
   const every = await p.evaluate((W) => ({ details: !!document.querySelector(`${W} .chat-details[data-show]`), people: document.querySelectorAll(`${W} .chat__thread [data-person]:not([data-typing])`).length }), W)
-  say(!every.details && every.people === 89, 'Show Every Reply there brings everyone in and closes them too', JSON.stringify(every))
+  say(!every.details && every.people === 80, 'Show Every Reply there brings everyone in and closes them too', JSON.stringify(every))
   say(A.realErrors(t.errors).length === 0, 'desktop (while replies come): no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()
 
@@ -403,11 +403,12 @@ async function desk(browser) {
   await p.waitForSelector(`${W} .composer__input`, { timeout: 20000 })
   await p.waitForTimeout(1200)
   const whole = await p.evaluate((W) => { const s = document.querySelector(`${W} .chat__scroll`); return { replies: document.querySelectorAll(`${W} .chat__thread [data-person]`).length, top: s.scrollTop, pill: document.querySelector(`${W} .chat__new[data-show]`)?.textContent.trim(), badge: document.querySelector('.dock__badge')?.textContent ?? null, next: !!document.querySelector(`${W} .chat__thread .chat-link`), all: !!document.querySelector(`${W} .chat__all[data-show]`) } }, W)
-  say(whole.replies === 89 && whole.top === 0 && whole.pill === 'Latest' && whole.badge === null && !whole.next && !whole.all, 'AX-14 reduced motion: all eighty-nine, from the top, "Latest" offered, nothing unread and nothing left to load', JSON.stringify(whole))
-  // With every reply drawn: a phrase quoted in the middle of a sentence, with no space on either side of it, has a
-  // mark at each end that faces it (it opens straight after a full stop, in a reply written in Japanese)
-  const quoted = await p.evaluate((W) => [...document.querySelectorAll(`${W} .chat__thread .ss-bubble__text`)].map((b) => b.textContent).find((text) => text.includes('The next big thing')) ?? '', W)
-  say(quoted.includes('“The next big thing will start out looking like a toy.”') && !quoted.includes('”The'), 'a quotation hard against the words round it opens with an opening mark and closes with a closing one', quoted.slice(quoted.indexOf('The next') - 12, quoted.indexOf('The next') + 60))
+  say(whole.replies === 80 && whole.top === 0 && whole.pill === 'Latest' && whole.badge === null && !whole.next && !whole.all, 'AX-14 reduced motion: all eighty, from the top, "Latest" offered, nothing unread and nothing left to load', JSON.stringify(whole))
+  // With every reply drawn: a phrase quoted in the middle of a sentence has a mark at each end that faces it.
+  // (The reply written in Japanese, where a quotation stood hard against the words round it, was taken out
+  // on 27 Nov: this is the one quoted phrase that is left)
+  const quoted = await p.evaluate((W) => [...document.querySelectorAll(`${W} .chat__thread .ss-bubble__text`)].map((b) => b.textContent).find((text) => text.includes('value-add')) ?? '', W)
+  say(quoted.includes('“value-add”') && !quoted.includes('”value') && !quoted.includes('"'), 'a quoted phrase opens with an opening mark and closes with a closing one', quoted.slice(Math.max(0, quoted.indexOf('value-add') - 30), quoted.indexOf('value-add') + 40))
   await t.ctx.close()
   t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still', reducedMotion: true })
   p = t.page
@@ -417,7 +418,7 @@ async function desk(browser) {
   await A.at(p, 'messages', ['c:group'])
   await p.waitForTimeout(600)
   const there = await p.evaluate((F) => { const s = document.querySelector(`${F} .chat__scroll`); return { top: s.scrollTop, pill: document.querySelector(`${F} .chat__new[data-show]`)?.textContent.trim(), replies: document.querySelectorAll(`${F} .chat__thread [data-person]`).length } }, F)
-  say(homeBadge === null && there.top === 0 && there.pill === 'Latest' && there.replies === 89, 'AX-14 on the iPhone too: no badge of eighty-nine, and the conversation from its top', JSON.stringify({ homeBadge, ...there }))
+  say(homeBadge === null && there.top === 0 && there.pill === 'Latest' && there.replies === 80, 'AX-14 on the iPhone too: no badge of eighty, and the conversation from its top', JSON.stringify({ homeBadge, ...there }))
   await t.ctx.close()
 }
 
@@ -429,9 +430,9 @@ async function phone(browser) {
   await A.at(p, 'messages', ['c:group'], 'details')
   const foot = () => p.evaluate((F) => [...document.querySelectorAll(`${F} .ios-sheet .ios-section__footer, ${F} .ios-sheet [class*="footer"]`)].map((x) => x.textContent.trim()).find((x) => /replied/.test(x)) ?? null, F)
   const f0 = await foot()
-  await p.waitForFunction(() => /^1 of 89/.test([...document.querySelectorAll('.ios-sheet *')].map((x) => (x.children.length ? '' : x.textContent)).find((x) => /of 89/.test(x)) || ''), null, { timeout: 30000 }).catch(() => {})
+  await p.waitForFunction(() => /^1 of 80/.test([...document.querySelectorAll('.ios-sheet *')].map((x) => (x.children.length ? '' : x.textContent)).find((x) => /of 80/.test(x)) || ''), null, { timeout: 30000 }).catch(() => {})
   const f1 = await foot()
-  say(/^(No one has replied yet\.|\d+ of 89 ha(s|ve) replied so far\.)$/.test(f0 || '') && (f1 === null || /^\d+ of 89 ha(s|ve) replied so far\.$/.test(f1)) && !/^1 of 89 have/.test(f1 || '') && !/^1 of 89 have/.test(f0 || ''), 'UX-19 "No one has replied yet." / "1 of 89 has replied so far."', `${f0} -> ${f1}`)
+  say(/^(No one has replied yet\.|\d+ of 80 ha(s|ve) replied so far\.)$/.test(f0 || '') && (f1 === null || /^\d+ of 80 ha(s|ve) replied so far\.$/.test(f1)) && !/^1 of 80 have/.test(f1 || '') && !/^1 of 80 have/.test(f0 || ''), 'UX-19 "No one has replied yet." / "1 of 80 has replied so far."', `${f0} -> ${f1}`)
   // Two people under one name are spoken of as two (they are the fifty-fifth to reply: not yet, this early)
   const pair = p.locator(`${F} .msg-person`, { has: p.locator('.ios-cell__title', { hasText: 'Courtne Smith & Filip Diarra' }) })
   await pair.scrollIntoViewIfNeeded()
@@ -557,7 +558,7 @@ async function phone(browser) {
   await p.locator(`${F} .ios-sheet .ios-cell`, { hasText: 'Show Every Reply' }).tap()
   await p.waitForTimeout(1500)
   const ended = await p.evaluate((F) => { const thread = document.querySelector(`${F} .ios-page[data-pos="top"] .chat__thread`); return { people: thread.querySelectorAll('[data-person]').length, links: thread.querySelectorAll('.chat-link').length, anyway: /anyway\.|ツ/.test(thread.textContent) } }, F)
-  say(ended.people === 89 && ended.links === 0 && !ended.anyway, 'UX-23 phone: the last reply is the end of it; nothing after it leads elsewhere', JSON.stringify(ended))
+  say(ended.people === 80 && ended.links === 0 && !ended.anyway, 'UX-23 phone: the last reply is the end of it; nothing after it leads elsewhere', JSON.stringify(ended))
 
   say(A.realErrors(t.errors).length === 0, 'phone: no console errors', A.realErrors(t.errors).join(' | ').slice(0, 300))
   await t.ctx.close()

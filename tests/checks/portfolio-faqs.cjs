@@ -716,7 +716,8 @@ const BRACKET = '[Shrug’s answer goes here'
     check('a company nobody in the conversation speaks for has no such row', (await win.locator('.pf-preview__voice').count()) === 0)
     await win.locator('[data-company="Lula"]').click()
     await t.sleep(200)
-    check('a company with two founders in the conversation has a row for each', (await win.locator('.pf-preview__voice-text b').allInnerTexts()).join() === 'Michael Vega-Sanz,Matthew Vega-Sanz')
+    // (Lula had two founders in the conversation until 27 Nov, when one's reply was taken out: no company has two now)
+    check('a company has a row for each of its founders in the conversation: Lula, one', (await win.locator('.pf-preview__voice-text b').allInnerTexts()).join() === 'Matthew Vega-Sanz')
     await win.locator('[data-company="Living Carbon"]').click()
     await win.locator('.pf-preview__voice').click()
     await t.sleep(2600)
@@ -772,7 +773,7 @@ const BRACKET = '[Shrug’s answer goes here'
     await up(l.page)
     await l.sleep(4500)
     const landed = await l.page.evaluate(() => { const sc = document.querySelector('.wf[data-app="messages"] .chat__scroll'); const who = [...sc.querySelectorAll('[data-person]')]; const b = who.find((el) => /skateboarder/i.test(el.closest('.chat__scroll').querySelector(`[data-person="${el.dataset.person}"]`)?.previousElementSibling?.textContent ?? '')) ; const all = who.length; const names = [...sc.querySelectorAll('*')].filter((el) => el.children.length === 0 && /^Tony Hawk/.test(el.textContent)); const r = sc.getBoundingClientRect(); const n = names[0]?.getBoundingClientRect(); return { all, named: names.length, inSight: !!n && n.top >= r.top && n.top < r.bottom - 60 } })
-    check('a link to one person’s reply brings everyone in and opens the conversation at what they said', landed.all === 89 && landed.named >= 1 && landed.inSight, JSON.stringify(landed))
+    check('a link to one person’s reply brings everyone in and opens the conversation at what they said', landed.all === 80 && landed.named >= 1 && landed.inSight, JSON.stringify(landed))
     await l.ctx.close()
   }
 

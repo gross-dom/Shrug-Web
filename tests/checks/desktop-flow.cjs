@@ -169,10 +169,10 @@ const { chromium } = require('playwright')
   }
   // Every reply at once, from the head of the conversation
   const pill = page.locator('.wf[data-app="messages"] .chat__all[data-show]')
-  ok('while replies are still coming, the conversation offers them all at once', (await pill.count()) === 1 && /Load all 89 replies/.test(await pill.textContent()), await pill.textContent().catch(() => 'no pill'))
+  ok('while replies are still coming, the conversation offers them all at once', (await pill.count()) === 1 && /Load all 80 replies/.test(await pill.textContent()), await pill.textContent().catch(() => 'no pill'))
   await pill.click(); await page.waitForTimeout(800)
   const all = await page.evaluate(() => ({ people: document.querySelectorAll('.wf[data-app="messages"] .chat__thread [data-person]').length, pill: !!document.querySelector('.wf[data-app="messages"] .chat__all[data-show]'), tail: [...document.querySelectorAll('.wf[data-app="messages"] .chat__thread [data-from="me"] .ss-bubble__text')].map((b) => b.textContent).slice(-2) }))
-  ok('pressed, all eighty-nine are there and the offer goes; the last reply is the end of the conversation', all.people === 89 && !all.pill && !all.tail.some((t) => /anyway|ツ|portfolio|one-pager/i.test(t)), JSON.stringify(all))
+  ok('pressed, all eighty are there and the offer goes; the last reply is the end of the conversation', all.people === 80 && !all.pill && !all.tail.some((t) => /anyway|ツ|portfolio|one-pager/i.test(t)), JSON.stringify(all))
 
   // ---- Finder
   await page.click('[data-dock-app="finder"]'); await page.waitForTimeout(600)
