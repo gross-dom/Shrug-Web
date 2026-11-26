@@ -1,12 +1,14 @@
 // Fixer I: the shared iPhone parts in WebKit (Safari's engine): a menu, a menu on a short screen, a sheet, headings.
 const wk = require('./webkit.cjs')
 const path = require('path')
+// (the site it looks at: the one it is given, as every other check takes it; a dev server's own address if none)
+const BASE = process.argv[2] && /^https?:/.test(process.argv[2]) ? process.argv[2] : process.env.BASE || 'http://127.0.0.1:5173/'
 ;(async () => {
   const out = (n) => path.join(__dirname, '..', 'audit', 'shots', `wk-${n}.png`)
   const TOP = '.sb-slot[data-front] .ios-page[data-pos="top"]'
   const run = async (name, width, height) => {
     const b = await wk.start({ width, height })
-    await b.go('http://127.0.0.1:5173/?phone=hand&still')
+    await b.go(`${BASE}?phone=hand&still`)
     await b.js(`window.__errs = []; window.addEventListener('error', (e) => window.__errs.push(String(e.message))); return 1`)
     await wk.sleep(5000)
     await b.js(`document.querySelector('.sb-lock__hint')?.click(); return 1`); await wk.sleep(1500)

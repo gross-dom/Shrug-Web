@@ -105,12 +105,13 @@ const { chromium } = require('playwright')
   await page.click('.conv[data-conversation="group"]'); await page.waitForTimeout(500)
   const backIn = await page.evaluate(() => ({ unread: !!document.querySelector('.conv[data-conversation="group"][data-unread]'), badge: document.querySelector('.dock__badge')?.textContent ?? null }))
   ok('opening Testimonials again clears both', !backIn.unread && backIn.badge === null, JSON.stringify(backIn))
-  // In the list, the name and the last message are set against the middle of the face beside them
+  // In the list a row is set as Messages sets its own (Dom's screenshots of it, 26 Nov): the face at the middle
+  // of the row's height, and the name and the last message from the row's top, 16 down, however long the message
   const rows = await page.evaluate(() => [...document.querySelectorAll('.conv')].map((row) => {
-    const face = row.querySelector('.ss-row__lead > *').getBoundingClientRect(); const head = row.querySelector('.ss-row__head').getBoundingClientRect(); const said = row.querySelector('.ss-row__preview').getBoundingClientRect()
-    return Math.round(Math.abs((face.top + face.bottom) / 2 - (head.top + said.bottom) / 2) * 10) / 10
+    const box = row.getBoundingClientRect(); const face = row.querySelector('.ss-row__lead > *').getBoundingClientRect(); const head = row.querySelector('.ss-row__head').getBoundingClientRect()
+    return [Math.round(Math.abs((face.top + face.bottom) / 2 - (box.top + box.bottom) / 2) * 10) / 10, Math.round((head.top - box.top) * 10) / 10]
   }))
-  ok('in the list, a name and its last message are level with the middle of the face', rows.length === 4 && rows.every((off) => off <= 1), `off by ${rows.join(', ')}`)
+  ok('in the list, a face is at the middle of its row, and the name and its last message are set from the row’s top', rows.length === 4 && rows.every(([mid, top]) => mid <= 1 && Math.abs(top - 16) <= 1), `face off the middle by, and name down by: ${rows.map((r) => r.join('/')).join(', ')}`)
   // details of the group: a person's card, and show in group
   await page.click('.chat-id'); await page.waitForTimeout(400)
   await page.click('.details__person'); await page.waitForTimeout(400)
