@@ -22,8 +22,6 @@ export interface Shot {
   aspect?: number
   /** Where its subject is, for a tile that shows only part of it (the display crops to 4:5). */
   at?: string
-  /** It is not a photograph: a picture made of the thing from its model. */
-  drawn?: boolean
   /** It was made to fill whatever shows it: its subject is in its middle with room all round, so a place of
    * another shape shows the middle of it, edge to edge, where a photograph is shown whole. */
   fills?: boolean
@@ -34,7 +32,16 @@ export interface Shot {
   alt?: string
   /** It has a page to itself whatever its shape: it is not put beside another to fill one. */
   alone?: boolean
+  /** It is a studio shot, shown whole in a tile wider than it is: what it is like down its left edge and down
+   * its right (the color of each at eight heights), which the tile is painted with beside it, so that its
+   * studio seems to run on to the tile's edges. */
+  sides?: string[][]
 }
+
+/** What a tile is painted with behind a studio shot shown whole in it: its left half as the shot's left edge
+ * is from top to foot, its right half as its right edge is. */
+export const sidesOf = (shot: Shot): string | undefined =>
+  shot.sides && shot.sides.length === 2 ? shot.sides.map((stops, n) => `linear-gradient(${stops.join(', ')}) ${n ? 'right' : 'left'} / 50.5% 100% no-repeat`).join(', ') : undefined
 
 /** One slide of a chair's gallery, in a landscape window: a landscape photograph, which fills it; two upright
  * ones, side by side, which fill it between them; or one upright one, whole, inside it. */
@@ -51,8 +58,6 @@ const BASE = import.meta.env.BASE_URL.endsWith('store/') ? import.meta.env.BASE_
  * makes the files: the widths are the files' own.) */
 const SIZES: Record<string, number[][]> = {
   'chromatic': [[705, 1670, 1800, 2227], [760, 1800, 1200, 2400], [760, 1800, 1174, 2400]],
-  'workspace-matte-black': [[570, 1350, 1800, 1800], [570, 1350, 1800, 1800], [507, 1200, 1800, 1600]],
-  'workspace-ferrari-red': [[507, 1200, 1800, 1601], [507, 1200, 1800, 1601], [681, 1613, 1800, 2116]],
   'art-on-acrylic': [[608, 1440, 1800, 1920], [760, 1800, 1012, 2400], [760, 1800, 1013, 2400], [760, 1800, 1183, 2400]],
   // (the five pieces, as Dom supplied them on 26 Nov: each a product shot on white, a close look at it, and
   // the artwork itself, flat and whole)
@@ -82,23 +87,10 @@ const set = (slug: string, at: Record<number, string> = {}): Shot[] =>
  * artwork is shown whole, as any photograph is. */
 const piece = (slug: string): Shot[] => set(slug).map((shot, n) => (n === 0 ? { ...shot, ground: '#fdfdfd' } : n === 1 ? { ...shot, fills: true } : shot))
 
-/** The chair in a color, as product pictures: Dom's model of it in that color's paint, stood in a white
- * studio and taken four ways (from behind at a three-quarter, where the color is; from in front; square on
- * from behind; from the side: `node tools/chair-mockups.cjs` makes them). Every color has these, to be
- * clicked through, and they come first, so that the page a chair is bought on always opens on a proper
- * picture of the product, the same for each of them; a color's photographs, where it has them, follow. Each
- * says of itself that it is not a photograph, and Workspace, which has the chair itself to turn, leaves
- * them out of its strip. */
-const mock = (color: string): Shot[] =>
-  [1, 2, 3, 4].map((n) => {
-    const at1 = `${BASE}pictures/workspace-${color}-mock-${n}`
-    return { full: `${at1}.webp`, small: `${at1}-s.webp`, set: `${at1}-s.webp 760w, ${at1}.webp 1800w`, aspect: 1, drawn: true, fills: true }
-  })
-
 /** How wide a photograph is for its height, where that is known (one from Airtable is taken to be square). */
 const shape = (shot: Shot) => shot.aspect ?? 1
 /** A tall photograph: one that is shown two to a page. */
-const tall = (shot: Shot) => !shot.drawn && !shot.ground && !shot.fills && !shot.alone && shape(shot) <= 0.82
+const tall = (shot: Shot) => !shot.ground && !shot.fills && !shot.alone && shape(shot) <= 0.82
 
 // ---- The chair's own photography (Shrug's selects of 27 Nov)
 //
@@ -106,8 +98,8 @@ const tall = (shot: Shot) => !shot.drawn && !shot.ground && !shot.fills && !shot
 //   gallery/   what Workspace shows in its window: slides, each a landscape, a pair of uprights or one upright
 //   checkout/  upright studio shots for the page the chair is bought on, one to three, the first its hero
 // `python3 -I tools/chair-photos.py <Shrug's folder>` copies them in as they are and writes what there is to
-// chair-photos.json, which is all that is read here: a color with nothing there is shown as it was before
-// (the chair drawn from its model, and such photographs as were kept by its name).
+// chair-photos.json, which is all that is read here. (Until 27 Nov a chair's page showed pictures made from
+// its model in a white studio: every color has its own photographs now, and those are gone.)
 
 interface Kept {
   /** Its file in the color's folder, without its ending: "gallery/02-pair-left__X". */
@@ -117,7 +109,7 @@ interface Kept {
   /** How wide its small and its middle copy are (.webp); a photograph too small to need one has none. */
   s?: number
   m?: number
-  ground?: string
+  sides?: string[][]
   view?: string
 }
 const PHOTOS = CHAIR_PHOTOS as Record<string, { name: string; gallery: { kind: string; photos: Kept[] }[]; checkout: Kept[] } | undefined>
@@ -132,11 +124,12 @@ const kept = (color: string, name: string, one: Kept): Shot => {
     small: one.s ? `${at1}-s.webp` : one.m ? `${at1}-m.webp` : whole,
     set: [one.s ? `${at1}-s.webp ${one.s}w` : '', one.m ? `${at1}-m.webp ${one.m}w` : '', `${whole} ${one.w}w`].filter(Boolean).join(', '),
     aspect: one.w / one.h,
-    ground: one.ground,
+    sides: one.sides,
     alt: `${name} Workspace chair${one.view ? `, ${one.view}` : ''}`,
     alone: true,
   }
 }
+
 
 /** A color's checkout shots, the hero first; none where it has none yet. */
 const studio = (color: string): Shot[] => (PHOTOS[color]?.checkout ?? []).map((one) => kept(color, PHOTOS[color]!.name, one))
@@ -144,27 +137,13 @@ const studio = (color: string): Shot[] => (PHOTOS[color]?.checkout ?? []).map((o
 const slides = (color: string): Slide[] =>
   (PHOTOS[color]?.gallery ?? []).map((slide) => ({ kind: slide.kind === 'pair' ? 'pair' : slide.kind === 'portrait' ? 'portrait' : 'wide', shots: slide.photos.map((one) => kept(color, PHOTOS[color]!.name, one)) }))
 
-/** A chair's pictures before its color has studio shots of its own, in the order they are shown (Dom, 26
- * Nov): the pictures made from its model first; then its photographs, the wide ones first (a wide photograph fills a page by itself), then any that are near square,
- * and the tall ones last, where they share a page two by two (`pagesOf`). */
-const drawnChair = (color: string, photographs: Shot[] = []): Shot[] => [
-  ...mock(color),
-  ...photographs.filter((shot) => shape(shot) >= 1.15),
-  ...photographs.filter((shot) => shape(shot) < 1.15 && !tall(shot)),
-  ...photographs.filter(tall),
-]
-
-/** The photographs kept by a chair's name before its color had a folder of its own. */
-const BEFORE: Record<string, string> = { 'matte-black': 'workspace-matte-black', 'scuderia-red': 'workspace-ferrari-red' }
-
-/** A chair's pictures on the page it is bought on: its studio shots, where Shrug has supplied them (one to
- * three, the hero first, a page each); until then the chair drawn from its model, as above. */
+/** A chair's pictures on the page it is bought on: its studio shots (one to three, the hero first, a page
+ * each). A color with no folder yet has none, and is shown the drawing anything without a picture is. */
 const chair = (color: string): Shot[] => {
   // (made once for each color: a page that asks twice is given the same pictures, not ones like them)
   const made = MADE.get(color)
   if (made) return made
-  const shots = studio(color)
-  const all = shots.length ? shots : drawnChair(color, BEFORE[color] ? set(BEFORE[color]) : [])
+  const all = studio(color)
   MADE.set(color, all)
   return all
 }
@@ -172,7 +151,8 @@ const MADE = new Map<string, Shot[]>()
 const SLIDES = new Map<string, Slide[]>()
 
 /** The chair's colors, by the names its products go by, in small letters. A color goes by its old names too,
- * in case a row in Airtable still has one: Matte Leather was Matte Black, Scuderia Red was Ferrari Red. */
+ * in case a row in Airtable still has one: Matte Leather was Matte Black, Scuderia Red was Ferrari Red, and
+ * Manhattan Blue took Tiffany Blue's place. */
 const CHAIRS: Record<string, string> = {
   'workspace, matte leather': 'matte-black',
   'workspace, matte black': 'matte-black',
@@ -188,6 +168,7 @@ const CHAIRS: Record<string, string> = {
   'workspace, mantis green': 'mantis-green',
   // (and each of the sixteen more)
   ...Object.fromEntries(MORE_COLORS.map((color) => [`workspace, ${color.name.toLowerCase()}`, color.id])),
+  'workspace, tiffany blue': 'manhattan-blue',
 }
 
 /** Which color a product is the chair in; null for anything that is not a chair. */
@@ -225,24 +206,19 @@ const KEPT: Record<string, Shot[]> = {
 export function shotsOf(product: Pick<Product, 'name' | 'picture' | 'pictures'>): Shot[] {
   const color = chairOf(product)
   const ours = color ? chair(color) : KEPT[product.name.trim().toLowerCase()]
-  if (ours) return ours
+  if (ours?.length) return ours
   const all = product.pictures?.length ? product.pictures : product.picture ? [product.picture] : []
   return all.map((full, n) => ({ full, small: n === 0 && product.picture ? product.picture : full }))
 }
 
-/** A photograph wide enough to fill a landscape window by itself; a narrower one is shown whole in it. */
-const WIDE = 1.25
-
 /** A chair's gallery, as Workspace shows it in its window, a slide at a time: Shrug's own slides for its
- * color, where there are any; until then such photographs as it has, a wide one to a slide and the tall ones
- * two by two. Empty for a chair with no photographs, and for anything that is not a chair. */
+ * color. Empty for a color with no folder yet, and for anything that is not a chair. */
 export function galleryOf(product: Pick<Product, 'name' | 'picture' | 'pictures'>): Slide[] {
   const color = chairOf(product)
   if (!color) return []
   const made = SLIDES.get(color)
   if (made) return made
-  const own = slides(color)
-  const all: Slide[] = own.length ? own : pagesOf(shotsOf(product).filter((shot) => !shot.drawn)).map((page) => ({ kind: page.length > 1 ? 'pair' : shape(page[0]!) >= WIDE ? 'wide' : 'portrait', shots: page }))
+  const all = slides(color)
   SLIDES.set(color, all)
   return all
 }
@@ -252,7 +228,7 @@ export function galleryOf(product: Pick<Product, 'name' | 'picture' | 'pictures'
 export function tileSizes(shot: Shot): string | undefined {
   if (!shot.set || !shot.aspect) return undefined
   // (one shown whole on its own ground is never drawn wider than the tile)
-  const over = shot.ground ? 1 : Math.max(1, shot.aspect / 0.8)
+  const over = shot.ground || shot.sides ? 1 : Math.max(1, shot.aspect / 0.8)
   const vw = (share: number) => `${Math.round(share * over)}vw`
   return `(max-width: 739px) ${vw(50)}, (min-width: 1700px) ${vw(25)}, ${vw(33)}`
 }
@@ -263,5 +239,7 @@ export function wholeSizes(shot: Shot): string | undefined {
   // (one that fills its tile is as wide as the tile, or wider where the tile is taller than it)
   if (shot.fills) return '(max-width: 739px) max(calc(100vw - 40px), 46vh), max(58vw, calc(100vh - 200px))'
   const a = shot.aspect.toFixed(3)
+  // (a studio shot is as tall as its tile, which in a window of the desktop is nearly as tall as the window)
+  if (shot.sides) return `(max-width: 739px) min(calc(100vw - 40px), calc(60vh * ${a})), min(58vw, calc(100vh * ${a}))`
   return `(max-width: 739px) min(calc(100vw - 40px), calc(46vh * ${a})), min(58vw, calc((100vh - 200px) * ${a}))`
 }

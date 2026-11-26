@@ -5,7 +5,7 @@ import { Points, PointsMark } from './brand'
 import { DESK } from './desk'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
-import { pagesOf, shotsOf, tileSizes, wholeSizes, type Shot } from './pictures'
+import { pagesOf, shotsOf, sidesOf, tileSizes, wholeSizes, type Shot } from './pictures'
 import { NAMES, nameIn, ROOM } from './room'
 import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shipsOf, shipsWhen, shortOf } from './words'
 
@@ -35,7 +35,7 @@ export function Picture({ product, size, tile }: { product: Product; size: numbe
   return shot ? (
     // (a thing on a plain ground is shown whole in a tile, on that ground: a tile is taller than the picture, and
     // would otherwise cut the sides off a wide piece)
-    <img src={tile ? shot.full : shot.small} srcSet={tile ? shot.set : undefined} sizes={tile ? tileSizes(shot) : undefined} alt="" decoding="async" loading="lazy" style={tile && shot.ground ? { objectFit: 'contain', background: shot.ground } : shot.at ? { objectPosition: shot.at } : undefined} />
+    <img src={tile ? shot.full : shot.small} srcSet={tile ? shot.set : undefined} sizes={tile ? tileSizes(shot) : undefined} alt="" decoding="async" loading="lazy" style={tile && (shot.ground || shot.sides) ? { objectFit: 'contain', background: shot.ground ?? sidesOf(shot) } : shot.at ? { objectPosition: shot.at } : undefined} />
   ) : (
     <span className="t-3">
       <KindIcon kind={product.kind} size={size} width={size > 40 ? 1.1 : size > 22 ? 1.2 : 1.6} />
@@ -427,7 +427,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   /** Which of all its pictures one is, counted from one. */
   const nth = (one: Shot) => shots.indexOf(one) + 1
   // (a photograph that says what it shows is described by that: "Solar Orange Workspace chair, from behind")
-  const altOf = (one: Shot) => one.alt ?? (one.drawn ? `${product.name}: picture ${nth(one)} of ${shots.length}, made from its model` : shots.length > 1 ? `${product.name}: picture ${nth(one)} of ${shots.length}` : product.name)
+  const altOf = (one: Shot) => one.alt ?? (shots.length > 1 ? `${product.name}: picture ${nth(one)} of ${shots.length}` : product.name)
   const media = (
     <>
       {page && shot ? (
@@ -442,8 +442,9 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
           <>
             {/* A photograph is shown whole, and the same picture, out of focus, fills the tile behind it: a tall
                 one and a wide one sit alike. A picture made to fill its place (a chair in its studio) fills it */}
-            {shot.ground ? <span className="ui-media-ground" style={{ background: shot.ground }} aria-hidden="true" /> : !shot.fills && <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />}
-            <img className={`ui-media-pic${shot.fills ? ' fills' : ''}`} key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={altOf(shot)} decoding="async" />
+            {/* (a studio shot is whole on a tile painted as its own two sides are: the studio runs on to the tile's edges) */}
+            {shot.ground || shot.sides ? <span className="ui-media-ground" style={{ background: shot.ground ?? sidesOf(shot) }} aria-hidden="true" /> : !shot.fills && <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />}
+            <img className={`ui-media-pic${shot.fills ? ' fills' : shot.sides ? ' whole' : ''}`} key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={altOf(shot)} decoding="async" />
           </>
         )
       ) : (

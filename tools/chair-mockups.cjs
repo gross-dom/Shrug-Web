@@ -1,21 +1,23 @@
 // The chair's pictures, made from the chair itself: Dom's model of it (public/workspace/chair.glb), in the
-// studio's own paint and under the studio's own lights (src/apps/workspace/stage.ts), stood in a
-// photographer's white studio and taken as stills. A color with no photograph of its own is shown by these
-// in the store (store/src/pictures.ts), and every color opens the store's page with one, so that the page
-// to buy a chair on always has a proper picture of the product on it.
+// studio's own paint and under the studio's own lights (src/apps/workspace/stage.ts), taken as stills.
 //
-//   node tools/chair-mockups.cjs            every color, every picture
+// What the site shows of them is the chair alone, with nothing behind it: a slab's chair, an owner's card,
+// and the still the studio stands in for the 3D chair with. (It can also stand the chair in a photographer's
+// white studio and take it four ways. The store's pages showed those until 27 Nov, when every color got
+// photographs of its own: they are not kept in the site any more, and are made only when asked for.)
+//
+//   node tools/chair-mockups.cjs            the chair alone, for every color
 //   node tools/chair-mockups.cjs mantis-green matte-black     only these
-//   node tools/chair-mockups.cjs --alone    only the chair alone, for every color (the studio pictures are left)
-//   node tools/chair-mockups.cjs --views=3,4 --studio    only those studio pictures (the others, and the chair alone, are left)
+//   node tools/chair-mockups.cjs --studio   the studio pictures instead (--views=3,4 for only some of them)
 //   (needs Playwright, esbuild from node_modules, and python3 with Pillow and numpy)
 //
 // For each color it writes:
+//   public/workspace/chairs/<color>.webp                             the chair alone, nothing behind it
+// and, with --studio:
 //   store/public/pictures/workspace-<color>-mock-1.webp, -1-s.webp   from behind at a three-quarter, where the color is
 //   store/public/pictures/workspace-<color>-mock-2.webp, -2-s.webp   from in front
 //   store/public/pictures/workspace-<color>-mock-3.webp, -3-s.webp   square on from behind
 //   store/public/pictures/workspace-<color>-mock-4.webp, -4-s.webp   from the side
-//   public/workspace/chairs/<color>.webp                             the chair alone, nothing behind it: a slab's, a card's
 // Run it again when the chair's file, a paint or a color changes.
 const { chromium } = require('playwright')
 const esbuild = require('esbuild')
@@ -38,7 +40,7 @@ if (COLORS.length !== 24) throw new Error(`read ${COLORS.length} colors, not 24:
 
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const TRY = process.argv.includes('--try') // (small and quick, to look at: nothing is written to the site)
-const ONLY_ALONE = process.argv.includes('--alone')
+const ONLY_ALONE = !process.argv.includes('--studio') // (the chair alone is what the site shows: the studio pictures are made only when asked for; --alone, as it used to be asked, still means this)
 const ONLY_STUDIO = process.argv.includes('--studio') // (only the studio pictures: the chair alone is left as it is) // (only the chair alone: the studio pictures are left as they are)
 const OUT = TRY ? process.env.MOCKUP_OUT || os.tmpdir() : null
 

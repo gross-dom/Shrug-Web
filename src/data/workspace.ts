@@ -14,8 +14,8 @@
 // What a chair costs is not here: it is the store's to say (Matte Leather from $1,100, a painted one from
 // $1,200), and it is said only to someone logged in. Which colors are in stock is Dom's word of 26 Nov:
 // the eight the studio opens on are available now, and the sixteen more are made to order, in two to three
-// weeks. Still Shrug's to supply: the one line about each color, photographs of each, and the owners who
-// have agreed to be named.
+// weeks. Each color's photographs are Shrug's selects of 27 Nov (store/public/pictures/workspace/). Still
+// Shrug's to supply: the one line about each color, and the owners who have agreed to be named.
 //
 // (Illusion Blue is among the eight and Championship Green among the sixteen: Dom swapped the two after his
 // fourth round of testing.)

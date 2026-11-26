@@ -168,7 +168,6 @@ export function WorkspaceApp() {
   const product = chosen ? (shelf?.products.find((p) => p.id === chosen.paint.product) ?? null) : null
   /** Its price, as it is said: only to someone logged in, and never one the store has not given. */
   const price = product && !product.priceHidden && product.points ? `From ${fmtCents(priceCents(product))}` : null
-  // (its photographs: a color that has none yet has the chair drawn in the store's pages, and here the chair itself)
   // Its gallery, a slide at a time beside the 3D chair. A slide is a landscape photograph, which fills the
   // window; two upright ones, which share it side by side; or one upright one, whole, inside it (which is
   // which is Shrug's to say: galleryOf in store/src/pictures.ts)

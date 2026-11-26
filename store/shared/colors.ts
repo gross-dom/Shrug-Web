@@ -48,6 +48,8 @@ export const MORE_COLORS: MoreColor[] = [
   { id: 'dazzling-pink', name: 'Dazzling Pink', color: '#ce184e', finish: 'metallic' },
   { id: 'palleon-panther', name: 'Palleon Panther', color: '#939f9b', finish: 'shift', shift: ['#9da2aa', '#8fb8b0', '#8fa9c9'] },
   { id: 'giallo-yellow', name: 'Giallo Yellow', color: '#f2c81b', finish: 'gloss' },
-  { id: 'tiffany-blue', name: 'Tiffany Blue', color: '#86d0cb', finish: 'gloss' },
+  // (Manhattan Blue took Tiffany Blue's place on the launch list of 27 Nov: a pale aqua metallic, its value taken
+  // from the paint in its own photographs)
+  { id: 'manhattan-blue', name: 'Manhattan Blue', color: '#89becc', finish: 'metallic' },
   { id: 'fractured-love', name: 'Fractured Love', color: '#6e0301', finish: 'metallic' },
 ]

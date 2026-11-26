@@ -116,6 +116,8 @@ a{color:inherit}
 .ui-media-ground{position:absolute; inset:0}
 /* One made to fill its place does: edge to edge, the middle of it showing where the place is another shape */
 .ui-media-pic.fills{position:absolute; inset:0; width:100%; height:100%; max-width:none; max-height:none; object-fit:cover}
+/* A studio shot is whole in its tile, as large as the tile lets it be whatever size its file is: the tile is painted as its sides are */
+.ui-media-pic.whole{position:absolute; inset:0; width:100%; height:100%; max-width:none; max-height:none; object-fit:contain}
 /* Which of its pictures is on show: a dot for each, over the foot of the tile */
 .ui-dots{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); display:flex; align-items:center; gap:2px; padding:0 6px; border-radius:999px;
   background:rgba(12,12,13,.45); -webkit-backdrop-filter:blur(16px) saturate(180%); backdrop-filter:blur(16px) saturate(180%);

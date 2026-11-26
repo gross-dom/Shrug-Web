@@ -2,7 +2,7 @@
 """The chair's photographs, brought in from the folder Shrug keeps its selects in.
 
     python3 -I tools/chair-photos.py "<…/Website Selects>" [--check]
-    python3 tools/chair-photos.py --views
+    python3 tools/chair-photos.py --again
 
 The folder has one folder per colourway, named as the launch list names it, and in each:
 
@@ -23,16 +23,18 @@ is not made again. Beside it two smaller copies are made for small and plain scr
 long side: a thumbnail, a phone; -m.webp, 1,600), since nothing in this site makes sizes as a page is asked
 for. What there is of each color is written to store/src/chair-photos.json, which the pages read
 (store/src/pictures.ts): the slides of its gallery and how each is laid out, its checkout shots, and for
-each photograph its size, the ground a studio shot stands on (where its edges are one plain color, so that a
-tile can be painted the same and the shot shown whole on it) and what it is a view of, for its alt text.
+each photograph its size, what a studio shot's two sides are like (the color of its left edge and of its
+right, at eight heights: a tile wider than the shot is painted with those beside it, so that the shot is shown
+whole and its studio seems to run on to the tile's edges) and what it is a view of, for its alt text.
 
 What a photograph is a view of is read from chair-photo-views.json beside this script
 ({"<color id>/gallery/01__X": "from behind"}), which is written by hand, and only where the view is plain
 to see.
 
---check reads the folder and reports on it without copying anything. --views needs no folder: it writes the
-views in chair-photo-views.json into the list as it stands (and takes out any that file no longer has), for
-when the photographs are already in and only what is said of them has changed.
+--check reads the folder and reports on it without copying anything. --again needs no folder: it goes over
+the list as it stands from the copies already in the site, and writes in what chair-photo-views.json says
+of each (taking out any view that file no longer has) and each studio shot's sides, for when the photographs
+are already in and only what is said of them has changed.
 
 Needs Pillow. Run it with -I: the folder is someone else's.
 """
@@ -95,18 +97,22 @@ def safe(name):
     return re.sub(r'[^A-Za-z0-9._-]+', '-', name).strip('-')
 
 
-def ground_of(im):
-    """The color a studio shot stands on, where its edges are one plain color; None where they are not."""
+STOPS = 8
+
+
+def sides_of(im):
+    """What a studio shot is like down its left edge and down its right: the color of each at eight heights."""
     w, h = im.size
-    t = max(2, round(min(w, h) * 0.012))
-    edges = [im.crop(box) for box in ((0, 0, w, t), (0, h - t, w, h), (0, 0, t, h), (w - t, 0, w, h))]
-    means = [ImageStat.Stat(e).mean for e in edges]
-    spread = max(max(ImageStat.Stat(e).stddev) for e in edges)
-    apart = max(abs(a[c] - b[c]) for a in means for b in means for c in range(3))
-    if spread > 6 or apart > 8:
-        return None
-    r, g, b = (round(sum(m[c] for m in means) / len(means)) for c in range(3))
-    return f'#{r:02x}{g:02x}{b:02x}'
+    t = max(2, round(w * 0.012))
+    sides = []
+    for x in (0, w - t):
+        stops = []
+        for n in range(STOPS):
+            band = im.crop((x, round(h * n / STOPS), x + t, round(h * (n + 1) / STOPS)))
+            r, g, b = (round(c) for c in ImageStat.Stat(band).mean)
+            stops.append(f'#{r:02x}{g:02x}{b:02x}')
+        sides.append(stops)
+    return sides
 
 
 def smaller(im, long_side):
@@ -123,20 +129,25 @@ def listed(folder):
     return sorted(f for f in os.listdir(folder) if re.search(r'\.jpe?g$', f, re.I) and not f.startswith('.'))
 
 
-def views_only():
-    """What each photograph is a view of, written into the list as it stands."""
+def again():
+    """The list as it stands, gone over from the copies in the site: each view, and each studio shot's sides."""
     views = json.load(open(VIEWS)) if os.path.exists(VIEWS) else {}
     manifest = json.load(open(MANIFEST))
     known, said = set(), 0
     for color, kept in manifest.items():
-        for one in [p for slide in kept['gallery'] for p in slide['photos']] + kept['checkout']:
-            key = f"{color}/{one['file']}"
-            known.add(key)
-            if views.get(key):
-                one['view'] = views[key]
-                said += 1
-            else:
-                one.pop('view', None)
+        for part, photos in (('gallery', [p for slide in kept['gallery'] for p in slide['photos']]), ('checkout', kept['checkout'])):
+            for one in photos:
+                key = f"{color}/{one['file']}"
+                known.add(key)
+                if views.get(key):
+                    one['view'] = views[key]
+                    said += 1
+                else:
+                    one.pop('view', None)
+                one.pop('ground', None)
+                if part == 'checkout':
+                    with Image.open(os.path.join(OUT, color, one['file'] + '.jpg')) as opened:
+                        one['sides'] = sides_of(ImageOps.exif_transpose(opened).convert('RGB'))
     with open(MANIFEST, 'w') as out:
         json.dump(manifest, out, indent=1, sort_keys=True)
         out.write('\n')
@@ -148,8 +159,8 @@ def views_only():
 
 
 def main():
-    if '--views' in sys.argv:
-        return views_only()
+    if '--again' in sys.argv:
+        return again()
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     check = '--check' in sys.argv
     if len(args) != 1 or not os.path.isdir(args[0]):
@@ -190,9 +201,7 @@ def main():
                 if copy is not None:
                     one[key] = copy.size[0]
             if part == 'checkout':
-                ground = ground_of(im)
-                if ground:
-                    one['ground'] = ground
+                one['sides'] = sides_of(im)
             view = views.get(f'{color}/{part}/{stem}')
             if view:
                 one['view'] = view
@@ -252,8 +261,7 @@ def main():
 
     for color, kept in manifest.items():
         gallery = ', '.join(s['kind'] for s in kept['gallery']) or 'none'
-        grounds = sum(1 for c in kept['checkout'] if c.get('ground'))
-        print(f"{kept['name']:20} {color:20} gallery: {gallery:34} checkout: {len(kept['checkout'])} ({grounds} on a plain ground)")
+        print(f"{kept['name']:20} {color:20} gallery: {gallery:34} checkout: {len(kept['checkout'])}")
     print(f'\n{len(manifest)} colors' + ('' if check else f', written to {os.path.relpath(MANIFEST)}'))
     if notes:
         print('\nTo look at:')

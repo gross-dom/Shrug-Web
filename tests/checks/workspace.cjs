@@ -115,20 +115,23 @@ const check = (name, ok, detail = '') => {
   check('the tray of colors is 70 tall: the eight, and the way to the sixteen more', tray.tall === 70 && tray.dots === 'Matte Leather | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | More colors', JSON.stringify(tray))
   check('the button shows the pointing hand', tray.hand === 'pointer', tray.hand)
 
-  // ---- its photographs: a page each beside the 3D chair, two tall ones sharing a page side by side so that
-  // between them they fill the window (the one that is near square comes first, by itself)
+  // ---- its gallery: Shrug's photographs of the chair in this color, a slide each beside the 3D chair. A slide
+  // is a landscape photograph (it fills the window), two upright ones side by side (they fill it between
+  // them) or one upright one (whole, inside it): Scuderia Red's are three landscapes
   const shots = await p.evaluate((W) => [...document.querySelectorAll(`${W} .st-shots .st-shot`)].map((b) => `${b.getAttribute('aria-label')}${b.getAttribute('aria-pressed') === 'true' ? '*' : ''}`).join(' | '), W)
-  check('beside the chair are its pictures: the 3D chair, which is on show, and its photographs in this color, the two tall ones on one page', shots === 'The chair in 3D* | Photograph 1 of 3 | Photographs 2 and 3 of 3', shots)
-  await p.locator(`${W} .st-shot[aria-label="Photographs 2 and 3 of 3"]`).click()
+  check('beside the chair are its pictures: the 3D chair, which is on show, and the slides of its gallery in this color', shots === 'The chair in 3D* | Photograph 1 of 3 | Photograph 2 of 3 | Photograph 3 of 3', shots)
+  /** The photograph on show: how it is laid out, and each picture in it, measured against the window. */
+  const photoAt = () => p.evaluate((W) => { const ph = document.querySelector(`${W} .st-photo`); const win = document.querySelector(`${W} .ss-window`).getBoundingClientRect(); const r = ph?.getBoundingClientRect(); const pics = [...(ph?.querySelectorAll('.st-photo__pic') ?? [])]; const back = ph?.querySelector('.st-photo__back'); const shade = ph?.querySelector('.st-photo__shade')?.getBoundingClientRect(); const foot = document.querySelector(`${W} .st-foot`)?.getBoundingClientRect(); return { fit: ph?.dataset.fit, fills: !!r && Math.abs(r.left - win.left) <= 1 && Math.abs(r.right - win.right) <= 1 && Math.abs(r.top - win.top) <= 1 && Math.abs(r.bottom - win.bottom) <= 1, pics: pics.map((x) => { const b = x.getBoundingClientRect(); return { left: Math.round(b.left - win.left), right: Math.round(win.right - b.right), top: Math.round(b.top - win.top), tall: Math.round(b.height), fit: getComputedStyle(x).objectFit, file: x.currentSrc.split('/').slice(-2).join('/') } }), winTall: Math.round(win.height), gap: pics.length === 2 ? Math.round(pics[1].getBoundingClientRect().left - pics[0].getBoundingClientRect().right) : null, behind: !!back && getComputedStyle(back).display !== 'none', loaded: pics.length > 0 && pics.every((x) => x.complete && x.naturalWidth > 0), alt: pics.map((x) => x.alt).join(' | '), shade: !!shade && shade.bottom >= win.bottom - 1 && shade.height > 60, on: document.querySelector(`${W} .st-shot[aria-pressed="true"]`)?.getAttribute('aria-label'), ink: getComputedStyle(document.querySelector(`${W} .ss-window`)).color } }, W)
+  await p.locator(`${W} .st-shot[aria-label="Photograph 2 of 3"]`).click()
   await p.waitForTimeout(900)
-  const photo = await p.evaluate((W) => { const ph = document.querySelector(`${W} .st-photo`); const win = document.querySelector(`${W} .ss-window`).getBoundingClientRect(); const r = ph?.getBoundingClientRect(); const pics = [...(ph?.querySelectorAll('.st-photo__pic') ?? [])]; const pic = pics[0]; const halves = pics.map((x) => x.getBoundingClientRect()); const shade = ph?.querySelector('.st-photo__shade')?.getBoundingClientRect(); return { fills: !!r && Math.abs(r.left - win.left) <= 1 && Math.abs(r.right - win.right) <= 1 && Math.abs(r.top - win.top) <= 1 && Math.abs(r.bottom - win.bottom) <= 1, pair: pics.length === 2 && Math.abs(halves[0].left - win.left) <= 1 && Math.abs(halves[1].right - win.right) <= 1 && halves[1].left - halves[0].right >= 1 && halves[1].left - halves[0].right <= 5 && halves.every((h) => Math.abs(h.height - win.height) <= 1) && pics.every((x) => getComputedStyle(x).objectFit === 'cover'), dim: !!ph?.querySelector('.st-photo__back'), loaded: pics.every((x) => x.complete && x.naturalWidth > 0), alt: pics.map((x) => x.alt).join(' | '), shade: !!shade && shade.bottom >= win.bottom - 1 && shade.height > 60, on: document.querySelector(`${W} .st-shot[aria-pressed="true"]`)?.getAttribute('aria-label'), ink: getComputedStyle(document.querySelector(`${W} .ss-window`)).color } }, W)
-  check('the two tall photographs fill the window between them, side by side and a hair apart, with nothing dim round them and a shade at the foot for the words, which are white on it', photo.fills && photo.pair && !photo.dim && photo.loaded && photo.alt === 'Scuderia Red: photograph 2 of 3 | Scuderia Red: photograph 3 of 3' && photo.shade && photo.on === 'Photographs 2 and 3 of 3' && photo.ink === 'rgb(255, 255, 255)', JSON.stringify(photo))
+  let photo = await photoAt()
+  check('a landscape photograph fills the window, edge to edge, with nothing dim round it and a shade at the foot for the words, which are white on it; it is Shrug’s own file, and says what it shows', photo.fills && photo.fit === 'fill' && photo.pics.length === 1 && photo.pics[0].left === 0 && photo.pics[0].right === 0 && photo.pics[0].tall === photo.winTall && photo.pics[0].fit === 'cover' && !photo.behind && photo.loaded && /^gallery\/02__5F4A0487-copy(-[sm]\.webp|\.jpg)$/.test(photo.pics[0].file) && photo.alt === 'Scuderia Red Workspace chair, base being spray-painted' && photo.shade && photo.on === 'Photograph 2 of 3' && photo.ink === 'rgb(255, 255, 255)', JSON.stringify(photo))
   await p.locator(`${W} .st-shot[aria-label="The chair in 3D"]`).click()
   await p.waitForTimeout(500)
   check('and the 3D chair comes back when it is picked', (await p.locator(`${W} .st-photo`).count()) === 0 && (await studio()).still)
   await p.locator(`${W} .fl-dot[aria-label="Solar Orange"]`).click()
   await p.waitForTimeout(700)
-  check('a color with no photographs yet has the 3D chair alone, and no strip', (await p.locator(`${W} .st-shots`).count()) === 0 && (await studio()).name === 'Solar Orange', '')
+  check('every color has a gallery of its own: Solar Orange’s three are beside its chair', (await p.locator(`${W} .st-shots .st-shot`).count()) === 4 && (await studio()).name === 'Solar Orange', '')
   await p.locator(`${W} .fl-dot[aria-label="Scuderia Red"]`).click()
   await p.waitForTimeout(700)
 
@@ -197,7 +200,7 @@ const check = (name, ok, detail = '') => {
   await p.waitForSelector(`${W} .mc-sheet`, { timeout: 8000 })
   await p.waitForTimeout(400)
   const more = await p.evaluate((W) => { const w = document.querySelector(W); const sheet = w.querySelector('.wx-more .mc-sheet'); const sw = [...w.querySelectorAll('.mc-swatch')]; const rows = new Set(sw.map((x) => Math.round(x.getBoundingClientRect().top))); const cols = new Set(sw.map((x) => Math.round(x.getBoundingClientRect().left))); const box = sheet.getBoundingClientRect(); const tops = sw.map((x) => x.getBoundingClientRect().top); const feet = sw.map((x) => x.getBoundingClientRect().bottom); return { role: sheet.getAttribute('role'), names: sw.map((x) => x.textContent.trim()), rows: rows.size, cols: cols.size, text: sheet.innerText, x: !!sheet.querySelector('.wx-x'), fills: Math.min(...tops) - box.top <= 16 && box.bottom - Math.max(...feet) <= 16, colored: sw.every((x) => getComputedStyle(x).backgroundImage !== 'none' || getComputedStyle(x).backgroundColor !== 'rgba(0, 0, 0, 0)') } }, W)
-  check('the last dot lets down a sheet over the window: sixteen more colors, four by four, each a slab of its color with its own name on it', more.role === 'dialog' && more.names.length === 16 && more.rows === 4 && more.cols === 4 && more.x && more.colored && more.names.join(' | ') === 'Neutron Star | Gummi Berry | Luxury Bronze | Smurf | Nuclear Pink | Championship Green | Interstellar Black | Hulk Green | Reserve Green | Nuclear Green | Nuclear Violet | Dazzling Pink | Palleon Panther | Giallo Yellow | Tiffany Blue | Fractured Love', JSON.stringify(more.names))
+  check('the last dot lets down a sheet over the window: sixteen more colors, four by four, each a slab of its color with its own name on it', more.role === 'dialog' && more.names.length === 16 && more.rows === 4 && more.cols === 4 && more.x && more.colored && more.names.join(' | ') === 'Neutron Star | Gummi Berry | Luxury Bronze | Smurf | Nuclear Pink | Championship Green | Interstellar Black | Hulk Green | Reserve Green | Nuclear Green | Nuclear Violet | Dazzling Pink | Palleon Panther | Giallo Yellow | Manhattan Blue | Fractured Love', JSON.stringify(more.names))
   check('the colors fill the sheet, from its top to its foot, and nothing is written over them ("More colors", "16 more, each made to order")', more.fills && !/More colors|each made to order/i.test(more.text), JSON.stringify({ fills: more.fills, text: more.text.slice(0, 80) }))
   check('the sheet has no "Owned by" and no "Your own" in it', !/Owned by|Your own/i.test(more.text), more.text.slice(0, 200))
   await p.locator(`${W} .mc-swatch`, { hasText: 'Championship Green' }).click()
@@ -226,10 +229,11 @@ const check = (name, ok, detail = '') => {
   check('the page is in the chair’s own color, and the chair is called by its color: "Championship Green", not "Workspace, …", with no "Chair" over it', pg.tint !== null && pg.ground === '11,157,110' && pg.title === 'Championship Green' && !/^Chair \|/.test(pg.col) && !/Workspace,/.test(pg.col), JSON.stringify(pg))
   check('it is priced in dollars, their points bring it down, and nothing says how much points can take off', /Price \| \$1,200 \|.*100 points \| of your 100 \| −\$10 \|.*Shipping \| \$70 \| Total \| \$1,260 \| Buy for \$1,260( \||$)/.test(pg.col) && !/Points can take up to/i.test(pg.col), pg.col)
   check('the chair’s page fits the window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
-  // Its picture is a proper one of the product, every time: the chair in that color in a white studio, made
-  // from its model, filling its panel edge to edge (no square set in a dim surround), with a second from in front
-  const media = await f.locator('.ui-media').evaluate((fig) => { const img = fig.querySelector('.ui-media-pic'); const a = fig.getBoundingClientRect(); const b = img.getBoundingClientRect(); return { src: img.currentSrc.split('/').pop(), loaded: img.complete && img.naturalWidth >= 400, fills: Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1, fit: getComputedStyle(img).objectFit, behind: !!fig.querySelector('.ui-media-bg'), dots: fig.querySelectorAll('.ui-dots button').length, alt: img.alt } })
-  check('the chair’s picture is the product in a studio, made from its model in that color, and fills its panel; there are four of them to click through', /^workspace-championship-green-mock-1(-s)?\.webp$/.test(media.src) && media.loaded && media.fills && media.fit === 'cover' && !media.behind && media.dots === 4 && /made from its model/.test(media.alt), JSON.stringify(media))
+  // Its pictures are Shrug's studio shots of the chair in that color, the hero first: each whole (not cut to
+  // the panel), on a panel painted as the shot's own two sides are, so that nothing dim is set round it
+  await f.locator('.ui-media-pic').evaluate((img) => img.complete || new Promise((done) => { img.addEventListener('load', done, { once: true }); setTimeout(done, 8000) }))
+  const media = await f.locator('.ui-media').evaluate((fig) => { const img = fig.querySelector('.ui-media-pic'); const a = fig.getBoundingClientRect(); const b = img.getBoundingClientRect(); const ground = fig.querySelector('.ui-media-ground'); return { src: img.currentSrc.split('/').slice(-2).join('/'), loaded: img.complete && img.naturalWidth >= 200, within: b.left >= a.left - 1 && b.right <= a.right + 1 && b.top >= a.top - 1 && b.bottom <= a.bottom + 1, tall: Math.abs(a.height - b.height) < 2, fit: getComputedStyle(img).objectFit, behind: !!fig.querySelector('.ui-media-bg'), ground: !!ground && /linear-gradient/.test(getComputedStyle(ground).backgroundImage) && Math.abs(ground.getBoundingClientRect().width - a.width) < 1, dots: fig.querySelectorAll('.ui-dots button').length, alt: img.alt } })
+  check('the chair’s picture is Shrug’s studio shot of it in that color, whole in its panel, which is painted as the shot’s own sides are; there are three of them to click through, and each says what it shows', /^checkout\/01__5F4A3345(-[sm]\.webp|\.jpg)$/.test(media.src) && media.loaded && media.within && media.tall && media.fit === 'contain' && !media.behind && media.ground && media.dots === 3 && media.alt === 'Championship Green Workspace chair, from behind', JSON.stringify(media))
   const rail = await f.locator('.ui-rail a, .ui-rail button').evaluateAll((els) => els.map((el) => el.textContent.replace(/\s+/g, ' ').trim()).join(' | '))
   const gaps = await f.locator('.ui-rail li').evaluateAll((els) => els.slice(0, 6).map((el, i, all) => (i ? Math.round(el.getBoundingClientRect().left - all[i - 1].getBoundingClientRect().right) : 99)))
   check('along its foot are the chair’s other colors, with room between them, and nothing of another store', /Scuderia Red/.test(rail) && /Mantis Green/.test(rail) && !/Art No|America Must Win|Chromatic/.test(rail) && gaps.every((g) => g >= 6), JSON.stringify({ rail: rail.slice(0, 160), gaps }))
@@ -269,6 +273,34 @@ const check = (name, ok, detail = '') => {
   s = await studio()
   check('Alexandrite is color-shifting: the cove is its colors, and it says to turn it', s.image === 'linear-gradient' && s.tags === 'Color-shifting | Available now' && /Turn it to see it shift\.$/.test(await p.locator(`${W} .fl-info p`).innerText()), JSON.stringify(s))
   check('nothing went wrong on the way', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
+
+  // ---- a gallery that is all upright: two side by side as one slide, and one whole inside the window
+  const fromSheet = async (name) => {
+    await p.locator(`${W} .fl-dot.more`).click()
+    await p.waitForSelector(`${W} .mc-sheet`, { timeout: 8000 })
+    await p.waitForTimeout(400)
+    await p.locator(`${W} .mc-swatch`, { hasText: name }).click()
+    await p.waitForTimeout(1500)
+  }
+  const strip = () => p.evaluate((W) => [...document.querySelectorAll(`${W} .st-shots .st-shot`)].map((b) => b.getAttribute('aria-label')).join(' | '), W)
+  await fromSheet('Dazzling Pink')
+  check('Dazzling Pink has no landscape photograph: its gallery is a pair and one upright', (await strip()) === 'The chair in 3D | Photographs 1 and 2 of 3 | Photograph 3 of 3', await strip())
+  await p.locator(`${W} .st-shot[aria-label="Photographs 1 and 2 of 3"]`).click()
+  await p.waitForTimeout(900)
+  photo = await photoAt()
+  check('two upright photographs are one slide: side by side and a hair apart, they fill the window between them, with nothing dim round them', photo.fills && photo.fit === 'pair' && photo.pics.length === 2 && photo.pics[0].left === 0 && photo.pics[1].right === 0 && photo.winTall > 0 && photo.pics.every((x) => x.tall === photo.winTall && x.fit === 'cover') && photo.gap >= 1 && photo.gap <= 5 && !photo.behind && photo.loaded && /pair-left/.test(photo.pics[0].file) && /pair-right/.test(photo.pics[1].file) && photo.alt === 'Dazzling Pink Workspace chair, close-up of the back | Dazzling Pink Workspace chair, close-up of the back', JSON.stringify(photo))
+  await p.locator(`${W} .st-shot[aria-label="Photograph 3 of 3"]`).click()
+  await p.waitForTimeout(900)
+  photo = await photoAt()
+  check('one upright photograph is whole inside the window, not cut to it: clear of the bar and of the foot, on a blur of itself', photo.fills && photo.fit === 'whole' && photo.pics.length === 1 && photo.pics[0].fit === 'contain' && photo.pics[0].top >= 40 && photo.pics[0].tall < photo.winTall - 100 && photo.behind && photo.loaded && /portrait/.test(photo.pics[0].file) && photo.alt === 'Dazzling Pink Workspace chair, in a photo studio', JSON.stringify(photo))
+  await p.locator(`${W} .st-shot[aria-label="The chair in 3D"]`).click()
+  await p.waitForTimeout(400)
+  await fromSheet('Interstellar Black')
+  check('Interstellar Black’s gallery is one pair, and that is all there is beside its chair', (await strip()) === 'The chair in 3D | Photographs 1 and 2 of 2', await strip())
+  // (and back to Alexandrite, which is the color the visit is left in)
+  await p.locator(`${W} .fl-dot[aria-label="Alexandrite"]`).click()
+  await p.waitForTimeout(900)
+  check('nothing went wrong among the photographs', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
 
   // ---- closed and opened again, it is on the color selector; and the next visit keeps the color for the Dock
   await p.locator(`${W} button[aria-label^="Close"]`).click()

@@ -165,8 +165,9 @@ things move.
   the page the chair is bought on, the first its hero). `python3 -I tools/chair-photos.py "<Shrug's
   folder>"` copies them in as they came, makes two smaller copies of each, and writes `src/chair-photos.json`,
   which is what `src/pictures.ts` reads. On a chair's page each studio shot has a page to itself and is
-  shown whole, on a tile painted the color of its own ground; one shot alone has no arrows and no dots. A
-  color with no folder yet is shown the chair made from its model, as before.
+  shown whole, in a tile painted beside it as the shot's own two edges are, so that its studio runs on to
+  the tile's edges; one shot alone has no arrows and no dots. On a shelf the hero is whole in its tile the
+  same way. All twenty-four colors have their folder.
 - **A product's pictures** are paged through with the arrows on the picture, the arrow keys, the dots, or
   a finger drawn across it. Another product is reached from the foot (on a phone, the two arrows by
   "2 of 6").
