@@ -7,11 +7,14 @@
 //   node tools/chair-mockups.cjs            every color, every picture
 //   node tools/chair-mockups.cjs mantis-green matte-black     only these
 //   node tools/chair-mockups.cjs --alone    only the chair alone, for every color (the studio pictures are left)
+//   node tools/chair-mockups.cjs --views=3,4 --studio    only those studio pictures (the others, and the chair alone, are left)
 //   (needs Playwright, esbuild from node_modules, and python3 with Pillow and numpy)
 //
 // For each color it writes:
 //   store/public/pictures/workspace-<color>-mock-1.webp, -1-s.webp   from behind at a three-quarter, where the color is
 //   store/public/pictures/workspace-<color>-mock-2.webp, -2-s.webp   from in front
+//   store/public/pictures/workspace-<color>-mock-3.webp, -3-s.webp   square on from behind
+//   store/public/pictures/workspace-<color>-mock-4.webp, -4-s.webp   from the side
 //   public/workspace/chairs/<color>.webp                             the chair alone, nothing behind it: a slab's, a card's
 // Run it again when the chair's file, a paint or a color changes.
 const { chromium } = require('playwright')
@@ -35,16 +38,22 @@ if (COLORS.length !== 24) throw new Error(`read ${COLORS.length} colors, not 24:
 
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const TRY = process.argv.includes('--try') // (small and quick, to look at: nothing is written to the site)
-const ONLY_ALONE = process.argv.includes('--alone') // (only the chair alone: the studio pictures are left as they are)
+const ONLY_ALONE = process.argv.includes('--alone')
+const ONLY_STUDIO = process.argv.includes('--studio') // (only the studio pictures: the chair alone is left as it is) // (only the chair alone: the studio pictures are left as they are)
 const OUT = TRY ? process.env.MOCKUP_OUT || os.tmpdir() : null
 
 /** The pictures: how the chair is turned, and how it is framed. Both are taken square, the chair standing in
  * the middle with the studio all round it, so that a place of another shape can show the middle of it. */
 const SIDE = TRY ? 900 : 1800
-const VIEWS = [
-  { n: 1, turn: 0, down: 0.13 },
-  { n: 2, turn: Math.PI - 0.42 - 0.62, down: 0.13 },
+const ALL_VIEWS = [
+  { n: 1, turn: 0, down: 0.13 }, // from behind at a three-quarter, as the studio opens on it: where the color is
+  { n: 2, turn: Math.PI - 0.42 - 0.62, down: 0.13 }, // from in front, at a three-quarter
+  { n: 3, turn: -0.42, down: 0.1 }, // square on from behind, as Shrug's own white-studio photograph has it
+  { n: 4, turn: -0.42 - Math.PI / 2, down: 0.1 }, // from the side
 ]
+// (--views=3,4 takes only those: the others are left as they are)
+const asked = (process.argv.find((a) => a.startsWith('--views=')) || '').slice(8).split(',').filter(Boolean).map(Number)
+const VIEWS = ALL_VIEWS.filter((view) => !asked.length || asked.includes(view.n))
 const STUDIO = { w: SIDE, h: SIDE, fills: 0.64, middle: 0.515, samples: TRY ? 12 : 24, shadow: 0.24 }
 // (alone, the lamp throws no shadow: that one runs off to the side, past the picture's edge. The dark under the chair is enough)
 const BARE = { n: 'alone', w: TRY ? 450 : 900, h: TRY ? 600 : 1200, fills: 0.84, middle: 0.49, down: 0.1, turn: 0, samples: TRY ? 8 : 16, shadow: 0 }
@@ -108,7 +117,7 @@ for to, side, q in zip(job['to'], job['sides'], job['q']):
 
   // The dark under the chair, once for each way it is turned
   const unders = {}
-  for (const view of [...(ONLY_ALONE ? [] : VIEWS.map((view) => ({ ...STUDIO, ...view }))), BARE]) {
+  for (const view of [...(ONLY_ALONE ? [] : VIEWS.map((view) => ({ ...STUDIO, ...view }))), ...(ONLY_STUDIO ? [] : [BARE])]) {
     const began = Date.now()
     unders[view.n] = await save(await page.evaluate(([shot, lamps]) => window.mockup.under(shot, lamps), [{ ...view, color: '#888888', finish: 'gloss' }, TRY ? 96 : 240]), `under-${view.n}.bin`)
     console.log(`the floor under view ${view.n}: ${((Date.now() - began) / 1000).toFixed(0)}s`)
@@ -124,9 +133,11 @@ for to, side, q in zip(job['to'], job['sides'], job['q']):
       fs.writeFileSync(path.join(tmp, 'job.json'), JSON.stringify({ w: STUDIO.w, h: STUDIO.h, still: bin, under: unders[view.n], horizon, ao: 0.78, to, sides: TRY ? [SIDE] : [1800, 760], q: [86, 82] }))
       execFileSync('python3', [path.join(tmp, 'compose.py'), path.join(tmp, 'job.json')], { stdio: 'inherit' })
     }
-    const bin = await save(await page.evaluate((shot) => window.mockup.still(shot), { ...BARE, color: c.color, shift: c.shift, finish: c.finish }), 'bare.bin')
-    fs.writeFileSync(path.join(tmp, 'job.json'), JSON.stringify({ w: BARE.w, h: BARE.h, bare: true, still: bin, under: unders.alone, ao: 0.9, floor: BARE.middle + BARE.fills * 0.47, out_w: TRY ? 450 : 600, out_h: TRY ? 600 : 800, to: [TRY ? path.join(OUT, `${c.id}-alone.webp`) : path.join(ALONE, `${c.id}.webp`)] }))
-    execFileSync('python3', [path.join(tmp, 'compose.py'), path.join(tmp, 'job.json')], { stdio: 'inherit' })
+    if (!ONLY_STUDIO) {
+      const bin = await save(await page.evaluate((shot) => window.mockup.still(shot), { ...BARE, color: c.color, shift: c.shift, finish: c.finish }), 'bare.bin')
+      fs.writeFileSync(path.join(tmp, 'job.json'), JSON.stringify({ w: BARE.w, h: BARE.h, bare: true, still: bin, under: unders.alone, ao: 0.9, floor: BARE.middle + BARE.fills * 0.47, out_w: TRY ? 450 : 600, out_h: TRY ? 600 : 800, to: [TRY ? path.join(OUT, `${c.id}-alone.webp`) : path.join(ALONE, `${c.id}.webp`)] }))
+      execFileSync('python3', [path.join(tmp, 'compose.py'), path.join(tmp, 'job.json')], { stdio: 'inherit' })
+    }
     console.log(`took ${c.id}: ${((Date.now() - began) / 1000).toFixed(0)}s`)
   }
   await browser.close()

@@ -113,7 +113,7 @@ const check = (name, ok, detail = '') => {
   let at = await inFrame(p, 'store')
   check('ArtStore opens 1120 by 720 on its own room of the store: its name in the bar, nothing said in the bar’s middle, and no balance for a visitor', (await sizeOf(p, 'store')) === '1120x720' && b.name === 'ArtStore*' && b.says === '' && b.wallet === null && at.path === '/vip/store/' && at.search === '?k=art', JSON.stringify({ b, at }))
   const art = await f.locator('body').evaluate(() => ({ own: !!document.querySelector('.ui-top'), demo: !!document.querySelector('.demo'), pack: !!document.querySelector('#stage'), names: [...document.querySelectorAll('.ui-prod')].map((el) => el.textContent.replace(/\s+/g, ' ').trim()) }))
-  check('it opens straight on the six pieces, with no pack before them: each $150, in an edition of 50', !art.pack && art.names.length === 6 && art.names.every((n) => /Art No\. \d/.test(n) && /\$150$/.test(n) && /of 50 left/.test(n)), JSON.stringify(art.names))
+  check('it opens straight on the six pieces, with no pack before them, five by their names and the sixth, still to come, by its number: each $150, in an edition of 50', !art.pack && art.names.length === 6 && ['America Must Win', 'Becoming Steve Jobs', 'Outatime', 'Return of the Jedi', 'Tesla Flying', 'Art No. 6'].every((name, i) => art.names[i]?.includes(name)) && art.names.every((n) => true && /\$150$/.test(n) && /of 50 left/.test(n)), JSON.stringify(art.names))
   // Five of the six have their photographs (Dom's, 26 Nov): on the shelf each piece is whole on its own white,
   // and its page opens on that product shot, whole, with a close look at it after
   const artShelf = await f.locator('.ui-prod').evaluateAll((tiles) => tiles.map((tile) => { const img = tile.querySelector('.ui-prod-pic img'); return img ? { src: (img.currentSrc || img.src).split('/').pop().replace(/(-s|-l)?\.webp$/, ''), fit: getComputedStyle(img).objectFit, loaded: img.complete && img.naturalWidth > 300 } : null }))
@@ -125,7 +125,9 @@ const check = (name, ok, detail = '') => {
   const shotOne = await artShot()
   await f.locator('.ui-media .next').click(); await p.waitForTimeout(500)
   const shotTwo = await artShot()
-  check('a piece’s page opens on its product shot, whole on its own white (nothing dim round it), and its second picture is a close look that fills the tile', /-1$/.test(shotOne.src) && shotOne.whole && shotOne.ground && !shotOne.dim && shotOne.dots === 2 && /-2$/.test(shotTwo.src) && shotTwo.fills && !shotTwo.dim, JSON.stringify({ shotOne, shotTwo }))
+  await f.locator('.ui-media .next').click(); await p.waitForTimeout(500)
+  const shotThree = await artShot()
+  check('a piece’s page opens on its product shot, whole on its own white (nothing dim round it); its second picture is a close look that fills the tile; and its third is the artwork itself, whole', /-1$/.test(shotOne.src) && shotOne.whole && shotOne.ground && !shotOne.dim && shotOne.dots === 3 && /-2$/.test(shotTwo.src) && shotTwo.fills && !shotTwo.dim && /-3$/.test(shotThree.src) && !shotThree.ground && shotThree.dim, JSON.stringify({ shotOne, shotTwo, shotThree }))
   await p.locator(`${WIN('store')} .storebar__name`).click()
   await f.locator('.ui-prod').first().waitFor({ timeout: 20000 })
   await p.waitForTimeout(250)
@@ -204,7 +206,7 @@ const check = (name, ok, detail = '') => {
   b = await bar(p, 'myvip')
   let home = await words(v, 'body')
   const doors = (await p.locator(`${WIN('myvip')} .myvip__door b`).allInnerTexts()).join(' | ')
-  check('My VIP: their card, what they have, the order from ArtStore and the address they typed there', at.path === '/vip/store/' && at.search === '?k=yours' && b.says === '' && (await v.locator('.mc.m-standard').count()) === 1 && /Art No\. 1/.test(home) && /1 Example St/.test(home) && /Balance \| 0/.test(home), JSON.stringify({ at, b, home: home.slice(0, 500) }))
+  check('My VIP: their card, what they have, the order from ArtStore and the address they typed there', at.path === '/vip/store/' && at.search === '?k=yours' && b.says === '' && (await v.locator('.mc.m-standard').count()) === 1 && /America Must Win/.test(home) && /1 Example St/.test(home) && /Balance \| 0/.test(home), JSON.stringify({ at, b, home: home.slice(0, 500) }))
   check('…and how their points came: awarded, and when', /Points awarded \| Member since \d{4} \| \+100/.test(home), home.slice(home.indexOf('Points awarded') - 40, home.indexOf('Points awarded') + 80))
   const vip = await v.locator('body').evaluate(() => ({ how: [...document.querySelectorAll('.ui-how h3, .ui-how b, .ui-how dt')].map((x) => x.textContent.trim()).join(' | '), out: [...document.querySelectorAll('button, a')].filter((x) => /sign out|log out/i.test(x.textContent)).length, total: document.querySelector('.mc')?.textContent.replace(/\s+/g, ' ') ?? '' }))
   const mark = await p.evaluate((W) => ({ mark: document.querySelector(`${W} .storebar__name`).textContent.trim(), left: Math.round(document.querySelector(`${W} .storebar__name`).getBoundingClientRect().left - document.querySelector(W).getBoundingClientRect().left), wallet: document.querySelectorAll(`${W} .storebar__wallet`).length }), WIN('myvip'))
@@ -232,7 +234,7 @@ const check = (name, ok, detail = '') => {
   check('a book opens on the store\'s own page for it, in the same window, under its name, with a way back', at.path === '/vip/store/' && at.search === '?k=books&p=what-is-shrug' && head.title === 'What is Shrug?' && head.back === 'Book Store' && head.shelf, JSON.stringify({ at, head }))
   check('a book\'s page fits the window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
   const others = await k.locator('.ui-rail a, .ui-rail button').evaluateAll((els) => els.map((el) => el.textContent.replace(/\s+/g, ' ').trim()).join(' | '))
-  check('what is along its foot is the other books, and nothing of another store', /Chromatic/.test(others) && !/Art No|Workspace/.test(others), others)
+  check('what is along its foot is the other books, and nothing of another store', /Chromatic/.test(others) && !/Art No|America Must Win|Workspace/.test(others), others)
   await k.locator('.ui-col .ui-btn').first().click()
   await k.locator('.ui-btn', { hasText: 'Pay with card' }).waitFor({ timeout: 20000 })
   const bookOut = await words(k)
@@ -301,7 +303,7 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${WIN('books')} button.bkbar__back`).click(); await p.waitForTimeout(500)
   // My VIP was asked again by the desk when the book was bought: the order is there without a reload
   home = await words(v, 'body')
-  check('the book is in My VIP\'s orders at once, beside the piece from ArtStore', /What is Shrug\?/.test(home) && /Art No\. 1/.test(home), home.slice(home.indexOf('Purchase history'), home.indexOf('Purchase history') + 260))
+  check('the book is in My VIP\'s orders at once, beside the piece from ArtStore', /What is Shrug\?/.test(home) && /America Must Win/.test(home), home.slice(home.indexOf('Purchase history'), home.indexOf('Purchase history') + 260))
 
   // ---- closed and opened again, and after a reload: it is where it was left
   await p.locator('.dock [data-dock-app="myvip"]').click()
@@ -495,7 +497,7 @@ const check = (name, ok, detail = '') => {
   const visitorHome = await home0(p)
   at = await inFrame(p, 'myvip')
   home = await words(v, 'body')
-  check('with the number added they are taken straight to My VIP, in front, on what is theirs (no pack first): nothing more is said in the store first, and the order is there', (await front(p)) === 'myvip' && at.path === '/vip/store/' && at.search === '?k=yours' && !visitorHome.pack && /Art No\. 2/.test(home) && /Purchases \| 1/.test(home), JSON.stringify({ front: await front(p), at, visitorHome, home: home.slice(0, 400) }))
+  check('with the number added they are taken straight to My VIP, in front, on what is theirs (no pack first): nothing more is said in the store first, and the order is there', (await front(p)) === 'myvip' && at.path === '/vip/store/' && at.search === '?k=yours' && !visitorHome.pack && /Becoming Steve Jobs/.test(home) && /Purchases \| 1/.test(home), JSON.stringify({ front: await front(p), at, visitorHome, home: home.slice(0, 400) }))
   check('their card has the name they gave at checkout, whole', /CASEY\s+MORGAN/i.test(home), home.slice(0, 200))
   // the card's own page, from the card: a scroll down from it goes back to the rest of My VIP
   await v.locator('a.mc-link').click()
@@ -508,7 +510,7 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(600)
   at = await inFrame(p, 'myvip')
   home = await words(v, 'body')
-  check('a scroll down from the card goes on to the rest of My VIP, where the order is', at.path === '/vip/store/' && at.search === '?k=yours' && /Art No\. 2/.test(home) && /Purchases \| 1/.test(home), JSON.stringify({ at, home: home.slice(0, 400) }))
+  check('a scroll down from the card goes on to the rest of My VIP, where the order is', at.path === '/vip/store/' && at.search === '?k=yours' && /Becoming Steve Jobs/.test(home) && /Purchases \| 1/.test(home), JSON.stringify({ at, home: home.slice(0, 400) }))
   await p.mouse.wheel(0, 500); await p.waitForTimeout(500)
   const scrolled = await v.locator('.ui-page').evaluate((el) => ({ top: Math.round(el.scrollTop), room: el.scrollHeight - el.clientHeight }))
   check('and My VIP’s own page scrolls under the wheel', scrolled.room <= 0 || scrolled.top > 0, JSON.stringify(scrolled))

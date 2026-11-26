@@ -2,11 +2,12 @@
 
 Where Shrug people see their points and spend them. Two pages and a small server:
 
-- **The card** (`/`, `card/index.html`): a member signs in with their email and a six-digit code. The first
-  time, that is **Apply / Redeem**: the code loosens the strip, they tear their pack open and their card
-  comes out. After that they use **Sign in** at the foot of the page: the same code by email, and their card
-  is simply there, with nothing to tear (a pack waiting to be torn can also be skipped). Under the card is
-  one button, **Go to the store**.
+- **The card** (`/`, `card/index.html`): a member signs in with their email and a six-digit code. Once the
+  code is right their card is simply there. (It was a pack hanging on a peg, torn open the first time: Dom took
+  the pack out of the product on 26 Nov. What is left of it is its strip, **Sign in**: the button, then the
+  email field, then the six cells of the code. The foil, the tear and the opening are not drawn or reached any
+  more, and their code goes when this page's sign-in is redrawn.) Under the card is one button, **Go to the
+  store**.
 - **The store** (`/store/`, `src/`): two sections under one bar. **Store** is a display of everything in
   it, pictures first, and a screen for each product, with checkout and the receipt in its panel. **My VIP**
   is the member's card, their account at a glance, what they have bought, the funds they are in, their
@@ -277,9 +278,8 @@ price is the price, with no points. The payment makes their account (`api/pay.ts
 On Shrug's own site the store is the VIP Store window (`src/apps/Store.tsx`, in the desktop's folder): these
 pages in a frame, served by the same site at `/vip/` (the desktop's build puts them there: `tools/store.mjs`).
 The window draws the bar; here it is not drawn, the layout is sized to the window, Log In is the desk's
-sheet, and moving about adds nothing to the browser's history (`src/desk.ts`). The first time someone signed
-in comes to the store, the frame shows the card's page: the pack hangs with its strip loose, and asks for no
-code. A visitor's prices are in dollars, in a window and out of one.
+sheet, and moving about adds nothing to the browser's history (`src/desk.ts`). My VIP's frame shows the card's page only when the card on it is pressed: their card, at once, with no pack and no
+code asked for. A visitor's prices are in dollars, in a window and out of one.
 
 ## Not done yet
 

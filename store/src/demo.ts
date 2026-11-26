@@ -24,8 +24,8 @@ export const PEOPLE: Record<string, { label: string; member: { name: string; fir
 /** Things the demo can be made to do, so that every state the store has can be seen. */
 export const SCENES: Record<string, string> = {
   normal: 'As it is',
-  soldout: 'Art No. 1 sold out',
-  kept: 'Art No. 1 kept to Shrug 2 LPs',
+  soldout: 'America Must Win sold out',
+  kept: 'America Must Win kept to Shrug 2 LPs',
   empty: 'Nothing in the store',
   down: 'The store does not answer',
   declined: 'A payment that fails',
@@ -47,7 +47,9 @@ const chair = (id: string, color: string, dollars: number, more: Partial<Product
 /** A book: posted for $5. */
 const book = (id: string, name: string, dollars: number, more: Partial<Product> = {}) => item(id, name, { kind: 'Book', points: dollars * 10, postage: 5, needsAddress: true, description: LINE, ...more })
 /** One of the six art pieces: $150, in an edition of 50. Their names are Shrug's to give. */
-const art = (n: number, left = 50) => item(`art-${n}`, `Art No. ${n}`, { kind: 'Art', points: 1500, postage: 5, editionOf: 50, left, needsAddress: true, description: LINE })
+/** The pieces, by the names Shrug gives them (Dom, 26 Nov). The sixth is on its way: it has its number until it has a name. */
+const PIECES = ['America Must Win', 'Becoming Steve Jobs', 'Outatime', 'Return of the Jedi', 'Tesla Flying']
+const art = (n: number, left = 50) => item(`art-${n}`, PIECES[n - 1] ?? `Art No. ${n}`, { kind: 'Art', points: 1500, postage: 5, editionOf: 50, left, needsAddress: true, description: LINE })
 
 /** Everything that is sold, as Shrug has it: five books (Books), six art pieces (ArtStore), and the chair in
  * each color (Workspace). The photographs are found by name (pictures.ts). The books' prices here are

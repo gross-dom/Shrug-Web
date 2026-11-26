@@ -5,7 +5,7 @@ import { Points, PointsMark } from './brand'
 import { DESK } from './desk'
 import { KindIcon, Left, Right, Tick } from './icons'
 import { Pay, whyNot } from './Pay'
-import { shotsOf, tileSizes, wholeSizes } from './pictures'
+import { pagesOf, shotsOf, tileSizes, wholeSizes, type Shot } from './pictures'
 import { NAMES, nameIn, ROOM } from './room'
 import { badgeOf, editionOf, keptOf, offCents, owned, pointsOf, shipsOf, shipsWhen, shortOf } from './words'
 
@@ -194,6 +194,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const at = all.findIndex((p) => p.id === product.id)
   const way = wayOf(product)
   const shots = shotsOf(product)
+  /** Its pictures as they are paged through: one to a page, but for two tall photographs, which share one. */
+  const pages = pagesOf(shots)
   // What the member has to spend. It stays as it was once something is bought here, so that the receipt's
   // sums are the ones that were paid; until then it follows what they have now (below)
   const [balance, setBalance] = useState(shop.member.points)
@@ -271,23 +273,22 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const to = (p: Product) => ({ href: `?p=${encodeURIComponent(p.id)}`, onClick: (e: React.MouseEvent) => (e.preventDefault(), go({ view: 'product', id: p.id })) })
   // (it stops at the first picture and at the last: there is no arrow back from the first, which could be
   // taken for the way back to the shelf, nor one on from the last)
-  const turn = (by: number) => setSeen((n) => Math.min(shots.length - 1, Math.max(0, n + by)))
+  const turn = (by: number) => setSeen((n) => Math.min(pages.length - 1, Math.max(0, n + by)))
 
   // The arrow keys page through this product's pictures; Escape leaves checkout
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest?.('input, textarea, select, iframe') || e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === 'Escape' && mode === 'checkout') setMode('product')
-      else if (shots.length > 1 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) turn(e.key === 'ArrowRight' ? 1 : -1)
+      else if (pages.length > 1 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) turn(e.key === 'ArrowRight' ? 1 : -1)
     }
     window.addEventListener('keydown', keys)
     return () => window.removeEventListener('keydown', keys)
-  }, [mode, shots.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, pages.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The next picture is fetched while this one is looked at, so that turning to it is at once
   useEffect(() => {
-    const next = shots[(seen + 1) % shots.length]
-    if (shots.length > 1 && next) new Image().src = next.full
+    if (pages.length > 1) for (const next of pages[(seen + 1) % pages.length] ?? []) new Image().src = next.full
   }, [seen, product.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const finish = (placed: Placed) => {
@@ -421,37 +422,51 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     </p>
   )
 
-  const shot = shots[seen] ?? null
+  const page = pages[seen] ?? null
+  const shot = page?.[0] ?? null
+  /** Which of all its pictures one is, counted from one. */
+  const nth = (one: Shot) => shots.indexOf(one) + 1
+  const altOf = (one: Shot) => (one.drawn ? `${product.name}: picture ${nth(one)} of ${shots.length}, made from its model` : shots.length > 1 ? `${product.name}: picture ${nth(one)} of ${shots.length}` : product.name)
   const media = (
     <>
-      {shot ? (
-        <>
-          {/* A photograph is shown whole, and the same picture, out of focus, fills the tile behind it: a tall
-              one and a wide one sit alike. A picture made to fill its place (a chair in its studio) fills it */}
-          {shot.ground ? <span className="ui-media-ground" style={{ background: shot.ground }} aria-hidden="true" /> : !shot.fills && <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />}
-          <img className={`ui-media-pic${shot.fills ? ' fills' : ''}`} key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shot.drawn ? `${product.name}: picture ${seen + 1} of ${shots.length}, made from its model` : shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
-        </>
+      {page && shot ? (
+        page.length > 1 ? (
+          // Two tall photographs share the page, side by side, and fill it between them
+          <div className="ui-media-pair">
+            {page.map((one) => (
+              <img key={one.full} src={one.full} srcSet={one.set} sizes="(max-width: 739px) 50vw, 30vw" alt={altOf(one)} decoding="async" />
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* A photograph is shown whole, and the same picture, out of focus, fills the tile behind it: a tall
+                one and a wide one sit alike. A picture made to fill its place (a chair in its studio) fills it */}
+            {shot.ground ? <span className="ui-media-ground" style={{ background: shot.ground }} aria-hidden="true" /> : !shot.fills && <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />}
+            <img className={`ui-media-pic${shot.fills ? ' fills' : ''}`} key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={altOf(shot)} decoding="async" />
+          </>
+        )
       ) : (
         <span className="t-3">
           <KindIcon kind={product.kind} size={phone ? 40 : 64} width={1.1} />
         </span>
       )}
-      {shots.length > 1 && (
+      {pages.length > 1 && (
         <>
           {seen > 0 && (
             <button type="button" className="ui-round prev" aria-label="Previous picture" onClick={() => turn(-1)}>
               <Left />
             </button>
           )}
-          {seen < shots.length - 1 && (
+          {seen < pages.length - 1 && (
             <button type="button" className="ui-round next" aria-label="Next picture" onClick={() => turn(1)}>
               <Right />
             </button>
           )}
-          <ol className="ui-dots" aria-label={`Picture ${seen + 1} of ${shots.length}`}>
-            {shots.map((s, n) => (
-              <li key={s.full}>
-                <button type="button" className={n === seen ? 'at' : undefined} aria-label={`Picture ${n + 1}`} aria-current={n === seen ? 'true' : undefined} onClick={() => setSeen(n)} />
+          {/* (said as pictures where each has a page of its own, as most have; as pages where two share one) */}
+          <ol className="ui-dots" aria-label={pages.length === shots.length ? `Picture ${seen + 1} of ${shots.length}` : `Page ${seen + 1} of ${pages.length} of its ${shots.length} pictures`}>
+            {pages.map((s, n) => (
+              <li key={s[0]!.full}>
+                <button type="button" className={n === seen ? 'at' : undefined} aria-label={s.length > 1 ? `Pictures ${nth(s[0]!)} and ${nth(s[1]!)}` : `Picture ${nth(s[0]!)}`} aria-current={n === seen ? 'true' : undefined} onClick={() => setSeen(n)} />
               </li>
             ))}
           </ol>
@@ -612,7 +627,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
                   swipe.current = null
                   const moved = from === null ? 0 : e.changedTouches[0]!.clientX - from
                   // A finger drawn across the picture turns to the next one, or the one before
-                  if (shots.length > 1 && Math.abs(moved) > 48) turn(moved < 0 ? 1 : -1)
+                  if (pages.length > 1 && Math.abs(moved) > 48) turn(moved < 0 ? 1 : -1)
                 }}
               >
                 {media}
