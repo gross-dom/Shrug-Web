@@ -426,7 +426,8 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const shot = page?.[0] ?? null
   /** Which of all its pictures one is, counted from one. */
   const nth = (one: Shot) => shots.indexOf(one) + 1
-  const altOf = (one: Shot) => (one.drawn ? `${product.name}: picture ${nth(one)} of ${shots.length}, made from its model` : shots.length > 1 ? `${product.name}: picture ${nth(one)} of ${shots.length}` : product.name)
+  // (a photograph that says what it shows is described by that: "Solar Orange Workspace chair, from behind")
+  const altOf = (one: Shot) => one.alt ?? (one.drawn ? `${product.name}: picture ${nth(one)} of ${shots.length}, made from its model` : shots.length > 1 ? `${product.name}: picture ${nth(one)} of ${shots.length}` : product.name)
   const media = (
     <>
       {page && shot ? (

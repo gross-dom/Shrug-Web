@@ -1,5 +1,6 @@
 import { MORE_COLORS } from '../shared/colors'
 import type { Product } from '../shared/rules'
+import CHAIR_PHOTOS from './chair-photos.json'
 
 // A product's photographs. The ones Shrug has supplied are kept with the pages (store/public/pictures), each
 // whole, and are found by the product's name, so that they are the same in the demo and in the real store.
@@ -29,6 +30,17 @@ export interface Shot {
   /** It is a thing on a plain ground (a piece on white): it is shown whole, on a tile painted that same
    * color, so that the ground runs to the tile's edges and nothing dim is set round it. */
   ground?: string
+  /** What it shows, where that is known and worth saying: "Solar Orange Workspace chair, from behind". */
+  alt?: string
+  /** It has a page to itself whatever its shape: it is not put beside another to fill one. */
+  alone?: boolean
+}
+
+/** One slide of a chair's gallery, in a landscape window: a landscape photograph, which fills it; two upright
+ * ones, side by side, which fill it between them; or one upright one, whole, inside it. */
+export interface Slide {
+  kind: 'wide' | 'pair' | 'portrait'
+  shots: Shot[]
 }
 
 // (the desktop's own windows read these too, for a shelf of covers: from there the store's pages are at /vip/store/)
@@ -86,17 +98,100 @@ const mock = (color: string): Shot[] =>
 /** How wide a photograph is for its height, where that is known (one from Airtable is taken to be square). */
 const shape = (shot: Shot) => shot.aspect ?? 1
 /** A tall photograph: one that is shown two to a page. */
-const tall = (shot: Shot) => !shot.drawn && !shot.ground && !shot.fills && shape(shot) <= 0.82
+const tall = (shot: Shot) => !shot.drawn && !shot.ground && !shot.fills && !shot.alone && shape(shot) <= 0.82
 
-/** A chair's pictures, in the order they are shown (Dom, 26 Nov): the studio pictures first; then its
- * photographs, the wide ones first (a wide photograph fills a page by itself), then any that are near square,
+// ---- The chair's own photography (Shrug's selects of 27 Nov)
+//
+// Each color has a folder of its own (store/public/pictures/workspace/<color>/), with two sets in it:
+//   gallery/   what Workspace shows in its window: slides, each a landscape, a pair of uprights or one upright
+//   checkout/  upright studio shots for the page the chair is bought on, one to three, the first its hero
+// `python3 -I tools/chair-photos.py <Shrug's folder>` copies them in as they are and writes what there is to
+// chair-photos.json, which is all that is read here: a color with nothing there is shown as it was before
+// (the chair drawn from its model, and such photographs as were kept by its name).
+
+interface Kept {
+  /** Its file in the color's folder, without its ending: "gallery/02-pair-left__X". */
+  file: string
+  w: number
+  h: number
+  /** How wide its small and its middle copy are (.webp); a photograph too small to need one has none. */
+  s?: number
+  m?: number
+  ground?: string
+  view?: string
+}
+const PHOTOS = CHAIR_PHOTOS as Record<string, { name: string; gallery: { kind: string; photos: Kept[] }[]; checkout: Kept[] } | undefined>
+
+/** One of them as a picture: the file as Shrug supplied it is its largest size, and is sent only to a screen
+ * that can show it. */
+const kept = (color: string, name: string, one: Kept): Shot => {
+  const at1 = `${BASE}pictures/workspace/${color}/${one.file}`
+  const whole = `${at1}.jpg`
+  return {
+    full: one.m ? `${at1}-m.webp` : whole,
+    small: one.s ? `${at1}-s.webp` : one.m ? `${at1}-m.webp` : whole,
+    set: [one.s ? `${at1}-s.webp ${one.s}w` : '', one.m ? `${at1}-m.webp ${one.m}w` : '', `${whole} ${one.w}w`].filter(Boolean).join(', '),
+    aspect: one.w / one.h,
+    ground: one.ground,
+    alt: `${name} Workspace chair${one.view ? `, ${one.view}` : ''}`,
+    alone: true,
+  }
+}
+
+/** A color's checkout shots, the hero first; none where it has none yet. */
+const studio = (color: string): Shot[] => (PHOTOS[color]?.checkout ?? []).map((one) => kept(color, PHOTOS[color]!.name, one))
+/** And the slides of its gallery. */
+const slides = (color: string): Slide[] =>
+  (PHOTOS[color]?.gallery ?? []).map((slide) => ({ kind: slide.kind === 'pair' ? 'pair' : slide.kind === 'portrait' ? 'portrait' : 'wide', shots: slide.photos.map((one) => kept(color, PHOTOS[color]!.name, one)) }))
+
+/** A chair's pictures before its color has studio shots of its own, in the order they are shown (Dom, 26
+ * Nov): the pictures made from its model first; then its photographs, the wide ones first (a wide photograph fills a page by itself), then any that are near square,
  * and the tall ones last, where they share a page two by two (`pagesOf`). */
-const chair = (color: string, photographs: Shot[] = []): Shot[] => [
+const drawnChair = (color: string, photographs: Shot[] = []): Shot[] => [
   ...mock(color),
   ...photographs.filter((shot) => shape(shot) >= 1.15),
   ...photographs.filter((shot) => shape(shot) < 1.15 && !tall(shot)),
   ...photographs.filter(tall),
 ]
+
+/** The photographs kept by a chair's name before its color had a folder of its own. */
+const BEFORE: Record<string, string> = { 'matte-black': 'workspace-matte-black', 'scuderia-red': 'workspace-ferrari-red' }
+
+/** A chair's pictures on the page it is bought on: its studio shots, where Shrug has supplied them (one to
+ * three, the hero first, a page each); until then the chair drawn from its model, as above. */
+const chair = (color: string): Shot[] => {
+  // (made once for each color: a page that asks twice is given the same pictures, not ones like them)
+  const made = MADE.get(color)
+  if (made) return made
+  const shots = studio(color)
+  const all = shots.length ? shots : drawnChair(color, BEFORE[color] ? set(BEFORE[color]) : [])
+  MADE.set(color, all)
+  return all
+}
+const MADE = new Map<string, Shot[]>()
+const SLIDES = new Map<string, Slide[]>()
+
+/** The chair's colors, by the names its products go by, in small letters. A color goes by its old names too,
+ * in case a row in Airtable still has one: Matte Leather was Matte Black, Scuderia Red was Ferrari Red. */
+const CHAIRS: Record<string, string> = {
+  'workspace, matte leather': 'matte-black',
+  'workspace, matte black': 'matte-black',
+  'workspace chair': 'matte-black',
+  'workspace, scuderia red': 'scuderia-red',
+  'workspace, ferrari red': 'scuderia-red',
+  'workspace chair, ferrari red': 'scuderia-red',
+  'workspace, solar orange': 'solar-orange',
+  'workspace, alexandrite': 'alexandrite',
+  'workspace, illusion blue': 'illusion-blue',
+  'workspace, supersonic': 'supersonic',
+  'workspace, pearl lavender': 'pearl-lavender',
+  'workspace, mantis green': 'mantis-green',
+  // (and each of the sixteen more)
+  ...Object.fromEntries(MORE_COLORS.map((color) => [`workspace, ${color.name.toLowerCase()}`, color.id])),
+}
+
+/** Which color a product is the chair in; null for anything that is not a chair. */
+const chairOf = (product: Pick<Product, 'name'>): string | null => CHAIRS[product.name.trim().toLowerCase()] ?? null
 
 /** The pictures as they are paged through. A tall photograph shares its page with the tall one after it, side
  * by side, so that the two of them fill the page; everything else has a page of its own. */
@@ -110,22 +205,9 @@ export function pagesOf(shots: Shot[]): Shot[][] {
   return pages
 }
 
-/** By name, in small letters. The chair goes by its old names too, in case a row in Airtable still has one. */
+/** By name, in small letters. (The chair, in each of its colors, is found by `chairOf`.) */
 const KEPT: Record<string, Shot[]> = {
   chromatic: set('chromatic'),
-  'workspace, matte black': chair('matte-black', set('workspace-matte-black')),
-  'workspace chair': chair('matte-black', set('workspace-matte-black')),
-  'workspace, ferrari red': chair('scuderia-red', set('workspace-ferrari-red')),
-  'workspace chair, ferrari red': chair('scuderia-red', set('workspace-ferrari-red')),
-  'workspace, scuderia red': chair('scuderia-red', set('workspace-ferrari-red')),
-  'workspace, solar orange': chair('solar-orange'),
-  'workspace, alexandrite': chair('alexandrite'),
-  'workspace, illusion blue': chair('illusion-blue'),
-  'workspace, supersonic': chair('supersonic'),
-  'workspace, pearl lavender': chair('pearl-lavender'),
-  'workspace, mantis green': chair('mantis-green'),
-  // (and each of the sixteen more)
-  ...Object.fromEntries(MORE_COLORS.map((color) => [`workspace, ${color.name.toLowerCase()}`, chair(color.id)])),
   'art on acrylic': set('art-on-acrylic'),
   // (five of the six pieces, by the names Shrug gives them, with Dom's photographs of 26 Nov. The sixth is on its way)
   'america must win': piece('art-america-must-win'),
@@ -141,10 +223,28 @@ const KEPT: Record<string, Shot[]> = {
 
 /** Every photograph of a product, the first first; empty where it has none. */
 export function shotsOf(product: Pick<Product, 'name' | 'picture' | 'pictures'>): Shot[] {
-  const kept = KEPT[product.name.trim().toLowerCase()]
-  if (kept) return kept
+  const color = chairOf(product)
+  const ours = color ? chair(color) : KEPT[product.name.trim().toLowerCase()]
+  if (ours) return ours
   const all = product.pictures?.length ? product.pictures : product.picture ? [product.picture] : []
   return all.map((full, n) => ({ full, small: n === 0 && product.picture ? product.picture : full }))
+}
+
+/** A photograph wide enough to fill a landscape window by itself; a narrower one is shown whole in it. */
+const WIDE = 1.25
+
+/** A chair's gallery, as Workspace shows it in its window, a slide at a time: Shrug's own slides for its
+ * color, where there are any; until then such photographs as it has, a wide one to a slide and the tall ones
+ * two by two. Empty for a chair with no photographs, and for anything that is not a chair. */
+export function galleryOf(product: Pick<Product, 'name' | 'picture' | 'pictures'>): Slide[] {
+  const color = chairOf(product)
+  if (!color) return []
+  const made = SLIDES.get(color)
+  if (made) return made
+  const own = slides(color)
+  const all: Slide[] = own.length ? own : pagesOf(shotsOf(product).filter((shot) => !shot.drawn)).map((page) => ({ kind: page.length > 1 ? 'pair' : shape(page[0]!) >= WIDE ? 'wide' : 'portrait', shots: page }))
+  SLIDES.set(color, all)
+  return all
 }
 
 /** How wide a photograph is drawn in the display, for the browser to choose a file by. A tile is 4 by 5 and

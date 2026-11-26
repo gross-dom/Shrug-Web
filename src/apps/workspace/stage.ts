@@ -122,7 +122,7 @@ export function standChair(file: THREE.Group, material: THREE.Material): THREE.O
   return model
 }
 
-/** Sets the one paint material for a finish: a gloss paint has a clear coat over it; Matte Black has none,
+/** Sets the one paint material for a finish: a gloss paint has a clear coat over it; Matte Leather has none,
  * and scatters what light it gets; a metallic one takes its color into what it mirrors; a pearl has a soft
  * sheen; a shifting or holographic one is mixed from the angle it is seen at (`moving`: the colors it moves
  * through, set on the shader; how far it is mixed in is the caller's, since the studio fades it). */

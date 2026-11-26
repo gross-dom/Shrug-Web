@@ -40,7 +40,7 @@ const item = (id: string, name: string, more: Partial<Product>): Product => ({
 /** Where each product's one line goes, until Shrug has written them (Products → Description in Airtable). */
 const LINE = 'A one-line write-up goes here.'
 
-/** A chair, in one color: a product each (Workspace, Matte Black), as the store has them. Matte Black is
+/** A chair, in one color: a product each (Workspace, Matte Leather), as the store has them. Matte Leather is
  * $1,100 and a painted one $1,200. Someone with the points for it can put as many towards one as they have;
  * the postage is the sample the demo has always had. */
 const chair = (id: string, color: string, dollars: number, more: Partial<Product> = {}) => item(id, `Workspace, ${color}`, { kind: 'Chair', points: dollars * 10, postage: 70, needsAddress: true, description: LINE, ...more })
@@ -68,7 +68,7 @@ const SHELVES: Product[] = [
   art(4),
   art(5),
   art(6),
-  chair('chair-matte-black', 'Matte Black', 1100),
+  chair('chair-matte-black', 'Matte Leather', 1100),
   chair('chair-scuderia-red', 'Scuderia Red', 1200),
   chair('chair-solar-orange', 'Solar Orange', 1200),
   chair('chair-alexandrite', 'Alexandrite', 1200),

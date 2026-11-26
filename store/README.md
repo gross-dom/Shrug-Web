@@ -98,7 +98,7 @@ points are used: the page says so as "You can use a maximum of 9,500 points agai
 
 | Product | Points | Floor | Postage | With no points | At its least |
 | --- | --- | --- | --- | --- | --- |
-| Workspace, Matte Black | 10,000 | $450 | $70 | $1,070 | $520, using 5,500 points |
+| Workspace, Matte Leather | 10,000 | $450 | $70 | $1,070 | $520, using 5,500 points |
 | Art on Acrylic | 2,800 | $75 | $5 | $285 | $80, using 2,050 points |
 | Chromatic | 400 | none | none | $40 | nothing, using 400 points |
 | Shrug 2027 (pre-order) | 550 | none | none | $55 | nothing, using 550 points |
@@ -159,6 +159,14 @@ things move.
   is 4 by 5 and its first picture fills it (cropped to the tile, about its middle unless `pictures.ts`
   says where); on a product's own screen each picture is shown whole, with the same picture out of focus
   filling the tile behind it, so that a tall one and a wide one sit alike.
+- **The chair's photographs** are apart from those: each color has a folder of its own
+  (`public/pictures/workspace/<color>/`), with `gallery/` (what Workspace shows in its window: slides, each
+  a landscape, a pair of uprights or one upright) and `checkout/` (one to three upright studio shots for
+  the page the chair is bought on, the first its hero). `python3 -I tools/chair-photos.py "<Shrug's
+  folder>"` copies them in as they came, makes two smaller copies of each, and writes `src/chair-photos.json`,
+  which is what `src/pictures.ts` reads. On a chair's page each studio shot has a page to itself and is
+  shown whole, on a tile painted the color of its own ground; one shot alone has no arrows and no dots. A
+  color with no folder yet is shown the chair made from its model, as before.
 - **A product's pictures** are paged through with the arrows on the picture, the arrow keys, the dots, or
   a finger drawn across it. Another product is reached from the foot (on a phone, the two arrows by
   "2 of 6").
@@ -172,7 +180,7 @@ things move.
   My VIP. An old link to `?s=updates` lands on the store.
 - Where a product has `Options`, they are drawn as swatches. Black, Stone and White are known; any other
   is given its color after its name ("Sand #c8b89a"). The chairs are now a product for each color
-  ("Workspace, Matte Black"), so none has options at present.
+  ("Workspace, Matte Leather"), so none has options at present.
 - `/?signin` opens the card page ready to sign in; the store's door sends people to `/?signin=store`,
   and they are back in the store as soon as they are in.
 

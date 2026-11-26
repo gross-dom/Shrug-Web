@@ -8,7 +8,7 @@
 // photographs won). The reference photographs are the standard for the paint: a value here is where the
 // match starts. Change one here and everything that shows the color follows.
 
-/** How a paint is finished. One paint material, in seven settings (and Matte Black's, which has no gloss). */
+/** How a paint is finished. One paint material, in seven settings (and Matte Leather's, which has no gloss). */
 export type Finish = 'matte' | 'gloss' | 'pearl' | 'metallic' | 'shift' | 'holo' | 'uv'
 
 /** A finish, as the catalog words it. */

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { ChevronLeft, Play, Rotate3d, X } from 'lucide-react'
 import { fmtCents, priceCents } from '../../store/shared/rules'
-import { pagesOf, shotsOf } from '../../store/src/pictures'
+import { galleryOf } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
 import { ALL_PAINTS, inkOn, MAKING, MORE, OWNERS, PAINTS, PAPER, shadedOn, type Making, type Paint } from '../data/workspace'
 import { FINISH_WORDS, type Finish } from '../../store/shared/colors'
@@ -57,8 +57,6 @@ const leadOf = (paint: Paint) => (paint.stock === 'now' ? 'Available now' : 'Mad
 const real = (text: string) => !text.startsWith('[')
 const OWNERS_SHOWN = TEMPLATED ? OWNERS : OWNERS.filter((owner) => real(owner.name))
 const MAKING_SHOWN = TEMPLATED ? MAKING : MAKING.filter((piece) => piece.src && real(piece.says))
-/** A photograph wide enough to fill the window whole; a narrower one is set whole on a blur of itself. */
-const WIDE = 1.25
 
 type View = 'first' | 'studio' | 'owners' | 'bts' | 'buy'
 
@@ -171,10 +169,14 @@ export function WorkspaceApp() {
   /** Its price, as it is said: only to someone logged in, and never one the store has not given. */
   const price = product && !product.priceHidden && product.points ? `From ${fmtCents(priceCents(product))}` : null
   // (its photographs: a color that has none yet has the chair drawn in the store's pages, and here the chair itself)
-  // Its photographs, a page each beside the 3D chair: a wide one fills the window by itself, and two tall
-  // ones share it, side by side (the order, and which share, are the store's: pagesOf in store/src/pictures.ts)
-  const shots = product ? pagesOf(shotsOf(product).filter((s) => !s.drawn)) : []
+  // Its gallery, a slide at a time beside the 3D chair. A slide is a landscape photograph, which fills the
+  // window; two upright ones, which share it side by side; or one upright one, whole, inside it (which is
+  // which is Shrug's to say: galleryOf in store/src/pictures.ts)
+  const shots = product ? galleryOf(product) : []
   const photo = shot !== null ? (shots[shot] ?? null) : null
+  /** How many photographs come before a slide, and how many there are in all: what each is called by. */
+  const before = (n: number) => shots.slice(0, n).reduce((sum, slide) => sum + slide.shots.length, 0)
+  const photographs = before(shots.length)
   /** The store's page for a chair, in that chair's color. */
   const pageOf = (c: Chosen) => `${addressOf('chairs', c.paint.product)}&c=${c.color.slice(1)}`
   const buy = () => {
@@ -288,10 +290,10 @@ export function WorkspaceApp() {
           {/* A photograph picked fills the window, under a shade the controls can still be read on. One too
               narrow to fill it is set whole, on a blur of itself */}
           {photo && (
-            <div className="st-photo" data-fit={photo.length > 1 ? 'pair' : (photo[0]!.aspect ?? 1) >= WIDE ? 'fill' : 'whole'}>
-              {photo.length === 1 && <img className="st-photo__back" src={photo[0]!.small} alt="" aria-hidden draggable={false} />}
-              {photo.map((one, n) => (
-                <img key={one.full} className="st-photo__pic" src={one.full} srcSet={one.set} sizes={photo.length > 1 ? '550px' : '1100px'} alt={`${chosen.name}: photograph ${shots.slice(0, shot!).flat().length + n + 1} of ${shots.flat().length}`} draggable={false} />
+            <div className="st-photo" data-fit={photo.kind === 'pair' ? 'pair' : photo.kind === 'wide' ? 'fill' : 'whole'}>
+              {photo.kind !== 'pair' && <img className="st-photo__back" src={photo.shots[0]!.small} alt="" aria-hidden draggable={false} />}
+              {photo.shots.map((one, n) => (
+                <img key={one.full} className="st-photo__pic" src={one.full} srcSet={one.set} sizes={photo.kind === 'pair' ? '550px' : photo.kind === 'wide' ? '1100px' : `${Math.round(560 * (one.aspect ?? 0.75))}px`} alt={one.alt ?? `${chosen.name}: photograph ${before(shot!) + n + 1} of ${photographs}`} draggable={false} />
               ))}
               <span className="st-photo__shade" aria-hidden />
             </div>
@@ -303,11 +305,11 @@ export function WorkspaceApp() {
                 <Rotate3d size={18} strokeWidth={1.9} aria-hidden />
                 <span>3D</span>
               </button>
-              {shots.map((page, n) => {
-                const from = shots.slice(0, n).flat().length + 1
+              {shots.map((slide, n) => {
+                const from = before(n) + 1
                 return (
-                  <button key={page[0]!.full} type="button" className="st-shot" data-pair={page.length > 1 || undefined} aria-pressed={shot === n} aria-label={page.length > 1 ? `Photographs ${from} and ${from + 1} of ${shots.flat().length}` : `Photograph ${from} of ${shots.flat().length}`} onClick={() => setShot(n)}>
-                    {page.map((one) => (
+                  <button key={slide.shots[0]!.full} type="button" className="st-shot" data-pair={slide.shots.length > 1 || undefined} aria-pressed={shot === n} aria-label={slide.shots.length > 1 ? `Photographs ${from} and ${from + 1} of ${photographs}` : `Photograph ${from} of ${photographs}`} onClick={() => setShot(n)}>
+                    {slide.shots.map((one) => (
                       <img key={one.full} src={one.small} alt="" loading="lazy" draggable={false} />
                     ))}
                   </button>

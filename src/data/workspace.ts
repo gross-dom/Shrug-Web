@@ -11,7 +11,7 @@
 // as it was built: the design has it as a stand-in. Each has a finish, which is how its paint is lit on the
 // chair: one paint material in several settings (store/shared/colors.ts). To change one, change it here.
 //
-// What a chair costs is not here: it is the store's to say (Matte Black from $1,100, a painted one from
+// What a chair costs is not here: it is the store's to say (Matte Leather from $1,100, a painted one from
 // $1,200), and it is said only to someone logged in. Which colors are in stock is Dom's word of 26 Nov:
 // the eight the studio opens on are available now, and the sixteen more are made to order, in two to three
 // weeks. Still Shrug's to supply: the one line about each color, photographs of each, and the owners who
@@ -33,7 +33,7 @@ export interface Paint {
   /** The color. A paint that shifts with the angle it is seen from has the colors it moves through, first to last. */
   color: string
   shift?: string[]
-  /** How it is finished: matte (Matte Black, the chair as it comes), high gloss, pearl, metallic, and the rest. */
+  /** How it is finished: matte (Matte Leather, the chair as it comes), high gloss, pearl, metallic, and the rest. */
   finish: Finish
   /** In stock, or made to order. Either is bought here. */
   stock: 'now' | 'order'
@@ -50,8 +50,10 @@ export interface Paint {
  * file is put in its place). */
 export const CHAIR_MODEL: string | null = '/workspace/chair.glb'
 
+// (Matte Leather is the chair as it comes, in black: it went by Matte Black until the launch list of 27 Nov,
+// and keeps that as its id, so that nothing kept under it is lost)
 export const PAINTS: Paint[] = [
-  { id: 'matte-black', name: 'Matte Black', color: '#141414', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
+  { id: 'matte-black', name: 'Matte Leather', color: '#141414', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
   { id: 'scuderia-red', name: 'Scuderia Red', color: '#ff302c', finish: 'gloss', stock: 'now', line: null, product: 'chair-scuderia-red' },
   { id: 'solar-orange', name: 'Solar Orange', color: '#ff7900', finish: 'gloss', stock: 'now', line: null, product: 'chair-solar-orange' },
   { id: 'alexandrite', name: 'Alexandrite', color: '#6e5e72', shift: ['#1c3146', '#6e5e72', '#b47e62'], finish: 'shift', stock: 'now', line: null, product: 'chair-alexandrite' },

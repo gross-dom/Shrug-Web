@@ -71,7 +71,7 @@ const check = (name, ok, detail = '') => {
   await p.waitForSelector(`${W}[data-open] .fl-slab`, { timeout: 15000 })
   await p.waitForTimeout(600)
   const first = await p.evaluate((W) => { const w = document.querySelector(W); const r = w.getBoundingClientRect(); return { size: `${Math.round(r.width)}x${Math.round(r.height)}`, head: w.querySelector('.fl-head h1').innerText.replace(/\s*\n\s*/g, ' / '), lines: Math.round(w.querySelector('.fl-head h1').getBoundingClientRect().height / parseFloat(getComputedStyle(w.querySelector('.fl-head h1')).lineHeight)), sub: !!w.querySelector('.fl-head p'), slabs: [...w.querySelectorAll('.fl-slab')].map((s) => `${s.querySelector('b').textContent}: ${s.querySelector('small').textContent}`), mark: !!w.querySelector('.wxbar svg.mk path') && w.querySelector('.wxbar__home').innerText.trim(), money: /\$\d/.test(w.innerText), own: /your own/i.test(w.innerText) } }, W)
-  check('it opens 1100 by 720, its mark drawn in its bar and on its icon, on the color selector, under "Your new daily driver" on two lines with nothing under it: a slab for each of the eight colors, each available now, and one for the sixteen more ("Custom Coloring", made to order); there is no "Your own"', first.size === '1100x720' && first.head === 'Your new daily driver' && first.lines === 2 && !first.sub && first.mark === 'Workspace' && iconBefore && first.slabs.join(' | ') === 'Matte Black: Available now | Scuderia Red: Available now | Solar Orange: Available now | Alexandrite: Available now | Illusion Blue: Available now | Supersonic: Available now | Pearl Lavender: Available now | Mantis Green: Available now | Custom Coloring: Made to Order' && !first.own, JSON.stringify(first))
+  check('it opens 1100 by 720, its mark drawn in its bar and on its icon, on the color selector, under "Your new daily driver" on two lines with nothing under it: a slab for each of the eight colors, each available now, and one for the sixteen more ("Custom Coloring", made to order); there is no "Your own"', first.size === '1100x720' && first.head === 'Your new daily driver' && first.lines === 2 && !first.sub && first.mark === 'Workspace' && iconBefore && first.slabs.join(' | ') === 'Matte Leather: Available now | Scuderia Red: Available now | Solar Orange: Available now | Alexandrite: Available now | Illusion Blue: Available now | Supersonic: Available now | Pearl Lavender: Available now | Mantis Green: Available now | Custom Coloring: Made to Order' && !first.own, JSON.stringify(first))
   check('no price is on the slabs for a visitor', !first.money, '')
   // (each slab holds its chair before it is pointed at, so that nothing is fetched, and nothing waited for, when it is)
   await p.waitForFunction((W) => [...document.querySelectorAll(`${W} .fl-slab img.ch`)].every((img) => img.complete), W, { timeout: 8000 }).catch(() => {})
@@ -112,7 +112,7 @@ const check = (name, ok, detail = '') => {
   const icon = await p.evaluate(() => document.querySelector('.dock [data-dock-app="workspace"] svg stop:last-child')?.getAttribute('stop-color'))
   check('the Dock’s icon takes the color picked', icon === '#ff302c', String(icon))
   const tray = await p.evaluate((W) => { const d = document.querySelector(`${W} .fl-dock`).getBoundingClientRect(); const b = document.querySelector(`${W} .fl-btn`); return { tall: Math.round(d.height), dots: [...document.querySelectorAll(`${W} .fl-dot`)].map((x) => x.getAttribute('aria-label')).join(' | '), hand: getComputedStyle(b).cursor } }, W)
-  check('the tray of colors is 70 tall: the eight, and the way to the sixteen more', tray.tall === 70 && tray.dots === 'Matte Black | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | More colors', JSON.stringify(tray))
+  check('the tray of colors is 70 tall: the eight, and the way to the sixteen more', tray.tall === 70 && tray.dots === 'Matte Leather | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | More colors', JSON.stringify(tray))
   check('the button shows the pointing hand', tray.hand === 'pointer', tray.hand)
 
   // ---- its photographs: a page each beside the 3D chair, two tall ones sharing a page side by side so that
@@ -187,10 +187,10 @@ const check = (name, ok, detail = '') => {
   await logIn('riley@example.test', '4155550134', 'Riley Chen')
   s = await studio()
   check('logged in, the chair has its price and a button, and nothing written beside them: a painted chair from $1,200, to buy (the eight are in stock)', s.name === 'Scuderia Red' && s.buy === 'From $1,200 / Buy', s.buy)
-  await p.locator(`${W} .fl-dot[aria-label="Matte Black"]`).click()
+  await p.locator(`${W} .fl-dot[aria-label="Matte Leather"]`).click()
   await p.waitForTimeout(700)
   s = await studio()
-  check('Matte Black is from $1,100, and can be bought now', s.name === 'Matte Black' && s.tags === 'Matte | Available now' && s.buy === 'From $1,100 / Buy', JSON.stringify({ tags: s.tags, buy: s.buy }))
+  check('Matte Leather is from $1,100, and can be bought now', s.name === 'Matte Leather' && s.tags === 'Matte | Available now' && s.buy === 'From $1,100 / Buy', JSON.stringify({ tags: s.tags, buy: s.buy }))
 
   // ---- the sixteen more: a grid of four by four over the window
   await p.locator(`${W} .fl-dot.more`).click()
@@ -206,7 +206,7 @@ const check = (name, ok, detail = '') => {
   s = await studio()
   const moreIn = await p.evaluate((W) => { const w = document.querySelector(W); const o = w.querySelector('button.fl-owners'); const tags = w.querySelector('.st-tags').getBoundingClientRect(); const win = w.querySelector('.ss-window').getBoundingClientRect(); return { owners: !!o && o.getClientRects().length > 0 && getComputedStyle(o).visibility !== 'hidden', tagsLeft: Math.round(tags.left - win.left), tagsFoot: Math.round(win.bottom - tags.bottom), own: /your own/i.test(w.innerText), dots: [...w.querySelectorAll('.fl-dot')].map((d) => d.getAttribute('aria-label') + (d.classList.contains('on') ? '*' : '')).join(' | ') } }, W)
   check('one picked, the studio is in it: its name, its finish and "Made to Order · 2–3 weeks" at the bottom left, and no "Owned by" (nor "Your own")', s.view === 'studio' && s.name === 'Championship Green' && s.ground === 'rgb(11, 157, 110)' && s.tags === 'Metallic | Made to Order · 2–3 weeks' && !moreIn.owners && !moreIn.own && moreIn.tagsLeft < 80 && moreIn.tagsFoot < 90 && s.buy === 'From $1,200 / Order', JSON.stringify({ s: { name: s.name, ground: s.ground, tags: s.tags, buy: s.buy }, moreIn }))
-  check('and it is added to the tray, where it stays, with the way to the sixteen still at the tray’s end', moreIn.dots === 'Matte Black | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | Championship Green* | More colors', moreIn.dots)
+  check('and it is added to the tray, where it stays, with the way to the sixteen still at the tray’s end', moreIn.dots === 'Matte Leather | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | Championship Green* | More colors', moreIn.dots)
 
   // ---- buying, in this window: the store's own page for that chair, in the chair's color through to the receipt
   await p.locator(`${W} .fl-dot[aria-label="Championship Green"]`).click()
