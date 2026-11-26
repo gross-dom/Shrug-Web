@@ -38,7 +38,7 @@ const check = (name, ok, detail = '') => {
         buy: w.querySelector('.fl-buy')?.innerText.replace(/\s*\n\s*/g, ' / ').trim() ?? null,
         on: w.querySelector('.fl-dot.on')?.getAttribute('aria-label') ?? null,
         dots: w.querySelectorAll('.fl-dot').length,
-        still: !!w.querySelector('.st-still'),
+        still: /\/workspace\/chairs\/[a-z-]+\.webp$/.test(w.querySelector('img.st-still')?.getAttribute('src') ?? ''),
         drawn: !!w.querySelector('.st-table[data-3d]'),
         turn: w.querySelector('.st-turn')?.textContent ?? null,
         wordSize: parseFloat(getComputedStyle(w.querySelector('.fl-word') ?? w).fontSize),
@@ -70,12 +70,12 @@ const check = (name, ok, detail = '') => {
   await p.click('.dock [data-dock-app="workspace"]')
   await p.waitForSelector(`${W}[data-open] .fl-slab`, { timeout: 15000 })
   await p.waitForTimeout(600)
-  const first = await p.evaluate((W) => { const w = document.querySelector(W); const r = w.getBoundingClientRect(); return { size: `${Math.round(r.width)}x${Math.round(r.height)}`, head: w.querySelector('.fl-head h1').innerText.replace(/\s*\n\s*/g, ' / '), slabs: [...w.querySelectorAll('.fl-slab')].map((s) => `${s.querySelector('b').textContent}: ${s.querySelector('small').textContent}`), mark: !!w.querySelector('.wxbar svg.mk path') && w.querySelector('.wxbar__home').innerText.trim(), money: /\$\d/.test(w.innerText), own: /your own/i.test(w.innerText) } }, W)
-  check('it opens 1100 by 720, its mark drawn in its bar and on its icon, on the color selector: a slab for each of the eight colors and one for the sixteen more, each saying how it is to be had; there is no "Your own"', first.size === '1100x720' && first.head === 'One chair. / Eight colors.' && first.mark === 'Workspace' && iconBefore && first.slabs.join(' | ') === 'Matte Black: Available now | Scuderia Red: Made to order | Solar Orange: Available now | Alexandrite: Color-shifting | Illusion Blue: Made to order | Supersonic: Made to order | Pearl Lavender: Made to order | Mantis Green: Made to order | 16 more colors: Made to order' && !first.own, JSON.stringify(first))
+  const first = await p.evaluate((W) => { const w = document.querySelector(W); const r = w.getBoundingClientRect(); return { size: `${Math.round(r.width)}x${Math.round(r.height)}`, head: w.querySelector('.fl-head h1').innerText.replace(/\s*\n\s*/g, ' / '), lines: Math.round(w.querySelector('.fl-head h1').getBoundingClientRect().height / parseFloat(getComputedStyle(w.querySelector('.fl-head h1')).lineHeight)), sub: !!w.querySelector('.fl-head p'), slabs: [...w.querySelectorAll('.fl-slab')].map((s) => `${s.querySelector('b').textContent}: ${s.querySelector('small').textContent}`), mark: !!w.querySelector('.wxbar svg.mk path') && w.querySelector('.wxbar__home').innerText.trim(), money: /\$\d/.test(w.innerText), own: /your own/i.test(w.innerText) } }, W)
+  check('it opens 1100 by 720, its mark drawn in its bar and on its icon, on the color selector, under "Your new daily driver" on two lines with nothing under it: a slab for each of the eight colors, each available now, and one for the sixteen more ("Custom Coloring", made to order); there is no "Your own"', first.size === '1100x720' && first.head === 'Your new daily driver' && first.lines === 2 && !first.sub && first.mark === 'Workspace' && iconBefore && first.slabs.join(' | ') === 'Matte Black: Available now | Scuderia Red: Available now | Solar Orange: Available now | Alexandrite: Available now | Illusion Blue: Available now | Supersonic: Available now | Pearl Lavender: Available now | Mantis Green: Available now | Custom Coloring: Made to Order' && !first.own, JSON.stringify(first))
   check('no price is on the slabs for a visitor', !first.money, '')
   await p.locator(`${W} .fl-slab`).nth(2).hover()
   await p.waitForTimeout(600)
-  const hover = await p.evaluate((W) => { const slabs = [...document.querySelectorAll(`${W} .fl-slab`)].map((s) => s.getBoundingClientRect().width); return { wider: slabs[2] > slabs[0] * 1.8, chair: !!document.querySelector(`${W} .fl-slab.big svg.ch`) } }, W)
+  const hover = await p.evaluate((W) => { const slabs = [...document.querySelectorAll(`${W} .fl-slab`)].map((s) => s.getBoundingClientRect().width); return { wider: slabs[2] > slabs[0] * 1.8, chair: (() => { const img = document.querySelector(`${W} .fl-slab.big img.ch`); return !!img && img.complete && img.naturalWidth > 0 && /\/workspace\/chairs\/solar-orange\.webp$/.test(img.currentSrc) })() } }, W)
   check('pointed at, a slab widens and shows the chair in its color', hover.wider && hover.chair, JSON.stringify(hover))
 
   // ---- a color picked: the studio
@@ -86,9 +86,9 @@ const check = (name, ok, detail = '') => {
   check('a color picked floods the window: the studio is that color, its name huge behind the chair, words that read on it', s.view === 'studio' && s.ground === 'rgb(255, 48, 44)' && s.ink === 'rgb(20, 20, 20)' && (s.word ?? '').toLowerCase() === 'scuderia red' && s.name === 'Scuderia Red' && s.dots === 9 && s.on === 'Scuderia Red', JSON.stringify(s))
   check('the name is set at 176, whole, inside the window', s.wordSize === 176 && s.wordFits, JSON.stringify({ size: s.wordSize, fits: s.wordFits }))
   const words = await p.evaluate((W) => document.querySelector(`${W} .fl.st`).innerText.replace(/\s*\n\s*/g, ' | '), W)
-  check('a visitor is not told the price: the button is "Log in to enquire", with nothing written under it; its finish and how it is had are said in two tags', s.tags === 'High gloss | Made to order · 2–3 weeks' && s.buy === 'Log in to enquire' && !/\$\d/.test(words), JSON.stringify({ tags: s.tags, buy: s.buy }))
+  check('a visitor is not told the price: the button is "Log in to enquire", with nothing written under it; its finish and how it is had are said in two tags', s.tags === 'High gloss | Available now' && s.buy === 'Log in to enquire' && !/\$\d/.test(words), JSON.stringify({ tags: s.tags, buy: s.buy }))
   check('nothing in the studio says the chair is a drawing, or that points bring a price down', !/drawn model|drawing, not a photograph|points bring it down|Points can take/i.test(words), words)
-  check('the chair is there: a drawing of it at once, and the 3D chair over it where the browser can draw one', s.still && (s.drawn ? s.turn === 'Drag to turn · 0°' : true), JSON.stringify({ still: s.still, drawn: s.drawn, turn: s.turn }))
+  check('the chair is there: a still of it at once (the 3D chair’s own picture, in this color), and the 3D chair over it where the browser can draw one', s.still && (s.drawn ? s.turn === 'Drag to turn · 0°' : true), JSON.stringify({ still: s.still, drawn: s.drawn, turn: s.turn }))
   if (s.drawn) {
     const table = await p.evaluate((W) => { const r = document.querySelector(`${W} .st-table`).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } }, W)
     await p.mouse.move(table.x, table.y)
@@ -175,7 +175,7 @@ const check = (name, ok, detail = '') => {
   check('"Log in to enquire" lets down Log In, which says what for and that the color is kept', sheet.head === 'Log in to enquire' && sheet.lead === 'Scuderia Red is kept while you log in.', JSON.stringify(sheet))
   await logIn('riley@example.test', '4155550134', 'Riley Chen')
   s = await studio()
-  check('logged in, the chair has its price and a button, and nothing written beside them: a painted chair from $1,200, to order', s.name === 'Scuderia Red' && s.buy === 'From $1,200 / Order', s.buy)
+  check('logged in, the chair has its price and a button, and nothing written beside them: a painted chair from $1,200, to buy (the eight are in stock)', s.name === 'Scuderia Red' && s.buy === 'From $1,200 / Buy', s.buy)
   await p.locator(`${W} .fl-dot[aria-label="Matte Black"]`).click()
   await p.waitForTimeout(700)
   s = await studio()
@@ -194,7 +194,7 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(500)
   s = await studio()
   const moreIn = await p.evaluate((W) => { const w = document.querySelector(W); const o = w.querySelector('button.fl-owners'); const tags = w.querySelector('.st-tags').getBoundingClientRect(); const win = w.querySelector('.ss-window').getBoundingClientRect(); return { owners: !!o && o.getClientRects().length > 0 && getComputedStyle(o).visibility !== 'hidden', tagsLeft: Math.round(tags.left - win.left), tagsFoot: Math.round(win.bottom - tags.bottom), own: /your own/i.test(w.innerText), dots: [...w.querySelectorAll('.fl-dot')].map((d) => d.getAttribute('aria-label') + (d.classList.contains('on') ? '*' : '')).join(' | ') } }, W)
-  check('one picked, the studio is in it: its name, its finish and Made to order at the bottom left, and no "Owned by" (nor "Your own")', s.view === 'studio' && s.name === 'Championship Green' && s.ground === 'rgb(11, 157, 110)' && s.tags === 'Metallic | Made to order · 2–3 weeks' && !moreIn.owners && !moreIn.own && moreIn.tagsLeft < 80 && moreIn.tagsFoot < 90 && s.buy === 'From $1,200 / Order', JSON.stringify({ s: { name: s.name, ground: s.ground, tags: s.tags, buy: s.buy }, moreIn }))
+  check('one picked, the studio is in it: its name, its finish and "Made to Order · 2–3 weeks" at the bottom left, and no "Owned by" (nor "Your own")', s.view === 'studio' && s.name === 'Championship Green' && s.ground === 'rgb(11, 157, 110)' && s.tags === 'Metallic | Made to Order · 2–3 weeks' && !moreIn.owners && !moreIn.own && moreIn.tagsLeft < 80 && moreIn.tagsFoot < 90 && s.buy === 'From $1,200 / Order', JSON.stringify({ s: { name: s.name, ground: s.ground, tags: s.tags, buy: s.buy }, moreIn }))
   check('and it is added to the tray, where it stays, with the way to the sixteen still at the tray’s end', moreIn.dots === 'Matte Black | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | Championship Green* | More colors', moreIn.dots)
 
   // ---- buying, in this window: the store's own page for that chair, in the chair's color through to the receipt
@@ -202,7 +202,7 @@ const check = (name, ok, detail = '') => {
   await p.waitForFunction((W) => getComputedStyle(document.querySelector(`${W} .ss-window`)).backgroundColor === 'rgb(11, 157, 110)', W, { timeout: 15000 }).catch(() => {})
   await p.waitForTimeout(500)
   s = await studio()
-  check('a long name is set smaller, so that it does not run off the window', s.name === 'Championship Green' && s.wordSize < 176 && s.wordSize > 100 && s.wordFits && s.tags === 'Metallic | Made to order · 2–3 weeks', JSON.stringify({ size: s.wordSize, fits: s.wordFits, tags: s.tags }))
+  check('a long name is set smaller, so that it does not run off the window', s.name === 'Championship Green' && s.wordSize < 176 && s.wordSize > 100 && s.wordFits && s.tags === 'Metallic | Made to Order · 2–3 weeks', JSON.stringify({ size: s.wordSize, fits: s.wordFits, tags: s.tags }))
   await p.locator(`${W} .fl-btn`).click()
   const f = p.frameLocator(`${W} .wx-buy iframe`)
   await f.locator('.ui-col .ui-btn').first().waitFor({ timeout: 20000 })
@@ -215,6 +215,10 @@ const check = (name, ok, detail = '') => {
   check('the page is in the chair’s own color, and the chair is called by its color: "Championship Green", not "Workspace, …", with no "Chair" over it', pg.tint !== null && pg.ground === '11,157,110' && pg.title === 'Championship Green' && !/^Chair \|/.test(pg.col) && !/Workspace,/.test(pg.col), JSON.stringify(pg))
   check('it is priced in dollars, their points bring it down, and nothing says how much points can take off', /Price \| \$1,200 \|.*100 points \| of your 100 \| −\$10 \|.*Shipping \| \$70 \| Total \| \$1,260 \| Buy for \$1,260( \||$)/.test(pg.col) && !/Points can take up to/i.test(pg.col), pg.col)
   check('the chair’s page fits the window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
+  // Its picture is a proper one of the product, every time: the chair in that color in a white studio, made
+  // from its model, filling its panel edge to edge (no square set in a dim surround), with a second from in front
+  const media = await f.locator('.ui-media').evaluate((fig) => { const img = fig.querySelector('.ui-media-pic'); const a = fig.getBoundingClientRect(); const b = img.getBoundingClientRect(); return { src: img.currentSrc.split('/').pop(), loaded: img.complete && img.naturalWidth >= 400, fills: Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1, fit: getComputedStyle(img).objectFit, behind: !!fig.querySelector('.ui-media-bg'), dots: fig.querySelectorAll('.ui-dots button').length, alt: img.alt } })
+  check('the chair’s picture is the product in a studio, made from its model in that color, and fills its panel; there are two of it', /^workspace-championship-green-mock-1(-s)?\.webp$/.test(media.src) && media.loaded && media.fills && media.fit === 'cover' && !media.behind && media.dots === 2 && /made from its model/.test(media.alt), JSON.stringify(media))
   const rail = await f.locator('.ui-rail a, .ui-rail button').evaluateAll((els) => els.map((el) => el.textContent.replace(/\s+/g, ' ').trim()).join(' | '))
   const gaps = await f.locator('.ui-rail li').evaluateAll((els) => els.slice(0, 6).map((el, i, all) => (i ? Math.round(el.getBoundingClientRect().left - all[i - 1].getBoundingClientRect().right) : 99)))
   check('along its foot are the chair’s other colors, with room between them, and nothing of another store', /Scuderia Red/.test(rail) && /Mantis Green/.test(rail) && !/Art No|Chromatic/.test(rail) && gaps.every((g) => g >= 6), JSON.stringify({ rail: rail.slice(0, 160), gaps }))
@@ -252,7 +256,7 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${W} .fl-dot[aria-label="Alexandrite"]`).click()
   await p.waitForTimeout(900)
   s = await studio()
-  check('Alexandrite is color-shifting: the cove is its colors, and it says to turn it', s.image === 'linear-gradient' && s.tags === 'Color-shifting | Made to order · 2–3 weeks' && /Turn it to see it shift\.$/.test(await p.locator(`${W} .fl-info p`).innerText()), JSON.stringify(s))
+  check('Alexandrite is color-shifting: the cove is its colors, and it says to turn it', s.image === 'linear-gradient' && s.tags === 'Color-shifting | Available now' && /Turn it to see it shift\.$/.test(await p.locator(`${W} .fl-info p`).innerText()), JSON.stringify(s))
   check('nothing went wrong on the way', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
 
   // ---- closed and opened again, it is on the color selector; and the next visit keeps the color for the Dock
@@ -269,8 +273,6 @@ const check = (name, ok, detail = '') => {
   await p.click('.dock [data-dock-app="myvip"]')
   await p.waitForSelector('.wf[data-app="myvip"][data-open] iframe.storewin__frame', { timeout: 20000 })
   const v = p.frameLocator('.wf[data-app="myvip"] iframe.storewin__frame')
-  await v.locator('#ripBtn, .mc').first().waitFor({ timeout: 20000 })
-  if (await v.locator('#ripBtn').count()) { await v.locator('#ripBtn').focus(); await p.keyboard.press('Enter'); await v.locator('#stage[data-view="card"]').waitFor({ timeout: 20000 }); await p.waitForTimeout(1200); await v.locator('a.go').click() }
   await v.locator('.mc').first().waitFor({ timeout: 20000 })
   await p.waitForTimeout(600)
   const mine = (await v.locator('body').innerText()).replace(/\s*\n\s*/g, ' | ')

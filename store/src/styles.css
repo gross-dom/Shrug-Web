@@ -109,6 +109,8 @@ a{color:inherit}
 /* A photograph is shown whole, whatever its shape; the same one, out of focus and dimmed, fills the tile behind it */
 .ui-media-bg{position:absolute; top:-12%; left:-12%; width:124%; height:124%; object-fit:cover; filter:blur(44px) brightness(.42) saturate(1.15)}
 .ui-media-pic{position:relative; display:block; max-width:100%; max-height:100%; object-fit:contain}
+/* One made to fill its place does: edge to edge, the middle of it showing where the place is another shape */
+.ui-media-pic.fills{position:absolute; inset:0; width:100%; height:100%; max-width:none; max-height:none; object-fit:cover}
 /* Which of its pictures is on show: a dot for each, over the foot of the tile */
 .ui-dots{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); display:flex; align-items:center; gap:2px; padding:0 6px; border-radius:999px;
   background:rgba(12,12,13,.45); -webkit-backdrop-filter:blur(16px) saturate(180%); backdrop-filter:blur(16px) saturate(180%);
@@ -204,6 +206,19 @@ a{color:inherit}
 .ui-ord{grid-template-columns:56px minmax(0,1fr) auto minmax(0,auto)}
 .ui-pts{grid-template-columns:minmax(0,1fr) auto; min-height:60px}
 .ui-sect{font:600 13px/1 var(--font); color:var(--text-2); padding:18px 0 8px}
+/* My VIP is several lists, one under another: each begins well clear of the one before it, so that a list's
+   last row is not read as the next list's first */
+.ui-part{margin-top:22px}
+h2.ui-sect.ui-part{padding-top:18px}
+/* A word that is explained where it stands: the line appears under the pointer, and for the keyboard on it */
+.ui-explains{position:relative; cursor:help; outline:none}
+.ui-explain{position:absolute; left:0; top:calc(100% + 8px); z-index:5; width:max-content; max-width:min(260px, 70vw); padding:9px 12px; border-radius:10px;
+  background:rgba(38,38,42,.96); box-shadow:0 8px 24px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.1); color:#f2f2f4; font:400 12.5px/1.4 var(--font); letter-spacing:0; text-align:left; white-space:normal;
+  opacity:0; visibility:hidden; transform:translateY(-3px); transition:opacity .14s ease, transform .14s ease, visibility 0s .14s; pointer-events:none}
+.ui-explain.end{left:auto; right:0}
+.ui-explains:hover .ui-explain,.ui-explains:focus-visible .ui-explain{opacity:1; visibility:visible; transform:none; transition-delay:.12s, .12s, .12s}
+.ui-explains:focus-visible{box-shadow:0 0 0 2px var(--text-3); border-radius:16px}
+@media (prefers-reduced-motion: reduce){ .ui-explain{transition:none; transform:none} }
 .ui-none{padding:6px 0 4px; font-size:14px; color:var(--text-3)}
 /* The account at a glance, in My VIP: a tile to a figure */
 .ui-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}

@@ -12,8 +12,10 @@
 // chair: one paint material in several settings (store/shared/colors.ts). To change one, change it here.
 //
 // What a chair costs is not here: it is the store's to say (Matte Black from $1,100, a painted one from
-// $1,200), and it is said only to someone logged in. Still Shrug's to supply: which colors are in stock, the
-// one line about each color, photographs of each, and the owners who have agreed to be named.
+// $1,200), and it is said only to someone logged in. Which colors are in stock is Dom's word of 26 Nov:
+// the eight the studio opens on are available now, and the sixteen more are made to order, in two to three
+// weeks. Still Shrug's to supply: the one line about each color, photographs of each, and the owners who
+// have agreed to be named.
 //
 // (Illusion Blue is among the eight and Championship Green among the sixteen: Dom swapped the two after his
 // fourth round of testing.)
@@ -50,13 +52,13 @@ export const CHAIR_MODEL: string | null = '/workspace/chair.glb'
 
 export const PAINTS: Paint[] = [
   { id: 'matte-black', name: 'Matte Black', color: '#141414', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
-  { id: 'scuderia-red', name: 'Scuderia Red', color: '#ff302c', finish: 'gloss', stock: 'order', line: null, product: 'chair-scuderia-red' },
+  { id: 'scuderia-red', name: 'Scuderia Red', color: '#ff302c', finish: 'gloss', stock: 'now', line: null, product: 'chair-scuderia-red' },
   { id: 'solar-orange', name: 'Solar Orange', color: '#ff7900', finish: 'gloss', stock: 'now', line: null, product: 'chair-solar-orange' },
-  { id: 'alexandrite', name: 'Alexandrite', color: '#6e5e72', shift: ['#1c3146', '#6e5e72', '#b47e62'], finish: 'shift', stock: 'order', line: null, product: 'chair-alexandrite' },
-  { id: 'illusion-blue', name: 'Illusion Blue', color: '#2386f7', finish: 'metallic', stock: 'order', line: null, product: 'chair-illusion-blue' },
-  { id: 'supersonic', name: 'Supersonic', color: '#ffffff', finish: 'gloss', stock: 'order', line: null, product: 'chair-supersonic' },
-  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', finish: 'pearl', stock: 'order', line: null, product: 'chair-pearl-lavender' },
-  { id: 'mantis-green', name: 'Mantis Green', color: '#13c334', finish: 'pearl', stock: 'order', line: null, product: 'chair-mantis-green' },
+  { id: 'alexandrite', name: 'Alexandrite', color: '#6e5e72', shift: ['#1c3146', '#6e5e72', '#b47e62'], finish: 'shift', stock: 'now', line: null, product: 'chair-alexandrite' },
+  { id: 'illusion-blue', name: 'Illusion Blue', color: '#2386f7', finish: 'metallic', stock: 'now', line: null, product: 'chair-illusion-blue' },
+  { id: 'supersonic', name: 'Supersonic', color: '#ffffff', finish: 'gloss', stock: 'now', line: null, product: 'chair-supersonic' },
+  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', finish: 'pearl', stock: 'now', line: null, product: 'chair-pearl-lavender' },
+  { id: 'mantis-green', name: 'Mantis Green', color: '#13c334', finish: 'pearl', stock: 'now', line: null, product: 'chair-mantis-green' },
 ]
 
 /** The sixteen more: each made to order, and each a chair of its own in the store. */

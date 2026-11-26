@@ -62,7 +62,9 @@ export interface FrameHandle {
  * (`onAt`: a product, or the front) and which page the frame has come to (`onPage`: the card's, or the store's). */
 export const StoreFrame = forwardRef<FrameHandle, { room: Room; title: string; first?: string; onAt?: (place: Place) => void; onPage?: (page: 'card' | 'store') => void }>(function StoreFrame({ room, title, first, onAt, onPage }, handle) {
   const frame = useRef<HTMLIFrameElement>(null)
-  const who = useStore(account, (s) => (s.status === 'member' ? s.email : s.status === 'anon' ? '' : null))
+  // (who is logged in, and what they are called: the pages show both, a name on a card for one, so they ask
+  // the server again when either changes. Someone new gives their name a step after they are logged in)
+  const who = useStore(account, (s) => (s.status === 'member' ? `${s.email}|${s.name.trim()}` : s.status === 'anon' ? '' : null))
   const [src] = useState(() => first ?? addressOf(room))
   const page = useRef<'card' | 'store'>('store')
   const heard = useRef({ onAt, onPage })
@@ -116,7 +118,7 @@ export const StoreFrame = forwardRef<FrameHandle, { room: Room; title: string; f
     within.addEventListener('wheel', stir, { passive: true })
   }
 
-  // Whoever is logged in has changed (the desk's Log In, or Log Out): the pages ask the server again
+  // Whoever is logged in has changed (the desk's Log In, or Log Out), or what they are called: the pages ask the server again
   const was = useRef(who)
   useEffect(() => {
     if (who === null || was.current === who) return

@@ -109,8 +109,8 @@ function AddressField({ typed, onType }: { typed: string; onType: (text: string)
 /** After a visitor has paid: their payment made them an account, under the email they checked out with.
  * They are told so and asked for a phone number, for news of the order (and it is how they log in from then
  * on: it is texted six digits, and the six digits make it theirs). A number or a code that cannot be one is
- * said to be so where it was typed. With the number added they are taken to My VIP, where the order is (and,
- * the first time, their pack); what is left here says so, for when they come back to this window. */
+ * said to be so where it was typed. With the number added they are taken to My VIP, where the order is;
+ * what is left here says so, for when they come back to this window. */
 function NewAccount({ backend, email, onLater, onYours }: { backend: Backend; email: string; onLater: () => void; onYours: () => void }) {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -140,7 +140,7 @@ function NewAccount({ backend, email, onLater, onYours }: { backend: Backend; em
     if (!given) return setStep('code')
     setStep('done')
     // The desk shows who is logged in: it is told there is someone now. And they are taken straight to
-    // My VIP, where their order is and their pack is waiting: nothing more is said here first
+    // My VIP, where their order is: nothing more is said here first
     DESK?.changed()
     onYours()
   }
@@ -388,7 +388,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     if (product.priceHidden) return DESK ? { text: 'Log in to enquire', act: () => DESK!.logIn('price') } : { text: 'Sign in to see the price', act: () => window.location.assign(`${CARD}?signin=store`) }
     if (visiting && !(way === 'buy' && due > 0)) {
       const what = way === 'request' ? 'request' : way === 'reserve' ? 'reserve' : 'claim'
-      return DESK ? { text: `Log in to ${what}`, act: () => DESK!.logIn(way === 'request' ? 'request' : 'store') } : { text: `Open your pack to ${what}`, act: () => window.location.assign(CARD) }
+      return DESK ? { text: `Log in to ${what}`, act: () => DESK!.logIn(way === 'request' ? 'request' : 'store') } : { text: `Sign in to ${what}`, act: () => window.location.assign(`${CARD}?signin=store`) }
     }
     if (needsOption) return { text: label === 'Color' ? 'Choose a color' : 'Choose one', off: true }
     if (way === 'request') return { text: 'Request', act: order }
@@ -421,9 +421,10 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     <>
       {shot ? (
         <>
-          {/* The same picture, out of focus, fills the tile behind it: a tall one and a wide one sit alike */}
-          <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />
-          <img className="ui-media-pic" key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shot.drawn ? `${product.name}: a drawing of it` : shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
+          {/* A photograph is shown whole, and the same picture, out of focus, fills the tile behind it: a tall
+              one and a wide one sit alike. A picture made to fill its place (a chair in its studio) fills it */}
+          {!shot.fills && <img className="ui-media-bg" src={shot.small} alt="" aria-hidden="true" />}
+          <img className={`ui-media-pic${shot.fills ? ' fills' : ''}`} key={shot.full} src={shot.full} srcSet={shot.set} sizes={wholeSizes(shot)} alt={shot.drawn ? `${product.name}: picture ${seen + 1} of ${shots.length}, made from its model` : shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name} decoding="async" />
         </>
       ) : (
         <span className="t-3">
@@ -583,7 +584,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
           {finishing && needsAddress && addressField}
           {/* Points alone give no address: pressed with none on file, this asks for one, and then places the order */}
           <button type="button" className={`ui-btn${waiting ? ' off' : ''}`} data-busy={busy || undefined} disabled={busy || waiting} onClick={() => (needsAddress && !onFile(typed) ? setFinishing(true) : order())}>
-            {waiting ? 'Add where to send it' : 'Confirm order'}
+            {waiting ? 'Confirm Address' : 'Confirm order'}
           </button>
         </>
       )}

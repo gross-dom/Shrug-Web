@@ -39,7 +39,7 @@ export interface Stage {
 }
 
 /** How the chair opens: from behind, at a slight three-quarter, because that is where the color is. */
-const OPEN = Math.PI + 0.42
+export const OPEN = Math.PI + 0.42
 /** How far the camera may tilt, either way: the turn is kept level. */
 const TILT = 0.16
 const FADE = 400
@@ -61,7 +61,7 @@ const LIT: Record<Finish, { coat: number; coatRough: number; rough: number; meta
 }
 
 /** The paint: a clear coat over a color. For a color-shifting paint the color is mixed from the angle it is seen at. */
-function paintOf() {
+export function paintOf() {
   const material = new THREE.MeshPhysicalMaterial({ name: 'Paint', color: '#888', metalness: 0, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.06, side: THREE.DoubleSide })
   const shift = { uShift: { value: 0 }, uA: { value: hex('#000') }, uB: { value: hex('#000') }, uC: { value: hex('#000') } }
   material.onBeforeCompile = (shader) => {
@@ -84,7 +84,7 @@ function paintOf() {
 
 /** The chair's file, read once for the page: each stage is given its own copy of it to paint. */
 let read: Promise<THREE.Group> | null = null
-function chairFile(): Promise<THREE.Group> {
+export function chairFile(): Promise<THREE.Group> {
   if (!CHAIR_MODEL) return Promise.reject(new Error('no chair'))
   return (read ??= new GLTFLoader()
     .setMeshoptDecoder(MeshoptDecoder)
@@ -95,6 +95,49 @@ function chairFile(): Promise<THREE.Group> {
       read = null
       throw err
     }))
+}
+
+/** A copy of the chair's file stood on the floor at the height the camera is set for, about its own origin
+ * (the gas lift's axis), with the paint given it wherever the file says Paint. (A copy: its parts are the
+ * caller's to paint and to let go of; what they are made of is shared with the file.) Throws at a file that
+ * is not this chair: better the still than a chair in the wrong color. The pictures of the chair are made
+ * with this too (tools/chair-mockups.cjs), so that they are the chair the studio turns. */
+export function standChair(file: THREE.Group, material: THREE.Material): THREE.Object3D {
+  const model = file.clone(true)
+  const box = new THREE.Box3().setFromObject(model)
+  const tall = box.max.y - box.min.y
+  if (!(tall > 0)) throw new Error('an empty chair')
+  const fit = TALL / tall
+  model.scale.setScalar(fit)
+  model.position.y = -box.min.y * fit
+  let painted = 0
+  model.traverse((thing) => {
+    if (!(thing instanceof THREE.Mesh)) return
+    if ([thing.material].flat().some((m: THREE.Material) => m.name === 'Paint')) {
+      thing.material = material
+      painted++
+    }
+  })
+  if (!painted) throw new Error('no Paint in the chair')
+  return model
+}
+
+/** Sets the one paint material for a finish: a gloss paint has a clear coat over it; Matte Black has none,
+ * and scatters what light it gets; a metallic one takes its color into what it mirrors; a pearl has a soft
+ * sheen; a shifting or holographic one is mixed from the angle it is seen at (`moving`: the colors it moves
+ * through, set on the shader; how far it is mixed in is the caller's, since the studio fades it). */
+export function finishPaint(material: THREE.MeshPhysicalMaterial, shift: ReturnType<typeof paintOf>['shift'], color: string, moving: string[] | undefined, finish: Finish) {
+  const lit = LIT[finish]
+  material.clearcoat = lit.coat
+  material.clearcoatRoughness = lit.coatRough
+  material.roughness = lit.rough
+  material.metalness = lit.metal
+  material.iridescence = lit.pearl
+  if (moving) {
+    shift.uA.value = hex(moving[0] ?? color)
+    shift.uB.value = hex(moving[Math.floor(moving.length / 2)] ?? color)
+    shift.uC.value = hex(moving[moving.length - 1] ?? color)
+  }
 }
 
 /** A soft shadow where the chair meets the floor: a dark round that fades to nothing at its edge. */
@@ -153,26 +196,7 @@ export function makeStage(canvas: HTMLCanvasElement, settle: boolean, drawn: () 
   chairFile()
     .then((file) => {
       if (stopped) return
-      // (a copy: its parts are this stage's to paint and to let go of; what they are made of is shared with the file)
-      const model = file.clone(true)
-      const box = new THREE.Box3().setFromObject(model)
-      const tall = box.max.y - box.min.y
-      if (!(tall > 0)) throw new Error('an empty chair')
-      // Stood on the floor at the height the camera is set for, about its own origin (the gas lift's axis)
-      const fit = TALL / tall
-      model.scale.setScalar(fit)
-      model.position.y = -box.min.y * fit
-      let painted = 0
-      model.traverse((thing) => {
-        if (!(thing instanceof THREE.Mesh)) return
-        if ([thing.material].flat().some((m: THREE.Material) => m.name === 'Paint')) {
-          thing.material = material
-          painted++
-        }
-      })
-      // (a file with no Paint is not this chair: better the still than a chair in the wrong color)
-      if (!painted) throw new Error('no Paint in the chair')
-      table.add(model)
+      table.add(standChair(file, material))
       stood = true
       if (settling) settling.began = performance.now()
       ask()
@@ -225,21 +249,9 @@ export function makeStage(canvas: HTMLCanvasElement, settle: boolean, drawn: () 
   return {
     paint(color, moving, finish = 'gloss') {
       const to = hex(color)
-      // One paint material, in a setting for each finish: a gloss paint has a clear coat over it; Matte Black
-      // has none, and scatters what light it gets; a metallic one takes its color into what it mirrors; a
-      // pearl has a soft sheen; a shifting or holographic one is mixed from the angle it is seen at (below)
-      const lit = LIT[finish]
-      material.clearcoat = lit.coat
-      material.clearcoatRoughness = lit.coatRough
-      material.roughness = lit.rough
-      material.metalness = lit.metal
-      material.iridescence = lit.pearl
+      // One paint material, in a setting for each finish
+      finishPaint(material, shift, color, moving, finish)
       const toShift = moving ? 1 : 0
-      if (moving) {
-        shift.uA.value = hex(moving[0] ?? color)
-        shift.uB.value = hex(moving[Math.floor(moving.length / 2)] ?? color)
-        shift.uC.value = hex(moving[moving.length - 1] ?? color)
-      }
       if (first) {
         // The first paint is simply the paint: there is nothing to fade from
         first = false

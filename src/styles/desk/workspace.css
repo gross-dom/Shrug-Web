@@ -165,13 +165,8 @@
   font-weight: 700;
   line-height: 0.98;
   letter-spacing: -0.045em;
-}
-
-.fl-head p {
-  margin-top: 12px;
-  font-size: 15px;
-  line-height: 1.4;
-  opacity: 0.8;
+  /* (two lines of much the same length: "Your new" over "daily driver") */
+  text-wrap: balance;
 }
 
 .fl-slabs {
@@ -179,7 +174,7 @@
   flex: 1;
   gap: 8px;
   min-width: 0;
-  padding: 182px 20px 20px;
+  padding: 150px 20px 20px;
   transition: padding 0.4s cubic-bezier(0.22, 1, 0.36, 1), gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -221,11 +216,37 @@
   font-size: 11.5px;
 }
 
-.fl-slab svg.ch {
+/* The chair on the slab under the pointer: the chair the studio turns, in that color (workspace/Still.tsx).
+   It stands on a slab of its own paint, so a soft light is put behind it, as the studio puts one behind the
+   chair, and its own shadow under it: a white chair is then still a chair on a white slab. */
+.fl-slab .ch {
   position: absolute;
-  bottom: 92px;
+  bottom: 84px;
   left: 50%;
+  max-width: none;
   transform: translateX(-50%);
+  filter: drop-shadow(0 10px 18px rgb(0 0 0 / 0.2));
+  pointer-events: none;
+  animation: fl-ch 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.fl-slab.big::before {
+  content: '';
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  width: 250px;
+  height: 290px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.24), rgb(255 255 255 / 0));
+  pointer-events: none;
+}
+
+@keyframes fl-ch {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
 }
 
 /* The sixteen more: a slab of all of them at once, four by four */
@@ -819,6 +840,10 @@
   .st-table .st-still {
     transition: none;
   }
+
+  .fl-slab .ch {
+    animation: none;
+  }
 }
 
 /* ---- Notable Owners */
@@ -873,11 +898,11 @@
   font-size: 14px;
 }
 
-.ow-card svg {
+.ow-card img {
   position: absolute;
   right: -6px;
   bottom: -14px;
-  opacity: 0.96;
+  filter: drop-shadow(0 6px 12px rgb(0 0 0 / 0.18));
 }
 
 /* ---- BTS: how a chair is made, as a wall of pictures and films. Columns of tiles of different heights,

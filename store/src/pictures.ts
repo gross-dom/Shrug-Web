@@ -21,8 +21,11 @@ export interface Shot {
   aspect?: number
   /** Where its subject is, for a tile that shows only part of it (the display crops to 4:5). */
   at?: string
-  /** It is not a photograph: the thing as the site draws it, standing where a photograph will go. */
+  /** It is not a photograph: a picture made of the thing from its model. */
   drawn?: boolean
+  /** It was made to fill whatever shows it: its subject is in its middle with room all round, so a place of
+   * another shape shows the middle of it, edge to edge, where a photograph is shown whole. */
+  fills?: boolean
 }
 
 // (the desktop's own windows read these too, for a shelf of covers: from there the store's pages are at /vip/store/)
@@ -52,30 +55,34 @@ const set = (slug: string, at: Record<number, string> = {}): Shot[] =>
     }
   })
 
-/** A chair color with no photograph yet: the chair as Workspace draws it, in that color, on its ground
- * (`node tools/chair-shots.cjs` takes them from the studio itself). It says of itself that it is drawn, so
- * that nothing calls it a photograph, and Workspace, which has the chair itself to show, leaves it out. */
-const drawn = (color: string): Shot[] => {
-  const at1 = `${BASE}pictures/workspace-${color}-drawn`
-  return [{ full: `${at1}.webp`, small: `${at1}-s.webp`, set: `${at1}-s.webp 760w, ${at1}.webp 1800w`, aspect: 1, drawn: true }]
-}
+/** The chair in a color, as a product picture: Dom's model of it in that color's paint, stood in a white
+ * studio and taken from behind at a three-quarter (where the color is) and from in front
+ * (`node tools/chair-mockups.cjs` makes them). Every color has these, and they come first, so that the page a
+ * chair is bought on always opens on a proper picture of the product, the same for each of them; a color's
+ * photographs, where it has them, follow. Each says of itself that it is not a photograph, and Workspace,
+ * which has the chair itself to turn, leaves them out of its strip. */
+const mock = (color: string): Shot[] =>
+  [1, 2].map((n) => {
+    const at1 = `${BASE}pictures/workspace-${color}-mock-${n}`
+    return { full: `${at1}.webp`, small: `${at1}-s.webp`, set: `${at1}-s.webp 760w, ${at1}.webp 1800w`, aspect: 1, drawn: true, fills: true }
+  })
 
 /** By name, in small letters. The chair goes by its old names too, in case a row in Airtable still has one. */
 const KEPT: Record<string, Shot[]> = {
   chromatic: set('chromatic'),
-  'workspace, matte black': set('workspace-matte-black'),
-  'workspace chair': set('workspace-matte-black'),
-  'workspace, ferrari red': set('workspace-ferrari-red'),
-  'workspace chair, ferrari red': set('workspace-ferrari-red'),
-  'workspace, scuderia red': set('workspace-ferrari-red'),
-  'workspace, solar orange': drawn('solar-orange'),
-  'workspace, alexandrite': drawn('alexandrite'),
-  'workspace, illusion blue': drawn('illusion-blue'),
-  'workspace, supersonic': drawn('supersonic'),
-  'workspace, pearl lavender': drawn('pearl-lavender'),
-  'workspace, mantis green': drawn('mantis-green'),
+  'workspace, matte black': [...mock('matte-black'), ...set('workspace-matte-black')],
+  'workspace chair': [...mock('matte-black'), ...set('workspace-matte-black')],
+  'workspace, ferrari red': [...mock('scuderia-red'), ...set('workspace-ferrari-red')],
+  'workspace chair, ferrari red': [...mock('scuderia-red'), ...set('workspace-ferrari-red')],
+  'workspace, scuderia red': [...mock('scuderia-red'), ...set('workspace-ferrari-red')],
+  'workspace, solar orange': mock('solar-orange'),
+  'workspace, alexandrite': mock('alexandrite'),
+  'workspace, illusion blue': mock('illusion-blue'),
+  'workspace, supersonic': mock('supersonic'),
+  'workspace, pearl lavender': mock('pearl-lavender'),
+  'workspace, mantis green': mock('mantis-green'),
   // (and each of the sixteen more)
-  ...Object.fromEntries(MORE_COLORS.map((color) => [`workspace, ${color.name.toLowerCase()}`, drawn(color.id)])),
+  ...Object.fromEntries(MORE_COLORS.map((color) => [`workspace, ${color.name.toLowerCase()}`, mock(color.id)])),
   'art on acrylic': set('art-on-acrylic'),
   // (the six pieces have no photographs of their own yet: the first two stand under the ones there are)
   'art no. 1': set('art-on-acrylic').slice(0, 2),
@@ -106,6 +113,8 @@ export function tileSizes(shot: Shot): string | undefined {
 /** And on a product's own screen, where it is shown whole in a tile that is most of the window. */
 export function wholeSizes(shot: Shot): string | undefined {
   if (!shot.set || !shot.aspect) return undefined
+  // (one that fills its tile is as wide as the tile, or wider where the tile is taller than it)
+  if (shot.fills) return '(max-width: 739px) max(calc(100vw - 40px), 46vh), max(58vw, calc(100vh - 200px))'
   const a = shot.aspect.toFixed(3)
   return `(max-width: 739px) min(calc(100vw - 40px), calc(46vh * ${a})), min(58vw, calc((100vh - 200px) * ${a}))`
 }

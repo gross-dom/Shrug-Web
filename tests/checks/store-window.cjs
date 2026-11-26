@@ -181,7 +181,7 @@ const check = (name, ok, detail = '') => {
   check('its card, pressed, is the card’s own page: their card at once, with no strip to tear and nothing to skip, and the doors are put away while it is up', at.path === '/vip/' && onCard.view === 'card' && !onCard.rip && !onCard.skip && onCard.fields === 0 && doorsNow === 0, JSON.stringify({ at, onCard, doorsNow }))
   check('the card fits its window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
   const go = (await v.locator('a.go').innerText()).trim()
-  check('and the way on from it is back into My VIP (not a store)', go === 'Go to My VIP', go)
+  check('and the way on from it is back into My VIP (not a store)', go === 'Back to My VIP', go)
   await v.locator('a.go').click()
   await v.locator('.mc').first().waitFor({ timeout: 20000 })
   await p.waitForTimeout(600)

@@ -479,8 +479,8 @@ const check = (name, ok, detail = '') => {
   b = await pb(p)
   const shot = await p.evaluate(() => { const img = document.querySelector('.pb-photo'); return { jpeg: img.src.startsWith('data:image/jpeg'), w: img.naturalWidth } })
   check('then the photo, to look at: Retake, Post to the Wall, and Share (not Save)', b.stage === 'review' && b.ctl === 'Retake | Post to the Wall | Share this photo' && shot.jpeg && shot.w > 300, JSON.stringify({ b, shot }))
-  const says = await p.evaluate(() => document.querySelector('.wf[data-app="photobooth"] .pb-line')?.textContent ?? null)
-  check('and what posting does is said under it, in Dom’s words', says === 'Posting shares this photo and your name with everyone.', String(says))
+  const postingSays = await p.evaluate(() => document.querySelector('.wf[data-app="photobooth"] .pb-line')?.textContent ?? null)
+  check('and what posting does is said under it, in Dom’s words', postingSays === 'Posting shares this photo and your name with everyone.', String(postingSays))
   // Share hands the photo on: to the system's own share sheet where there is one (stood in for here, since a
   // browser with no screen has none to show), and otherwise to the clipboard, or failing both to a file
   await p.evaluate(() => { window.__shared = null; navigator.canShare = () => true; navigator.share = async (data) => { window.__shared = { name: data.files?.[0]?.name, type: data.files?.[0]?.type, size: data.files?.[0]?.size } } })

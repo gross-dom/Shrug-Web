@@ -86,7 +86,7 @@ function DemoPay({ backend, product, option, points, cents, shipTo, needsAddress
     <>
       {needsAddress && address}
       <button type="button" className={`ui-btn${waiting ? ' off' : ''}`} data-busy={busy || undefined} disabled={busy || waiting} onClick={pay}>
-        {waiting ? 'Add where to send it' : `Pay ${fmtCents(cents)}`}
+        {waiting ? 'Confirm Address' : `Pay ${fmtCents(cents)}`}
       </button>
       <Others onOptions={onOptions} off={busy} />
     </>
@@ -229,7 +229,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
         {card && needsAddress && address}
         <div ref={cardBox} />
         <button type="button" className={`ui-btn${waiting ? ' off' : ''}`} data-busy={busy || undefined} disabled={busy || waiting || ready !== 'ready'} onClick={payByCard}>
-          {waiting ? 'Add where to send it' : `Pay ${fmtCents(cents)}`}
+          {waiting ? 'Confirm Address' : `Pay ${fmtCents(cents)}`}
         </button>
         {wallet && <Others onOptions={onOptions} off={busy} />}
       </div>

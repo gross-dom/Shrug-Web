@@ -49,10 +49,10 @@ interface Chosen {
 const chosenOf = (paint: Paint): Chosen => ({ id: paint.id, name: paint.name, color: paint.color, shift: paint.shift, paint })
 /** What a slab, a dot or the cove is painted with: the color, or for a shifting paint the colors it moves through. */
 const ground = (c: { color: string; shift?: string[] }) => (c.shift ? `linear-gradient(135deg, ${c.shift.join(', ')})` : c.color)
-const stockOf = (paint: Paint) => (paint.shift ? 'Color-shifting' : paint.stock === 'now' ? 'Available now' : 'Made to order')
-/** How a chair in a color is to be had, as the studio says it on the color's tag: every color can be bought; one that is not in stock is made, and takes its weeks. */
-const leadOf = (paint: Paint) => (paint.stock === 'now' ? 'Available now' : 'Made to order · 2–3 weeks')
-const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
+/** How a chair in a color is to be had, as its slab says it: the eight the studio opens on are in stock. */
+const stockOf = (paint: Paint) => (paint.stock === 'now' ? 'Available now' : 'Made to Order')
+/** And as the studio says it on the color's tag: every color can be bought; one that is not in stock (the sixteen more) is made, and takes its weeks. */
+const leadOf = (paint: Paint) => (paint.stock === 'now' ? 'Available now' : 'Made to Order · 2–3 weeks')
 /** A visitor never reads a note written for Shrug: what is still templated is the demo's and the editor's. */
 const real = (text: string) => !text.startsWith('[')
 const OWNERS_SHOWN = TEMPLATED ? OWNERS : OWNERS.filter((owner) => real(owner.name))
@@ -238,12 +238,7 @@ export function WorkspaceApp() {
       {view === 'first' && (
         <div className="wx-first" data-flood={flood ? '' : undefined}>
           <div className="fl-head">
-            <h1>
-              One chair.
-              <br />
-              {COUNT[PAINTS.length] ?? PAINTS.length} colors.
-            </h1>
-            <p>Pick one and the studio changes with you.</p>
+            <h1>Your new daily driver</h1>
           </div>
           <div className="fl-slabs" role="group" aria-label="Colors">
             {PAINTS.map(chosenOf).map((c) => {
@@ -260,21 +255,21 @@ export function WorkspaceApp() {
                   onBlur={() => setHover(null)}
                   onClick={() => enter(c)}
                 >
-                  {big && <ChairStill className="ch" paint={c.color} shift={c.shift} width={150} />}
+                  {big && <ChairStill className="ch" paint={c.id} width={168} />}
                   <b>{c.name}</b>
                   <small>{stockOf(c.paint)}</small>
                 </button>
               )
             })}
-            {/* The sixteen more: a slab of all of them at once, which lets the grid down */}
+            {/* The sixteen more, each painted to order: a slab of all of them at once, which lets the grid down */}
             <button type="button" className="fl-slab eight more" aria-haspopup="dialog" onClick={() => setMore(true)}>
               <span className="fl-mosaic" aria-hidden>
                 {MORE.map((paint) => (
                   <i key={paint.id} style={{ background: paint.color }} />
                 ))}
               </span>
-              <b>{MORE.length} more colors</b>
-              <small>Made to order</small>
+              <b>Custom Coloring</b>
+              <small>Made to Order</small>
             </button>
           </div>
         </div>
@@ -285,7 +280,7 @@ export function WorkspaceApp() {
           <span className="st-floor" aria-hidden />
           <Word name={chosen.name} />
           <div className="st-stage" data-shot={shot !== null || undefined}>
-            <Turntable color={chosen.color} shift={chosen.shift} finish={chosen.paint.finish} name={chosen.name} live={shown && shot === null} />
+            <Turntable id={chosen.id} color={chosen.color} shift={chosen.shift} finish={chosen.paint.finish} name={chosen.name} live={shown && shot === null} />
           </div>
           {/* A photograph picked fills the window, under a shade the controls can still be read on. One too
               narrow to fill it is set whole, on a blur of itself */}
@@ -396,7 +391,7 @@ export function WorkspaceApp() {
                     <b>{owner.name}</b>
                     {owner.of} · {paint.name}
                   </footer>
-                  <ChairStill paint={paint.color} shift={paint.shift} width={120} />
+                  <ChairStill paint={paint.id} width={120} />
                 </article>
               )
             })}
@@ -562,7 +557,7 @@ function Word({ name }: { name: string }) {
   )
 }
 
-function Turntable({ color, shift, finish, name, live }: { color: string; shift?: string[]; finish: Finish; name: string; live: boolean }) {
+function Turntable({ id, color, shift, finish, name, live }: { id: string; color: string; shift?: string[]; finish: Finish; name: string; live: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const stage = useRef<Stage | null>(null)
@@ -664,7 +659,7 @@ function Turntable({ color, shift, finish, name, live }: { color: string; shift?
         onPointerDown={onDown}
         onKeyDown={onKey}
       >
-        <ChairStill className="st-still" paint={color} shift={shift} width={300} />
+        <ChairStill className="st-still" paint={id} width={300} />
         <canvas ref={canvas} aria-hidden />
       </div>
       {drawn && (
