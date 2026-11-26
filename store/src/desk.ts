@@ -24,8 +24,6 @@ export interface Desk {
   at(place: { section: 'store' | 'yours'; product: string | null }, room: Room): void
   /** Opens another of the desk's windows: My VIP from a receipt in a store, a store from My VIP. */
   open(room: Room): void
-  /** The pack has been opened (the card's page says so): that, and not its hanging there, is what the desk remembers. */
-  opened?(): void
 }
 
 /** What the store leaves for the desk to ask of it. */

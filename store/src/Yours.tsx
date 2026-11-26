@@ -11,9 +11,15 @@ import { editionOf, shipsOf } from './words'
 // it goes to the card page), their account at a glance (what kind of member they are, their balance, how
 // long they have been one, what they have bought and which funds they are in: a word and a figure each,
 // and no more), then the history behind each: purchases and where each stands; apart from those, what they
-// have only asked for or had kept for them; investments; the points that have been awarded and spent; how
-// points work; and the cards at the side: where things are sent, emails, and whose account this is.
+// have only asked for or had kept for them; investments; the points that have been awarded and spent; and
+// the cards at the side: where things are sent, emails, whose account this is, and where to write for help.
+// What points are is said in one line, where the balance is (under the pointer, or the keyboard on it).
 // Everything here is what the server says of them: nothing is worked out that it does not know.
+
+/** What points are, in the one line there is of it for now (Dom, 26 Nov). */
+const POINTS_EXPLAINED = 'Earn points and use them across the Shrug VIP experience.'
+/** Where a member writes for help (Dom, 26 Nov). */
+const SUPPORT = 'support@vip.labs'
 
 const WHEN = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const when = (iso: string) => (Number.isFinite(Date.parse(iso)) ? WHEN.format(Date.parse(iso)) : '')
@@ -122,11 +128,16 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
         <dt>Card</dt>
         <dd>{Stock}</dd>
       </div>
-      <div>
+      {/* What points are, said where the balance is: under the pointer, and to the keyboard and a reader
+          (Dom, 26 Nov: this is all that is said of it for now, and it is said here and not in a section) */}
+      <div className="ui-explains" tabIndex={0} aria-describedby="points-explained">
         <dt>Balance</dt>
         <dd>
           <Points n={me.points} size={18} />
         </dd>
+        <span className="ui-explain" id="points-explained" role="tooltip">
+          {POINTS_EXPLAINED}
+        </span>
       </div>
       <div>
         <dt>Member since</dt>
@@ -170,11 +181,11 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
   // What has been bought, and then, under a heading of its own, what has only been asked for or kept
   const orders = (
     <>
-      <h2 className="ui-sect">Purchase history</h2>
+      <h2 className="ui-sect ui-part">Purchase history</h2>
       {purchases.length > 0 ? rows(purchases) : <p className="ui-none">Nothing yet. What you buy in ArtStore, Books or Workspace is kept here.</p>}
       {asks.length > 0 && (
         <>
-          <h2 className="ui-sect">Requests and reservations</h2>
+          <h2 className="ui-sect ui-part">Requests and reservations</h2>
           {rows(asks)}
         </>
       )}
@@ -182,7 +193,7 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
   )
   const funds = me.funds.length > 0 && (
     <>
-      <h2 className="ui-sect">Investment history</h2>
+      <h2 className="ui-sect ui-part">Investment history</h2>
       <ol className="ui-list">
         {me.funds.map((fund) => (
           <li key={fund} className="ui-row ui-pts">
@@ -198,10 +209,13 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
   )
   const points = (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      <div className="ui-part" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <h2 className="ui-sect">Points</h2>
-        <span className="t-sm t-2 pts-sum">
+        <span className="t-sm t-2 pts-sum ui-explains" tabIndex={0} aria-describedby="points-explained-2">
           Balance <Points n={me.points} size={13} />
+          <span className="ui-explain end" id="points-explained-2" role="tooltip">
+            {POINTS_EXPLAINED}
+          </span>
         </span>
       </div>
       <ol className="ui-list">
@@ -241,14 +255,19 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
       </ol>
     </>
   )
-  // How points work, said in one line for now (Dom's fourth round: the details come later)
-  const how = (
-    <>
-      <h2 className="ui-sect">How points work</h2>
-      <div className="ui-card">
-        <p className="t-sm t-2">Earn points and use them across the Shrug VIP experience. More details soon!</p>
+  // Where to write for help: it opens a message to Shrug in their own mail
+  const help = (
+    <div className="ui-card" style={phone ? { marginTop: 14 } : undefined}>
+      <div className="ui-split" style={{ alignItems: 'center' }}>
+        <div>
+          <span className="t-sm t-2">Need help?</span>
+          <p>We’ll write back.</p>
+        </div>
+        <a className="ui-btn sec sm" href={`mailto:${SUPPORT}`}>
+          Contact Support
+        </a>
       </div>
-    </>
+    </div>
   )
   const emailsCard = (
     <div className="ui-card" style={phone ? { marginTop: 14 } : undefined}>
@@ -332,10 +351,10 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
         {orders}
         {funds}
         {points}
-        {how}
         <Address shop={shop} backend={backend} onChange={onChange} style={{ marginTop: 14 }} />
         {emailsCard}
         {account}
+        {help}
       </main>
     )
 
@@ -355,12 +374,12 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
         {orders}
         {funds}
         {points}
-        {how}
       </div>
       <aside className="ui-side" style={{ paddingTop: DESK ? 6 : 58 }}>
         <Address shop={shop} backend={backend} onChange={onChange} />
         {emailsCard}
         {account}
+        {help}
       </aside>
     </main>
   )

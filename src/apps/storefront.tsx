@@ -12,8 +12,8 @@ import { focusApp } from '../os/wm'
 //
 // There is one store (store/): one catalogue, one checkout, one address on file, one balance of points. On
 // the desk it is sold from three places, each with its own things and nothing of the others': art in
-// ArtStore, books in Books, chairs in Workspace. What is a member's (their card, the pack it comes in, their
-// points, orders and address) is in a fourth, My VIP. Each of those windows shows the store's pages for its
+// ArtStore, books in Books, chairs in Workspace. What is a member's (their card, their points, orders and
+// address) is in a fourth, My VIP. Each of those windows shows the store's pages for its
 // own room (`?k=art`, `books`, `chairs`, `yours`), in a frame, so that buying is the same everywhere and
 // nothing about it is written twice. The pages are served by this site, at /vip/store/, which is what lets
 // one login do for all of them.
@@ -22,8 +22,6 @@ import { focusApp } from '../os/wm'
 // own window for every frame to ask of; each frame says which room it is when it speaks.
 
 export const CARD = '/vip/'
-/** The card's page, asked to hang a pack for whoever is logged in: it shows no card it kept from before (store/card/index.html, boot). */
-export const PACK = '/vip/?pack'
 export const SHELVES = '/vip/store/'
 export type Place = { section: 'store' | 'yours'; product: string | null }
 export type { Room }
@@ -37,8 +35,6 @@ export const addressOf = (room: Room, product?: string | null) => `${SHELVES}?k=
 // ---- What the desk leaves for the pages in a frame to ask of it
 
 const rooms: Partial<Record<Room, { at: (place: Place) => void; reload: () => void }>> = {}
-/** What My VIP does when the card's page says the pack has been opened. */
-export const packs: { opened: (() => void) | null } = { opened: null }
 const desk: Desk = {
   logIn: (why) => askLogIn(why === 'request' ? 'request' : why === 'price' ? 'price' : null),
   // Points were spent in one room, or someone logged out there: the desk's own figures are asked for again,
@@ -50,26 +46,25 @@ const desk: Desk = {
   },
   at: (place, room) => rooms[room]?.at(place),
   open: (room) => launchApp(APP_OF[room]),
-  opened: () => packs.opened?.(),
 }
 if (typeof window !== 'undefined') (window as Window & { shrugDesk?: Desk }).shrugDesk = desk
 
 export interface FrameHandle {
   /** Shows a product of this room, or its front. */
   go(product: string | null): void
-  /** Takes the frame to another page altogether (the pack, and back from it). */
+  /** Takes the frame to another page altogether (back from the card's page to My VIP's). */
   to(src: string): void
   /** Has the pages drawn in a color (Workspace's: a chair's own). */
   tint(color: string | null): void
 }
 
 /** A room's pages, in a frame that fills what it is put in. The window it is in is told where the pages are
- * (`onAt`: a product, or the front) and which page the frame has come to (`onPage`: the pack's, or the store's). */
-export const StoreFrame = forwardRef<FrameHandle, { room: Room; title: string; first?: string; onAt?: (place: Place) => void; onPage?: (page: 'pack' | 'store') => void }>(function StoreFrame({ room, title, first, onAt, onPage }, handle) {
+ * (`onAt`: a product, or the front) and which page the frame has come to (`onPage`: the card's, or the store's). */
+export const StoreFrame = forwardRef<FrameHandle, { room: Room; title: string; first?: string; onAt?: (place: Place) => void; onPage?: (page: 'card' | 'store') => void }>(function StoreFrame({ room, title, first, onAt, onPage }, handle) {
   const frame = useRef<HTMLIFrameElement>(null)
   const who = useStore(account, (s) => (s.status === 'member' ? s.email : s.status === 'anon' ? '' : null))
   const [src] = useState(() => first ?? addressOf(room))
-  const page = useRef<'pack' | 'store'>('store')
+  const page = useRef<'card' | 'store'>('store')
   const heard = useRef({ onAt, onPage })
   heard.current = { onAt, onPage }
 
@@ -112,7 +107,7 @@ export const StoreFrame = forwardRef<FrameHandle, { room: Room; title: string; f
     } catch {
       return
     }
-    page.current = path.startsWith(SHELVES) ? 'store' : 'pack'
+    page.current = path.startsWith(SHELVES) ? 'store' : 'card'
     heard.current.onPage?.(page.current)
     const stir = () => window.dispatchEvent(new Event('wheel'))
     within.addEventListener('pointerdown', () => (focusApp(APP_OF[room]), stir()), true)

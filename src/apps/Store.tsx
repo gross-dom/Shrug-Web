@@ -8,7 +8,7 @@ import { Balance, StoreFrame, type FrameHandle } from './storefront'
 //
 // It sells the art, and only the art: six pieces, each in an edition of fifty. What is in the window is the
 // store already written (store/), its own pages in a frame (storefront.tsx), on the art's shelf. Books are
-// sold in Books and chairs in Workspace, and what is a member's (the pack, their card, points, orders and
+// sold in Books and chairs in Workspace, and what is a member's (their card, points, orders and
 // address) is in My VIP: nothing of those is here, so the window opens straight on the art.
 //
 // What the window adds is its bar, where a Mac app keeps such things: one row with the traffic lights, the

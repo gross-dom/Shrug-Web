@@ -6,37 +6,21 @@ import { AppIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
-import { addressOf, PACK, packs, StoreFrame, type FrameHandle } from './storefront'
+import { addressOf, StoreFrame, type FrameHandle } from './storefront'
 
 // My VIP: what is a member's, in a window of its own.
 //
-// Their pack is opened here (the first time someone logged in comes to it, in this browser), and their card
-// is under it. After that it is where their points are and when they arrived, what they have ordered from
-// any of the three stores and where each order stands, and the address things are sent to, which every
-// store's checkout reads so that it is typed once. (Later: what they have done, ways to earn more, people
-// they have brought.) The stores themselves are not in it: ArtStore, Books and Workspace are their own
-// windows, each opening straight on what it sells, and the three doors along the head of this one lead to them.
+// Their card, their points and when they arrived, what they have ordered from any of the three stores and
+// where each order stands, and the address things are sent to, which every store's checkout reads so that
+// it is typed once. (Later: what they have done, ways to earn more, people they have brought.) The stores
+// themselves are not in it: ArtStore, Books and Workspace are their own windows, each opening straight on
+// what it sells, and the three doors along the head of this one lead to them.
 //
-// What is in the window is the store's own pages (store/): the card's page for the pack, and My VIP's page
-// for the rest (storefront.tsx). A visitor is shown the doors, and asked to log in for what is theirs.
-
-// ---- The pack is opened once to a browser, for each person who logs in on it
-
-const packKey = (email: string) => `shrug:pack:${email.toLowerCase()}`
-function packDue(email: string) {
-  try {
-    return window.localStorage.getItem(packKey(email)) === null
-  } catch {
-    return false
-  }
-}
-function packShown(email: string) {
-  try {
-    window.localStorage.setItem(packKey(email), String(Date.now()))
-  } catch {
-    // No storage: it plays again next time, which is no harm
-  }
-}
+// What is in the window is the store's own pages (store/): My VIP's page, and the card's page when the card
+// on it is pressed (storefront.tsx). A visitor is shown the doors, and asked to log in for what is theirs.
+//
+// (A member's card used to come in a pack, torn open here the first time they came. Dom took the pack
+// opening out of the product on 26 Nov: the window opens on My VIP's page, for everyone.)
 
 /** The three stores, as My VIP leads to them. */
 const DOORS: { app: AppId; says: string }[] = [
@@ -49,49 +33,27 @@ export function MyVipApp() {
   const open = useStore(wm, (s) => s.wins.myvip.open)
   // The frame is made when the window is first opened, and kept: closing the window does not lose their place
   const [made, setMade] = useState(false)
-  // Where the frame begins is decided when the window is first opened, by who is logged in then (someone
-  // whose account was made a moment ago, at a checkout, has a pack to open): the pack, for someone logged in
-  // who has not had it in this browser; otherwise My VIP
-  const [first, setFirst] = useState(() => addressOf('yours'))
   useEffect(() => {
-    if (!open || made) return
-    const now = account.get()
-    // (a pack has its owner's name in its window: someone who has not said what they are called yet is asked
-    // first, below, and their pack hangs once they have)
-    setFirst(now.status === 'member' && now.name.trim() && packDue(now.email) ? PACK : addressOf('yours'))
-    setMade(true)
+    if (open && !made) setMade(true)
   }, [open, made])
-  // A pack is had once it has been opened, and not before: one left hanging through a reload is still there
-  // to tear (the card's page says when it is opened: storefront.tsx)
-  useEffect(() => {
-    packs.opened = () => {
-      const me = account.get()
-      if (me.status === 'member') packShown(me.email)
-    }
-    return () => {
-      packs.opened = null
-    }
-  }, [])
   const frame = useRef<FrameHandle>(null)
-  /** Who is logged in, and whether they have said what they are called: a change in either is looked at below. */
-  const who = useStore(account, (s) => (s.status === 'member' ? `${s.email}|${s.name.trim() ? 'named' : ''}` : s.status === 'anon' ? '' : null))
-  const [page, setPage] = useState<'pack' | 'store'>('store')
+  /** Who is logged in: a change is looked at below. */
+  const who = useStore(account, (s) => (s.status === 'member' ? s.email : s.status === 'anon' ? '' : null))
+  const [page, setPage] = useState<'card' | 'store'>('store')
 
-  // Someone who has just logged in (and said what they are called), with My VIP's own page showing, gets
-  // their pack; someone who logs out while the pack is showing is taken off it
+  // Someone who logs out while their card's page is showing is taken off it, back to My VIP's own page
+  // (which asks a visitor to log in)
   const was = useRef(who)
   useEffect(() => {
     if (who === null || was.current === who) return
     const before = was.current
     was.current = who
     if (before === null || !made) return
-    const now = account.get()
-    if (now.status === 'member' && now.name.trim() && packDue(now.email) && page === 'store') frame.current?.to(PACK)
-    else if (now.status !== 'member' && page === 'pack') frame.current?.to(addressOf('yours'))
+    if (account.get().status !== 'member' && page === 'card') frame.current?.to(addressOf('yours'))
   }, [who, made, page])
 
   // A card has a name on it: someone logged in who has not yet said what they are called is asked, as My VIP
-  // opens, before their pack or their card is anything to look at
+  // opens, before their card is anything to look at
   const nameless = useStore(account, (s) => s.status === 'member' && !s.name.trim())
   useEffect(() => {
     if (open && nameless) askLogIn('name')
@@ -106,7 +68,7 @@ export function MyVipApp() {
   )
   return (
     <Window className="app storewin myvip" lightsSize="large" lead={bar} body={{ className: 'storewin__body myvip__body' }}>
-      {/* The ways in to the three stores: once the pack is opened, and for anyone who has no pack to open */}
+      {/* The ways in to the three stores, over My VIP's own page (and not over the card's) */}
       {page === 'store' && (
         <nav className="myvip__doors" aria-label="The stores">
           {DOORS.map(({ app, says }) => (
@@ -130,7 +92,6 @@ export function MyVipApp() {
           ref={frame}
           room="yours"
           title="My VIP"
-          first={first}
           onPage={setPage}
         />
       )}

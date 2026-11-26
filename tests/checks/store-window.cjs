@@ -84,15 +84,13 @@ const check = (name, ok, detail = '') => {
     await p.waitForTimeout(300)
     return rows
   }
-  /** The pack, in My VIP's frame: its strip is loose, and Return on it tears it. Then the card, and the way on. */
-  const tear = async (p) => {
+  /** My VIP's frame, on My VIP's own page: there is no pack to open any more (Dom, 26 Nov), so this is where
+   * it opens for anyone logged in. Says whether anything of a pack is in it. */
+  const home0 = async (p) => {
     const f = frameOf(p, 'myvip')
-    await f.locator('#ripBtn').waitFor({ timeout: 20000 })
-    await p.waitForTimeout(900)
-    await f.locator('#ripBtn').focus()
-    await p.keyboard.press('Enter')
-    await f.locator('#stage[data-view="card"]').waitFor({ timeout: 20000 })
-    await p.waitForTimeout(1200)
+    await f.locator('.mc').first().waitFor({ timeout: 20000 })
+    await p.waitForTimeout(600)
+    return f.locator('body').evaluate(() => ({ pack: !!document.querySelector('#stage, #pack, #ripBtn'), fields: document.querySelectorAll('#email, #code').length }))
   }
   const ADDRESS = 'Riley Chen\n1 Example St\nSan Francisco, CA 94110'
   /** Whether every way to pay is in sight in the column they are in: none of them under its foot, to be scrolled to. */
@@ -165,20 +163,25 @@ const check = (name, ok, detail = '') => {
   check('with nowhere on file to send it, the address is asked for once, and the button says what will be paid', pay === 'Pay $145', pay)
   check('bought: the receipt says it is theirs, which of the fifty, and what was paid; the balance in the bar has come down', /It’s yours\./.test(receipt) && /No\. \d+ of 50/.test(receipt) && /\$145/.test(receipt) && b.wallet === '0', JSON.stringify({ receipt: receipt.slice(0, 300), b }))
 
-  // ---- "View in My VIP" opens the other window, where their pack is waiting; then the card, and home
+  // ---- "View in My VIP" opens the other window, on what is theirs: there is no pack to open first
   await f.locator('a.ui-btn.sec', { hasText: 'My VIP' }).click()
   await p.waitForSelector(`${WIN('myvip')}[data-open] iframe.storewin__frame`, { timeout: 20000 })
   let v = frameOf(p, 'myvip')
-  await v.locator('#ripBtn').waitFor({ timeout: 20000 })
+  const straight = await home0(p)
   at = await inFrame(p, 'myvip')
   b = await bar(p, 'myvip')
-  const pack = await v.locator('body').evaluate(() => ({ view: document.querySelector('#stage').dataset.view, strip: document.querySelector('#ripBtn')?.textContent.trim(), fields: document.querySelectorAll('#email, #code').length }))
+  check('My VIP comes to the front on what is theirs, with no pack to open first: no strip, no email or code asked for, and the bar has its mark and nothing in its middle', (await front(p)) === 'myvip' && at.path === '/vip/store/' && at.search === '?k=yours' && !straight.pack && straight.fields === 0 && b.says === '', JSON.stringify({ at, straight, b }))
+  // The card on it, pressed, is the card's own page: their card, at once, with nothing to tear; and the way back
+  await v.locator('a.mc-link').click()
+  await v.locator('#stage[data-view="card"]').waitFor({ timeout: 20000 })
+  await p.waitForTimeout(1200)
+  at = await inFrame(p, 'myvip')
+  const onCard = await v.locator('body').evaluate(() => ({ view: document.querySelector('#stage').dataset.view, mode: document.querySelector('#stage').dataset.mode, rip: !!document.querySelector('#ripBtn'), skip: /skip to your card/i.test(document.body.innerText), fields: document.querySelectorAll('#email, #code').length }))
   const doorsNow = await p.locator(`${WIN('myvip')} .myvip__door`).count()
-  check('My VIP comes to the front with their pack: the strip is loose, no email or code is asked for, and the bar has its mark and nothing in its middle', (await front(p)) === 'myvip' && at.path === '/vip/' && pack.view === 'pack' && /Tear here/.test(pack.strip ?? '') && pack.fields === 0 && b.says === '' && doorsNow === 0, JSON.stringify({ at, pack, b, doorsNow }))
-  check('the pack fits its window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
-  await tear(p)
+  check('its card, pressed, is the card’s own page: their card at once, with no strip to tear and nothing to skip, and the doors are put away while it is up', at.path === '/vip/' && onCard.view === 'card' && !onCard.rip && !onCard.skip && onCard.fields === 0 && doorsNow === 0, JSON.stringify({ at, onCard, doorsNow }))
+  check('the card fits its window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
   const go = (await v.locator('a.go').innerText()).trim()
-  check('torn, their card, and the way on is into My VIP (not a store)', go === 'Go to My VIP', go)
+  check('and the way on from it is back into My VIP (not a store)', go === 'Go to My VIP', go)
   await v.locator('a.go').click()
   await v.locator('.mc').first().waitFor({ timeout: 20000 })
   await p.waitForTimeout(600)
@@ -190,7 +193,7 @@ const check = (name, ok, detail = '') => {
   check('…and how their points came: awarded, and when', /Points awarded \| Member since \d{4} \| \+100/.test(home), home.slice(home.indexOf('Points awarded') - 40, home.indexOf('Points awarded') + 80))
   const vip = await v.locator('body').evaluate(() => ({ how: [...document.querySelectorAll('.ui-how h3, .ui-how b, .ui-how dt')].map((x) => x.textContent.trim()).join(' | '), out: [...document.querySelectorAll('button, a')].filter((x) => /sign out|log out/i.test(x.textContent)).length, total: document.querySelector('.mc')?.textContent.replace(/\s+/g, ' ') ?? '' }))
   const mark = await p.evaluate((W) => ({ mark: document.querySelector(`${W} .storebar__name`).textContent.trim(), left: Math.round(document.querySelector(`${W} .storebar__name`).getBoundingClientRect().left - document.querySelector(W).getBoundingClientRect().left), wallet: document.querySelectorAll(`${W} .storebar__wallet`).length }), WIN('myvip'))
-  check('its name, My VIP, is at the window’s top left, set as ArtStore sets its own, with no balance beside it (the card has it); the page says how points work, in a line; the card says TOTAL POINTS; and Log Out is not in it', mark.mark === 'My VIP' && mark.left < 140 && mark.wallet === 0 && /How points work \| Earn points and use them across the Shrug VIP experience\. More details soon!/.test(home) && !/Spend/.test(home) && /TOTAL POINTS/i.test(vip.total) && vip.out === 0, JSON.stringify({ mark, vip: { out: vip.out, total: vip.total.slice(0, 120) }, how: home.slice(home.indexOf('How points work'), home.indexOf('How points work') + 110) }))
+  check('its name, My VIP, is at the window’s top left, set as ArtStore sets its own, with no balance beside it (the card has it); the page has no section on how points work (what they are is said under the pointer, on Balance); the card says TOTAL POINTS; and Log Out is not in it', mark.mark === 'My VIP' && mark.left < 140 && mark.wallet === 0 && !/How points work|More details soon/.test(home) && !/Spend/.test(home) && /TOTAL POINTS/i.test(vip.total) && vip.out === 0, JSON.stringify({ mark, vip: { out: vip.out, total: vip.total.slice(0, 120) }, how: home.slice(home.indexOf('How points work'), home.indexOf('How points work') + 110) }))
   check('three doors along its head lead into the stores', doors === 'ArtStore | Books | Workspace', doors)
   check('My VIP is not wider than its window', at.wide <= 0, JSON.stringify(at))
 
@@ -285,7 +288,7 @@ const check = (name, ok, detail = '') => {
   home = await words(v, 'body')
   check('the book is in My VIP\'s orders at once, beside the piece from ArtStore', /What is Shrug\?/.test(home) && /Art No\. 1/.test(home), home.slice(home.indexOf('Purchase history'), home.indexOf('Purchase history') + 260))
 
-  // ---- closed and opened again, and after a reload: the pack is not played twice
+  // ---- closed and opened again, and after a reload: it is where it was left
   await p.locator('.dock [data-dock-app="myvip"]').click()
   await p.waitForTimeout(500)
   await p.locator(`${WIN('myvip')} button[aria-label^="Close"]`).click()
@@ -302,7 +305,7 @@ const check = (name, ok, detail = '') => {
   v = frameOf(p, 'myvip')
   await v.locator('.mc').first().waitFor({ timeout: 20000 })
   at = await inFrame(p, 'myvip')
-  check('after a reload they are still logged in, and My VIP opens on what is theirs, not on the pack again', at.path === '/vip/store/' && (await p.locator('.menubar__login').innerText()).trim() !== 'Log In', JSON.stringify(at))
+  check('after a reload they are still logged in, and My VIP opens on what is theirs', at.path === '/vip/store/' && (await p.locator('.menubar__login').innerText()).trim() !== 'Log In', JSON.stringify(at))
   await t.ctx.close()
 
   // ================= My VIP, to a visitor, and to someone who logs in there
@@ -318,25 +321,19 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(500)
   check('its Log In lets down the desk\'s own sheet, with the keyboard in it', (await p.locator('.account').count()) === 1 && (await p.evaluate(() => document.activeElement?.type)) === 'email', '')
   await logInNew(p, 'sam@example.test', '4155550135', 'Sam Okafor')
-  await v.locator('#ripBtn').waitFor({ timeout: 20000 })
+  const samHome = await home0(p)
   at = await inFrame(p, 'myvip')
   b = await bar(p, 'myvip')
-  const printed = (await v.locator('.pk-engrave').first().textContent().catch(() => '')) ?? ''
-  check('logged in there, and named, the frame shows their pack, with their name on the card inside it', at.path === '/vip/' && at.search === '?pack' && b.says === '' && b.wallet === null && /Sam Okafor/i.test(printed), JSON.stringify({ at, b, printed }))
-  // the stores are clean of it: opened now, before the pack is torn, ArtStore is the six pieces
+  home = await words(v, 'body')
+  check('logged in there, and named, the frame shows what is theirs at once, with no pack before it: their card with their name on it, and nothing bought yet', at.path === '/vip/store/' && at.search === '?k=yours' && !samHome.pack && b.says === '' && b.wallet === null && /Balance \| 100/.test(home) && /SAM OKAFOR/i.test(home), JSON.stringify({ at, samHome, b, home: home.slice(0, 300) }))
+  // the stores are their own windows: opened now, ArtStore is the six pieces
   await openApp(p, 'store')
   f = frameOf(p, 'store')
   await f.locator('.ui-prod').first().waitFor({ timeout: 20000 })
   at = await inFrame(p, 'store')
-  check('a store opened before the pack is torn is the store, with their balance: the pack is My VIP\'s alone', at.path === '/vip/store/' && at.search === '?k=art' && (await bar(p, 'store')).wallet === '100' && (await f.locator('#stage').count()) === 0, JSON.stringify(at))
+  check('a store opened then is the store, with their balance', at.path === '/vip/store/' && at.search === '?k=art' && (await bar(p, 'store')).wallet === '100' && (await f.locator('#stage').count()) === 0, JSON.stringify(at))
   await p.locator(`.dock [data-dock-app="myvip"]`).click()
   await p.waitForTimeout(500)
-  await tear(p)
-  await v.locator('a.go').click()
-  await v.locator('.mc').first().waitFor({ timeout: 20000 })
-  await p.waitForTimeout(500)
-  home = await words(v, 'body')
-  check('torn and on: My VIP with nothing bought yet', /Balance \| 100/.test(home) && /SAM OKAFOR/i.test(home), home.slice(0, 300))
   await p.locator(`${WIN('myvip')} .myvip__door`, { hasText: 'ArtStore' }).click()
   await p.waitForTimeout(600)
   check('the door to ArtStore brings its window to the front', (await front(p)) === 'store', String(await front(p)))
@@ -480,12 +477,15 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(2500)
   v = frameOf(p, 'myvip')
   at = await inFrame(p, 'myvip')
-  const packNow = await v.locator('body').evaluate(() => ({ view: document.querySelector('#stage')?.dataset.view ?? null, name: document.body.innerText.replace(/\s+/g, ' ') }))
-  check('with the number added they are taken straight to My VIP, in front, where their pack is waiting: nothing more is said in the store first', (await front(p)) === 'myvip' && at.path === '/vip/' && packNow.view === 'pack', JSON.stringify({ front: await front(p), at, view: packNow.view }))
-  await tear(p)
-  const card = (await v.locator('body').innerText()).replace(/\s+/g, ' ')
-  check('their card has the name they gave at checkout, whole', /CASEY\s+MORGAN/i.test(card), card.slice(0, 200))
-  // a scroll down from the card goes on to the rest of My VIP
+  const visitorHome = await home0(p)
+  at = await inFrame(p, 'myvip')
+  home = await words(v, 'body')
+  check('with the number added they are taken straight to My VIP, in front, on what is theirs (no pack first): nothing more is said in the store first, and the order is there', (await front(p)) === 'myvip' && at.path === '/vip/store/' && at.search === '?k=yours' && !visitorHome.pack && /Art No\. 2/.test(home) && /Purchases \| 1/.test(home), JSON.stringify({ front: await front(p), at, visitorHome, home: home.slice(0, 400) }))
+  check('their card has the name they gave at checkout, whole', /CASEY\s+MORGAN/i.test(home), home.slice(0, 200))
+  // the card's own page, from the card: a scroll down from it goes back to the rest of My VIP
+  await v.locator('a.mc-link').click()
+  await v.locator('#stage[data-view="card"]').waitFor({ timeout: 20000 })
+  await p.waitForTimeout(1200)
   const box = await p.locator(`${WIN('myvip')} iframe`).boundingBox()
   await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   for (let i = 0; i < 4; i++) { await p.mouse.wheel(0, 60); await p.waitForTimeout(60) }

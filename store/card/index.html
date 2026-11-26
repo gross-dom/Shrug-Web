@@ -1126,7 +1126,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     <div class="bot-r" id="botR"><button class="linkbtn" type="button">Sign in</button></div>
   </footer>
 </div>
-<noscript><p class="noscript">This page needs JavaScript to open the pack. Turn it on and reload.</p></noscript>
+<noscript><p class="noscript">This page needs JavaScript to show your card. Turn it on and reload.</p></noscript>
 <script>
 /* A stand-in for the server, for the click-through demo only. It lives in the browser, sends no
    email and talks to nothing. `npm run demo` bundles it with the page; a deploy never includes it. */
@@ -1286,9 +1286,15 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
 </script>
 <script>
 /* Shrug · Apply / Redeem
-   One page, one object. The pack hangs on a peg; its tear strip is the button, then the email
-   field, then the six cells of the code. The right code loosens the strip, the visitor swipes
-   along it to rip the top off the pack, and the card comes out. */
+   One page, one object. The pack hangs on a peg; its strip is the button, then the email
+   field, then the six cells of the code. The right code and their card is there.
+
+   THE PACK IS NOT OPENED ANY MORE. It used to be: the right code loosened the strip, the visitor
+   swiped along it to rip the top off the pack, and the card came out. Dom took the pack opening
+   out of the product on 26 Nov. Whoever is signed in is shown their card at once (armTear, which
+   everything that used to lead to the tear still calls), and nothing arms the strip: the tear,
+   the rip and the opening below it (stripTear, the rip, finishOpen, skipTear, the 'armed' footer)
+   are no longer reached, and are kept only until this page's sign-in is redrawn without a pack. */
 (() => {
   'use strict';
 
@@ -1387,10 +1393,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     }
   }
 
-  // The desk this page is in a window of, when it is one (the desktop's VIP Store window opens the pack here
-  // the first time someone logged in comes to the store). It is this page's own site. Nobody signs in here
-  // then: the desk has done that, so the pack hangs with its strip loose and the tear is theirs. The desk is
-  // told when someone signs out.
+  // The desk this page is in a window of, when it is one (My VIP's window, when the card on its page is
+  // pressed). It is this page's own site. Nobody signs in here then: the desk has done that, and their card
+  // is simply shown. The desk is told when someone signs out.
   const DESK = (() => { try { const up = window.parent; return up !== window && up.shrugDesk ? up.shrugDesk : null; } catch (e) { return null; } })();
   if (DESK) document.documentElement.classList.add('in-desk');
   // In My VIP's window the card is the head of a longer page (their points, orders and address are under
@@ -3405,7 +3410,27 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     fitIn(words, words.parentNode, 7);
   }
 
-  function armTear(who, why, later) {
+  /** They are signed in: their card, at once (or, sent here by the store, back to the store). There is no
+   * pack to open any more (see the head of this script): everything that used to loosen the strip comes here. */
+  function armTear(who) {
+    S.who = who;
+    S.armed = null;
+    S.direct = false;
+    S.busy = false;
+    S.engaged = true;
+    if (S.to === 'store' && who.status === 'member') {
+      remember(who);
+      toStore('store/');
+      return;
+    }
+    showCard(who);
+    // (in a window of the desk the keyboard may be in something else, the Log In sheet for one: the card
+    // takes it only when this page already has it)
+    if (!DESK || document.hasFocus()) cardslot.focus({ preventScroll: true });
+  }
+
+  /** The strip as it was armed for a tear: not reached any more (see the head of this script). */
+  function armTearWas(who, why, later) {
     S.who = who;
     S.armed = who;
     engrave(who);
@@ -3644,6 +3669,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
    * the visitor ending it, and the label says so.
    */
   function hangPack(arm, out) {
+    // (someone signed in has no pack to open: their card)
+    if (arm) return armTear(arm);
     ripStop();
     ripReset();
     stopClock();
@@ -3800,15 +3827,9 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
   async function boot() {
     fit();
     page.dataset.ready = 'on'; // fitted: the stage can be seen (see the curtain in app.css)
-    // In My VIP's window, asked for a pack (?pack: whoever is logged in on the desk has not had theirs in
-    // this browser): the card this browser kept, which may be someone else's who was logged in before, is
-    // forgotten, so that a pack hangs and the tear is theirs
-    const deskPack = !!DESK && new URLSearchParams(window.location.search).has('pack');
-    if (deskPack) forget();
     const hint = keep.get('hint');
     const cached = hint ? recall() : null;
     const pending = hint ? null : keep.read('pending');
-    const began = Date.now();
     // /?signin is the way straight to signing in (the store sends its visitors here with ?signin=store,
     // and has them back as soon as they are in)
     const asked = new URLSearchParams(window.location.search).get('signin');
@@ -3844,14 +3865,6 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       footer('sent', sentTo());
       codeShelf();
       setPhase('idle');
-    } else if (deskPack) {
-      // Asked for by My VIP, for someone logged in on the desk: nothing of a stranger's pack (Apply, Sign in,
-      // "Your name here") is shown while the server says who they are. Their pack hangs once it has
-      if (pending) keep.set('pending', null);
-      rig.hidden = true;
-      setShelf(null);
-      botL.textContent = '';
-      botR.textContent = '';
     } else {
       if (pending) keep.set('pending', null);
       setShelf(label(quip())); // "Tap" or "Click", whichever this visitor will be doing
@@ -3876,28 +3889,11 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
         showCard(r);
       } else if (S.mode === 'code' && S.codeUi && !S.codeUi.done && !S.busy) {
         armTear(r, 'signed', 0); // waiting on a code they no longer need: they signed in elsewhere
-      } else if (deskPack && !S.engaged) {
-        // The desk's own: their pack drops in, with their name on it, and the strip is loose
-        rig.hidden = false;
-        engrave(r);
-        dropIn();
-        // (the strip is loose once the pack has landed, and not before: a press on it then tears it)
-        await wait(reduced ? 0 : 580);
-        if (!S.engaged && S.view === 'pack') armTear(r, 'signed', 0);
       } else if (!S.engaged) {
-        // Signed in, but they never tore it (or this browser forgot). Let the pack hang for a
-        // beat, then loosen the strip.
-        await wait(Math.max(0, 900 - (Date.now() - began)));
-        if (!S.engaged && S.view === 'pack') armTear(r, 'signed', 380);
+        // Signed in, and this browser has no card of theirs kept: their card
+        armTear(r);
       }
       return;
-    }
-    if (deskPack && rig.hidden) {
-      // (not logged in after all, or the server could not say: the pack as a visitor has it)
-      rig.hidden = false;
-      footer('anon');
-      setShelf(label(quip()));
-      dropIn();
     }
     if (r.status === 'anon') {
       if (hint) { forget(); hangPack(null, true); if (asked !== null) signIn(); }

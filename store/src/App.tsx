@@ -318,13 +318,10 @@ export function App() {
         <Lock />
       </span>
       <h2 className="t-h2">Sign in to come in.</h2>
-      <p className="t-words">This part is for members. New here? Open your pack first.</p>
+      <p className="t-words">This part is for members.</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 6 }}>
         <a className="ui-btn fit" href={SIGN_IN}>
           Sign in
-        </a>
-        <a className="ui-btn sec fit" href={CARD}>
-          Open your pack
         </a>
       </div>
     </div>

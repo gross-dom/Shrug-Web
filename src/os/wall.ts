@@ -7,9 +7,10 @@ import { createStore } from './store'
 // a person can remove their own, and Shrug can remove any.
 //
 // A photo goes straight to the wall (Dom's fourth round: the simplest and fastest way, with no queue to be
-// kept up with). What keeps the wall fit to look at is a flag: anyone logged in can flag a photo, and a
-// flagged photo is off the wall at once, for everyone but whoever took it (who sees it marked), until Shrug
-// has looked at it and either put it back or removed it.
+// kept up with). What keeps the wall fit to look at is a flag: anyone logged in can flag a photo that is
+// not their own. A flag does not take the photo off the wall: nobody but its taker (and Shrug) removes a
+// photo (Dom, 26 Nov: "I should obviously not be able to delete other people's photos"). It tells Shrug,
+// who looks and removes it or leaves it, and whoever flagged it is not shown it again.
 //
 // The server for it is not built yet: where the photos are kept is still to be decided (they are too many
 // and too large for the store's Airtable base as it stands). Until it is, the site's demo keeps the wall in
@@ -31,8 +32,8 @@ export interface Post {
   /** Who posted it: only they are offered Remove. */
   by: string
   at: string
-  /** Flagged by someone, and off the wall until Shrug has looked: only whoever took it still sees it, marked. */
-  flagged?: boolean
+  /** Who has flagged it, for Shrug to look at: it stays on the wall, but they are not shown it again. */
+  flags?: string[]
 }
 
 /** Whether this is the demo, where the wall is this browser's own. */
@@ -84,14 +85,15 @@ export async function remove(id: string): Promise<boolean> {
   return true
 }
 
-/** Flags a photo: it is off the wall until Shrug has looked at it. Anyone logged in may, of a photo that is not their own. */
+/** Flags a photo, for Shrug to look at. Anyone logged in may, of a photo that is not their own: it stays on
+ * the wall for everyone else, and is not shown to them again. */
 export async function flag(id: string): Promise<boolean | { error: 'anon' }> {
   const who = account.get()
   if (who.status !== 'member') return { error: 'anon' }
   if (LIVE) return false
   const theirs = wall.get().posts.find((p) => p.id === id && p.by !== who.email)
   if (!theirs) return false
-  const posts = wall.get().posts.map((p) => (p.id === id ? { ...p, flagged: true } : p))
+  const posts = wall.get().posts.map((p) => (p.id === id ? { ...p, flags: [...new Set([...(p.flags ?? []), who.email])] } : p))
   keep(posts)
   wall.set({ posts, loaded: true })
   return true

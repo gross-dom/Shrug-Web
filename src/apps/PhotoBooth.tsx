@@ -17,8 +17,8 @@ import '../styles/desk/photobooth.css'
 // effects, one at a time or four to a sheet. The strip is the wall: the latest photos from everyone, each
 // with a display name and picture. A photo that is posted is on it at once. A photo on it opens large: the
 // camera's button in the bar's middle goes back to the camera, Share hands the photo on, its own taker can
-// remove it with the x on its corner in the strip, and anyone else logged in can flag it, which takes it
-// off the wall until Shrug has looked (its taker still sees it, marked as flagged).
+// remove it with the x on its corner in the strip (nobody else can), and anyone else logged in can flag it
+// for Shrug to look at: it stays on the wall, and whoever flagged it is not shown it again (os/wall.ts).
 
 /** The nine effects, in the order their grid has them: Normal is in the middle. */
 const EFFECTS = [
@@ -233,8 +233,8 @@ export function PhotoBoothApp() {
 
   const mine = (p: Post) => who.status === 'member' && p.by === who.email
   // What the strip has: the wall, oldest first, so that the newest is at its right end, where a Mac's booth
-  // puts a photo just taken. A photo that has been flagged is off it, but for whoever took it, who sees it marked
-  const strip = posts.filter((p) => !p.flagged || mine(p)).reverse()
+  // puts a photo just taken. A photo is not shown again to someone who has flagged it
+  const strip = posts.filter((p) => !(who.status === 'member' && p.flags?.includes(who.email))).reverse()
   const shownLarge = large ? (strip.find((p) => p.id === large) ?? null) : null
   const at = shownLarge ? strip.indexOf(shownLarge) : -1
   // Back to the camera: for someone logged in. A visitor who was looking at the wall is back at the door
@@ -294,12 +294,6 @@ export function PhotoBoothApp() {
                   <b>{shownLarge.name}</b>
                   <small>{dayOf(shownLarge.at)}</small>
                 </span>
-                {shownLarge.flagged && (
-                  <span className="pb-wait">
-                    <Flag size={12} strokeWidth={2} aria-hidden />
-                    Flagged: off the wall until Shrug has looked
-                  </span>
-                )}
               </div>
             </>
           )}
@@ -333,7 +327,7 @@ export function PhotoBoothApp() {
               </button>
             </div>
           )}
-          {stage === 'review' && me && <span className="pb-line">Posting puts this photo and your name, {me}, on the wall for everyone.</span>}
+          {stage === 'review' && me && <span className="pb-line">Posting shares this photo and your name with everyone.</span>}
           {said && (
             <span className="pb-toast" role="status">
               {said}
@@ -342,14 +336,14 @@ export function PhotoBoothApp() {
         </div>
         {/* The strip: the wall, at the right of the strip as a Mac's booth keeps its own, the newest at its
             end. It stays where it is through the count, so that the picture does not change shape under
-            whoever is posing. A photo of the taker's own that has been flagged is still in it for them,
-            marked. The one that is open has an x on its corner, for its taker to remove it */}
+            whoever is posing. The one that is open has an x on its corner, for its taker (and nobody else)
+            to remove it */}
         {
           (strip.length ? (
             <ol ref={row} className="pb-strip" aria-label="The wall: latest photos from everyone">
               {strip.map((p) => (
-                <li key={p.id} className={`pb-th${large === p.id && stage === 'large' ? ' on' : ''}${fresh === p.id ? ' new' : ''}${p.flagged ? ' waiting' : ''}`}>
-                  <button type="button" aria-label={`A photo by ${p.name}, ${dayOf(p.at)}${p.flagged ? ', flagged' : ''}`} onClick={() => open(p)}>
+                <li key={p.id} className={`pb-th${large === p.id && stage === 'large' ? ' on' : ''}${fresh === p.id ? ' new' : ''}`}>
+                  <button type="button" aria-label={`A photo by ${p.name}, ${dayOf(p.at)}`} onClick={() => open(p)}>
                     <span>
                       <img src={p.src} alt="" />
                     </span>
@@ -357,12 +351,6 @@ export function PhotoBoothApp() {
                       <Face picture={p.picture} name={p.name} size={14} />
                       {p.name}
                     </small>
-                    {p.flagged && (
-                      <i className="pb-th__wait" aria-hidden>
-                        <Flag size={10} strokeWidth={2.4} />
-                        Flagged
-                      </i>
-                    )}
                   </button>
                   {large === p.id && stage === 'large' && mine(p) && (
                     <button type="button" className="pb-th__x" aria-label="Remove this photo from the wall" onClick={() => void remove(p.id).then((gone) => gone && (camera(), setSaid('Removed from the wall.')))}>
@@ -411,8 +399,9 @@ export function PhotoBoothApp() {
                   Retake
                 </button>
               )}
-              {/* Someone else's photo can be flagged: it is off the wall at once, until Shrug has looked at it */}
-              {stage === 'large' && shownLarge && !mine(shownLarge) && !shownLarge.flagged && (
+              {/* Someone else's photo can be flagged, for Shrug to look at: it is theirs to remove, not the
+                  flagger's, who is simply not shown it again */}
+              {stage === 'large' && shownLarge && !mine(shownLarge) && (
                 <button
                   type="button"
                   className="pb-btn"
@@ -420,7 +409,7 @@ export function PhotoBoothApp() {
                   onClick={() =>
                     void flag(shownLarge.id).then((went) => {
                       if (typeof went === 'object') return askLogIn('booth')
-                      if (went) camera(), setSaid('Flagged. It’s off the wall until Shrug has looked.')
+                      if (went) camera(), setSaid('Flagged for Shrug to look at. You won’t be shown it again.')
                     })
                   }
                 >

@@ -125,19 +125,56 @@ const check = (name, ok, detail = '') => {
   const player = () => p.evaluate(() => (window.__spotify ? { uri: window.__spotify.uri, paused: window.__spotify.paused, at: window.__spotify.at, calls: window.__spotify.calls.join(', ') } : null))
   let so = await sp()
   check('Spotify opens on Home: the way back and on, Home and one long search field along its head', so.view === 'Home' && so.home === 'page' && so.search === 'What do you want to play?' && so.back === 'true', JSON.stringify(so))
-  check('it is dark panels on black: Your Library (the three playlists of podcasts under the names Dom gave them, then each playlist of songs under Spotify’s name for it), the main pane, the Now playing view, and the bar at the foot', so.panels && so.lib.join(' | ') === 'Tech/Podcasts · 11 episodes | Culture/Podcasts · 10 episodes | Infrastructure/Podcasts · 10 episodes | Lalala/Playlist | portugal/Playlist', JSON.stringify(so.lib))
+  check('it is dark panels on black: Your Library (the three playlists of podcasts under the names Dom gave them, then each playlist of songs under Spotify’s name for it), the main pane, the Now playing view, and the bar at the foot', so.panels && so.lib.join(' | ') === 'Tech/Podcasts • 11 episodes | Culture/Podcasts • 10 episodes | Infrastructure/Podcasts • 10 episodes | Lalala/Playlist | portugal/Playlist', JSON.stringify(so.lib))
   check('Home has its tiles and its sections, one for each list of podcasts and one for the playlists, each with Show all; the first episode is set out in the bar at the foot under its own title and show (it does not say Nothing playing, Plays through Spotify, or anything of previews)', so.tiles === 8 && so.sects === 'Podcasts/Tech/Show all | Podcasts/Culture/Show all | Podcasts/Infrastructure/Show all | From the team/Playlists/Show all' && so.cards === 2 && /^69\. Niv Dror .* \/ Non-Technical$/.test(so.what) && !/Nothing playing|Plays through Spotify|[Pp]review/.test(so.what + so.said), JSON.stringify({ tiles: so.tiles, sects: so.sects, what: so.what }))
   let pl = await player()
-  check('Spotify’s own player for that episode is in the Now playing view (and not in the bar), by the episode’s link with no "si" on it, not yet playing; under it, what the episode is', so.side && so.players.length === 1 && so.players[0].includes('/embed/episode/4HK2X8EhWMW9PuyEWdf90F') && !/[?&]si=/.test(so.players[0]) && so.inFoot === 0 && pl?.uri === 'spotify:episode:4HK2X8EhWMW9PuyEWdf90F' && pl.paused && /Non-Technical \/ May 2022 · 39 min$/.test(so.about), JSON.stringify({ players: so.players, pl, about: so.about }))
-  check('the bar at the foot is the buttons that play it, as Spotify’s bar has them, over a line of where the episode is', so.keys === 'Back 15 seconds, Previous episode, Play, Next episode, Forward 15 seconds' && /^0:00 \/ /.test(so.line), JSON.stringify({ keys: so.keys, line: so.line }))
+  check('Spotify’s own player for that episode is in the Now playing view (and not in the bar), by the episode’s link with no "si" on it, not yet playing; under it, what the episode is', so.side && so.players.length === 1 && so.players[0].includes('/embed/episode/4HK2X8EhWMW9PuyEWdf90F') && !/[?&]si=/.test(so.players[0]) && so.inFoot === 0 && pl?.uri === 'spotify:episode:4HK2X8EhWMW9PuyEWdf90F' && pl.paused && /Non-Technical \/ May 2022 • 39 min$/.test(so.about), JSON.stringify({ players: so.players, pl, about: so.about }))
+  check('the bar at the foot is the buttons that play it, as Spotify’s bar has them (shuffle, the one before, play, the one after, repeat), over a line of where the episode is', so.keys === 'Shuffle, Previous episode, Play, Next episode, Repeat' && /^0:00 \/ /.test(so.line), JSON.stringify({ keys: so.keys, line: so.line }))
+  // How it is drawn (Dom's screenshots of Spotify's bar, 26 Nov): each button 32 across with a picture of 16
+  // in it, play in a white disc, 8 between them and 8 more at each side of the disc; the type is DM Sans
+  const drawn = await p.evaluate(async (S) => {
+    const w = document.querySelector(S)
+    await document.fonts.ready
+    const keys = [...w.querySelectorAll('.sp-keys button')].map((b) => b.getBoundingClientRect())
+    const k = w.getBoundingClientRect().width / w.offsetWidth || 1
+    return {
+      sizes: keys.map((r) => `${Math.round(r.width / k)}x${Math.round(r.height / k)}`).join(' '),
+      gaps: keys.slice(1).map((r, i) => Math.round((r.left - keys[i].right) / k)).join(' '),
+      pictures: [...w.querySelectorAll('.sp-keys button svg')].map((g) => Math.round(g.getBoundingClientRect().width / k)).join(' '),
+      disc: getComputedStyle(w.querySelector('.sp-go')).backgroundColor,
+      face: getComputedStyle(w.querySelector('.spwin') ?? w).fontFamily.split(',')[0].replace(/["']/g, '').trim(),
+      has: document.fonts.check('16px "DM Sans"'),
+      bar: Math.round(w.querySelector('.sp-now').getBoundingClientRect().height / k),
+      // (no volume: Spotify's embedded player cannot be told how loud to be, so no slider is drawn for it)
+      sliders: [...w.querySelectorAll('.sp-now input[type="range"], .sp-now [role="slider"]')].map((x) => x.getAttribute('aria-label')).join(', '),
+      loud: w.querySelectorAll('.sp-now [aria-label*="olume" i], .sp-now [aria-label*="mute" i]').length,
+    }
+  }, S)
+  check('its buttons are Spotify’s sizes (32 across, pictures of 16, the white disc, 8 between and 16 beside the disc), in a bar of 88; the window is set in DM Sans', drawn.sizes === '32x32 32x32 32x32 32x32 32x32' && drawn.gaps === '8 16 16 8' && drawn.pictures === '16 16 16 16 16' && drawn.disc === 'rgb(255, 255, 255)' && drawn.bar === 88 && drawn.face === 'DM Sans' && drawn.has, JSON.stringify(drawn))
+  check('the bar has one line to drag, the episode’s, and no volume slider (Spotify’s player cannot be told how loud to be: nothing is drawn that would do nothing)', drawn.sliders === 'Where the episode is' && drawn.loud === 0, JSON.stringify(drawn))
+  // Under the pointer: a button of the bar says what it does, a row lightens and its number gives way to the play button
+  await p.locator(`${S} .sp-keys button[aria-label="Shuffle"]`).hover()
+  await p.waitForTimeout(700)
+  const tip = await p.evaluate((S) => { const st = getComputedStyle(document.querySelector(`${S} .sp-keys button[aria-label="Shuffle"]`), '::before'); return { says: st.content, shown: st.opacity } }, S)
+  check('a button of the bar says what it does when the pointer rests on it, as Spotify’s do', tip.says === '"Enable shuffle"' && tip.shown === '1', JSON.stringify(tip))
+  await p.locator(`${S} button.sp-row`).nth(1).hover()
+  await p.waitForTimeout(250)
+  const over = await p.evaluate((S) => {
+    const row = document.querySelectorAll(`${S} button.sp-row`)[1]
+    const alpha = (c) => { const m = /rgba?\(([^)]+)\)/.exec(c); const parts = m ? m[1].split(/[,/ ]+/).filter(Boolean) : []; return parts.length > 3 ? parseFloat(parts[3]) : 1 }
+    return { ground: alpha(getComputedStyle(row).backgroundColor), number: getComputedStyle(row.querySelector('.num .n')).visibility, play: getComputedStyle(row.querySelector('.num .sp-g')).display, under: getComputedStyle(row.querySelector('.t span')).color }
+  }, S)
+  check('a row under the pointer lightens, its number gives way to the play button, and what is said under its title goes white', over.ground > 0.05 && over.ground < 0.3 && over.number === 'hidden' && over.play === 'block' && over.under === 'rgb(255, 255, 255)', JSON.stringify(over))
+  await p.mouse.move(8, 8)
   await p.locator(`${S} .sp-go`).click()
   await p.waitForTimeout(900)
   pl = await player()
   so = await sp()
   check('Play plays Spotify’s player: the button is Pause, and the line moves along with the episode, whose length it now says', pl.calls === 'toggle' && !pl.paused && pl.at > 0 && /Pause/.test(so.keys) && /^0:0[1-9] \/ 10:00$/.test(so.line), JSON.stringify({ pl, keys: so.keys, line: so.line }))
-  await p.locator(`${S} .sp-keys button[aria-label="Forward 15 seconds"]`).click()
+  await p.locator(`${S} .sp-line input`).focus()
+  await p.keyboard.press('ArrowRight')
   await p.waitForTimeout(300)
-  check('Forward 15 seconds moves it on by that', /seek (1[5-9]|2\d)\b/.test((await player()).calls), (await player()).calls)
+  check('on the line, the right arrow moves the episode on five seconds, as it does Spotify’s', /seek ([5-9]|1\d)\b/.test((await player()).calls), (await player()).calls)
   await p.locator(`${S} .sp-keys button[aria-label="Next episode"]`).click()
   await p.waitForTimeout(700)
   pl = await player()
@@ -152,6 +189,50 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${S} .sp-go`).click()
   await p.waitForTimeout(300)
   check('and brings it back; Pause pauses', (await sp()).side && (await player()).paused, JSON.stringify(await player()))
+  // Previous, as Spotify's is: well into an episode it is back to its start; at its start, the one before
+  const key = (name) => p.locator(`${S} .sp-keys button[aria-label^="${name}"]`)
+  await p.locator(`${S} .sp-line input`).focus()
+  await p.keyboard.press('ArrowRight')
+  await p.keyboard.press('ArrowRight')
+  await p.waitForTimeout(250)
+  await key('Previous').click()
+  await p.waitForTimeout(300)
+  pl = await player()
+  check('Previous, well into an episode, goes back to its start', pl.uri === 'spotify:episode:5rRgN3DwsHNjZpGrdInLYw' && /seek 0$/.test(pl.calls) && pl.at === 0, JSON.stringify(pl))
+  await key('Previous').click()
+  await p.waitForTimeout(400)
+  pl = await player()
+  check('and from its start, to the episode before (which is not played: this one was paused); at the first of a list there is none before', pl.uri === 'spotify:episode:4HK2X8EhWMW9PuyEWdf90F' && pl.paused && (await key('Previous').getAttribute('aria-disabled')) === 'true', JSON.stringify(pl))
+  // Shuffle: Next takes the others of the list in no order, each once; Previous goes back the way it came
+  await key('Shuffle').click()
+  const taken = []
+  for (let i = 0; i < 10; i++) {
+    await key('Next').click()
+    await p.waitForTimeout(160)
+    taken.push((await player()).uri)
+  }
+  check('Shuffle on (green, with its dot), Next goes through the other ten of the list once each, in no fixed order', (await key('Shuffle').getAttribute('aria-pressed')) === 'true' && new Set(taken).size === 10 && !taken.includes('spotify:episode:4HK2X8EhWMW9PuyEWdf90F') && taken.every((u) => /^spotify:episode:/.test(u)), JSON.stringify(taken))
+  await key('Previous').click()
+  await p.waitForTimeout(300)
+  check('and Previous goes back to the one that was played before', (await player()).uri === taken[8], JSON.stringify({ at: (await player()).uri, was: taken[8] }))
+  await key('Shuffle').click()
+  // Repeat, and what follows an episode that has played to its end
+  await p.locator(`${S} button.sp-row`).first().click()
+  await p.waitForTimeout(500)
+  await key('Repeat').click()
+  await key('Repeat').click()
+  const one = await key('Repeat').getAttribute('aria-label')
+  await p.locator(`${S} .sp-line input`).focus()
+  await p.keyboard.press('End')
+  await p.waitForTimeout(1300)
+  pl = await player()
+  check('Repeat pressed twice is the one episode: played to its end, it starts again', one === 'Repeat: this episode' && pl.uri === 'spotify:episode:4HK2X8EhWMW9PuyEWdf90F' && !pl.paused && pl.at < 30000 && /seek 599, load spotify:episode:4HK2X8EhWMW9PuyEWdf90F, play$/.test(pl.calls), JSON.stringify(pl))
+  await key('Repeat').click()
+  await p.locator(`${S} .sp-line input`).focus()
+  await p.keyboard.press('End')
+  await p.waitForTimeout(1300)
+  pl = await player()
+  check('Repeat off (pressed a third time), an episode that ends is followed by the next in its list, which plays', (await key('Repeat').getAttribute('aria-pressed')) === 'false' && pl.uri === 'spotify:episode:5rRgN3DwsHNjZpGrdInLYw' && !pl.paused && /load spotify:episode:5rRgN3DwsHNjZpGrdInLYw, play$/.test(pl.calls), JSON.stringify(pl))
   // the chips over Your Library filter the library, one kind at a time
   await p.locator(`${S} .sp-lib .sp-chips button`, { hasText: 'Playlists' }).click()
   await p.waitForTimeout(250)
@@ -161,7 +242,7 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${S} .sp-lib .sp-chips button`, { hasText: 'Podcasts' }).click()
   await p.waitForTimeout(250)
   lib = await sp()
-  check('the Podcasts chip leaves only the lists of podcasts; its x has everything back', lib.lib.length === 3 && lib.lib.every((l) => /\/Podcasts · \d+ episodes$/.test(l)), JSON.stringify(lib.lib))
+  check('the Podcasts chip leaves only the lists of podcasts; its x has everything back', lib.lib.length === 3 && lib.lib.every((l) => /\/Podcasts • \d+ episodes$/.test(l)), JSON.stringify(lib.lib))
   await p.locator(`${S} .sp-lib .sp-chips button.x`).click()
   await p.waitForTimeout(250)
   await p.locator(`${S} .sp-home .sp-chips button`, { hasText: 'Playlists' }).click()
@@ -172,7 +253,7 @@ const check = (name, ok, detail = '') => {
   await p.locator(`${S} .sp-lib .sp-item`).first().click()
   await p.waitForTimeout(400)
   so = await sp()
-  check('a list of podcasts, from the library: its page under its name, its eleven episodes in a table, and the way back lit', so.view === 'Tech' && so.hero === 'Podcasts / Tech / Shrug · 11 episodes' && so.rows === 11 && so.back === null && /\*$/.test(so.lib[0]), JSON.stringify(so))
+  check('a list of podcasts, from the library: its page under its name, its eleven episodes in a table, and the way back lit', so.view === 'Tech' && so.hero === 'Podcasts / Tech / Shrug • 11 episodes' && so.rows === 11 && so.back === null && /\*$/.test(so.lib[0]), JSON.stringify(so))
   const table = await p.evaluate((S) => ({ head: [...document.querySelectorAll(`${S} .sp-row.head > span`)].map((x) => x.textContent.trim()).join('|'), row: document.querySelector(`${S} button.sp-row`).innerText.replace(/\s*\n\s*/g, ' / ') }), S)
   check('the table: each episode’s number, its title over its show, when it came out and how long it is, as Spotify has them', table.head === '#||Title|Released|' && /^1 \/ 69\. Niv Dror \(Founder & Managing Partner, Shrug Capital\) has “no problem” with cartoon fish \/ Non-Technical \/ May 2022 \/ 39 min$/.test(table.row), JSON.stringify(table))
   await p.locator(`${S} button.sp-row`).nth(2).click()
@@ -230,13 +311,13 @@ const check = (name, ok, detail = '') => {
   /** YouTube's player (a stand-in) says something to the page, as the real one does. */
   const says = (told) => p.evaluate(([Y, told]) => { const f = document.querySelector(`${Y} .yt-player iframe`); window.dispatchEvent(new MessageEvent('message', { origin: 'https://www.youtube-nocookie.com', source: f.contentWindow, data: JSON.stringify(told) })) }, [Y, told])
   let yo = await yt()
-  check('YouTube opens 1100 by 664 as its watch page: YouTube’s own logo (its mark and its word, drawn) and one field along the head, with no menu button, the rounded player sixteen by nine, and the list of twenty-two at the right, the first picked, with Play all at its head', (await sizeOf(p, 'youtube')) === '1100x664' && yo.mark === 'YouTube' && yo.word && !yo.menu && yo.field === 'Search this playlist' && yo.search === 'Search Videos the team loves' && yo.items === 22 && yo.on === 0 && yo.head === 'Videos the team loves / Shrug · 1 / 22 / Play all' && yo.ratio === 1.78 && yo.radius === '12px' && yo.still, JSON.stringify(yo))
-  check('each video is under its own title and channel, as YouTube has them, with its still from YouTube by its id; nothing is said of why it is here until someone has written it', yo.h1 === 'Steve Jobs introduces iPhone in 2007' && /^J \/ John Schroter \/ Videos the team loves · 1 \/ 22/.test(yo.under) && yo.second === 'Jensen Huang-The First Six Months of NVIDIA / Entrepreneurship.org' && yo.why === null && yo.stills === 'https://i.ytimg.com/vi/MnrJzXM7a6o/mqdefault.jpg https://i.ytimg.com/vi/yU3GUHDf0mk/mqdefault.jpg', JSON.stringify({ h1: yo.h1, under: yo.under, second: yo.second, why: yo.why, stills: yo.stills }))
+  check('YouTube opens 1100 by 664 as its watch page: YouTube’s own logo (its mark and its word, drawn) and one field along the head, with no menu button, the rounded player sixteen by nine, and the list of twenty-two at the right, the first picked, with Play all at its head', (await sizeOf(p, 'youtube')) === '1100x664' && yo.mark === 'YouTube' && yo.word && !yo.menu && yo.field === 'Search this playlist' && yo.search === 'Search Daily Inspiration' && yo.items === 22 && yo.on === 0 && yo.head === 'Daily Inspiration / Shrug · 1 / 22 / Play all' && yo.ratio === 1.78 && yo.radius === '12px' && yo.still, JSON.stringify(yo))
+  check('each video is under its own title and channel, as YouTube has them, with its still from YouTube by its id; nothing is said of why it is here until someone has written it', yo.h1 === 'Steve Jobs introduces iPhone in 2007' && /^J \/ John Schroter \/ Daily Inspiration · 1 \/ 22/.test(yo.under) && yo.second === 'Jensen Huang-The First Six Months of NVIDIA / Entrepreneurship.org' && yo.why === null && yo.stills === 'https://i.ytimg.com/vi/MnrJzXM7a6o/mqdefault.jpg https://i.ytimg.com/vi/yU3GUHDf0mk/mqdefault.jpg', JSON.stringify({ h1: yo.h1, under: yo.under, second: yo.second, why: yo.why, stills: yo.stills }))
   check('it plays as the window opens, in YouTube’s own player, with its sound off', yo.frames === 1 && /^https:\/\/www\.youtube-nocookie\.com\/embed\/MnrJzXM7a6o\?autoplay=1&mute=1&/.test(yo.player), String(yo.player))
   await p.locator(`${Y} .yt-item`).nth(3).click()
   await p.waitForTimeout(300)
   yo = await yt()
-  check('a video picked in the list is the one shown, and plays with its sound', yo.on === 3 && yo.head === 'Videos the team loves / Shrug · 4 / 22 / Play all' && yo.frames === 1 && /^https:\/\/www\.youtube-nocookie\.com\/embed\/oXsQ4NMQ6B8\?autoplay=1&rel=0/.test(yo.player) && yo.h1 === 'Raf Simons Autumn/Winter 2001-2002 "Riot! Riot! Riot!"', JSON.stringify({ on: yo.on, head: yo.head, player: yo.player, h1: yo.h1 }))
+  check('a video picked in the list is the one shown, and plays with its sound', yo.on === 3 && yo.head === 'Daily Inspiration / Shrug · 4 / 22 / Play all' && yo.frames === 1 && /^https:\/\/www\.youtube-nocookie\.com\/embed\/oXsQ4NMQ6B8\?autoplay=1&rel=0/.test(yo.player) && yo.h1 === 'Raf Simons Autumn/Winter 2001-2002 "Riot! Riot! Riot!"', JSON.stringify({ on: yo.on, head: yo.head, player: yo.player, h1: yo.h1 }))
   // the player says a video has ended: the next one in the list begins
   await says({ event: 'onStateChange', info: 0 })
   await p.waitForTimeout(400)
@@ -398,6 +479,8 @@ const check = (name, ok, detail = '') => {
   b = await pb(p)
   const shot = await p.evaluate(() => { const img = document.querySelector('.pb-photo'); return { jpeg: img.src.startsWith('data:image/jpeg'), w: img.naturalWidth } })
   check('then the photo, to look at: Retake, Post to the Wall, and Share (not Save)', b.stage === 'review' && b.ctl === 'Retake | Post to the Wall | Share this photo' && shot.jpeg && shot.w > 300, JSON.stringify({ b, shot }))
+  const says = await p.evaluate(() => document.querySelector('.wf[data-app="photobooth"] .pb-line')?.textContent ?? null)
+  check('and what posting does is said under it, in Dom’s words', says === 'Posting shares this photo and your name with everyone.', String(says))
   // Share hands the photo on: to the system's own share sheet where there is one (stood in for here, since a
   // browser with no screen has none to show), and otherwise to the clipboard, or failing both to a file
   await p.evaluate(() => { window.__shared = null; navigator.canShare = () => true; navigator.share = async (data) => { window.__shared = { name: data.files?.[0]?.name, type: data.files?.[0]?.type, size: data.files?.[0]?.size } } })
@@ -454,7 +537,8 @@ const check = (name, ok, detail = '') => {
   await p.locator('.pb-shutter.back').click(); await p.waitForTimeout(400)
   b = await pb(p)
   check('a visitor can look at the wall, and the camera’s button there leads back to the door, not to the camera', looking.stage === 'large' && b.stage === 'door' && !b.cam, JSON.stringify({ looking: looking.stage, then: b.stage }))
-  // someone else, logged in, flags it: it is off the wall at once, until Shrug has looked
+  // someone else, logged in, cannot remove it: they can flag it for Shrug to look at, and are not shown it again.
+  // It stays on the wall: its taker, and anyone else, still has it
   await p.locator('.pb-msg .pb-btn').click()
   await p.waitForTimeout(400)
   await p.locator('.account input[type=email]').fill('sam@example.test')
@@ -464,9 +548,11 @@ const check = (name, ok, detail = '') => {
   await p.keyboard.type('Sam Okafor'); await p.locator('.account__go').click(); await p.waitForTimeout(1800)
   await p.locator('.pb-th button').first().click(); await p.waitForTimeout(400)
   const theirs = await pb(p)
+  const noX = await p.locator('.pb-th__x').count()
+  check('someone else, logged in, is not offered the x on another person’s photo: only its taker removes it', noX === 0 && theirs.wall === 1, JSON.stringify({ noX, wall: theirs.wall }))
   await p.locator('.pb-ctl .pb-btn', { hasText: 'Flag' }).click(); await p.waitForTimeout(500)
   b = await pb(p)
-  check('someone else, logged in, can flag a photo: it is off the wall at once, and the booth says what happens next', /^Flag this photo as not right for the wall \| Back to the camera \| Share this photo$/.test(theirs.ctl) && b.wall === 0 && b.toast === 'Flagged. It’s off the wall until Shrug has looked.', JSON.stringify({ theirs: theirs.ctl, wall: b.wall, toast: b.toast }))
+  check('they can flag it, for Shrug to look at: they are not shown it again, and the booth says so', /^Flag this photo as not right for the wall \| Back to the camera \| Share this photo$/.test(theirs.ctl) && b.wall === 0 && b.toast === 'Flagged for Shrug to look at. You won’t be shown it again.', JSON.stringify({ theirs: theirs.ctl, wall: b.wall, toast: b.toast }))
   await p.locator('.menubar__login').click()
   await p.locator('.account__row', { hasText: 'Log Out' }).click()
   await p.waitForTimeout(900)
@@ -476,7 +562,7 @@ const check = (name, ok, detail = '') => {
   await p.keyboard.press('Enter'); await p.waitForTimeout(900)
   await p.keyboard.type('246810'); await p.waitForTimeout(1800)
   const mine = await p.evaluate(() => { const th = document.querySelector('.pb-th'); return { n: document.querySelectorAll('.pb-th').length, tag: th?.querySelector('.pb-th__wait')?.textContent.trim() ?? null, says: th?.querySelector('button')?.getAttribute('aria-label') ?? null } })
-  check('its taker still sees it in the strip, marked Flagged', mine.n === 1 && mine.tag === 'Flagged' && /, flagged$/.test(mine.says ?? ''), JSON.stringify(mine))
+  check('a flag takes nothing off the wall: the photo is still there for its taker (and for everyone else), as it was', mine.n === 1 && mine.tag === null && /^A photo by Riley Chen, /.test(mine.says ?? '') && !/flagged/i.test(mine.says ?? ''), JSON.stringify(mine))
   check('nothing went wrong on the way (Photo Booth)', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
   await booth.close()
@@ -571,6 +657,8 @@ const check = (name, ok, detail = '') => {
   s = await wt(p)
   check('the field over them finds a place by name, and says so when none is called that', found === 'Los Angeles' && s.places === '' && s.none === 'No place here is called that.', JSON.stringify({ found, places: s.places, none: s.none }))
   await p.locator(`${WT} .wt-find input`).fill('')
+  const clear = await p.evaluate((WT) => { const f = document.querySelector(`${WT} .wt-fold`).getBoundingClientRect(); const i = document.querySelector(`${WT} .wt-find`).getBoundingClientRect(); return Math.round(i.top - f.bottom) }, WT)
+  check('the round button at the sidebar’s head is clear of the search field under it (they do not touch)', clear >= 8 && clear <= 14, String(clear))
   await p.locator(`${WT} .wt-fold`).click(); await p.waitForTimeout(300)
   check('the button at its head puts the places away, and brings them back', (await p.locator(`${WT} .wt-side`).count()) === 0 && (await p.locator(`${WT} .wt-fold`).getAttribute('aria-label')) === 'Show the places')
   check('nothing went wrong on the way (Weather)', A.realErrors(w.errors).length === 0, A.realErrors(w.errors).join(' | '))

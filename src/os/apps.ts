@@ -3,7 +3,7 @@
 //
 // Four of them are where things are sold and kept (design/v1, and Dom's notes after testing it): ArtStore,
 // Books and Workspace each sell their own things and nothing else, and My VIP is what is a member's (their
-// pack and card, points, orders, address). All four show the store's own pages (store/) for what is bought
+// card, points, orders, address). All four show the store's own pages (store/) for what is bought
 // or kept, so there is one checkout. An address can ask for each by name: `?open=artstore`, `books`,
 // `workspace`, `vip`.
 
@@ -143,7 +143,7 @@ export const APPS: Record<AppId, AppSpec> = {
     lightsY: 26,
     dock: 7,
   },
-  // My VIP: what is a member's. Their pack is opened here, and their card, points, orders and address are
+  // My VIP: what is a member's. Their card, points, orders and address are
   // kept here, with the doors to the three stores (src/apps/MyVip.tsx). Last in the Dock
   myvip: {
     id: 'myvip',

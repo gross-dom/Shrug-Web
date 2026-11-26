@@ -1,4 +1,4 @@
-// YouTube: one playlist, "Videos the team loves" (design/v1, "YouTube"). Each is played by YouTube's own
+// YouTube: one playlist, "Daily Inspiration" (Dom's name for it, 26 Nov; design/v1, "YouTube"). Each is played by YouTube's own
 // embedded player.
 //
 // A row is its video's id on YouTube (the part after watch?v=). These are the twenty-two Dom supplied on
@@ -20,7 +20,7 @@ export interface Video {
   tone: string
 }
 
-export const PLAYLIST = { name: 'Videos the team loves', by: 'Shrug' }
+export const PLAYLIST = { name: 'Daily Inspiration', by: 'Shrug' }
 
 const TONES = ['#8a6a2a', '#35508f', '#7a3f2f', '#3f7a4a', '#4a3b8f', '#2f6f7a', '#8f3b55', '#5a5f6a']
 

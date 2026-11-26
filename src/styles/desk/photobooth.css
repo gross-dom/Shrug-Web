@@ -673,42 +673,6 @@
   justify-content: center;
 }
 
-/* Waiting for Shrug's approval: said on the photo in the strip, and beside its taker's name when it is open */
-.pb-th.waiting button > span:first-child img {
-  opacity: 0.62;
-}
-
-.pb-th__wait {
-  position: absolute;
-  top: 3px;
-  /* (inside the picture, which is narrower than its button) */
-  right: 11px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 5px 1px 4px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.66);
-  color: #ffd60a;
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: 13px;
-}
-
-.pb-wait {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: 6px;
-  padding: 3px 9px 3px 7px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #ffd60a;
-  font-size: 11px;
-  font-weight: 600;
-}
-
 /* The x on the corner of the photo that is open, for its taker: it takes the photo away. (It is a button
    in a thumbnail, and must not be laid out as the thumbnail's own button is) */
 .pb-th button.pb-th__x {
