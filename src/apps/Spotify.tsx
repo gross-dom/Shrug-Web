@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, House, ListMusic, Mic, Pause, Play, RotateCcw, RotateCw, Search, SkipBack, SkipForward, SquarePlay, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, House, ListMusic, Mic, Search, SquarePlay, X } from 'lucide-react'
 import { embedOf, EPISODES, LISTS, PLAYLISTS, type Episode, type Playlist } from '../data/listening'
 import { Window } from '../kit/window'
 import { askSpotify, told as spotifySays } from '../os/listening'
@@ -15,11 +15,17 @@ import '../styles/desk/spotify.css'
 //
 // What it has is Shrug's: three playlists of podcast episodes (Tech, Culture, Infrastructure) and playlists
 // of songs from the team. Playing is Spotify's own embedded player. For an episode it is in the Now playing
-// view, and the bar at the foot is this window's own, drawn as Spotify draws its bar: back and on fifteen
-// seconds, the episode before and after, play and pause, and a line to drag along the episode. Its buttons
-// drive Spotify's player through Spotify's iFrame API (src/os/spotify-player.ts), and what it shows (where
-// the episode is, how long it is, whether it is playing) is what that player says. A playlist of songs is
-// Spotify's player in the main pane, since the embed brings its own track list and controls.
+// view, and the bar at the foot is this window's own, drawn as Spotify draws its bar (Dom's screenshots of
+// it, 26 Nov): shuffle, the episode before, play and pause in a white disc, the episode after, repeat, and
+// under them a line to drag along the episode. Its buttons drive Spotify's player through Spotify's iFrame
+// API (src/os/spotify-player.ts), and what it shows (where the episode is, how long it is, whether it is
+// playing) is what that player says. A playlist of songs is Spotify's player in the main pane, since the
+// embed brings its own track list and controls.
+//
+// Spotify's bar has a volume slider too. This one has none: Spotify's embedded player takes no word about
+// how loud it is (its iFrame API has play, pause, seek and load, and nothing for volume), and a page cannot
+// turn down a frame from another site. A slider here would move and change nothing, so it is left out; the
+// Mac's own volume is what there is.
 //
 // Where Spotify's script does not arrive, the Now playing view holds the plain embedded player instead and
 // the bar's play button shows it; where no player arrives at all, the view says so, and each thing can be
@@ -73,11 +79,80 @@ function Mosaic({ list, size }: { list: number; size?: number }) {
   )
 }
 
-/** Fifteen seconds back, or on: Spotify's turning arrow with the number in it. */
-const Fifteen = ({ on }: { on?: boolean }) => (
-  <span className="sp-15" aria-hidden>
-    {on ? <RotateCw size={22} strokeWidth={1.6} /> : <RotateCcw size={22} strokeWidth={1.6} />}
-    <i>15</i>
+type Mark = 'play' | 'pause' | 'prev' | 'next' | 'shuffle' | 'repeat' | 'repeat-one' | 'sound' | 'home'
+
+const LINE = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
+const SOLID = { fill: 'currentColor', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' } as const
+
+/** The pictures on the buttons that play, to the shapes Spotify's own have in Dom's screenshots of its bar:
+ * solid, in a square of sixteen. A triangle with soft corners; two bars; a triangle against a bar, for the
+ * one before and the one after; two arrows that cross; an arrow that comes round a rounded box, with a 1
+ * in its top edge when it is the one episode that repeats. */
+const MARKS: Record<Mark, ReactNode> = {
+  play: <path d="M3.5 2v12L14 8z" {...SOLID} />,
+  pause: (
+    <>
+      <rect x="2.3" y="1.3" width="4" height="13.4" rx="0.8" fill="currentColor" />
+      <rect x="9.7" y="1.3" width="4" height="13.4" rx="0.8" fill="currentColor" />
+    </>
+  ),
+  prev: (
+    <>
+      <rect x="1" y="1.3" width="3.2" height="13.4" rx="0.7" fill="currentColor" />
+      <path d="M14.3 2.1v11.8L4.7 8z" {...SOLID} />
+    </>
+  ),
+  next: (
+    <>
+      <rect x="11.8" y="1.3" width="3.2" height="13.4" rx="0.7" fill="currentColor" />
+      <path d="M1.7 2.1v11.8L11.3 8z" {...SOLID} />
+    </>
+  ),
+  shuffle: (
+    <g {...LINE}>
+      <path d="M0.75 12.75h0.5c1.05 0 2.04-0.47 2.7-1.28l5.1-6.19a3.5 3.5 0 0 1 2.7-1.28h3.3" />
+      <path d="M12.85 1.8l2.2 2.2-2.2 2.2" />
+      <path d="M0.75 3.25h0.5c1.05 0 2.04 0.47 2.7 1.28l0.9 1.09" />
+      <path d="M8.2 10.5l0.85 1.03a3.5 3.5 0 0 0 2.7 1.27h3.3" />
+      <path d="M12.85 10.6l2.2 2.2-2.2 2.2" />
+    </g>
+  ),
+  repeat: (
+    <g {...LINE}>
+      <path d="M5 12.5H3.75a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3h8.5a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H8.1" />
+      <path d="M10.2 10.3 8 12.5l2.2 2.2" />
+    </g>
+  ),
+  'repeat-one': (
+    <g {...LINE}>
+      <path d="M5 12.5H3.75a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3h0.9" />
+      <path d="M11.4 1.5h0.85a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H8.1" />
+      <path d="M10.2 10.3 8 12.5l2.2 2.2" />
+      <path d="M6.7 2.6c0.9-0.1 1.5-0.6 1.7-1.4h0.4v6.3" strokeWidth={1.4} />
+    </g>
+  ),
+  sound: (
+    <>
+      <path d="M1.4 5.7h2.5l4-3.1v10.8l-4-3.1H1.4z" fill="currentColor" stroke="currentColor" strokeWidth={1.2} strokeLinejoin="round" />
+      <path d="M10.6 5.3a3.9 3.9 0 0 1 0 5.4M12.6 3.3a6.7 6.7 0 0 1 0 9.4" {...LINE} />
+    </>
+  ),
+  // (Home, where it is the page that is open: the house filled in, as Spotify fills it)
+  home: <path d="M8.5 1.3a0.8 0.8 0 0 0-1 0L1.6 6.1a0.8 0.8 0 0 0-0.3 0.6v7.2a0.8 0.8 0 0 0 0.8 0.8h3.7v-4.5h4.4v4.5h3.7a0.8 0.8 0 0 0 0.8-0.8V6.7a0.8 0.8 0 0 0-0.3-0.6z" fill="currentColor" />,
+}
+
+const Glyph = ({ is, size = 16 }: { is: Mark; size?: number }) => (
+  <svg className="sp-g" width={size} height={size} viewBox="0 0 16 16" aria-hidden>
+    {MARKS[is]}
+  </svg>
+)
+
+/** The bars that rise and fall beside what is playing. */
+const Bars = () => (
+  <span className="sp-eq" aria-hidden>
+    <i />
+    <i />
+    <i />
   </span>
 )
 
@@ -129,6 +204,17 @@ export function SpotifyApp() {
   /** What the controller has loaded, and whether it is to play as soon as it can. */
   const loaded = useRef<string | null>(null)
   const want = useRef(false)
+  /** Shuffle, and Repeat (nothing, the whole list, or the one episode): the bar's two switches, as Spotify's are. */
+  const [shuffle, setShuffle] = useState(false)
+  const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off')
+  /** With Shuffle on: what has been played on this pass through the list, in the order it was, the one in
+   * the bar last. Next takes one that is not in it; Previous goes back along it. */
+  const heard = useRef<string[]>(FIRST ? [FIRST] : [])
+  /** What the player said last, and whether this time through the episode has been seen to end. */
+  const last = useRef({ at: 0, paused: true })
+  const over = useRef(false)
+  /** What is done when an episode ends (as it is now: the listener below is made once and calls this). */
+  const ended = useRef<() => void>(() => {})
 
   // What each is called, and its cover: written on its row, or as Spotify says (asked when the window opens)
   const says = useStore(spotifySays, (all) => all)
@@ -172,7 +258,21 @@ export function SpotifyApp() {
         controller.addListener('playback_update', (e) => {
           const d = e.data ?? {}
           const num = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 0)
-          if (!gone) setBeat({ paused: d.isPaused !== false, buffering: !!d.isBuffering, at: num(d.position), of: num(d.duration) })
+          if (gone) return
+          const now = { paused: d.isPaused !== false, at: num(d.position), of: num(d.duration) }
+          setBeat({ ...now, buffering: !!d.isBuffering })
+          // The end of an episode: the player says it is at its end, or it has stopped and gone back to the
+          // start from within a few seconds of the end. Acted on once for each time through
+          const was = last.current
+          last.current = now
+          if (!now.of) return
+          const atEnd = now.at >= now.of - 400
+          const fellBack = now.paused && now.at < 1000 && !was.paused && was.at >= now.of - 3000
+          if (atEnd || fellBack) {
+            if (over.current) return
+            over.current = true
+            setTimeout(() => !gone && ended.current(), 0)
+          } else if (now.at < now.of - 3000) over.current = false
         })
         controller.addListener('ready', () => {
           if (gone) return
@@ -192,6 +292,8 @@ export function SpotifyApp() {
       if (ctl.current === made) ctl.current = null
       loaded.current = null
       want.current = false
+      last.current = { at: 0, paused: true }
+      over.current = false
       host.current?.replaceChildren()
       setBeat(STILL)
     }
@@ -202,6 +304,8 @@ export function SpotifyApp() {
     const controller = ctl.current
     if (!controller || !uri || loaded.current === uri) return
     loaded.current = uri
+    last.current = { at: 0, paused: true }
+    over.current = false
     setBeat(STILL)
     controller.loadUri(uri)
     if (want.current) controller.play()
@@ -218,8 +322,15 @@ export function SpotifyApp() {
   const play = (e: Episode) => {
     if (e.id === playing && ctl.current) return toggle()
     want.current = true
+    // (one asked for by name is where a shuffled pass through its list starts)
+    heard.current = [e.id]
     setPlaying(e.id)
     if (!ctl.current) setSide(true)
+  }
+  /** A list, played: the episode of it that is in the bar, or its first. */
+  const playList = (n: number) => {
+    const to = episode && episode.list === n ? episode : inList(n)[0]
+    if (to) play(to)
   }
   const seek = (to: number) => {
     const controller = ctl.current
@@ -228,18 +339,83 @@ export function SpotifyApp() {
     setBeat((b) => ({ ...b, at }))
     controller.seek(Math.round(at / 1000))
   }
-  /** The episode before, or after, in the list this one is in. */
-  const step = (by: number) => {
-    if (!episode) return
-    const list = inList(episode.list)
-    const to = list[list.indexOf(episode) + by]
-    if (!to) return
-    want.current = want.current || !beat.paused
-    setPlaying(to.id)
-  }
   const near = episode ? inList(episode.list) : []
   const first = !!episode && near.indexOf(episode) <= 0
-  const last = !!episode && near.indexOf(episode) >= near.length - 1
+  const final = !!episode && near.indexOf(episode) >= near.length - 1
+  /** The episode in the bar, from its start again. */
+  const restart = () => {
+    const controller = ctl.current
+    if (!controller || !uri) return
+    last.current = { at: 0, paused: true }
+    over.current = false
+    want.current = true
+    setBeat(STILL)
+    controller.loadUri(uri)
+    controller.play()
+  }
+  /** What comes after an episode. In order, it is the next in its list, and after the last the first again
+   * if the list repeats. Shuffled, it is one of those not yet heard on this pass; when all have been, a
+   * new pass starts if the list repeats, or if it was Next that asked. */
+  const following = (e: Episode, pressed: boolean): Episode | null => {
+    const list = inList(e.list)
+    if (!shuffle) return list[list.indexOf(e) + 1] ?? (repeat === 'all' ? (list[0] ?? null) : null)
+    let left = list.filter((x) => x.id !== e.id && !heard.current.includes(x.id))
+    if (!left.length) {
+      if (repeat !== 'all' && !pressed) return null
+      heard.current = [e.id]
+      left = list.filter((x) => x.id !== e.id)
+    }
+    return left[Math.floor(Math.random() * left.length)] ?? null
+  }
+  /** On to another episode of the list, playing if this one was. */
+  const hop = (to: Episode, sounding = want.current || !beat.paused) => {
+    want.current = sounding
+    setPlaying(to.id)
+  }
+  const next = () => {
+    if (!episode) return
+    const to = following(episode, true)
+    if (!to) return
+    if (shuffle) heard.current.push(to.id)
+    hop(to)
+  }
+  /** Previous: well into an episode it is back to its start, as Spotify's is; at its start, the one before
+   * (shuffled: the one that was played before it). */
+  const prev = () => {
+    if (!episode) return
+    if (beat.at > 3000) return seek(0)
+    let to: Episode | undefined
+    if (shuffle) {
+      const trail = heard.current
+      if (trail.length > 1) {
+        trail.pop()
+        to = near.find((x) => x.id === trail[trail.length - 1])
+      }
+    } else to = near[near.indexOf(episode) - 1] ?? (repeat === 'all' ? near[near.length - 1] : undefined)
+    if (to && to.id !== episode.id) hop(to)
+  }
+  const canPrev = !!episode && (beat.at > 3000 || (shuffle ? heard.current.length > 1 : !first || (repeat === 'all' && near.length > 1)))
+  const canNext = !!episode && near.length > 1 && (shuffle || !final || repeat === 'all')
+  // An episode that has played to its end: again, if it is the one that repeats; or on to what follows it;
+  // or, with nothing to follow, it stops there
+  ended.current = () => {
+    const controller = ctl.current
+    if (!controller || !episode) return
+    if (repeat === 'one') return restart()
+    const to = following(episode, false)
+    if (to && to.id !== episode.id) {
+      if (shuffle) heard.current.push(to.id)
+      return hop(to, true)
+    }
+    if (to) return restart()
+    want.current = false
+    controller.pause()
+  }
+  const shuffleIt = () => {
+    // (a shuffled pass starts from what is in the bar)
+    heard.current = playing ? [playing] : []
+    setShuffle((on) => !on)
+  }
 
   const go = (to: At) => {
     setFailed(false)
@@ -264,10 +440,10 @@ export function SpotifyApp() {
       </span>
       <span className="spbar__mid">
         <button type="button" className="spbar__home" aria-label="Home" aria-current={at.is === 'home' ? 'page' : undefined} onClick={() => go({ is: 'home' })}>
-          <House size={20} strokeWidth={1.9} aria-hidden />
+          {at.is === 'home' ? <Glyph is="home" size={24} /> : <House size={24} strokeWidth={1.7} aria-hidden />}
         </button>
         <label className="sp-search">
-          <Search size={20} strokeWidth={1.8} aria-hidden />
+          <Search size={24} strokeWidth={1.7} aria-hidden />
           <input
             type="text"
             value={query}
@@ -296,21 +472,15 @@ export function SpotifyApp() {
   const rowOf = (e: Episode, i: number) => (
     <li key={e.id}>
       <button type="button" className={`sp-row${playing === e.id ? ' on' : ''}`} aria-pressed={playing === e.id} onClick={(press) => press.detail < 2 && play(e)}>
+        {/* (its number; under the pointer, what pressing it does: play, or pause where it is the one playing) */}
         <span className="num">
-          {playing === e.id && !beat.paused ? (
-            <span className="sp-eq" aria-hidden>
-              <i />
-              <i />
-              <i />
-            </span>
-          ) : (
-            i + 1
-          )}
+          {playing === e.id && !beat.paused ? <Bars /> : <span className="n">{i + 1}</span>}
+          <Glyph is={playing === e.id && !beat.paused ? 'pause' : 'play'} size={14} />
         </span>
         <Cover tone={e.tone} size={40} src={coverOf(e)} />
         <span className="t">
           <b>{titleOf(e)}</b>
-          {e.show ?? 'Podcast episode'}
+          <span>{e.show ?? 'Podcast episode'}</span>
         </span>
         <span className="when">{e.date}</span>
         <span className="num">{e.length}</span>
@@ -324,8 +494,8 @@ export function SpotifyApp() {
         <span />
         <span>Title</span>
         <span className="when">Released</span>
-        <span>
-          <Clock size={14} strokeWidth={1.8} />
+        <span className="num">
+          <Clock size={16} strokeWidth={1.6} />
         </span>
       </li>
       {list.map(rowOf)}
@@ -375,12 +545,14 @@ export function SpotifyApp() {
             {lib !== 'playlists' &&
               LISTS.map((list, n) => (
                 <li key={list.id}>
-                  <button type="button" className="sp-item" aria-current={(at.is === 'podcasts' && at.list === n) || undefined} onClick={() => go({ is: 'podcasts', list: n })}>
+                  {/* (the list that what is in the bar is from is named in green, as Spotify names it, with the speaker beside it while it sounds) */}
+                  <button type="button" className="sp-item" aria-current={(at.is === 'podcasts' && at.list === n) || undefined} data-playing={episode?.list === n || undefined} onClick={() => go({ is: 'podcasts', list: n })}>
                     <Mosaic list={n} size={48} />
                     <span>
                       <b>{list.name}</b>
-                      <small>Podcasts · {inList(n).length} episodes</small>
+                      <small>Podcasts • {inList(n).length} episodes</small>
                     </span>
+                    {episode?.list === n && !beat.paused && <Glyph is="sound" />}
                   </button>
                 </li>
               ))}
@@ -410,30 +582,50 @@ export function SpotifyApp() {
               </div>
               {only === 'all' && !q && (
                 <ul className="sp-tiles">
-                  {LISTS.map((list, n) => (
-                    <li key={list.id}>
-                      <button type="button" onClick={() => go({ is: 'podcasts', list: n })}>
-                        <Mosaic list={n} size={48} />
-                        <b>{list.name}</b>
-                      </button>
-                    </li>
-                  ))}
+                  {/* A tile is the way to its page. Under the pointer a list of podcasts has Spotify's green
+                      button too, which plays it from here; while it sounds, the bars are there instead. (A
+                      playlist of songs has none: its songs are played by Spotify's own player, on its page) */}
+                  {LISTS.map((list, n) => {
+                    const sounding = episode?.list === n && !beat.paused
+                    return (
+                      <li key={list.id} data-sounding={sounding || undefined}>
+                        <button type="button" className="sp-tile" onClick={() => go({ is: 'podcasts', list: n })}>
+                          <Mosaic list={n} size={48} />
+                          <b>{list.name}</b>
+                        </button>
+                        {sounding && <Bars />}
+                        {inList(n)[0] && (
+                          <button type="button" className="sp-tile__play" aria-label={`${sounding ? 'Pause' : 'Play'} ${list.name}`} onClick={() => playList(n)}>
+                            <Glyph is={sounding ? 'pause' : 'play'} size={14} />
+                          </button>
+                        )}
+                      </li>
+                    )
+                  })}
                   {PLAYLISTS.map((p) => (
                     <li key={p.id}>
-                      <button type="button" onClick={() => go({ is: 'playlist', id: p.id })}>
+                      <button type="button" className="sp-tile" onClick={() => go({ is: 'playlist', id: p.id })}>
                         <Cover tone={toneOf(p)} size={48} list src={coverOf(p)} />
                         <b>{nameOf(p)}</b>
                       </button>
                     </li>
                   ))}
-                  {EPISODES.slice(0, Math.max(0, 8 - LISTS.length - PLAYLISTS.length)).map((e) => (
-                    <li key={e.id}>
-                      <button type="button" onClick={(press) => press.detail < 2 && play(e)}>
-                        <Cover tone={e.tone} size={48} src={coverOf(e)} />
-                        <b>{titleOf(e)}</b>
-                      </button>
-                    </li>
-                  ))}
+                  {EPISODES.slice(0, Math.max(0, 8 - LISTS.length - PLAYLISTS.length)).map((e) => {
+                    const sounding = playing === e.id && !beat.paused
+                    return (
+                      <li key={e.id} data-sounding={sounding || undefined}>
+                        {/* (an episode's tile plays it: the green button under the pointer is a picture of what the tile does) */}
+                        <button type="button" className="sp-tile" onClick={(press) => press.detail < 2 && play(e)}>
+                          <Cover tone={e.tone} size={48} src={coverOf(e)} />
+                          <b>{titleOf(e)}</b>
+                          {sounding && <Bars />}
+                          <span className="sp-tile__play" aria-hidden>
+                            <Glyph is={sounding ? 'pause' : 'play'} size={14} />
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
               {q && !(only !== 'playlists' && episodes.length) && !(only !== 'podcasts' && playlists.length) && none}
@@ -478,21 +670,27 @@ export function SpotifyApp() {
           )}
           {at.is === 'podcasts' && (
             <>
-              <header className="sp-hero" style={{ ['--tone' as string]: '#3a5a4a' }}>
+              <header className="sp-hero" style={{ ['--tone' as string]: '#3a5a4a', ['--n' as string]: Math.max(4, listName(at.list).length) }}>
                 <Mosaic list={at.list} />
                 <span>
                   <small>Podcasts</small>
                   <h1>{listName(at.list)}</h1>
                   <p>
-                    <b>Shrug</b> · {inList(at.list).length} episodes
+                    <b>Shrug</b> • {inList(at.list).length} episodes
                   </p>
                 </span>
               </header>
-              <div className="sp-under">
+              <div className="sp-under" style={{ ['--tone' as string]: '#3a5a4a' }}>
+                {/* Under the head, as on a playlist's page in Spotify: the green button that plays the list, and Shuffle beside it (the same switch as the bar's) */}
                 {inList(at.list)[0] && (
-                  <button type="button" className="sp-play" aria-label={`Play ${listName(at.list)}`} onClick={() => play((episode && episode.list === at.list ? episode : inList(at.list)[0])!)}>
-                    {episode && episode.list === at.list && !beat.paused ? <Pause size={22} strokeWidth={0} fill="currentColor" aria-hidden /> : <Play size={22} strokeWidth={0} fill="currentColor" aria-hidden />}
-                  </button>
+                  <div className="sp-acts">
+                    <button type="button" className="sp-play" aria-label={`${episode?.list === at.list && !beat.paused ? 'Pause' : 'Play'} ${listName(at.list)}`} onClick={() => playList(at.list)}>
+                      <Glyph is={episode?.list === at.list && !beat.paused ? 'pause' : 'play'} size={24} />
+                    </button>
+                    <button type="button" className="sp-act" aria-label={`Shuffle ${listName(at.list)}`} aria-pressed={shuffle} onClick={shuffleIt}>
+                      <Glyph is="shuffle" size={32} />
+                    </button>
+                  </div>
                 )}
                 {episodes.some((e) => e.list === at.list) ? table(episodes.filter((e) => e.list === at.list)) : none}
               </div>
@@ -511,7 +709,7 @@ export function SpotifyApp() {
           )}
           {playlist && (
             <>
-              <header className="sp-hero" style={{ ['--tone' as string]: toneOf(playlist) }}>
+              <header className="sp-hero" style={{ ['--tone' as string]: toneOf(playlist), ['--n' as string]: Math.max(4, nameOf(playlist).length) }}>
                 <Cover tone={toneOf(playlist)} list src={coverOf(playlist)} />
                 <span>
                   <small>Public Playlist</small>
@@ -519,13 +717,13 @@ export function SpotifyApp() {
                   {playlist.line && <p>{playlist.line}</p>}
                 </span>
               </header>
-              <div className="sp-under">
+              <div className="sp-under" style={{ ['--tone' as string]: toneOf(playlist) }}>
                 {embedOf(playlist.link) && !failed ? (
                   <Player key={`${playlist.id}-${again}`} src={embedOf(playlist.link)!} title={`${nameOf(playlist)}, in Spotify’s player`} tall onFailed={() => setFailed(true)} />
                 ) : (
                   <div className="sp-stand">
                     <span className="sp-play" aria-hidden>
-                      <Play size={22} strokeWidth={0} fill="currentColor" />
+                      <Glyph is="play" size={24} />
                     </span>
                     <span>
                       <b>{failed ? 'Spotify’s player didn’t load' : 'Spotify’s own player goes here'}</b>
@@ -573,7 +771,7 @@ export function SpotifyApp() {
             <div className="sp-about">
               <b>{titleOf(episode)}</b>
               <span>{episode.show ?? 'Podcast episode'}</span>
-              {(episode.date || episode.length) && <small>{[episode.date, episode.length].filter(Boolean).join(' · ')}</small>}
+              {(episode.date || episode.length) && <small>{[episode.date, episode.length].filter(Boolean).join(' • ')}</small>}
             </div>
           )}
         </aside>
@@ -588,21 +786,28 @@ export function SpotifyApp() {
           </span>
         </div>
         <div className="sp-ctl" role="group" aria-label="Player controls">
+          {/* Each says what it does when the pointer rests on it, as Spotify's do (data-tip) */}
           <span className="sp-keys">
-            <button type="button" aria-label="Back 15 seconds" aria-disabled={!beat.of || undefined} onClick={() => seek(beat.at - 15_000)}>
-              <Fifteen />
+            <button type="button" aria-label="Shuffle" aria-pressed={shuffle} data-tip={shuffle ? 'Disable shuffle' : 'Enable shuffle'} onClick={shuffleIt}>
+              <Glyph is="shuffle" />
             </button>
-            <button type="button" aria-label="Previous episode" aria-disabled={first || undefined} onClick={() => step(-1)}>
-              <SkipBack size={18} strokeWidth={2.2} fill="currentColor" aria-hidden />
+            <button type="button" aria-label="Previous episode" aria-disabled={!canPrev || undefined} data-tip="Previous" onClick={prev}>
+              <Glyph is="prev" />
             </button>
-            <button type="button" className="sp-go" aria-label={beat.paused ? 'Play' : 'Pause'} aria-disabled={!episode?.link || undefined} onClick={toggle}>
-              {beat.paused ? <Play size={16} strokeWidth={0} fill="currentColor" aria-hidden /> : <Pause size={16} strokeWidth={0} fill="currentColor" aria-hidden />}
+            <button type="button" className="sp-go" aria-label={beat.paused ? 'Play' : 'Pause'} aria-disabled={!episode?.link || undefined} data-tip={beat.paused ? 'Play' : 'Pause'} onClick={toggle}>
+              <Glyph is={beat.paused ? 'play' : 'pause'} />
             </button>
-            <button type="button" aria-label="Next episode" aria-disabled={last || undefined} onClick={() => step(1)}>
-              <SkipForward size={18} strokeWidth={2.2} fill="currentColor" aria-hidden />
+            <button type="button" aria-label="Next episode" aria-disabled={!canNext || undefined} data-tip="Next" onClick={next}>
+              <Glyph is="next" />
             </button>
-            <button type="button" aria-label="Forward 15 seconds" aria-disabled={!beat.of || undefined} onClick={() => seek(beat.at + 15_000)}>
-              <Fifteen on />
+            <button
+              type="button"
+              aria-label={repeat === 'one' ? 'Repeat: this episode' : repeat === 'all' ? 'Repeat: the list' : 'Repeat'}
+              aria-pressed={repeat !== 'off'}
+              data-tip={repeat === 'off' ? 'Enable repeat' : repeat === 'all' ? 'Enable repeat one' : 'Disable repeat'}
+              onClick={() => setRepeat(repeat === 'off' ? 'all' : repeat === 'all' ? 'one' : 'off')}
+            >
+              <Glyph is={repeat === 'one' ? 'repeat-one' : 'repeat'} />
             </button>
           </span>
           <span className="sp-line">
@@ -618,17 +823,23 @@ export function SpotifyApp() {
               aria-valuetext={`${clock(beat.at)} of ${beat.of ? clock(beat.of) : (episode?.length ?? 'the episode')}`}
               style={{ ['--at' as string]: beat.of ? `${(beat.at / beat.of) * 100}%` : '0%' }}
               onChange={(e) => seek(Number(e.target.value) * 1000)}
+              onKeyDown={(e) => {
+                // The arrows move it five seconds, as they do Spotify's line
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+                e.preventDefault()
+                seek(beat.at + (e.key === 'ArrowRight' ? 5000 : -5000))
+              }}
             />
             <small>{beat.of ? clock(beat.of) : (episode?.length ?? '-:--')}</small>
           </span>
         </div>
         <div className="sp-end">
-          <button type="button" aria-label="Now playing view" aria-pressed={side} onClick={() => setSide((was) => !was)}>
-            <SquarePlay size={18} strokeWidth={1.8} aria-hidden />
+          <button type="button" aria-label="Now playing view" aria-pressed={side} data-tip="Now playing view" onClick={() => setSide((was) => !was)}>
+            <SquarePlay size={16} strokeWidth={1.6} aria-hidden />
           </button>
           {episode?.link && (
-            <a href={episode.link} target="_blank" rel="noopener noreferrer" aria-label="Open this episode in Spotify">
-              <ArrowUpRight size={18} strokeWidth={1.9} aria-hidden />
+            <a href={episode.link} target="_blank" rel="noopener noreferrer" aria-label="Open this episode in Spotify" data-tip="Open in Spotify">
+              <ArrowUpRight size={16} strokeWidth={1.7} aria-hidden />
             </a>
           )}
         </div>
