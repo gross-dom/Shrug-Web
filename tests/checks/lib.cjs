@@ -75,6 +75,7 @@ exports.DOCK_IDS = exports.DOCK.map(([id]) => id)
 /** What is out on the desk, down its right-hand side, in its order: each icon's own name, and what it says of itself. */
 exports.DESK = [
   ['updates', 'Updates, desktop icon, locked'],
+  ['portfolio', 'Portfolio, desktop icon'],
   ['one-pager', 'One-pager, desktop icon'],
   ['wallpapers', 'Wallpapers, desktop icon'],
   ['quicktime', 'QuickTime, desktop icon'],

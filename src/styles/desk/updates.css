@@ -172,3 +172,27 @@
   font-size: 11.5px;
   white-space: nowrap;
 }
+
+/* For someone the folder is locked to: the way to ask about becoming an LP, under what the folder says (and
+   under Log In, where nobody is logged in). A quiet button: Log In is the one that stands out */
+.updates__enquire {
+  height: 34px;
+  margin-top: 6px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--ss-text) 22%, transparent);
+  border-radius: 999px;
+  color: var(--ss-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .updates__enquire:hover {
+    background: color-mix(in srgb, var(--ss-text) 8%, transparent);
+  }
+}
+
+.updates__enquire:focus-visible {
+  outline: 2px solid var(--ss-accent, #0a84ff);
+  outline-offset: 2px;
+}

@@ -16,7 +16,7 @@ import { createStore } from './store'
 // Only the desktop reads this: a phone has neither a desk nor a Dock of this kind.
 
 /** What is on the desk as it comes: files and folders (which stay on the desk), then the apps that live there. */
-export const DESK_FILES = ['updates', 'one-pager', 'wallpapers'] as const
+export const DESK_FILES = ['updates', 'portfolio', 'one-pager', 'wallpapers'] as const
 export const DESK_APPS: AppId[] = ['quicktime', 'photobooth', 'spotify', 'youtube']
 /** The one Dock icon that stays where it is, as the Finder's does on a Mac. */
 export const FIXED: AppId = 'finder'
@@ -105,6 +105,34 @@ if (typeof window !== 'undefined')
 export function placeOnDesk(id: string, spot: Spot) {
   const now = layout.get()
   change({ dock: now.dock.filter((app) => app !== id), desk: now.desk.includes(id) ? now.desk : [...now.desk, id], at: { ...now.at, [id]: spot } })
+}
+
+/** Puts something into the line of icons down the right, beside one that is in it: before it, or after. */
+function joinLine(id: string, beside: string, before: boolean) {
+  const now = layout.get()
+  const desk = now.desk.filter((item) => item !== id)
+  const there = desk.indexOf(beside)
+  desk.splice(there < 0 ? desk.length : there + (before ? 0 : 1), 0, id)
+  const at = { ...now.at }
+  delete at[id]
+  change({ dock: now.dock.filter((app) => app !== id), desk, at })
+}
+
+/** Something let go of over the desk: it is put where it was dropped, as `placeOnDesk` puts it; but where
+ * that is on the line of icons down the right, it goes into the line there, among them, and the line makes
+ * room. (Left where it fell, it lay on top of whichever icon was under it: Niv, 27 Nov.) `wide` and `tall`
+ * are the icon's own size. */
+export function dropOnDesk(id: string, spot: Spot, wide = 92, tall = 80) {
+  const left = window.innerWidth - spot.r - wide
+  const top = spot.t
+  const line = [...document.querySelectorAll<HTMLElement>('.desk .desk__item')].filter((el) => el.dataset.desk && el.dataset.desk !== id).map((el) => ({ id: el.dataset.desk!, box: el.getBoundingClientRect() }))
+  const over = line.filter(({ box }) => left < box.right + 6 && left + wide > box.left - 6 && top < box.bottom + 6 && top + tall > box.top - 6)
+  if (!over.length) return placeOnDesk(id, spot)
+  // (beside whichever of them its middle is nearest: above that one's middle it goes before it, below it after)
+  const mid = { x: left + wide / 2, y: top + tall / 2 }
+  const far = ({ box }: { box: DOMRect }) => Math.hypot(box.left + box.width / 2 - mid.x, box.top + box.height / 2 - mid.y)
+  const nearest = over.reduce((a, b) => (far(b) < far(a) ? b : a))
+  joinLine(id, nearest.id, mid.y < nearest.box.top + nearest.box.height / 2)
 }
 
 /** Moves an app into the Dock, before the icon that is at `index` there now. */

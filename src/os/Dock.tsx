@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNewReplies } from '../apps/state'
 import { APPS, GUEST_APPS, type AppId } from './apps'
-import { FIXED, layout, offDock, placeOnDesk, toDock } from './layout'
+import { FIXED, dropOnDesk, layout, offDock, toDock } from './layout'
 import { dockPoint, prefersReducedMotion } from './dom'
 import { AppIcon } from './icons'
 import { useStore } from './store'
@@ -178,7 +178,8 @@ export function Dock() {
         // Up out of the Dock: on the desk, where it was let go
         const left = Math.max(8, Math.min(window.innerWidth - 100, ev.clientX - 46))
         const top = Math.max(34, Math.min(bar.top - 100, ev.clientY - 40))
-        return placeOnDesk(id, { r: Math.round(window.innerWidth - left - 92), t: Math.round(top) })
+        // (or, let go of over the line of icons down the right, into the line there)
+        return dropOnDesk(id, { r: Math.round(window.innerWidth - left - 92), t: Math.round(top) })
       }
       // Along the Dock: before whichever of the others is to the right of where it was let go
       const others = [...(shelf.current?.querySelectorAll<HTMLElement>('[data-dock-item]:not([data-guest])') ?? [])].filter((icon) => icon !== el)

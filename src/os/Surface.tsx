@@ -24,11 +24,12 @@ import { Dock } from './Dock'
 import { dockPoint } from './dom'
 import { focusFirst } from './focus'
 import { held } from './held'
-import { dockable, layout, placeOnDesk, toDock, type Spot } from './layout'
+import { dockable, dropOnDesk, layout, toDock, type Spot } from './layout'
 import { AppIcon, FolderIcon, OnePagerIcon } from './icons'
 import { MenuBar } from './MenuBar'
 import { Notifications } from './Notifications'
 import { openOnePager } from './papers'
+import { ArtWidget } from './ArtWidget'
 import { SanFrancisco } from './SanFrancisco'
 import { saver } from './saver'
 import { ScreenSaver } from './ScreenSaver'
@@ -74,13 +75,14 @@ interface DeskItem {
 }
 
 /** What is left out on the desk, down its right-hand side, in this order (design/v1/DESIGN.md, section 3):
- * Updates, the one-pager, Wallpapers, QuickTime Player, Photo Booth, Spotify, YouTube. The Updates folder is first:
- * it is always there, locked to everyone but Shrug's LPs. Portfolio is in the Dock. (One whose app has
+ * Updates, Portfolio, the one-pager, Wallpapers, QuickTime Player, Photo Booth, Spotify, YouTube. The Updates folder is
+ * first: it is always there, locked to everyone but Shrug's LPs. Portfolio is a folder here as well as an icon
+ * in the Dock (Niv, 27 Nov: it had been taken off the desk when it went into the Dock). (One whose app has
  * nothing real in it yet is left off the live site: os/held.ts.) */
-/** What the desk has besides Updates, the one-pager and Wallpapers, where it is not left out for now (held.ts). */
+/** What the desk has besides Updates, Portfolio, the one-pager and Wallpapers, where it is not left out for now (held.ts). */
 const ALSO_ON_DESK = ['quicktime', 'photobooth', 'spotify', 'youtube'] as const
 /** How many icons that makes. The window manager is told at once: a window can open before the desk is drawn. */
-const ON_DESK = 3 + ALSO_ON_DESK.filter((id) => !held(id)).length
+const ON_DESK = 4 + ALSO_ON_DESK.filter((id) => !held(id)).length
 deskHolds(ON_DESK)
 
 function useDesk(): DeskItem[] {
@@ -100,6 +102,18 @@ function useDesk(): DeskItem[] {
         if (account.get().status !== 'member') return askLogIn('updates')
         openApp('updates', dockPoint('updates'))
         focusWindow('updates')
+      },
+    },
+    // The portfolio, as a folder: the window the Dock's own icon opens, out of this one
+    portfolio: {
+      id: 'portfolio',
+      name: 'Portfolio',
+      says: 'desktop icon',
+      icon: <FolderIcon />,
+      open: () => {
+        const icon = document.querySelector<HTMLElement>('[data-desk="portfolio"] .desk__icon')?.getBoundingClientRect()
+        openApp('finder', icon ? { x: icon.left + icon.width / 2, y: icon.top + icon.height / 2 } : dockPoint('finder'))
+        focusWindow('finder')
       },
     },
     // A file: it opens in Preview (it was a link to a page elsewhere)
@@ -218,7 +232,8 @@ function DeskIcons() {
       const dockTop = shelf()?.getBoundingClientRect().top ?? window.innerHeight - 96
       const left = Math.max(8, Math.min(window.innerWidth - was.width - 8, was.left + ev.clientX - from.x))
       const top = Math.max(34, Math.min(dockTop - was.height - 8, was.top + ev.clientY - from.y))
-      placeOnDesk(id, { r: Math.round(window.innerWidth - left - was.width), t: Math.round(top) })
+      // (or, let go of over the line of icons down the right, into the line there)
+      dropOnDesk(id, { r: Math.round(window.innerWidth - left - was.width), t: Math.round(top) }, was.width, was.height)
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
@@ -389,6 +404,7 @@ export default function Surface() {
           <DeskIcons />
           <Unlocked />
           <SanFrancisco />
+          <ArtWidget />
           <TilePreview />
           {APP_IDS.map((id) => {
             const Body = WINDOWS[id]

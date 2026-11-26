@@ -186,16 +186,25 @@ export function pagesOf(shots: Shot[]): Shot[][] {
   return pages
 }
 
+/** The art pieces that have their photographs, by the names Shrug gives them, and the files they are kept in. */
+const PIECES: [string, string][] = [
+  ['America Must Win', 'art-america-must-win'],
+  ['Becoming Steve Jobs', 'art-becoming-steve-jobs'],
+  ['Outatime', 'art-outatime'],
+  ['Return of the Jedi', 'art-return-of-the-jedi'],
+  ['Tesla Flying', 'art-tesla-flying'],
+]
+
+/** Each of them with its product shot (the piece whole, on white): for a place that shows the art without
+ * the catalogue, as the desk's widget does. */
+export const ART: { name: string; shot: Shot }[] = PIECES.map(([name, slug]) => ({ name, shot: piece(slug)[0]! }))
+
 /** By name, in small letters. (The chair, in each of its colors, is found by `chairOf`.) */
 const KEPT: Record<string, Shot[]> = {
   chromatic: set('chromatic'),
   'art on acrylic': set('art-on-acrylic'),
   // (five of the six pieces, by the names Shrug gives them, with Dom's photographs of 26 Nov. The sixth is on its way)
-  'america must win': piece('art-america-must-win'),
-  'becoming steve jobs': piece('art-becoming-steve-jobs'),
-  outatime: piece('art-outatime'),
-  'return of the jedi': piece('art-return-of-the-jedi'),
-  'tesla flying': piece('art-tesla-flying'),
+  ...Object.fromEntries(PIECES.map(([name, slug]) => [name.toLowerCase(), piece(slug)])),
   // The cover's lettering is at its right-hand edge
   'ws catalog': set('ws-catalog', { 1: '88% 50%' }),
   'shrug 2027': set('shrug-2027'),

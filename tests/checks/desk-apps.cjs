@@ -30,7 +30,7 @@ const check = (name, ok, detail = '') => {
   let p = t.page
   await p.waitForTimeout(1600)
   const desk = await p.evaluate(() => { const items = [...document.querySelectorAll('.desk__item')]; const rects = items.map((i) => i.getBoundingClientRect()); const dockTop = document.querySelector('.dock__shelf').getBoundingClientRect().top; return { ids: items.map((i) => i.dataset.desk).join(' '), says: items.map((i) => i.getAttribute('aria-label')).join(' | '), oneLine: rects.every((r) => Math.abs(r.left - rects[0].left) < 1), clear: rects.every((r) => r.bottom <= dockTop), drawn: items.every((i) => !!i.querySelector('svg')) } })
-  check('the desk has, down its right side: Updates, the one-pager, Wallpapers, QuickTime, Photo Booth, Spotify, YouTube', desk.ids === A.DESK.map(([id]) => id).join(' ') && desk.says === A.DESK.map(([, says]) => says).join(' | '), desk.says)
+  check('the desk has, down its right side: Updates, Portfolio, the one-pager, Wallpapers, QuickTime, Photo Booth, Spotify, YouTube', desk.ids === A.DESK.map(([id]) => id).join(' ') && desk.says === A.DESK.map(([, says]) => says).join(' | '), desk.says)
   check('they are in one line on a 1440 by 900 screen, each with its icon, clear of the Dock', desk.oneLine && desk.clear && desk.drawn, JSON.stringify(desk))
   // (on a shorter screen they are closer together, still one line, so that a window has the room beside them;
   // and only on one too short for that do they go to a second line beside the first)
@@ -39,11 +39,11 @@ const check = (name, ok, detail = '') => {
   await p.setViewportSize({ width: 1280, height: 640 })
   await p.waitForTimeout(500)
   const short = await laid()
-  check('on a short screen the icons are closer together and smaller, still in one line, each with its name, none under the Dock', tall.pitch === 99 && tall.icon === 64 && short.lines === 1 && short.pitch < 99 && short.pitch >= 64 && short.icon < 64 && short.named && short.clear, JSON.stringify({ tall, short }))
+  check('on a short screen the icons are closer together and smaller, still in one line, each with its name, none under the Dock', tall.pitch === 96 && tall.icon === 61 && short.lines === 1 && short.pitch < 96 && short.pitch >= 58 && short.icon < 61 && short.named && short.clear, JSON.stringify({ tall, short }))
   await p.setViewportSize({ width: 1280, height: 520 })
   await p.waitForTimeout(500)
   const shortest = await laid()
-  check('on the shortest screens they go to a second line beside the first, the first still at the right, none under the Dock', shortest.lines === 2 && shortest.clear && shortest.firstRight && shortest.pitch >= 64, JSON.stringify(shortest))
+  check('on the shortest screens they go to a second line beside the first, the first still at the right, none under the Dock', shortest.lines === 2 && shortest.clear && shortest.firstRight && shortest.pitch >= 58, JSON.stringify(shortest))
   await p.setViewportSize({ width: 1440, height: 900 })
   await p.waitForTimeout(500)
 

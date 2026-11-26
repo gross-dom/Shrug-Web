@@ -167,11 +167,12 @@ function shared(a: Rect, b: Rect) {
  * under the menu bar to above the Dock, as far apart as a Mac puts them where the screen is tall enough
  * for them all in one line, closer together on a shorter one, and in a second line beside the first only
  * where they would otherwise be closer than `least`. */
-export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, least: 64, most: 99 }
+// (least: 58 since the desk came to hold eight, so that they are still one line on a screen 600 tall)
+export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, least: 58, most: 99 }
 
 /** How many icons the desk has. The desktop says (Surface.tsx), as soon as it is loaded: the first window
  * can open before the desk has been drawn, and has to know what it is keeping clear of. */
-let onDesk = 3
+let onDesk = 4
 export const deskHolds = (count: number) => void (onDesk = count)
 
 /** The icons left out on the desk, top right: where they are drawn (the icons themselves, not the strip
@@ -207,6 +208,10 @@ const WIDGET_FROM: Size = { w: 1240, h: 641 }
  * stylesheet puts it if the desk has not been drawn yet; null on a desk that
  * does not show one. */
 function deskWidget(viewport: Size): Rect | null {
+  // (San Francisco's, which is at the head of the desk. The art's widget under it is not kept clear of: a
+  // window moved beside this one is beside that one too, and a window that opens lower down may lie over it,
+  // as a window on a Mac lies over a widget. Kept clear of as well, it took the left of the desk from new
+  // windows, which then opened on one another)
   const el = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('.sf')
   const r = el?.getBoundingClientRect()
   if (r) return r.width > 0 && r.height > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null

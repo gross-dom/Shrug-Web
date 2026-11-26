@@ -8,6 +8,7 @@ import { PdfIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { openPaper, paperOf } from '../os/papers'
 import { useStore } from '../os/store'
+import { writeToShrug } from '../os/write'
 import '../styles/desk/v1.css'
 import '../styles/desk/updates.css'
 
@@ -131,6 +132,16 @@ function List({ docs, name }: { docs: Doc[]; name: string }) {
   )
 }
 
+/** For someone the folder is locked to: the way to ask Shrug about becoming an LP (Niv, 27 Nov). It opens a
+ * message to Shrug in Messages, about that. */
+function Enquire() {
+  return (
+    <button type="button" className="updates__enquire" onClick={() => writeToShrug({ subject: 'Becoming an LP' })}>
+      Enquire about becoming an LP
+    </button>
+  )
+}
+
 export function UpdatesApp() {
   const who = useStore(account, (s) => s)
   const lp = isLP(who)
@@ -162,12 +173,14 @@ export function UpdatesApp() {
               Log In
             </button>
           )}
+          {who.status !== 'checking' && <Enquire />}
         </div>
       ) : !lp ? (
         // Logged in, and not an LP: still locked. They are told who it is for, and shown nothing of what is in it
         <div className="v-empty updates__locked">
           <Lock size={38} strokeWidth={1.6} aria-hidden />
           <p>{LOCKED}</p>
+          <Enquire />
         </div>
       ) : docs.length === 0 ? (
         <div className="v-empty">

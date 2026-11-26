@@ -213,34 +213,38 @@ function FinderIcon() {
   )
 }
 
-/** ArtStore: a white tile with an open book of colored leaves, after the Mac's Journal (no picture of that
- * icon was supplied: this is drawn from its description, two violet leaves and two warm ones, fanned from a spine). */
+/** ArtStore: a picture hung on a gallery wall. A black frame on its wire, a white mount, and in it the two
+ * colors the pieces themselves are printed in, red against blue, with a plate of yellow across them. (It was
+ * an open book of colored leaves, after the Mac's Journal, which read as another Books: Niv, 27 Nov.) */
 function ArtStoreIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#ffffff" to="#f1f1f6">
+    <Tile from="#ffffff" to="#e9e9ef">
       <defs>
-        <linearGradient id={`${id}-a`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#5e5ce6" />
-          <stop offset="1" stopColor="#af52de" />
+        <linearGradient id={`${id}-r`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ff5a4e" />
+          <stop offset="1" stopColor="#e0121c" />
         </linearGradient>
         <linearGradient id={`${id}-b`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#bf5af2" />
-          <stop offset="1" stopColor="#ff375f" />
+          <stop offset="0" stopColor="#3d6bff" />
+          <stop offset="1" stopColor="#1a1fb8" />
         </linearGradient>
-        <linearGradient id={`${id}-c`} x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffd60a" />
-          <stop offset="1" stopColor="#ff9f0a" />
-        </linearGradient>
-        <linearGradient id={`${id}-d`} x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ff9f0a" />
-          <stop offset="1" stopColor="#ff453a" />
-        </linearGradient>
+        <clipPath id={`${id}-in`}>
+          <rect x="29.5" y="37.5" width="41" height="39" rx="1" />
+        </clipPath>
       </defs>
-      <path d="M50 79C33 79 15 68 15 37C30 37 44 44 50 55Z" fill={`url(#${id}-a)`} />
-      <path d="M50 79C67 79 85 68 85 37C70 37 56 44 50 55Z" fill={`url(#${id}-c)`} />
-      <path d="M50 79C40 75 26 60 28 24C40 29 48 40 50 53Z" fill={`url(#${id}-b)`} fillOpacity=".88" />
-      <path d="M50 79C60 75 74 60 72 24C60 29 52 40 50 53Z" fill={`url(#${id}-d)`} fillOpacity=".88" />
+      {/* the wire, and the nail it hangs from */}
+      <path d="M50 14.5L30 30.5M50 14.5L70 30.5" stroke="#8e8e93" strokeWidth="1.7" strokeLinecap="round" fill="none" />
+      <circle cx="50" cy="14.5" r="2.6" fill="#636366" />
+      {/* its shadow on the wall, then the frame and its mount */}
+      <rect x="22.5" y="32" width="59" height="56" rx="4" fill="#000" fillOpacity=".12" />
+      <rect x="20" y="28" width="60" height="58" rx="4" fill="#1c1c1e" />
+      <rect x="24.5" y="32.5" width="51" height="49" rx="1.5" fill="#fff" />
+      <g clipPath={`url(#${id}-in)`}>
+        <rect x="29.5" y="37.5" width="41" height="39" fill={`url(#${id}-b)`} />
+        <path d="M29.5 37.5H62L40 76.5H29.5Z" fill={`url(#${id}-r)`} />
+        <rect x="38.5" y="51" width="23" height="11.5" rx="2" fill="#ffd60a" stroke="#1c1c1e" strokeWidth="1.3" />
+      </g>
     </Tile>
   )
 }

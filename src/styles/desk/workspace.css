@@ -138,6 +138,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- A window of another size: everything in it is measured in one unit (--wsu), which is one pixel in the
+   window as it opens (1100 by 720) and grows and shrinks with it, between about four fifths of that and
+   half as much again. So the type, the tray of colors, the chair and the room about them are all as large
+   for the window as they are when it opens, whatever size it is dragged to: they had stayed one size, and
+   looked small in a large window and crowded in a small one (Niv, 27 Nov). It is a length the browser
+   works out once, where it is said, so that what is inside reads it as a number of pixels */
+@property --wsu {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 1px;
+}
+
 /* ---- First: eight slabs */
 
 .wx-first {
@@ -145,14 +157,19 @@
   display: flex;
   flex: 1;
   min-width: 0;
+  container: first / size;
+}
+
+.wx-first > * {
+  --wsu: clamp(0.82px, min(100cqw / 1100, 100cqh / 672), 1.5px);
 }
 
 .fl-head {
   position: absolute;
-  top: 16px;
-  left: 40px;
+  top: calc(16 * var(--wsu));
+  left: calc(40 * var(--wsu));
   z-index: 2;
-  max-width: 420px;
+  max-width: calc(420 * var(--wsu));
   transition: opacity 0.2s ease;
 }
 
@@ -161,7 +178,7 @@
 }
 
 .fl-head h1 {
-  font-size: 54px;
+  font-size: calc(54 * var(--wsu));
   font-weight: 700;
   line-height: 0.98;
   letter-spacing: -0.045em;
@@ -174,7 +191,7 @@
   flex: 1;
   gap: 8px;
   min-width: 0;
-  padding: 150px 20px 20px;
+  padding: calc(150 * var(--wsu)) 20px 20px;
   transition: padding 0.4s cubic-bezier(0.22, 1, 0.36, 1), gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -186,7 +203,7 @@
   justify-content: flex-end;
   min-width: 0;
   /* (nine slabs across: a little less edge, so that the longest name, Championship, is whole) */
-  padding: 18px 13px;
+  padding: calc(18 * var(--wsu)) calc(13 * var(--wsu));
   overflow: hidden;
   border-radius: 20px;
   text-align: left;
@@ -198,7 +215,9 @@
 }
 
 .fl-slab b {
-  font-size: 13.5px;
+  /* (as large as the window makes it, and never so large that the longest name, Alexandrite, would not fit
+     across a slab while another slab is the wide one: (100cqw - 104px) / 10.4 is how wide a slab is then) */
+  font-size: max(9.5px, min(calc(13.5 * var(--wsu)), calc(((100cqw - 104px) / 10.4 - 26 * var(--wsu)) / 5.35)));
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.025em;
@@ -213,7 +232,7 @@
 
 .fl-slab small {
   margin-top: 4px;
-  font-size: 11.5px;
+  font-size: max(9px, min(calc(11.5 * var(--wsu)), calc(((100cqw - 104px) / 10.4 - 26 * var(--wsu)) / 6.7)));
 }
 
 /* The chair on the slab under the pointer: the chair the studio turns, in that color (workspace/Still.tsx).
@@ -224,7 +243,9 @@
    little more softly than it came, with the slab closing over it. */
 .fl-slab .ch {
   position: absolute;
-  bottom: 84px;
+  bottom: calc(84 * var(--wsu));
+  width: calc(168 * var(--wsu));
+  height: auto;
   left: 50%;
   max-width: none;
   transform: translateX(-50%);
@@ -242,10 +263,10 @@
 .fl-slab.big::before {
   content: '';
   position: absolute;
-  bottom: 70px;
+  bottom: calc(70 * var(--wsu));
   left: 50%;
-  width: 250px;
-  height: 290px;
+  width: calc(250 * var(--wsu));
+  height: calc(290 * var(--wsu));
   transform: translateX(-50%);
   background: radial-gradient(closest-side, rgb(255 255 255 / 0.24), rgb(255 255 255 / 0));
   pointer-events: none;
@@ -317,8 +338,10 @@
 /* (how tall the foot is, and so how tall the chair can be: said on what is in the studio, which is what can
    be measured against the studio's own size) */
 .fl > * {
-  --st-foot: 150px;
-  --st-h: min(470px, calc(100cqh - 168px));
+  --wsu: clamp(0.82px, min(100cqw / 1100, 100cqh / 720), 1.5px);
+  --st-foot: calc(150 * var(--wsu));
+  /* (in a window smaller than it opens the chair keeps the height it has room for) */
+  --st-h: min(calc(470 * max(1px, var(--wsu))), calc(100cqh - 168 * var(--wsu)));
 }
 
 .st-light {
@@ -425,6 +448,108 @@
   left: auto;
 }
 
+/* One picture pushes the last off the stage: a photograph comes in from the right (going on) or the left
+   (going back) as the one before it goes off the other way, the two moving as one, the way a carousel is
+   pushed along. Over the 3D chair it is the same: the photograph comes in from the right, and the chair, its
+   name and its ring go a little way off with it, and come back that way when the photograph leaves. The
+   photographs come in by themselves after the chair has been looked at a while (Workspace.tsx): one that is
+   next is held ready out of sight, so that it is whole when its turn comes. */
+.st-photo[data-enter='1'] {
+  animation: st-on 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.st-photo[data-enter='-1'] {
+  animation: st-on-back 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.st-photo[data-leave='1'] {
+  animation: st-off 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.st-photo[data-leave='-1'] {
+  animation: st-off-back 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.st-photo[data-ahead] {
+  visibility: hidden;
+}
+
+@keyframes st-on {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes st-on-back {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes st-off {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes st-off-back {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.fl[data-stage='out'] > .fl-word,
+.fl[data-stage='out'] .st-table,
+.fl[data-stage='out'] .st-ring,
+.fl[data-stage='out'] .st-turn {
+  animation: st-chair-off 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fl[data-stage='in'] > .fl-word,
+.fl[data-stage='in'] .st-table,
+.fl[data-stage='in'] .st-ring,
+.fl[data-stage='in'] .st-turn {
+  animation: st-chair-on 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes st-chair-off {
+  to {
+    opacity: 0;
+    translate: -14% 0;
+  }
+}
+
+@keyframes st-chair-on {
+  from {
+    opacity: 0;
+    translate: -14% 0;
+  }
+}
+
+/* The picture that comes next by itself says so: a line fills along the foot of its place in the strip, for
+   as long as what is on the stage is being shown */
+.st-shot[data-next] {
+  position: relative;
+}
+
+.st-shot[data-next]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #fff;
+  transform-origin: left;
+  animation: st-next var(--hold, 5s) linear both;
+}
+
+@keyframes st-next {
+  from {
+    transform: scaleX(0);
+  }
+}
+
 .st-photo__shade {
   position: absolute;
   inset: 0;
@@ -443,23 +568,23 @@
 .st-shots {
   position: absolute;
   top: calc(var(--bar) + 26px);
-  right: 40px;
+  right: calc(40 * var(--wsu));
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: calc(8 * var(--wsu));
 }
 
 .st-shot {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: calc(58 * var(--wsu));
+  height: calc(58 * var(--wsu));
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: calc(12 * var(--wsu));
   background: rgba(255, 255, 255, 0.3);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
-  font-size: 10px;
+  font-size: max(9px, calc(10 * var(--wsu)));
   font-weight: 700;
   line-height: 1;
 }
@@ -509,7 +634,7 @@
 
 .st-ring {
   position: absolute;
-  bottom: calc(var(--st-foot) + 14px);
+  bottom: calc(var(--st-foot) + 14 * var(--wsu));
   left: 50%;
   width: calc(var(--st-h) * 0.851);
   height: calc(var(--st-h) * 0.157);
@@ -572,16 +697,16 @@
 
 .st-turn {
   position: absolute;
-  bottom: calc(var(--st-foot) - 16px);
+  bottom: calc(var(--st-foot) - 16 * var(--wsu));
   left: 50%;
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 26px;
-  padding: 0 12px;
+  height: calc(26 * var(--wsu));
+  padding: 0 calc(12 * var(--wsu));
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.26);
-  font-size: 11.5px;
+  font-size: max(10.5px, calc(11.5 * var(--wsu)));
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -599,34 +724,34 @@
    Where there is room to spare it is moved to stand under the middle of the window (--nudge) */
 .st-foot {
   position: absolute;
-  right: 40px;
-  bottom: 22px;
-  left: 40px;
+  right: calc(40 * var(--wsu));
+  bottom: calc(22 * var(--wsu));
+  left: calc(40 * var(--wsu));
   z-index: 2;
   display: flex;
   align-items: flex-end;
-  gap: 18px;
+  gap: calc(18 * var(--wsu));
 }
 
 .fl-info {
   flex: none;
   /* (one width whatever the color is called, so that the tray beside it does not change with the name) */
-  width: 264px;
+  width: calc(264 * var(--wsu));
   min-width: 0;
-  max-width: 300px;
-  padding-bottom: 10px;
+  max-width: calc(300 * var(--wsu));
+  padding-bottom: calc(10 * var(--wsu));
 }
 
 .fl-info h2 {
-  font-size: 34px;
+  font-size: calc(34 * var(--wsu));
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.035em;
 }
 
 .fl-info p {
-  margin-top: 8px;
-  font-size: 14px;
+  margin-top: calc(8 * var(--wsu));
+  font-size: max(12px, calc(14 * var(--wsu)));
   line-height: 1.4;
   opacity: 0.86;
 }
@@ -635,18 +760,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 10px;
+  margin-top: calc(10 * var(--wsu));
 }
 
 .st-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 22px;
-  padding: 0 9px;
+  height: calc(22 * var(--wsu));
+  padding: 0 calc(9 * var(--wsu));
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.3);
-  font-size: 11.5px;
+  font-size: max(10.5px, calc(11.5 * var(--wsu)));
   font-weight: 600;
 }
 
@@ -660,7 +785,7 @@
   flex: 1 1 0;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: calc(8 * var(--wsu));
   min-width: 0;
 }
 
@@ -669,10 +794,10 @@
   align-items: center;
   gap: 9px;
   max-width: 100%;
-  height: 30px;
-  padding: 0 12px 0 8px;
+  height: calc(30 * var(--wsu));
+  padding: 0 calc(12 * var(--wsu));
   border-radius: 999px;
-  font-size: 12px;
+  font-size: max(11px, calc(12 * var(--wsu)));
   font-weight: 500;
   white-space: nowrap;
   transform: translateX(var(--nudge, 0px));
@@ -686,22 +811,6 @@
 
 .fl-owners b {
   font-weight: 700;
-}
-
-.fl-faces {
-  display: inline-flex;
-}
-
-.fl-faces i {
-  width: 18px;
-  height: 18px;
-  margin-left: -6px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1.5px currentColor;
-}
-
-.fl-faces i:first-child {
-  margin-left: 0;
 }
 
 @media (hover: hover) {
@@ -719,9 +828,9 @@
   display: flex;
   align-items: center;
   gap: var(--dot-gap, 10px);
-  height: 70px;
-  padding: 0 16px;
-  border-radius: 24px;
+  height: calc(70 * var(--wsu));
+  padding: 0 calc(16 * var(--wsu));
+  border-radius: calc(24 * var(--wsu));
   background: rgba(255, 255, 255, 0.34);
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.6), 0 10px 30px -8px rgba(0, 0, 0, 0.3);
   -webkit-backdrop-filter: blur(20px);
@@ -754,7 +863,7 @@
 .fl-dot.on::after {
   content: '';
   position: absolute;
-  bottom: -11px;
+  bottom: calc(-11 * var(--wsu));
   left: 50%;
   width: 4px;
   height: 4px;
@@ -773,34 +882,24 @@
   flex: none;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
-  padding-bottom: 10px;
+  gap: calc(10 * var(--wsu));
+  padding-bottom: calc(10 * var(--wsu));
 }
 
-/* (in a narrow window the name is set a little smaller and has less of the row, so the tray keeps more of its dots) */
 @container studio (max-width: 900px) {
-  .fl-info {
-    width: 220px;
-    max-width: 230px;
-  }
-
-  .fl-info h2 {
-    font-size: 28px;
-  }
-
   .st-shots {
     right: 20px;
   }
 }
 
 .fl-buy b {
-  font-size: 22px;
+  font-size: calc(22 * var(--wsu));
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .fl-buy small {
-  font-size: 12px;
+  font-size: max(11px, calc(12 * var(--wsu)));
   opacity: 0.86;
 }
 
@@ -809,12 +908,12 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 50px;
-  padding: 0 28px;
+  height: calc(50 * var(--wsu));
+  padding: 0 calc(28 * var(--wsu));
   border-radius: 999px;
   background: #141414;
   color: #fff;
-  font-size: 15px;
+  font-size: max(13px, calc(15 * var(--wsu)));
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -901,7 +1000,6 @@
 .ow-card q {
   position: relative;
   z-index: 1;
-  max-width: 80%;
   font-size: 18px;
   font-weight: 600;
   line-height: 1.28;
@@ -918,13 +1016,6 @@
 .ow-card footer b {
   display: block;
   font-size: 14px;
-}
-
-.ow-card img {
-  position: absolute;
-  right: -6px;
-  bottom: -14px;
-  filter: drop-shadow(0 6px 12px rgb(0 0 0 / 0.18));
 }
 
 /* ---- BTS: how a chair is made, as a wall of pictures and films. Columns of tiles of different heights,

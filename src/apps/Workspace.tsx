@@ -1,13 +1,14 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { ChevronLeft, Play, Rotate3d, X } from 'lucide-react'
 import { fmtCents, priceCents } from '../../store/shared/rules'
-import { galleryOf } from '../../store/src/pictures'
+import { galleryOf, type Slide } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
 import { ALL_PAINTS, inkOn, MAKING, MORE, OWNERS, PAINTS, PAPER, shadedOn, type Making, type Paint } from '../data/workspace'
 import { FINISH_WORDS, type Finish } from '../../store/shared/colors'
 import { TEMPLATED } from '../data/site'
 import { Window } from '../kit/window'
 import { account, askLogIn } from '../os/account'
+import { isOn } from '../os/address'
 import { prefersReducedMotion } from '../os/dom'
 import { launchApp } from '../os/launch'
 import { loadShop, useShelf, wantShop } from '../os/shop'
@@ -81,7 +82,23 @@ export function WorkspaceApp() {
   /** The sixteen more colors, let down as a grid to pick from. */
   const [more, setMore] = useState(false)
   /** Which of the chair's pictures is on the stage: the 3D chair (null), or one of its photographs. */
-  const [shot, setShot] = useState<number | null>(null)
+  // Which of the chair's pictures is on the stage: the 3D chair (null), or one of its gallery's slides. And
+  // how it came to be: one picture pushes the last off the stage (`moving`, for as long as that takes),
+  // from the right going on and from the left going back (`dir`), `from` being what it pushes off.
+  const [stage, setStage] = useState<{ shot: number | null; from: number | null; dir: 1 | -1; moving: boolean }>({ shot: null, from: null, dir: 1, moving: false })
+  const shot = stage.shot
+  /** Shows one of them. On to a photograph it comes in from the right, the way a carousel is pushed on; back
+   * to the chair, or to an earlier photograph, from the left. */
+  const setShot = (next: number | null) =>
+    setStage((now) => (now.shot === next ? now : { shot: next, from: now.shot, dir: next !== null && (now.shot === null || next > now.shot) ? 1 : -1, moving: !prefersReducedMotion() }))
+  useEffect(() => {
+    if (!stage.moving) return
+    const done = setTimeout(() => setStage((now) => ({ ...now, moving: false })), PUSH)
+    return () => clearTimeout(done)
+  }, [stage])
+  /** The photographs come in by themselves, after the 3D chair has been looked at a while (below), until
+   * whoever is looking takes over: picks a picture, or takes hold of the chair. */
+  const [auto, setAuto] = useState(true)
   /** A film or photograph of the wall, opened large. */
   const [look, setLook] = useState<Making | null>(null)
   const frame = useRef<FrameHandle>(null)
@@ -89,7 +106,11 @@ export function WorkspaceApp() {
 
   const chosen: Chosen | null = kept ? (ALL_PAINTS.map(chosenOf).find((c) => c.id === kept.id) ?? null) : null
   const member = who.status === 'member'
-  useEffect(() => setShot(null), [chosen?.id])
+  useEffect(() => {
+    // (another color: its chair, with nothing pushed anywhere, and its photographs to come by themselves again)
+    setStage({ shot: null, from: null, dir: 1, moving: false })
+    setAuto(true)
+  }, [chosen?.id])
   /** Where the bar's way back leads, and what from: the studio if a color is picked, or the slabs. */
   const home: View = chosen ? 'studio' : 'first'
 
@@ -128,15 +149,18 @@ export function WorkspaceApp() {
       { dot: 30, gap: 8 },
       { dot: 26, gap: 7 },
     ]
-    const PAD = 32
     const measure = () => {
       const pick = el.querySelector<HTMLElement>('.fl-pick')
       if (!pick) return
       const info = el.querySelector<HTMLElement>('.fl-info')?.offsetWidth ?? 0
       const buy = el.querySelector<HTMLElement>('.fl-buy')?.offsetWidth ?? 0
       const wide = pick.clientWidth
+      // (everything in the window is as large as the window makes it: the dots too. scaleOf is the stylesheet's --wsu)
+      const k = scaleOf(el.closest<HTMLElement>('.fl'))
+      const PAD = 32 * k
+      const sizes = SIZES.map((one) => ({ dot: Math.round(one.dot * k), gap: Math.round(one.gap * k) }))
       const fits = (size: { dot: number; gap: number }) => Math.floor((wide - PAD + size.gap) / (size.dot + size.gap))
-      const size = SIZES.find((one) => fits(one) >= all) ?? SIZES[SIZES.length - 1]!
+      const size = sizes.find((one) => fits(one) >= all) ?? sizes[sizes.length - 1]!
       const dots = Math.max(2, Math.min(all, fits(size)))
       const slack = Math.max(0, wide - (dots * size.dot + (dots - 1) * size.gap + PAD))
       const nudge = Math.round(Math.max(-slack / 2, Math.min(slack / 2, (buy - info) / 2)))
@@ -173,6 +197,33 @@ export function WorkspaceApp() {
   // which is Shrug's to say: galleryOf in store/src/pictures.ts)
   const shots = product ? galleryOf(product) : []
   const photo = shot !== null ? (shots[shot] ?? null) : null
+  /** A photograph is on the stage and has covered it: one still on its way in over the chair has not. */
+  const covered = !!photo && !(stage.moving && stage.from === null)
+  // ---- The automatic push (Niv, 27 Nov): from the 3D chair into its horizontal photography. The chair is
+  // looked at for a while; then its first photograph that fills the window pushes in from the right, and the
+  // next after it, and when they have all been shown the chair comes back, and round again. An upright
+  // photograph shown whole is left for whoever picks it. It stops for good, for this color, as soon as a
+  // picture is picked or the chair is taken hold of; nothing moves by itself for someone who has asked for
+  // less motion, on a desk asked to keep still (?still), or while the window or the page is out of sight.
+  const filling = shots.map((slide, n) => (slide.kind === 'portrait' ? -1 : n)).filter((n) => n >= 0)
+  const nextAuto = shot === null ? (filling[0] ?? null) : (filling.find((n) => n > shot) ?? null)
+  const pushes = auto && view === 'studio' && shown && filling.length > 0 && !QUIET && !prefersReducedMotion()
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    if (!pushes || stage.moving) return
+    const timer = setTimeout(
+      () => {
+        // (out of sight, it waits where it is)
+        if (document.hidden) return setTick((n) => n + 1)
+        setStage((now) => (now.shot === nextAuto ? now : { shot: nextAuto, from: now.shot, dir: nextAuto === null ? -1 : 1, moving: true }))
+      },
+      shot === null ? HOLD_CHAIR : HOLD_PHOTO,
+    )
+    return () => clearTimeout(timer)
+  }, [pushes, stage.moving, shot, nextAuto, tick])
+  /** What is drawn of the gallery: the photograph on the stage, the one it is pushing off, and the one that
+   * comes next by itself, which is held ready out of sight so that it is there, whole, when it is pushed on. */
+  const layers = [...new Set([stage.moving ? stage.from : null, shot, pushes ? nextAuto : null].filter((n): n is number => n !== null && !!shots[n]))]
   /** How many photographs come before a slide, and how many there are in all: what each is called by. */
   const before = (n: number) => shots.slice(0, n).reduce((sum, slide) => sum + slide.shots.length, 0)
   const photographs = before(shots.length)
@@ -191,13 +242,13 @@ export function WorkspaceApp() {
 
   const coloured = (view === 'studio' || view === 'buy') && !!chosen
   // Over a photograph the words are white, on the shade laid under them
-  const ink = view === 'studio' && photo ? '#fff' : coloured ? inkOn(chosen.color) : '#141414'
+  const ink = view === 'studio' && covered ? '#fff' : coloured ? inkOn(chosen.color) : '#141414'
   const dark = ink === '#fff'
   // (at checkout a shifting paint is its one color: the store's page, which is drawn in it, has one ground)
   const cove = view === 'buy' && chosen ? chosen.color : coloured ? ground(chosen) : PAPER
   // How the chips are set off from the ground: on paper a little darker; on a color a little lighter, as the
   // design has them, unless white words could not then be read on one (data/workspace.ts)
-  const chips = view === 'studio' && photo ? ' dark shade' : !coloured ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
+  const chips = view === 'studio' && covered ? ' dark shade' : !coloured ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
   /** Who owns one, as the studio says it under the colors: owners of this color first. */
   const owners = chosen ? [...OWNERS_SHOWN.filter((o) => o.paint === chosen.id), ...OWNERS_SHOWN.filter((o) => o.paint !== chosen.id)] : OWNERS_SHOWN
 
@@ -279,35 +330,42 @@ export function WorkspaceApp() {
         </div>
       )}
       {view === 'studio' && chosen && (
-        <div className={`fl st${chips}`} data-photo={photo ? '' : undefined}>
+        <div className={`fl st${chips}`} data-photo={covered ? '' : undefined} data-stage={stage.moving && (stage.from === null || shot === null) ? (shot === null ? 'in' : 'out') : undefined}>
           <span className="st-light" aria-hidden />
           <span className="st-floor" aria-hidden />
           <Word name={chosen.name} />
-          <div className="st-stage" data-shot={shot !== null || undefined}>
-            <Turntable id={chosen.id} color={chosen.color} shift={chosen.shift} finish={chosen.paint.finish} name={chosen.name} live={shown && shot === null} />
+          {/* (taken hold of, or turned from the keyboard, the chair is theirs: nothing pushes it off by itself after that) */}
+          <div className="st-stage" data-shot={covered || undefined} onPointerDownCapture={() => setAuto(false)} onKeyDownCapture={() => setAuto(false)}>
+            <Turntable id={chosen.id} color={chosen.color} shift={chosen.shift} finish={chosen.paint.finish} name={chosen.name} live={shown && !covered} />
           </div>
-          {/* A photograph picked fills the window, under a shade the controls can still be read on. One too
-              narrow to fill it is set whole, on a blur of itself */}
-          {photo && (
-            <div className="st-photo" data-fit={photo.kind === 'pair' ? 'pair' : photo.kind === 'wide' ? 'fill' : 'whole'}>
-              {photo.kind !== 'pair' && <img className="st-photo__back" src={photo.shots[0]!.small} alt="" aria-hidden draggable={false} />}
-              {photo.shots.map((one, n) => (
-                <img key={one.full} className="st-photo__pic" src={one.full} srcSet={one.set} sizes={photo.kind === 'pair' ? '550px' : photo.kind === 'wide' ? '1100px' : `${Math.round(560 * (one.aspect ?? 0.75))}px`} alt={one.alt ?? `${chosen.name}: photograph ${before(shot!) + n + 1} of ${photographs}`} draggable={false} />
-              ))}
-              <span className="st-photo__shade" aria-hidden />
-            </div>
-          )}
+          {/* A photograph on the stage fills the window, under a shade the controls can still be read on. One too
+              narrow to fill it is set whole, on a blur of itself. It comes in by pushing off what was there, and
+              is pushed off in its turn (`layers`: the one on the stage, the one going, and the one held ready) */}
+          {layers.map((n) => {
+            const slide: Slide = shots[n]!
+            const on = n === shot
+            const going = stage.moving && n === stage.from && !on
+            return (
+              <div key={slide.shots[0]!.full} className="st-photo" data-fit={slide.kind === 'pair' ? 'pair' : slide.kind === 'wide' ? 'fill' : 'whole'} data-enter={on && stage.moving ? stage.dir : undefined} data-leave={going ? stage.dir : undefined} data-ahead={!on && !going ? '' : undefined} aria-hidden={on ? undefined : true}>
+                {slide.kind !== 'pair' && <img className="st-photo__back" src={slide.shots[0]!.small} alt="" aria-hidden draggable={false} />}
+                {slide.shots.map((one, i) => (
+                  <img key={one.full} className="st-photo__pic" src={one.full} srcSet={one.set} sizes={slide.kind === 'pair' ? '550px' : slide.kind === 'wide' ? '1100px' : `${Math.round(560 * (one.aspect ?? 0.75))}px`} alt={on ? (one.alt ?? `${chosen.name}: photograph ${before(n) + i + 1} of ${photographs}`) : ''} draggable={false} />
+                ))}
+                <span className="st-photo__shade" aria-hidden />
+              </div>
+            )
+          })}
           {/* The chair's pictures, beside it: the 3D chair, and each photograph there is of it in this color */}
           {shots.length > 0 && (
             <div className="st-shots" role="group" aria-label={`Pictures of the chair in ${chosen.name}`}>
-              <button type="button" className="st-shot" aria-pressed={shot === null} aria-label="The chair in 3D" onClick={() => setShot(null)}>
+              <button type="button" className="st-shot" aria-pressed={shot === null} aria-label="The chair in 3D" onClick={() => (setAuto(false), setShot(null))}>
                 <Rotate3d size={18} strokeWidth={1.9} aria-hidden />
                 <span>3D</span>
               </button>
               {shots.map((slide, n) => {
                 const from = before(n) + 1
                 return (
-                  <button key={slide.shots[0]!.full} type="button" className="st-shot" data-pair={slide.shots.length > 1 || undefined} aria-pressed={shot === n} aria-label={slide.shots.length > 1 ? `Photographs ${from} and ${from + 1} of ${photographs}` : `Photograph ${from} of ${photographs}`} onClick={() => setShot(n)}>
+                  <button key={slide.shots[0]!.full} type="button" className="st-shot" data-pair={slide.shots.length > 1 || undefined} aria-pressed={shot === n} aria-label={slide.shots.length > 1 ? `Photographs ${from} and ${from + 1} of ${photographs}` : `Photograph ${from} of ${photographs}`} data-next={pushes && !stage.moving && n === nextAuto ? '' : undefined} style={pushes && n === nextAuto ? ({ '--hold': `${shot === null ? HOLD_CHAIR : HOLD_PHOTO}ms` } as CSSProperties) : undefined} onClick={() => (setAuto(false), setShot(n))}>
                     {slide.shots.map((one) => (
                       <img key={one.full} src={one.small} alt="" loading="lazy" draggable={false} />
                     ))}
@@ -342,12 +400,7 @@ export function WorkspaceApp() {
               {/* Who owns one, under the colors: on the way to buying it. (Nobody is said to own one of the sixteen more.) */}
               {owners.length > 0 && !chosen.paint.more && (
                 <button type="button" className="fl-owners" style={{ ['--nudge' as string]: `${room.nudge}px` }} onClick={() => setView('owners')}>
-                  <span className="fl-faces" aria-hidden>
-                    {owners.slice(0, 4).map((owner, i) => {
-                      const paint = ALL_PAINTS.find((p) => p.id === owner.paint) ?? PAINTS[0]!
-                      return <i key={i} style={{ background: ground(paint) }} />
-                    })}
-                  </span>
+                  {/* (words alone: the dots of color that stood before them read as more colors to pick, Niv, 27 Nov) */}
                   <span>
                     Owned by <b>{owners.slice(0, 2).map((owner) => owner.name).join(', ')}</b>
                     {owners.length > 2 ? ` and ${owners.length - 2} more` : ''}
@@ -402,7 +455,6 @@ export function WorkspaceApp() {
                     <b>{owner.name}</b>
                     {owner.of} · {paint.name}
                   </footer>
-                  <ChairStill paint={paint.id} width={120} />
                 </article>
               )
             })}
@@ -532,6 +584,18 @@ function Look({ piece, onClose }: { piece: Making; onClose: () => void }) {
 /** The chair on its turntable: dragged to turn it. A drawing stands in for it until the 3D chair has been drawn, and stays where it cannot be. */
 /** How large the color's name is set behind the chair, at most; and how much of the studio's width its longest word may take. */
 const WORD = 176
+
+/** How long the 3D chair is looked at before its photographs begin to come in by themselves, how long each
+ * of those is shown, and how long one takes to push the last off the stage (the stylesheet's own figure). */
+const HOLD_CHAIR = 9000
+const HOLD_PHOTO = 5200
+const PUSH = 720
+/** A desk asked to keep still (?still): nothing on it moves by itself. */
+const QUIET = typeof window !== 'undefined' && isOn('still')
+
+/** How much larger or smaller than it opens the studio is drawn: 1 in a window 1100 by 720, and with the
+ * window from there, between about four fifths and half as much again (the stylesheet's --wsu, as a number). */
+const scaleOf = (studio: HTMLElement | null) => (studio ? Math.max(0.82, Math.min(1.5, Math.min(studio.clientWidth / 1100, studio.clientHeight / 720))) : 1)
 const WORD_ROOM = 0.868
 
 /** The color's name, huge behind the chair: a word to a line, as large as the design sets it where that
@@ -543,10 +607,12 @@ function Word({ name }: { name: string }) {
     const room = el?.parentElement
     if (!el || !room) return
     const fit = () => {
-      el.style.fontSize = `${WORD}px`
+      // (as large as the window makes it: 176 in the window as it opens)
+      const full = Math.round(WORD * scaleOf(room))
+      el.style.fontSize = `${full}px`
       const widest = Math.max(...[...el.children].map((line) => line.getBoundingClientRect().width))
       const most = room.getBoundingClientRect().width * WORD_ROOM
-      if (widest > most) el.style.fontSize = `${Math.floor((WORD * most) / widest)}px`
+      if (widest > most) el.style.fontSize = `${Math.floor((full * most) / widest)}px`
     }
     fit()
     // (measured again when the type it is set in has arrived, and when the window is another width)
