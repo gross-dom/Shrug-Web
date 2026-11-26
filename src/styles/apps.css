@@ -1065,6 +1065,79 @@
   background: rgba(0, 0, 0, 0.04);
 }
 
+/* The sidebar's rows, to the measures of Messages' own (Dom's two screenshots of it, 26 Nov, light and dark).
+   Each is 80 tall whatever it says, and 10 in from the sidebar's edges. The face is 40 across, 18 in from
+   the row's edge, at the middle of the row's height. The name and what was last said are set from the top,
+   16 down and 6 from the face: the name, the time at its right in the size of the words, and the words on
+   up to two lines. Under each row is a hairline, from where its words begin to where its time ends; the row
+   that is picked has none, and neither has the row over it. */
+.chat-side .conv-list {
+  padding: 0 10px 10px;
+}
+
+.chat-side .conv-write {
+  padding: 0 10px;
+}
+
+.chat-side .conv.ss-row {
+  --ss-row-subtitle: 13px;
+  --ss-row-meta: 13px;
+  --ss-row-line: 17px;
+  --ss-row-line-2: 15px;
+  --ss-row-gap: 1px;
+  height: 80px;
+  min-height: 80px;
+  align-content: start;
+  padding: 16px 11px 0 18px;
+  column-gap: 6px;
+  border-radius: 10px;
+}
+
+.chat-side .conv.ss-row .ss-row__lead,
+.chat-side .conv.ss-row:has(.ss-row__preview) .ss-row__lead {
+  /* (it takes no height of its own, so it cannot part the name from the words: its middle is put 24 under
+     the top of the name, which is the middle of the row) */
+  align-self: start;
+  height: 0;
+  margin-top: 24px;
+}
+
+.chat-side .conv.ss-row .ss-row__dot,
+.chat-side .conv.ss-row:has(.ss-row__preview) .ss-row__dot {
+  top: 24px;
+  align-self: start;
+  margin-top: calc(var(--ss-row-dot) / -2);
+}
+
+.chat-side .conv.ss-row .ss-row__meta {
+  color: var(--ss-text);
+}
+
+.chat-side .conv.ss-row::after {
+  content: '';
+  position: absolute;
+  right: 11px;
+  bottom: 0;
+  /* (18 in, the face's 40, and 6) */
+  left: 64px;
+  height: 1px;
+  background: rgb(0 0 0 / 0.1);
+  transform: scaleY(0.5);
+  transform-origin: 0 100%;
+}
+
+.chat-side .conv.ss-row[data-selected]::after,
+.chat-side .conv.ss-row:has(+ .conv[data-selected])::after,
+.chat-side .conv-list > .conv.ss-row:last-child::after {
+  content: none;
+}
+
+/* (while the message to Shrug is what is picked, the conversation that was open is a row like the others) */
+.chat-side[data-writing] .conv-list .conv.ss-row[data-selected]:not(:last-child)::after,
+.chat-side[data-writing] .conv-list .conv.ss-row:has(+ .conv[data-selected])::after {
+  content: '';
+}
+
 /* Found while searching: the people in the group, under the conversations */
 .conv-found__label {
   margin: 12px 14px 4px;

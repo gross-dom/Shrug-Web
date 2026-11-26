@@ -187,7 +187,9 @@
   flex-direction: column;
   width: 270px;
   min-height: 0;
-  padding: 44px 9px 0;
+  /* (the round button that folds this away is over its head, 8px down and 36 tall: the field under it
+     starts 10px clear of it, as Weather's own does, and does not touch it) */
+  padding: 54px 9px 0;
   border-right: 0.5px solid rgb(255 255 255 / 0.16);
   background: rgb(46 42 66 / 0.3);
   -webkit-backdrop-filter: blur(34px) saturate(1.5);

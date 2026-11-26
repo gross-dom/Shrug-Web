@@ -113,6 +113,24 @@ async function desk(browser) {
   say(inMom === '' && (await p.inputValue(`${W} .composer__input`)) === 'half a thought', 'tb-6 a draft stays with its conversation', `${inMom} / ${await p.inputValue(`${W} .composer__input`)}`)
   await p.fill(`${W} .composer__input`, '')
 
+  // The sidebar's rows, to Messages' own measures (Dom's screenshots of it, 26 Nov): each 80 tall, 10 in from the
+  // sidebar's edges; the face 40 across at the middle of the row's height, 28 from the sidebar's edge; the name
+  // 74 in, 16 down; a hairline under each row from where its words begin, which the picked row and the row over
+  // it do without
+  const rowsAre = await p.evaluate((W) => {
+    const side = document.querySelector(`${W} .chat-side`).getBoundingClientRect()
+    const rows = [...document.querySelectorAll(`${W} .conv-list > .conv`)]
+    const line = (r) => { const cs = getComputedStyle(r, '::after'); return cs.content !== 'none' && cs.content !== 'normal' }
+    return rows.map((r, i) => {
+      const b = r.getBoundingClientRect()
+      const face = r.querySelector('.ss-row__lead > *').getBoundingClientRect()
+      const name = r.querySelector('.ss-row__title').getBoundingClientRect()
+      return { h: Math.round(b.height), in: Math.round(b.left - side.left), out: Math.round(side.right - b.right), face: [Math.round(face.left - side.left), Math.round(face.width), Math.round(face.top + face.height / 2 - b.top)], name: [Math.round(name.left - side.left), Math.round(name.top - b.top)], line: line(r), picked: r.hasAttribute('data-selected'), beforePicked: !!rows[i + 1]?.hasAttribute('data-selected'), last: i === rows.length - 1 }
+    })
+  }, W)
+  say(rowsAre.length >= 3 && rowsAre.every((r) => r.h === 80 && r.in === 10 && r.out === 10 && r.face[0] === 28 && r.face[1] === 40 && Math.abs(r.face[2] - 40) <= 1 && r.name[0] === 74 && r.name[1] === 16), 'the sidebar’s rows are to Messages’ own measures: 80 tall, the face 28 in and at the middle, the name 74 in and 16 down', JSON.stringify(rowsAre.slice(0, 2)))
+  say(rowsAre.every((r) => r.line === !(r.picked || r.beforePicked || r.last)), 'a hairline is under each row, but for the picked one, the one over it, and the last', JSON.stringify(rowsAre.map((r) => [r.line, r.picked, r.beforePicked, r.last])))
+
   // AX-11 / AX-5: the list says which row is active, and shows it
   await p.focus(`${W} .conv-list`)
   await p.keyboard.press('ArrowDown')
