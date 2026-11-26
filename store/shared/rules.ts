@@ -18,8 +18,9 @@ export const POINTS_PER_DOLLAR = 10
 //   someone listed   a member with a Role (Founder, LP, Investor), and for an LP the funds they are in
 // Documents are a matter apart: they are what Shrug has written to its LPs, and only an LP is ever shown one.
 
-/** What someone who signs in without being on the list is given to begin with: 100 points, which is $10. */
-export const STARTING_POINTS = 100
+/** What someone who signs in without being on the list is given to begin with: 200 points, which is $20
+ * (Niv, 27 Nov: it was 100). Someone who already has a row keeps what they have. */
+export const STARTING_POINTS = 200
 /** The tier of a member who is not on the list. Their card is the standard one. */
 export const STANDARD_TIER = 'standard'
 /** What a member's card is printed on: one of three metals, or the standard card's black stock. */
@@ -257,6 +258,25 @@ export function fitPoints(member: Pick<Member, 'points'>, product: Priced, wante
   if (due > 0 && due < LEAST_PAYMENT) points = Math.max(0, points - Math.ceil((LEAST_PAYMENT - due) / (100 / POINTS_PER_DOLLAR)))
   return points
 }
+
+// ---- More than one of a thing (Niv, 27 Nov: a quantity on books). A book that is bought can be bought
+// several at once; nothing else can (an art piece is one of a numbered edition, and a chair is a chair).
+// So many of a thing are priced as one thing is, with the price and its floor so many times over: every sum
+// above is then the sum for the lot, on the page and on the server alike. They are posted together, so the
+// postage is charged once. The order says how many in its option ("Quantity: 3"), which is where whoever
+// packs it reads what was chosen.
+
+/** The most of one thing in one order. */
+export const MOST_AT_ONCE = 10
+/** Whether it can be bought several at once. */
+export const sellsMany = (product: Pick<Product, 'kind' | 'status' | 'points' | 'editionOf'>): boolean => product.kind === 'Book' && wayOf(product) === 'buy' && !product.editionOf
+/** How many were asked for, made good: a whole number from one to the most, and one of anything not sold in numbers. */
+export const countOf = (product: Pick<Product, 'kind' | 'status' | 'points' | 'editionOf'>, asked: unknown): number =>
+  sellsMany(product) && typeof asked === 'number' && Number.isInteger(asked) ? Math.max(1, Math.min(MOST_AT_ONCE, asked)) : 1
+/** So many of a thing, priced as one thing is. */
+export const times = <P extends Priced>(product: P, count: number): P => (count > 1 ? { ...product, points: (product.points ?? 0) * count, floor: product.floor === null ? null : product.floor * count } : product)
+/** What an order's option says where there is more than one: what was chosen, and how many. */
+export const manyOf = (option: string, count: number): string => (count > 1 ? [option, `Quantity: ${count}`].filter(Boolean).join(', ') : option)
 
 /** How a product is got.
  *   request  no buying: the member asks, and Shrug writes back

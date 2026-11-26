@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { asksAddress, dueCents, fitPoints, fmtCents, fmtPoints, has, mostPoints, numberOf, onFile, POINTS_PER_DOLLAR, postageCents, priceCents, soldOut, wayOf, type Order, type Product } from '../shared/rules'
+import { asksAddress, dueCents, fitPoints, fmtCents, fmtPoints, has, MOST_AT_ONCE, mostPoints, numberOf, onFile, POINTS_PER_DOLLAR, postageCents, priceCents, sellsMany, soldOut, times, wayOf, type Order, type Product } from '../shared/rules'
 import { CARD, type Backend, type Placed, type Shop } from './backend'
 import { Points, PointsMark } from './brand'
 import { DESK } from './desk'
@@ -199,7 +199,11 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   // What the member has to spend. It stays as it was once something is bought here, so that the receipt's
   // sums are the ones that were paid; until then it follows what they have now (below)
   const [balance, setBalance] = useState(shop.member.points)
-  const most = mostPoints({ points: balance }, product)
+  /** How many of it: a book can be bought several at once (shared/rules.ts), and the sums are then the lot's. */
+  const [count, setCount] = useState(1)
+  const many = sellsMany(product)
+  const lot = times(product, many ? count : 1)
+  const most = mostPoints({ points: balance }, lot)
   const [option, setOption] = useState(product.options.length === 1 ? product.options[0]! : '')
   // To begin with every point it will take is used: that is its best price, and the member can ease them off
   const [wanted, setWanted] = useState(most)
@@ -225,8 +229,14 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   useEffect(() => {
     if (done || busy || shop.member.points === balance) return
     setBalance(shop.member.points)
-    setWanted(mostPoints({ points: shop.member.points }, product))
+    setWanted(mostPoints({ points: shop.member.points }, lot))
   }, [shop.member.points]) // eslint-disable-line react-hooks/exhaustive-deps
+  /** Another number of them: every point the lot will take is used, to begin with, as it is for one. */
+  const howMany = (n: number) => {
+    const next = Math.max(1, Math.min(MOST_AT_ONCE, n))
+    setCount(next)
+    setWanted(mostPoints({ points: balance }, times(product, next)))
+  }
 
   // Checkout can be taller than the room a window gives it (an address on file, points to choose, two ways
   // to pay; or the address asked for under the sums). Where it is, the column is taken to its foot, so that
@@ -244,10 +254,10 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     // (and when something is said over the button, which would otherwise push it under the foot)
   }, [mode, finishing, error])
 
-  const points = way === 'buy' ? fitPoints({ points: balance }, product, wanted) : 0
-  const price = priceCents(product)
-  const postage = postageCents(product)
-  const due = way === 'buy' ? dueCents(product, points) : 0
+  const points = way === 'buy' ? fitPoints({ points: balance }, lot, wanted) : 0
+  const price = priceCents(lot)
+  const postage = postageCents(lot)
+  const due = way === 'buy' ? dueCents(lot, points) : 0
   const asked = has(shop.orders, product)
   const bought = owned(shop.orders, product)
   const out = soldOut(product) && way !== 'request'
@@ -265,7 +275,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
     const rest = setTimeout(() => setSettled(points), 350)
     return () => clearTimeout(rest)
   }, [points])
-  const settledDue = way === 'buy' ? dueCents(product, settled) : 0
+  const settledDue = way === 'buy' ? dueCents(lot, settled) : 0
   const badge = badgeOf(product, shop.orders)
   const colors = product.options.map(swatchOf)
   const label = colors.length > 0 && colors.every((c) => c.color) ? 'Color' : 'Choice'
@@ -300,7 +310,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
   const order = async () => {
     setBusy(true)
     setError('')
-    const placed = await backend.order({ product: product.id, option, points, shipTo: onFile(typed) ? typed : undefined })
+    const placed = await backend.order({ product: product.id, option, count: many ? count : 1, points, shipTo: onFile(typed) ? typed : undefined })
     setBusy(false)
     if ('error' in placed) setError(whyNot(placed.error))
     else finish(placed)
@@ -313,8 +323,32 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
 
   const sums = (withRange: boolean, full: boolean) => (
     <dl className="ui-card rows">
+      {/* A book can be bought several at once: how many is chosen here, on its page, and said again at checkout */}
+      {many && way === 'buy' && !out && !done && (
+        <div className="qty">
+          <dt>Quantity</dt>
+          <dd>
+            {mode === 'product' ? (
+              <span className="ui-qty" role="group" aria-label="Quantity">
+                <button type="button" aria-label="One fewer" disabled={count <= 1} onClick={() => howMany(count - 1)}>
+                  −
+                </button>
+                <output aria-live="polite">{count}</output>
+                <button type="button" aria-label="One more" disabled={count >= MOST_AT_ONCE} onClick={() => howMany(count + 1)}>
+                  +
+                </button>
+              </span>
+            ) : (
+              count
+            )}
+          </dd>
+        </div>
+      )}
       <div>
-        <dt>Price</dt>
+        <dt>
+          Price
+          {many && count > 1 && <span className="t-3"> · {count} × {fmtCents(priceCents(product))}</span>}
+        </dt>
         <dd>{price === 0 ? 'Free' : fmtCents(price)}</dd>
       </div>
       {way === 'buy' && price > 0 && most > 0 && (
@@ -581,6 +615,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
               backend={backend}
               product={product}
               option={option}
+              count={many ? count : 1}
               points={settled}
               cents={settledDue}
               stripeKey={shop.stripeKey}

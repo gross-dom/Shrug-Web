@@ -13,6 +13,8 @@ interface Props {
   backend: Backend
   product: Product
   option: string
+  /** How many of it (a book can be bought several at once): one, for anything else. */
+  count: number
   points: number
   /** What is to be paid, in cents. The server works it out again for itself; this is only what is shown. */
   cents: number
@@ -56,7 +58,7 @@ const Others = ({ onOptions, off }: { onOptions: () => void; off: boolean }) => 
   </button>
 )
 
-function DemoPay({ backend, product, option, points, cents, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError }: Props) {
+function DemoPay({ backend, product, option, count, points, cents, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError }: Props) {
   const [busy, setBusy] = useState(false)
   const pay = async () => {
     if (email !== undefined && !(name ?? '').trim()) return onError(whyNot('name'))
@@ -65,7 +67,7 @@ function DemoPay({ backend, product, option, points, cents, shipTo, needsAddress
     onError('')
     // (Apple Pay brings the address saved in it: the demo's stand-in for it says so, and the demo's store
     // makes one up to keep, as the real one keeps Apple Pay's own)
-    const placed = await backend.paid('demo', { product: product.id, option, points, shipTo: shipTo || undefined, ...(!byCard ? { wallet: true } : {}), ...(email !== undefined ? { email: email.trim(), name: (name ?? '').trim() } : {}) })
+    const placed = await backend.paid('demo', { product: product.id, option, count, points, shipTo: shipTo || undefined, ...(!byCard ? { wallet: true } : {}), ...(email !== undefined ? { email: email.trim(), name: (name ?? '').trim() } : {}) })
     setBusy(false)
     if ('error' in placed) onError(whyNot(placed.error))
     else onDone(placed)
@@ -107,7 +109,7 @@ const stripeJs = () =>
     document.head.append(script)
   }))
 
-function StripePay({ backend, product, option, points, cents, stripeKey, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError }: Props) {
+function StripePay({ backend, product, option, count, points, cents, stripeKey, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError }: Props) {
   const express = useRef<HTMLDivElement>(null)
   const cardBox = useRef<HTMLDivElement>(null)
   const kit = useRef<{ stripe: any; elements: any } | null>(null)
@@ -139,7 +141,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
       const kept = await backend.address(typed.current)
       if ('error' in kept) return kept
     }
-    const started = await backend.pay(visitor ? { product: product.id, option, points: 0, email: mail.current!.trim(), name: (named.current ?? '').trim(), shipTo: typed.current || undefined, wallet: !!shipping } : { product: product.id, option, points })
+    const started = await backend.pay(visitor ? { product: product.id, option, count, points: 0, email: mail.current!.trim(), name: (named.current ?? '').trim(), shipTo: typed.current || undefined, wallet: !!shipping } : { product: product.id, option, count, points })
     if ('error' in started) return started
     if (!('clientSecret' in started)) return { error: 'server' }
     // The price was changed between the page being drawn and now: nothing is taken at a price that was not shown
@@ -151,7 +153,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
       redirect: 'if_required',
     })
     if (refused) return { error: refused.message ?? 'unpaid' }
-    const placed = await backend.paid(paymentIntent?.id ?? started.payment, { product: product.id, option, points })
+    const placed = await backend.paid(paymentIntent?.id ?? started.payment, { product: product.id, option, count, points })
     if ('error' in placed) return placed
     onDone(placed)
     return null
@@ -180,7 +182,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
           shippingAddressRequired: needsAddress,
           // Shipping is already in the amount: it is the same wherever the thing goes
           ...(needsAddress ? { shippingRates: [{ id: 'post', displayName: 'Shipping', amount: 0 }] } : {}),
-          lineItems: [{ name: product.name + (option ? `, ${option}` : ''), amount: cents - postage }, ...(postage ? [{ name: 'Shipping', amount: postage }] : [])],
+          lineItems: [{ name: product.name + (option ? `, ${option}` : '') + (count > 1 ? ` × ${count}` : ''), amount: cents - postage }, ...(postage ? [{ name: 'Shipping', amount: postage }] : [])],
         })
         button.on('ready', (event: any) => !gone && setWallet(!!event.availablePaymentMethods))
         button.on('confirm', async (event: any) => {
@@ -199,7 +201,7 @@ function StripePay({ backend, product, option, points, cents, stripeKey, shipTo,
       gone = true
       for (const element of made) element.destroy()
     }
-  }, [product.id, option, cents, stripeKey, needsAddress]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [product.id, option, count, cents, stripeKey, needsAddress]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const waiting = needsAddress && !shipTo
   const payByCard = async () => {

@@ -28,7 +28,7 @@ const check = (name, ok, detail = '') => {
   let p = t.page
   await p.waitForTimeout(1600)
   check('a visitor: the bar says Log In, after the menus and before the clock', (await bar(p)) === 'Log In' && (await p.evaluate(() => { const s = document.querySelector('.menubar__status'); return s.firstElementChild.classList.contains('menubar__account') && s.lastElementChild.classList.contains('menubar__clock') })))
-  check('the desk has Updates first, then the one-pager, Wallpapers and the rest, in their order', (await desk(p)) === A.DESK.map(([id]) => id).join(' '), await desk(p))
+  check('the desk has Updates first, then Portfolio, the one-pager, Wallpapers and the rest, in their order', (await desk(p)) === A.DESK.map(([id]) => id).join(' '), await desk(p))
   let folder = await locked(p)
   check('the Updates folder is locked, and says so', folder.lock && folder.says === 'Updates, desktop icon, locked', JSON.stringify(folder))
   await p.locator('[data-desk="updates"]').click()
@@ -130,7 +130,7 @@ const check = (name, ok, detail = '') => {
   await p.locator('.menubar__login').click()
   await p.waitForTimeout(300)
   let acct = await p.evaluate(() => ({ name: document.querySelector('.account').getAttribute('aria-label'), who: [...document.querySelectorAll('.account__who b, .account__who small')].map((el) => el.textContent).join(' / '), rows: [...document.querySelectorAll('.account__row')].map((r) => r.firstChild.textContent.trim()), points: document.querySelector('.account__row small').textContent, links: document.querySelectorAll('.account a').length }))
-  check('logged in, the sheet has who they are, their points, My VIP (a row that opens its window: nothing here is a link), their name and picture, and Log Out', acct.name === 'Your account' && acct.who === 'Riley Chen / Member' && acct.rows.join(' | ') === 'Points | Open My VIP | Edit Name and Picture… | Log Out' && /^100 pts · \$10/.test(acct.points) && acct.links === 0, JSON.stringify(acct))
+  check('logged in, the sheet has who they are, their points, My VIP (a row that opens its window: nothing here is a link), their name and picture, and Log Out', acct.name === 'Your account' && acct.who === 'Riley Chen / Member' && acct.rows.join(' | ') === 'Points | Open My VIP | Edit Name and Picture… | Log Out' && /^200 pts · \$20/.test(acct.points) && acct.links === 0, JSON.stringify(acct))
   await p.keyboard.press('Escape')
 
   // ---- a reload keeps them in; Log Out; and the next time they are texted at the number they gave

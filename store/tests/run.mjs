@@ -164,11 +164,11 @@ check('a visitor can order nothing and fetch no file; and to pay, they have to s
 const members = tables[T.members].length
 const stranger = await signIn('sam', 'sam@elsewhere.test', '+14155550101')
 const samRow = tables[T.members].at(-1)
-check('someone not on the list is given an account: no Role, the standard tier, 100 points', stranger.body.status === 'member' && stranger.body.member.tier === 'standard' && stranger.body.member.points === 100 && stranger.body.member.roles.length === 0 && tables[T.members].length === members + 1 && samRow.fields[M.email] === 'sam@elsewhere.test' && samRow.fields[M.points] === 100 && !samRow.fields[M.role] && tables[T.applications].length === 0, JSON.stringify(stranger.body))
+check('someone not on the list is given an account: no Role, the standard tier, 200 points', stranger.body.status === 'member' && stranger.body.member.tier === 'standard' && stranger.body.member.points === 200 && stranger.body.member.roles.length === 0 && tables[T.members].length === members + 1 && samRow.fields[M.email] === 'sam@elsewhere.test' && samRow.fields[M.points] === 200 && !samRow.fields[M.role] && tables[T.applications].length === 0, JSON.stringify(stranger.body))
 await call('sam', 'signout', 'POST', {})
 await new Promise((done) => setTimeout(done, 5))
 tables[T.signIns].length = 0
-check('and signing in again makes no second account, and gives no more points', (await signIn('sam', 'sam@elsewhere.test')).body.member.points === 100 && tables[T.members].length === members + 1)
+check('and signing in again makes no second account, and gives no more points', (await signIn('sam', 'sam@elsewhere.test')).body.member.points === 200 && tables[T.members].length === members + 1)
 check('it is their number they sign in with from then on: the code is texted, and nothing is emailed', texts.filter((t) => t.to === '+14155550101').length === 2 && !mail.some((m) => m.to[0] === 'sam@elsewhere.test'))
 const samStore = (await call('sam', 'store', 'GET')).body
 check('they are shown what a visitor is, and no update: not its name, and not that it can be asked for', samStore.status === 'member' && samStore.products.map((p) => p.name).join('|') === visitor.products.map((p) => p.name).join('|') && samStore.updates.length === 0 && !JSON.stringify(samStore).match(/Update/))
@@ -337,6 +337,26 @@ Object.assign(intents.get(newPay.body.payment), { status: 'succeeded', amount_re
 await call('new', 'order', 'POST', { payment: newPay.body.payment })
 check('with none on file, the address a payment gives is used and kept', tables[T.orders].at(-1).fields[F.order.shipTo].includes('7 Example Way') && newcomer.fields[M.shipTo].includes('7 Example Way'))
 
+// ---- More than one of a book (Niv, 27 Nov): the price so many times over, posted once, and said on the order
+const posted = rec(T.products, { [P.name]: 'Posted Book', [P.kind]: 'Book', [P.status]: 'Available', [P.visibleTo]: ['Everyone'], [P.points]: 400, [P.postage]: 5, [P.needsAddress]: true, [P.place]: 11 })
+const three = await call('new', 'pay', 'POST', { product: posted.id, count: 3, points: 0 })
+check('three of a book are three times its price, posted once: 3 × $40 and $5', three.body.ok && three.body.cents === 12500 && intents.get(three.body.payment).amount === 12500 && intents.get(three.body.payment).metadata.count === '3', JSON.stringify(three.body))
+Object.assign(intents.get(three.body.payment), { status: 'succeeded', amount_received: 12500 })
+const threePaid = await call('new', 'order', 'POST', { payment: three.body.payment })
+check('paid, the order says how many, for whoever packs it', threePaid.body.ok && threePaid.body.order.status === 'Paid' && threePaid.body.order.option === 'Quantity: 3' && tables[T.orders].at(-1).fields[F.order.option] === 'Quantity: 3' && tables[T.orders].at(-1).fields[F.order.paid] === 125, JSON.stringify(threePaid.body))
+lp.fields[M.points] = 1000
+const lot = await call('lee', 'pay', 'POST', { product: posted.id, count: 2, points: 800 })
+check('points go towards the lot: two at $40 less 800 points leaves the $5 postage', lot.body.ok && lot.body.cents === 500 && intents.get(lot.body.payment).metadata.points === '800', JSON.stringify(lot.body))
+check('more points than the lot costs cannot be used, and for one book no more than one book costs', (await call('lee', 'pay', 'POST', { product: posted.id, count: 2, points: 900 })).body.error === 'points' && (await call('lee', 'pay', 'POST', { product: posted.id, points: 800 })).body.error === 'points')
+const tooMany = await call('new', 'pay', 'POST', { product: posted.id, count: 99, points: 0 })
+check('no more than ten at once, and a number that is not whole is one', tooMany.body.cents === 40500 && (await call('new', 'pay', 'POST', { product: posted.id, count: 2.5, points: 0 })).body.cents === 4500 && (await call('new', 'pay', 'POST', { product: posted.id, count: -4, points: 0 })).body.cents === 4500, JSON.stringify(tooMany.body))
+const oneArt = await call('new', 'pay', 'POST', { product: art.id, count: 3, points: 0 })
+check('only a book is sold several at once: three of an art piece is one', oneArt.body.ok ? oneArt.body.cents === 28500 && intents.get(oneArt.body.payment).metadata.count === '1' : oneArt.body.error === 'sold-out', JSON.stringify(oneArt.body))
+const underpaid = await call('new', 'pay', 'POST', { product: posted.id, count: 3, points: 0 })
+Object.assign(intents.get(underpaid.body.payment), { status: 'succeeded', amount_received: 4500 })
+const looked = await call('new', 'order', 'POST', { payment: underpaid.body.payment })
+check('a payment that is not the lot\'s price is kept for Shrug to look at, with how many were asked for', looked.body.ok && looked.body.order.status === 'Needs review' && looked.body.order.option === 'Quantity: 3', JSON.stringify(looked.body))
+
 // An update with a price in points: locked until it is unlocked, by the LPs it was written for
 const locked = rec(T.products, { [P.name]: 'Shrug 5 LP Update', [P.kind]: 'Document', [P.status]: 'Available', [P.visibleTo]: ['Shrug 1 LPs'], [P.listed]: true, [P.points]: 10, [P.file]: [{ url: 'https://files.example.test/u5.pdf', filename: 'Shrug 5.pdf', type: 'application/pdf' }], [P.place]: 12 })
 const stateOf = async (who) => (await call(who, 'store', 'GET')).body.updates.find((u) => u.name === 'Shrug 5 LP Update')
@@ -362,13 +382,13 @@ check('a number typed as it is spoken is texted as it is dialed', kitText.body.o
 check('a wrong code is wrong, and makes no account', (await call('kit', 'verify', 'POST', { email: 'kit@elsewhere.test', phone: '(415) 555-0102', code: '000000' })).body.error === 'wrong' && tables[T.members].length === si_before.members)
 const kitIn = await call('kit', 'verify', 'POST', { email: 'kit@elsewhere.test', phone: '(415) 555-0102', code: textIn('+14155550102') })
 const kitRow = rowFor('kit@elsewhere.test')
-check('the right one makes their account, with the number on it', kitIn.body.status === 'member' && kitIn.body.member.tier === 'standard' && kitIn.body.member.points === 100 && kitRow?.fields[M.phone] === '+14155550102' && kitIn.body.via === 'text' && kitIn.body.existing === false, JSON.stringify(kitIn.body))
+check('the right one makes their account, with the number on it', kitIn.body.status === 'member' && kitIn.body.member.tier === 'standard' && kitIn.body.member.points === 200 && kitRow?.fields[M.phone] === '+14155550102' && kitIn.body.via === 'text' && kitIn.body.existing === false, JSON.stringify(kitIn.body))
 check('it lacks a name of its own, and not a number', kitIn.body.needs.profile === true && kitIn.body.needs.phone === false)
 check('a number cannot be typed onto an account that exists', (await call('x', 'text', 'POST', { email: 'kit@elsewhere.test', phone: '+14155550177' })).body.error === 'start')
 await call('kit2', 'start', 'POST', { email: 'kit+two@elsewhere.test' })
 await call('kit2', 'text', 'POST', { email: 'kit+two@elsewhere.test', phone: '+14155550102' })
 const kitTwo = await call('kit2', 'verify', 'POST', { email: 'kit+two@elsewhere.test', phone: '+14155550102', code: textIn('+14155550102') })
-check('a number belongs to one account: another address with the same number is signed in to it, and given nothing', kitTwo.body.existing === true && kitTwo.body.member.email === 'kit@elsewhere.test' && kitTwo.body.member.points === 100 && tables[T.members].length === si_before.members + 1 && !rowFor('kit+two@elsewhere.test'), JSON.stringify(kitTwo.body))
+check('a number belongs to one account: another address with the same number is signed in to it, and given nothing', kitTwo.body.existing === true && kitTwo.body.member.email === 'kit@elsewhere.test' && kitTwo.body.member.points === 200 && tables[T.members].length === si_before.members + 1 && !rowFor('kit+two@elsewhere.test'), JSON.stringify(kitTwo.body))
 
 // Someone on the list: their inbox once, then a number
 const zoe = rec(T.members, { [M.name]: 'Zoe Example', [M.email]: 'zoe@example.test', [M.role]: ['LP'], [M.funds]: ['Shrug 2'], [M.points]: 500 })
@@ -452,7 +472,7 @@ Object.assign(veraIntent, { status: 'succeeded', amount_received: 4000 })
 check('and is nobody else\'s to make into an order: only the browser that began it is answered', (await call('nobody', 'order', 'POST', { payment: veraPay.body.payment })).status === 401 && !rowFor('vera@example.test'))
 const veraOrder = await call('vera', 'order', 'POST', { payment: veraPay.body.payment })
 const vera = rowFor('vera@example.test')
-check('the payment makes their account: a standard one, with their address on file, and the order is its', veraOrder.body.ok && veraOrder.body.account === 'new' && veraOrder.body.order.status === 'Paid' && !!vera && vera.fields[M.tier] === 'Standard' && vera.fields[M.points] === 100 && vera.fields[M.shipTo] === home2 && !vera.fields[M.phone] && tables[T.orders].at(-1).fields[F.order.member][0] === vera.id && tables[T.orders].at(-1).fields[F.order.shipTo] === home2, JSON.stringify(veraOrder.body))
+check('the payment makes their account: a standard one, with their address on file, and the order is its', veraOrder.body.ok && veraOrder.body.account === 'new' && veraOrder.body.order.status === 'Paid' && !!vera && vera.fields[M.tier] === 'Standard' && vera.fields[M.points] === 200 && vera.fields[M.shipTo] === home2 && !vera.fields[M.phone] && tables[T.orders].at(-1).fields[F.order.member][0] === vera.id && tables[T.orders].at(-1).fields[F.order.shipTo] === home2, JSON.stringify(veraOrder.body))
 const veraMe = (await call('vera', 'me', 'GET')).body
 check('the account is under the name they paid with (the one the parcel is addressed to, where they gave no other), which is the name on their card', vera.fields[M.displayName] === 'Vera Example' && veraMe.member?.name === 'Vera Example', JSON.stringify(veraMe.member))
 check('they are signed in to it, and it lacks a number', veraMe.status === 'member' && veraMe.via === 'pay' && veraMe.needs.phone === true && (await call('vera', 'store', 'GET')).body.orders.length === 1, JSON.stringify(veraMe))

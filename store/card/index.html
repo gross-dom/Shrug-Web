@@ -3843,6 +3843,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     const asked = new URLSearchParams(window.location.search).get('signin');
     if (asked === 'store') S.to = 'store';
     let answered = false;
+    /** Shows the way to sign in, where that has been held back until the server says who this is. */
+    let land = null;
     footer('anon');
     $('tearBtn').addEventListener('click', onStrip);
     tuggable($('tearBtn'));
@@ -3875,13 +3877,28 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
       setPhase('idle');
     } else {
       if (pending) keep.set('pending', null);
-      setShelf(label(quip())); // "Tap" or "Click", whichever this visitor will be doing
-      if (asked !== null) signIn(); else dropIn(); // asked to sign in: the pack hangs still, and the field is ready
+      // Nothing kept here says who this is, and they may be signed in all the same: the desktop opens this
+      // page for someone who is, the first time they press their card. So the way to sign in is not shown
+      // until the server has said that nobody is, or has been long enough about it that an empty page would
+      // look broken. (Shown at once, it was seen for a moment before the card took its place: Niv, 27 Nov.)
+      rig.hidden = true;
+      setShelf(null);
+      land = () => {
+        if (!land) return;
+        land = null;
+        rig.hidden = false;
+        setShelf(label(quip())); // "Tap" or "Click", whichever this visitor will be doing
+        if (asked !== null) signIn(); else dropIn(); // asked to sign in: the pack hangs still, and the field is ready
+      };
+      setTimeout(() => { if (land) land(); }, 900);
     }
 
     const r = await api.me();
     answered = true;
     S.lastMe = Date.now();
+    // (nobody is signed in, or the server could not say: the way to sign in, now. Someone who is has their card)
+    if (land && r.status !== 'member' && r.status !== 'applied') land();
+    land = null;
 
     if (cached) {
       if (S.view === 'card' && !S.opening) reconcile(r);

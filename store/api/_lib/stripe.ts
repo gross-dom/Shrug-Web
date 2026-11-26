@@ -28,7 +28,7 @@ export interface Intent {
 
 /** A payment to be made: so many cents, for one product, by one member; or by a visitor, who has no row yet
  * (`visitor`), with the address they typed (`shipTo`). The account is made from the payment once it arrives. */
-export function newIntent(cents: number, says: { member: string; email: string; product: string; option: string; points: string; name: string; visitor?: string; buyer?: string; shipTo?: string }): Promise<Intent> {
+export function newIntent(cents: number, says: { member: string; email: string; product: string; option: string; count?: string; points: string; name: string; visitor?: string; buyer?: string; shipTo?: string }): Promise<Intent> {
   const form: Record<string, string> = {
     amount: String(cents),
     currency: 'usd',

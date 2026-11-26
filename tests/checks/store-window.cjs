@@ -156,10 +156,10 @@ const check = (name, ok, detail = '') => {
   let after = await inFrame(p, 'store')
   b = await bar(p, 'store')
   let sums = await words(f)
-  check('logged in from a piece, they are still on it, with no pack over what they were doing and their balance in the bar', after.path === '/vip/store/' && after.search === kept.search && b.wallet === '100', JSON.stringify({ kept, after, b }))
-  check('the balance says what it is and where it leads', /^Your balance: 100 points\. My VIP$/.test(b.label ?? ''), String(b.label))
-  check('…and their points come off the price, in dollars: $150, less $10 for 100 points, $5 shipping, $145', /Price \| \$150 \|.*100 points \| of your 100 \| −\$10 \|.*Shipping \| \$5 \| Total \| \$145 \| Buy for \$145$/.test(sums), sums)
-  check('their points are in the desk\'s sheet before any pack is opened, with the way to My VIP', /Points ?100/.test(await sheet(p)) && /Open My VIP/.test(await sheet(p)), await sheet(p))
+  check('logged in from a piece, they are still on it, with no pack over what they were doing and their balance in the bar', after.path === '/vip/store/' && after.search === kept.search && b.wallet === '200', JSON.stringify({ kept, after, b }))
+  check('the balance says what it is and where it leads', /^Your balance: 200 points\. My VIP$/.test(b.label ?? ''), String(b.label))
+  check('…and their points come off the price, in dollars: $150, less $20 for 200 points, $5 shipping, $135', /Price \| \$150 \|.*200 points \| of your 200 \| −\$20 \|.*Shipping \| \$5 \| Total \| \$135 \| Buy for \$135$/.test(sums), sums)
+  check('their points are in the desk\'s sheet before any pack is opened, with the way to My VIP', /Points ?200/.test(await sheet(p)) && /Open My VIP/.test(await sheet(p)), await sheet(p))
 
   // ---- they buy it: an address the first time, and it is theirs
   await f.locator('.ui-col .ui-btn').first().click()
@@ -177,8 +177,8 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(1200)
   const receipt = await words(f)
   b = await bar(p, 'store')
-  check('with nowhere on file to send it, the address is asked for once, and the button says what will be paid', pay === 'Pay $145', pay)
-  check('bought: the receipt says it is theirs, which of the fifty, and what was paid; the balance in the bar has come down', /It’s yours\./.test(receipt) && /No\. \d+ of 50/.test(receipt) && /\$145/.test(receipt) && b.wallet === '0', JSON.stringify({ receipt: receipt.slice(0, 300), b }))
+  check('with nowhere on file to send it, the address is asked for once, and the button says what will be paid', pay === 'Pay $135', pay)
+  check('bought: the receipt says it is theirs, which of the fifty, and what was paid; the balance in the bar has come down', /It’s yours\./.test(receipt) && /No\. \d+ of 50/.test(receipt) && /\$135/.test(receipt) && b.wallet === '0', JSON.stringify({ receipt: receipt.slice(0, 300), b }))
 
   // ---- "View in My VIP" opens the other window, on what is theirs: there is no pack to open first
   await f.locator('a.ui-btn.sec', { hasText: 'My VIP' }).click()
@@ -207,7 +207,7 @@ const check = (name, ok, detail = '') => {
   let home = await words(v, 'body')
   const doors = (await p.locator(`${WIN('myvip')} .myvip__door b`).allInnerTexts()).join(' | ')
   check('My VIP: their card, what they have, the order from ArtStore and the address they typed there', at.path === '/vip/store/' && at.search === '?k=yours' && b.says === '' && (await v.locator('.mc.m-standard').count()) === 1 && /America Must Win/.test(home) && /1 Example St/.test(home) && /Balance \| 0/.test(home), JSON.stringify({ at, b, home: home.slice(0, 500) }))
-  check('…and how their points came: awarded, and when', /Points awarded \| Member since \d{4} \| \+100/.test(home), home.slice(home.indexOf('Points awarded') - 40, home.indexOf('Points awarded') + 80))
+  check('…and how their points came: awarded, and when', /Points awarded \| Member since \d{4} \| \+200/.test(home), home.slice(home.indexOf('Points awarded') - 40, home.indexOf('Points awarded') + 80))
   const vip = await v.locator('body').evaluate(() => ({ how: [...document.querySelectorAll('.ui-how h3, .ui-how b, .ui-how dt')].map((x) => x.textContent.trim()).join(' | '), out: [...document.querySelectorAll('button, a')].filter((x) => /sign out|log out/i.test(x.textContent)).length, total: document.querySelector('.mc')?.textContent.replace(/\s+/g, ' ') ?? '' }))
   const mark = await p.evaluate((W) => ({ mark: document.querySelector(`${W} .storebar__name`).textContent.trim(), left: Math.round(document.querySelector(`${W} .storebar__name`).getBoundingClientRect().left - document.querySelector(W).getBoundingClientRect().left), wallet: document.querySelectorAll(`${W} .storebar__wallet`).length }), WIN('myvip'))
   check('its name, My VIP, is at the window’s top left, set as ArtStore sets its own, with no balance beside it (the card has it); the page has no section on how points work (what they are is said under the pointer, on Balance); the card says TOTAL POINTS; and Log Out is not in it', mark.mark === 'My VIP' && mark.left < 140 && mark.wallet === 0 && !/How points work|More details soon/.test(home) && !/Spend/.test(home) && /TOTAL POINTS/i.test(vip.total) && vip.out === 0, JSON.stringify({ mark, vip: { out: vip.out, total: vip.total.slice(0, 120) }, how: home.slice(home.indexOf('How points work'), home.indexOf('How points work') + 110) }))
@@ -300,6 +300,16 @@ const check = (name, ok, detail = '') => {
   for (let n = 2; n < shotsAll; n++) { await k.locator('.ui-round.next').first().click(); await p.waitForTimeout(200) }
   shotAt = await arrows()
   check('and on its last picture there is no arrow on', shotAt.at === `Picture ${shotsAll} of ${shotsAll}` && shotAt.prev === 1 && shotAt.next === 0, JSON.stringify(shotAt))
+  // A book can be bought several at once (Niv, 27 Nov): how many is chosen on its page, the price is that many
+  // times over, and it is posted once
+  const sumsOf = async () => (await k.locator('.ui-card.rows').first().innerText()).replace(/\s*\n\s*/g, ' | ')
+  const one = await sumsOf()
+  await k.locator('.ui-qty button[aria-label="One more"]').click(); await k.locator('.ui-qty button[aria-label="One more"]').click(); await p.waitForTimeout(300)
+  const threeOf = await sumsOf()
+  check('a book’s page asks how many: one to begin with, and one fewer cannot be pressed', /^Quantity \| − \| 1 \| \+ \| Price \| \$40/.test(one) && !/×/.test(one), one)
+  check('three of it are three times its price, said as "3 × $40", with the postage once', /^Quantity \| − \| 3 \| \+ \| Price · 3 × \$40 \| \$120 \|/.test(threeOf) && /Shipping \| \$5 \|/.test(threeOf), threeOf)
+  await k.locator('.ui-qty button[aria-label="One fewer"]').click(); await k.locator('.ui-qty button[aria-label="One fewer"]').click(); await p.waitForTimeout(300)
+  check('and back to one, it is as it was', (await sumsOf()) === one && (await k.locator('.ui-qty button[aria-label="One fewer"]').isDisabled()), await sumsOf())
   await p.locator(`${WIN('books')} button.bkbar__back`).click(); await p.waitForTimeout(500)
   // My VIP was asked again by the desk when the book was bought: the order is there without a reload
   home = await words(v, 'body')
@@ -342,13 +352,13 @@ const check = (name, ok, detail = '') => {
   at = await inFrame(p, 'myvip')
   b = await bar(p, 'myvip')
   home = await words(v, 'body')
-  check('logged in there, and named, the frame shows what is theirs at once, with no pack before it: their card with their name on it, and nothing bought yet', at.path === '/vip/store/' && at.search === '?k=yours' && !samHome.pack && b.says === '' && b.wallet === null && /Balance \| 100/.test(home) && /SAM OKAFOR/i.test(home), JSON.stringify({ at, samHome, b, home: home.slice(0, 300) }))
+  check('logged in there, and named, the frame shows what is theirs at once, with no pack before it: their card with their name on it, and nothing bought yet', at.path === '/vip/store/' && at.search === '?k=yours' && !samHome.pack && b.says === '' && b.wallet === null && /Balance \| 200/.test(home) && /SAM OKAFOR/i.test(home), JSON.stringify({ at, samHome, b, home: home.slice(0, 300) }))
   // the stores are their own windows: opened now, ArtStore is the six pieces
   await openApp(p, 'store')
   f = frameOf(p, 'store')
   await f.locator('.ui-prod').first().waitFor({ timeout: 20000 })
   at = await inFrame(p, 'store')
-  check('a store opened then is the store, with their balance', at.path === '/vip/store/' && at.search === '?k=art' && (await bar(p, 'store')).wallet === '100' && (await f.locator('#stage').count()) === 0, JSON.stringify(at))
+  check('a store opened then is the store, with their balance', at.path === '/vip/store/' && at.search === '?k=art' && (await bar(p, 'store')).wallet === '200' && (await f.locator('#stage').count()) === 0, JSON.stringify(at))
   await p.locator(`.dock [data-dock-app="myvip"]`).click()
   await p.waitForTimeout(500)
   await p.locator(`${WIN('myvip')} .myvip__door`, { hasText: 'ArtStore' }).click()

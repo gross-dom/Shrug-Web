@@ -4,7 +4,7 @@ import { tidied } from './_lib/members.js'
 import { payCookie, sessionOf } from './_lib/session.js'
 import { newIntent } from './_lib/stripe.js'
 import { memberAsking, trouble } from './_lib/who.js'
-import { asksAddress, dueCents, onFile, refusalOf, soldOut, wayOf } from '../shared/rules.js'
+import { asksAddress, countOf, dueCents, onFile, refusalOf, soldOut, times, wayOf } from '../shared/rules.js'
 
 // The start of a payment. The page says which product and how many points to use; the store works out
 // what is then left to pay (the price less those points, never under the floor, and the postage), asks
@@ -20,7 +20,9 @@ async function fromAVisitor(body: Record<string, unknown>) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'email' }, { status: 400 })
   const product = (await shelvesForAVisitor()).find((p) => p.id === text(body.product, 40))
   if (!product) return json({ error: 'hidden' }, { status: 404 })
-  const due = dueCents(product, 0)
+  // (so many of it, for a book: the price of the lot)
+  const count = countOf(product, body.count)
+  const due = dueCents(times(product, count), 0)
   if (wayOf(product) !== 'buy' || due <= 0) return json({ error: 'anon' }, { status: 401 })
   if (soldOut(product)) return json({ error: 'sold-out' }, { status: 400 })
   const option = text(body.option, 60)
@@ -29,7 +31,7 @@ async function fromAVisitor(body: Record<string, unknown>) {
   if (asksAddress(product) && !onFile(shipTo) && body.wallet !== true) return json({ error: 'address' }, { status: 400 })
   // (their name, as they gave it at checkout: the account the payment makes is under it)
   const buyer = text(body.name, 80)
-  const intent = await newIntent(due, { member: '', visitor: '1', email, buyer, product: product.id, option, points: '0', name: product.name, shipTo })
+  const intent = await newIntent(due, { member: '', visitor: '1', email, buyer, product: product.id, option, count: String(count), points: '0', name: product.name, shipTo })
   return json({ ok: true, clientSecret: intent.client_secret, payment: intent.id, cents: due }, { headers: { 'Set-Cookie': payCookie(intent.id) } })
 }
 
@@ -46,12 +48,14 @@ export async function POST(request: Request) {
     const { orders } = await ordersFor(who.member.id, rows)
     const option = text(body.option, 60)
     const points = typeof body.points === 'number' ? body.points : 0
-    const refusal = refusalOf(who.member, product, orders, { option, points })
+    const count = countOf(product, body.count)
+    const lot = times(product, count)
+    const refusal = refusalOf(who.member, lot, orders, { option, points })
     if (refusal) return json({ error: refusal }, { status: 400 })
-    const due = dueCents(product, points)
+    const due = dueCents(lot, points)
     // Nothing left to pay is an order, not a payment
     if (due <= 0) return json({ error: 'pay' }, { status: 400 })
-    const intent = await newIntent(due, { member: who.row.id, email: who.email, product: product.id, option, points: String(points), name: product.name })
+    const intent = await newIntent(due, { member: who.row.id, email: who.email, product: product.id, option, count: String(count), points: String(points), name: product.name })
     return json({ ok: true, clientSecret: intent.client_secret, payment: intent.id, cents: due })
   } catch (error) {
     return trouble('pay', error)

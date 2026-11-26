@@ -5,7 +5,7 @@ import { keepAddress, listed, phoneOn, tidied } from './_lib/members.js'
 import { request as ask, reserve, settle, withPoints } from './_lib/orders.js'
 import { beganPayment, noPayCookie, sessionCookie, sessionOf } from './_lib/session.js'
 import { memberAsking, trouble } from './_lib/who.js'
-import { dueCents, has, onFile, refusalOf, updateOf, wayOf, type Address } from '../shared/rules.js'
+import { countOf, dueCents, has, manyOf, onFile, refusalOf, times, updateOf, wayOf, type Address } from '../shared/rules.js'
 
 const addressOf = (given: unknown): Address | null => {
   if (!given || typeof given !== 'object') return null
@@ -71,13 +71,16 @@ export async function POST(request: Request) {
     const typed = tidied(body.shipTo)
     const shipTo = onFile(typed) ? typed : str(who.row.fields[F.member.shipTo]).trim()
     if (onFile(typed) && typed !== str(who.row.fields[F.member.shipTo]).trim()) await keepAddress(who.row, typed)
-    const refusal = refusalOf(who.member, product, orders, { option, points, address, shipTo })
+    // (so many of it, for a book: priced as the lot. shared/rules.ts)
+    const count = countOf(product, body.count)
+    const lot = times(product, count)
+    const refusal = refusalOf(who.member, lot, orders, { option, points, address, shipTo })
     if (refusal) return json({ error: refusal }, { status: 400 })
 
     const way = wayOf(product)
     // Dollars are owed: that is /api/pay and then a payment, never this
-    if (way === 'buy' && dueCents(product, points) > 0) return json({ error: 'pay' }, { status: 400 })
-    const placed = way === 'request' ? await ask(who.row, productRow, product, option) : way === 'reserve' ? await reserve(who.row, productRow, product, option) : await withPoints(who.row, productRow, product, option, points, address ?? (onFile(shipTo) ? shipTo : null))
+    if (way === 'buy' && dueCents(lot, points) > 0) return json({ error: 'pay' }, { status: 400 })
+    const placed = way === 'request' ? await ask(who.row, productRow, product, option) : way === 'reserve' ? await reserve(who.row, productRow, product, option) : await withPoints(who.row, productRow, lot, manyOf(option, count), points, address ?? (onFile(shipTo) ? shipTo : null))
     return json({ ok: true, ...placed })
   } catch (error) {
     return trouble('order', error)

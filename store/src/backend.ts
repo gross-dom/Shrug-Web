@@ -40,6 +40,8 @@ export type PayStart = { ok: true; clientSecret: string; payment: string; cents:
 export interface Asked {
   product: string
   option?: string
+  /** How many of it, for a book (shared/rules.ts: sellsMany). One, where it is not said. */
+  count?: number
   /** How many of their points to put towards it. */
   points?: number
   /** An address typed with the order: where it goes, and kept on file from then on. */

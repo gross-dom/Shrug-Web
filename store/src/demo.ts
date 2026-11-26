@@ -1,4 +1,4 @@
-import { awardFor, dueCents, mayHave, numberOf, onFile, refusalOf, unpriced, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
+import { awardFor, countOf, dueCents, manyOf, mayHave, numberOf, onFile, refusalOf, STARTING_POINTS, times, unpriced, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
 import { MORE_COLORS } from '../shared/colors'
 import { samplePdf } from '../shared/sample'
 import { save, type Asked, type Backend, type Failed, type Placed, type Who } from './backend'
@@ -18,7 +18,7 @@ export const PEOPLE: Record<string, { label: string; member: { name: string; fir
   investor: { label: 'Investor, silver, 400 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'silver', points: 400, number: '027', since: 2024 }, funds: [] },
   black: { label: 'Investor, black, 20,000 points', member: { name: 'Sample Member', first: 'Sample', roles: ['Investor'], tier: 'black', points: 20000, number: '027', since: 2024 }, funds: [] },
   // Not on the list: a standard member, as the server makes of anyone who signs in. No name until they give one
-  standard: { label: 'Standard, not on the list, 100 points', member: { name: '', first: '', roles: [], tier: 'standard', points: 100, number: '', since: 2026 }, funds: [] },
+  standard: { label: 'Standard, not on the list, 200 points', member: { name: '', first: '', roles: [], tier: 'standard', points: STARTING_POINTS, number: '', since: 2026 }, funds: [] },
 }
 
 /** Things the demo can be made to do, so that every state the store has can be seen. */
@@ -156,8 +156,8 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   // one (api/_lib/orders.ts). The demo has no Apple Pay to ask, so it keeps a stand-in under their own name
   const fromWallet = asked.wallet && !(asked.shipTo ?? '').trim() && !store.shipTos[me] ? `${member.name.trim() || 'Your name'}\n1 Example St\nSan Francisco, CA 94110` : ''
   const typed = (asked.shipTo ?? '').trim() || fromWallet
-  const ask = (product: Product, status: OrderStatus, points: number, cents: number, takes: boolean): Placed => {
-    const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: asked.option ?? '', number: takes ? numberOf(product) : '', points, paid: cents / 100, placed: new Date().toISOString(), who: me }
+  const ask = (product: Product, status: OrderStatus, points: number, cents: number, takes: boolean, count = 1): Placed => {
+    const order = { id: `demo-${Date.now()}`, reference: reference(), status, productId: product.id, productName: product.name, option: manyOf(asked.option ?? '', count), number: takes ? numberOf(product) : '', points, paid: cents / 100, placed: new Date().toISOString(), who: me }
     store.orders.unshift(order)
     if (takes && product.left !== null) store.left[product.id] = product.left - 1
     if (onFile(typed)) store.shipTos[me] = typed
@@ -183,15 +183,18 @@ function place(asked: Asked, paying: boolean): Placed | Failed {
   const product = shelves(store).find((p) => p.id === asked.product && mayHave(member, p))
   if (!product) return { error: 'hidden' }
   if (store.scene === 'lastgone') return { error: 'sold-out' }
-  const refusal = refusalOf(member, product, mine, { ...asked, shipTo: onFile(typed) ? typed : store.shipTos[me] })
+  // (so many of it, for a book: priced as the lot, as the real store prices it)
+  const count = countOf(product, asked.count)
+  const lot = times(product, count)
+  const refusal = refusalOf(member, lot, mine, { ...asked, shipTo: onFile(typed) ? typed : store.shipTos[me] })
   if (refusal) return { error: refusal }
   const way = wayOf(product)
   const points = way === 'buy' ? (asked.points ?? 0) : 0
-  const due = way === 'buy' ? dueCents(product, points) : 0
+  const due = way === 'buy' ? dueCents(lot, points) : 0
   if (due > 0 && !paying) return { error: 'pay' }
   if (due > 0 && store.scene === 'declined') return { error: 'unpaid' }
   const status: OrderStatus = way === 'request' ? 'Requested' : way === 'reserve' || product.status === 'Pre-order' ? 'Pre-order' : due > 0 ? 'Paid' : 'Points'
-  return ask(product, status, points, due, way === 'buy')
+  return ask(product, status, points, due, way === 'buy', count)
 }
 
 export const demo: Backend = {

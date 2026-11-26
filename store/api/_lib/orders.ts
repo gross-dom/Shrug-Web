@@ -3,7 +3,7 @@ import { add, all, change, F, num, one, remove, str, T, type Row } from './airta
 import { keepAddress, rowFor } from './members.js'
 import { orderOf, productOf } from './catalogue.js'
 import { intentOf, type Intent } from './stripe.js'
-import { awardFor, dueCents, fitPoints, numberOf, onFile, soldOut, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
+import { awardFor, countOf, dueCents, fitPoints, manyOf, numberOf, onFile, soldOut, times, wayOf, written, type Address, type Order, type OrderStatus, type Product } from '../../shared/rules.js'
 
 // Placing an order: the row in Orders, the points off the balance, and one fewer on the shelf.
 
@@ -113,12 +113,16 @@ export async function settle(paymentId: string, forMember?: string): Promise<{ o
   const option = intent.metadata.option ?? ''
   // The points that were to be used are said on the payment itself, as the store wrote them when it began
   const points = Number(intent.metadata.points ?? 0)
-  const sound = !!product && wayOf(product) === 'buy' && !soldOut(product) && Number.isInteger(points) && points === fitPoints({ points: balance }, product, points) && dueCents(product, points) === intent.amount_received
-  if (!product || !sound) {
+  // How many were paid for is said on the payment too (a book can be bought several at once): the sums are the lot's
+  const count = product ? countOf(product, Number(intent.metadata.count ?? 1)) : 1
+  const lot = product ? times(product, count) : null
+  const said = manyOf(option, Number.isInteger(Number(intent.metadata.count)) ? Math.max(1, Number(intent.metadata.count)) : 1)
+  const sound = !!lot && wayOf(lot) === 'buy' && !soldOut(lot) && Number.isInteger(points) && points === fitPoints({ points: balance }, lot, points) && dueCents(lot, points) === intent.amount_received
+  if (!lot || !sound) {
     const shown = product ?? ({ ...EMPTY, id: productRow.id, name: str(productRow.fields[F.product.name]) } as Product)
-    return { ...(await place({ member, productRow, product: shown, status: 'Needs review', option, shipTo, paid, payment: paymentId, takes: false })), member }
+    return { ...(await place({ member, productRow, product: shown, status: 'Needs review', option: said, shipTo, paid, payment: paymentId, takes: false })), member }
   }
-  return { ...(await place({ member, productRow, product, status: product.status === 'Pre-order' ? 'Pre-order' : 'Paid', option, shipTo, paid, payment: paymentId, points, takes: true })), member }
+  return { ...(await place({ member, productRow, product: lot, status: lot.status === 'Pre-order' ? 'Pre-order' : 'Paid', option: manyOf(option, count), shipTo, paid, payment: paymentId, points, takes: true })), member }
 }
 
 const EMPTY: Omit<Product, 'id' | 'name'> = {

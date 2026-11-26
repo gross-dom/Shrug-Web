@@ -1,4 +1,4 @@
-import { endOf, phoneOf, type Needs, type Picture, type Update, type Via } from '../../store/shared/rules'
+import { STARTING_POINTS, endOf, phoneOf, type Needs, type Picture, type Update, type Via } from '../../store/shared/rules'
 import { samplePdf } from '../../store/shared/sample'
 import { createStore } from './store'
 
@@ -248,7 +248,7 @@ function fromStore() {
   }
 }
 const listedRow = (email: string): DemoRow => ({ email, listed: true, confirmed: false, phone: null, shrugName: 'Jordan Avery', name: '', picture: null, points: 8400, roles: ['LP'], funds: ['Shrug 2', 'Shrug 4'] })
-const standardRow = (email: string, phone: string | null): DemoRow => ({ email, listed: false, confirmed: false, phone, shrugName: '', name: '', picture: null, points: 100, roles: [], funds: [] })
+const standardRow = (email: string, phone: string | null): DemoRow => ({ email, listed: false, confirmed: false, phone, shrugName: '', name: '', picture: null, points: STARTING_POINTS, roles: [], funds: [] })
 const textsIn = (row: DemoRow) => !!row.phone && (!row.listed || row.confirmed)
 
 /** A guess at a code, in the demo: 000000 is wrong, five wrong ones pause codes, and anything else is right. */

@@ -30,7 +30,7 @@ There are three kinds of person, and one set of rules (`shared/rules.ts`) answer
 | Who | How | What they are shown |
 | --- | --- | --- |
 | A visitor | Nobody is signed in | The store: everything that is `Visible to` Everyone, at its price. No points, no orders, no updates. The button on a product is the way to the card |
-| A standard user | They signed in with a phone number, and are not on Shrug's list | The same store, as a member: a row in Members with no `Role`, the tier Standard and 100 points to begin with (`STARTING_POINTS`, which is $10) |
+| A standard user | They signed in with a phone number, and are not on Shrug's list | The same store, as a member: a row in Members with no `Role`, the tier Standard and 200 points (it was 100 until 27 Nov; someone who already has a row keeps what they have) to begin with (`STARTING_POINTS`, which is $10) |
 | Someone on the list | A row in Members with a `Role` | What is for Everyone and for their groups; and, for an LP, the updates |
 
 - **Signing in makes the account.** The first time an address that is not in Members proves a phone number,
@@ -168,6 +168,8 @@ things move.
   shown whole, in a tile painted beside it as the shot's own two edges are, so that its studio runs on to
   the tile's edges; one shot alone has no arrows and no dots. On a shelf the hero is whole in its tile the
   same way. All twenty-four colors have their folder.
+- **More than one of a book.** A book that is bought can be bought several at once, up to ten (Niv, 27 Nov): its page has a Quantity row (one fewer, the number, one more), the price is said as "3 × $40", points go towards the lot, and it is posted once, so the postage is charged once. Nothing else is sold in numbers (an art piece is one of an edition, a chair is a chair). The rule is in `shared/rules.ts` (`sellsMany`, `countOf`, `times`, `manyOf`), which the page, the demo and the server all price by; the server reads the number from the request, puts it on the payment, and checks the payment against the lot's price. The order says how many in its option ("Quantity: 3"), which is where whoever packs it reads it: there is no column for it in Airtable.
+- **The card's page, for someone already signed in.** Opened for the first time in a browser (from My VIP on the desk, by pressing the card), it shows the card and nothing before it: the way to sign in is held back until the server has said that nobody is signed in (or, after 900ms, has been too long about it). It used to be drawn at once and replaced a moment later.
 - **A product's pictures** are paged through with the arrows on the picture, the arrow keys, the dots, or
   a finger drawn across it. Another product is reached from the foot (on a phone, the two arrows by
   "2 of 6").

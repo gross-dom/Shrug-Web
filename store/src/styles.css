@@ -150,6 +150,14 @@ a{color:inherit}
 .ui-card.rows dd{font-variant-numeric:tabular-nums; text-align:right}
 .ui-card.rows dd small{font-size:13px; color:var(--text-3); margin-right:10px}
 .ui-card.rows .pts dd{color:var(--gold)}
+/* How many, of something sold several at once (a book): one fewer, the number, one more */
+.ui-card.rows .qty{align-items:center; padding:8px 0}
+.ui-qty{display:inline-flex; align-items:center; gap:2px; height:34px; padding:0 3px; border-radius:999px; background:var(--surface-2, rgba(255,255,255,.08)); box-shadow:inset 0 0 0 1px var(--line)}
+.ui-qty button{display:grid; place-items:center; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:none; color:var(--text); font:500 18px/1 var(--font); cursor:pointer}
+.ui-qty button:disabled{color:var(--text-3); cursor:default}
+.ui-qty button:not(:disabled):hover{background:rgba(127,127,127,.22)}
+.ui-qty button:focus-visible{outline:2px solid var(--text); outline-offset:1px}
+.ui-qty output{min-width:26px; text-align:center; font-weight:600; font-variant-numeric:tabular-nums}
 .ui-card.rows .total dt{color:var(--text); font-weight:600}
 .ui-card.rows .total dd{font:600 20px/1.2 var(--font); letter-spacing:-.015em}
 /* How many points to use: a plain range under the Your points row, full by default */
