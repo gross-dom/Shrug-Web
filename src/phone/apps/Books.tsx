@@ -4,13 +4,13 @@ import { fmtCents, priceCents, soldOut, wayOf, type Order, type Product } from '
 import { shotsOf } from '../../../store/src/pictures'
 import { shipsWhen } from '../../../store/src/words'
 import { ReaderPages, useReading } from '../../apps/Reader'
-import { StoreFrame, type FrameHandle } from '../../apps/storefront'
 import { editionOf, EDITIONS } from '../../data/editions'
 import { useShelf, wantShop } from '../../os/shop'
-import { LOGIN, LogInSheet } from '../LogIn'
 import { pop, push } from '../system'
-import { BackButton, GlassGroup, GroupButton, Menu, NavStack, Screen, SheetHost, useApp } from '../ui'
-import { Wallet } from './Shop'
+import { BackButton, GlassGroup, GroupButton, Menu, NavStack, Screen, useApp } from '../ui'
+import { StoreSheets } from './Buying'
+import { ProductPage } from './Product'
+import { Wallet } from './Wallet'
 import '../../styles/desk/books.css'
 import '../../styles/phone/shop.css'
 import '../../styles/phone/books.css'
@@ -166,19 +166,6 @@ function Shelves() {
   )
 }
 
-/** A book's own page: the store's, where it is bought. "View all" on it comes back to the shelf. */
-function BookPage({ id }: { id: string }) {
-  const frame = useRef<FrameHandle>(null)
-  const shelf = useShelf('books')
-  const [at, setAt] = useState(id)
-  const book = shelf?.products.find((b) => b.id === at) ?? null
-  return (
-    <Screen title={book?.name ?? 'Books'} tone="dark" fixed className="shop-ios" leading={<BackButton label="Book Store" />} trailing={<Wallet />}>
-      <StoreFrame ref={frame} room="books" title="Books: a book" first={`/vip/store/?k=books&p=${encodeURIComponent(id)}`} onAt={(place) => (place.product ? setAt(place.product) : pop())} />
-    </Screen>
-  )
-}
-
 /** The reader: a book of the Library, a page at a time. */
 function Reader({ of }: { of: string }) {
   const read = useReading(editionOf(of))
@@ -254,8 +241,8 @@ export function BooksApp() {
   }, [active])
   return (
     <>
-      <NavStack>{(view) => (view?.startsWith(BOOK) ? <BookPage id={view.slice(BOOK.length)} /> : view?.startsWith(READ) ? <Reader of={view.slice(READ.length)} /> : <Shelves />)}</NavStack>
-      <SheetHost>{(name) => (name === LOGIN ? <LogInSheet /> : null)}</SheetHost>
+      <NavStack>{(view) => (view?.startsWith(BOOK) ? <ProductPage id={view.slice(BOOK.length)} back="Book Store" /> : view?.startsWith(READ) ? <Reader of={view.slice(READ.length)} /> : <Shelves />)}</NavStack>
+      <StoreSheets />
     </>
   )
 }

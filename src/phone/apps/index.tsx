@@ -6,7 +6,8 @@ import { ContactsApp, contactsFirst } from './Contacts'
 import { MessagesApp } from './Messages'
 import { NotesApp } from './Notes'
 import { OnePagerApp, UpdatesApp } from './Papers'
-import { shopApp } from './Shop'
+import { MyVipApp } from './MyVip'
+import { ArtStoreApp } from './Shop'
 import { TerminalApp } from './Terminal'
 import { WorkspaceApp, workspaceFirst } from './Workspace'
 
@@ -44,11 +45,11 @@ export const PHONE: Record<PhoneApp, PhoneAppSpec> = {
   terminal: { label: 'Case Studies', Root: TerminalApp, first: () => ({ tone: 'dark' }), eager: true },
   // Workspace is the studio: paper, then whichever color is picked (apps/Workspace.tsx)
   workspace: { label: 'Workspace', Root: WorkspaceApp, first: workspaceFirst },
-  // ArtStore and My VIP are the store's own pages, which are black (apps/Shop.tsx); Books is a shelf and a
-  // reader of the phone's own over the same store (apps/Books.tsx)
-  store: { label: 'ArtStore', Root: shopApp('art', 'ArtStore'), first: () => ({ tone: 'dark' }) },
+  // The stores are black, every screen of them: ArtStore's shelf and a piece's page (apps/Shop.tsx,
+  // Product.tsx), Books' shelf and reader (apps/Books.tsx), and My VIP (apps/MyVip.tsx)
+  store: { label: 'ArtStore', Root: ArtStoreApp, first: () => ({ tone: 'dark' }) },
   books: { label: 'Books', Root: BooksApp, first: () => ({ tone: 'dark' }) },
-  myvip: { label: 'My VIP', Root: shopApp('yours', 'My VIP'), first: () => ({ tone: 'dark' }) },
+  myvip: { label: 'My VIP', Root: MyVipApp, first: () => ({ tone: 'dark' }) },
   // Documents, on the gray they lie on: the one-pager (the desk's Preview: here the app is the document), and
   // the folder kept for Shrug's LPs (apps/Papers.tsx)
   preview: { label: 'One-pager', Root: OnePagerApp, first: () => ({ tone: 'grouped' }) },

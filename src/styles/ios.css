@@ -1033,8 +1033,10 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
   --field: rgb(118 118 128 / 0.12);
 }
 
+/* (a sheet over a dark app is dark the same way: My VIP over a store) */
 .ios-tray--dark .ios-sheet__panel,
-.ios-sheet[data-detent='tray'].ios-tray--dark .ios-sheet__panel {
+.ios-sheet[data-detent='tray'].ios-tray--dark .ios-sheet__panel,
+.ios-sheet--dark .ios-sheet__panel {
   --label: #fff;
   --label-2: rgb(235 235 245 / 0.62);
   --label-3: rgb(235 235 245 / 0.32);
@@ -1054,7 +1056,8 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
 }
 
 /* (its Close, on a dark tray, is dark glass) */
-.ios-tray--dark .ios-glass {
+.ios-tray--dark .ios-glass,
+.ios-sheet--dark .ios-glass {
   --glass: rgb(118 118 128 / 0.3);
   --glass-edge: 0 0 0 0.5px rgb(255 255 255 / 0.1), inset 0 0.5px 0 rgb(255 255 255 / 0.12);
   color: #fff;

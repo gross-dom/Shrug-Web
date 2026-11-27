@@ -3,7 +3,6 @@ import { Play, Rotate3d, X } from 'lucide-react'
 import { FINISH_WORDS } from '../../../store/shared/colors'
 import { fmtCents, priceCents } from '../../../store/shared/rules'
 import { galleryOf, type Slide } from '../../../store/src/pictures'
-import { addressOf, StoreFrame, type FrameHandle } from '../../apps/storefront'
 import { chosenOf, ground, leadOf, MAKING_SHOWN, OWNERS_SHOWN, stockOf, Turntable, type Chosen } from '../../apps/workspace/parts'
 import { ChairStill } from '../../apps/workspace/Still'
 import { W_S } from '../../data/lettering'
@@ -18,7 +17,9 @@ import { addToBar, onBar, pick, picked } from '../../os/workspace'
 import { LOGIN, LogInSheet } from '../LogIn'
 import { closeSheet, openSheet, pop, push, sys } from '../system'
 import { BackButton, NavStack, Screen, Sheet, SheetHost, useApp } from '../ui'
-import { Wallet } from './Shop'
+import { CHECKOUT, checkOut, CheckoutTray } from './Buying'
+import { MyVipSheet } from './MyVip'
+import { VIP, Wallet } from './Wallet'
 import '../../styles/phone/shop.css'
 import '../../styles/phone/workspace.css'
 
@@ -39,7 +40,6 @@ import '../../styles/phone/workspace.css'
 const STUDIO = 'studio'
 const OWNERS = 'owners'
 const BTS = 'bts'
-const BUY = 'buy'
 const MORE_SHEET = 'more'
 
 /** How long the 3D chair is looked at before its photographs begin to come by themselves, and how long each is shown. */
@@ -51,7 +51,6 @@ const QUIET = typeof window !== 'undefined' && isOn('still')
 const chosenNow = (kept: { id: string } | null): Chosen | null => (kept ? (ALL_PAINTS.map(chosenOf).find((c) => c.id === kept.id) ?? null) : null)
 const choose = (c: Chosen) => pick({ id: c.id, color: c.color, shift: c.shift })
 /** The store's page for a chair, in that chair's color. */
-const pageOf = (c: Chosen) => `${addressOf('chairs', c.paint.product)}&c=${c.color.slice(1)}`
 
 /** W/S, as the app's bar has it. (For the eye: the screen's own heading says Workspace.) */
 const Mark = () => (
@@ -255,7 +254,8 @@ function Studio({ top }: { top: boolean }) {
   const dark = ink === '#fff'
   const owners = [...OWNERS_SHOWN.filter((o) => o.paint === chosen.id), ...OWNERS_SHOWN.filter((o) => o.paint !== chosen.id)]
   const member = who === 'member'
-  const buy = () => push(BUY)
+  // Buy brings checkout up over the studio (Buying.tsx): the chair stays where it is behind it
+  const buy = () => product && checkOut(product)
 
   return (
     <Screen title={chosen.name} center={<></>} leading={<BackButton label="Colors" />} trailing={<Wallet />} tone={dark ? 'dark' : 'plain'} ground={chosen.shift ? { top: chosen.shift[0]!, foot: chosen.shift[chosen.shift.length - 1]! } : chosen.color} under={covered ? 'dark' : undefined} fixed className="wsp wsp-studio">
@@ -357,36 +357,6 @@ function Studio({ top }: { top: boolean }) {
   )
 }
 
-// ---- Buying: the store's own page for the chair, in its color
-
-function Buy() {
-  const kept = useStore(picked, (s) => s)
-  const chosen = chosenNow(kept) ?? chosenOf(PAINTS[0]!)
-  const frame = useRef<FrameHandle>(null)
-  // (the page the frame opens on is the chair's as it was when Buy was pressed; another color picked on the
-  // page itself is followed from there)
-  const [first] = useState(() => pageOf(chosen))
-  return (
-    <Screen title="Workspace" tone="dark" fixed className="shop-ios" leading={<BackButton label={chosen.name} />} trailing={<Wallet />}>
-      <StoreFrame
-        ref={frame}
-        room="chairs"
-        title="Workspace: buying a chair"
-        first={first}
-        onAt={(place) => {
-          // "View all" on the store's page is the way back to the studio
-          if (!place.product) return pop()
-          const paint = ALL_PAINTS.find((p) => p.product === place.product)
-          if (paint && paint.id !== picked.get()?.id) {
-            choose(chosenOf(paint))
-            frame.current?.tint(paint.color)
-          }
-        }}
-      />
-    </Screen>
-  )
-}
-
 // ---- Notable Owners, and BTS
 
 function Owners() {
@@ -470,7 +440,7 @@ function Bts() {
 /** What the app is drawn on at the screen it opens at: paper for the colors and the owners, the color picked
  * for its studio, and black for the wall and for the store's page. */
 export function workspaceFirst(top: string | null): { tone: 'plain' | 'dark'; ground?: string } {
-  if (top === BUY || top === BTS) return { tone: 'dark' }
+  if (top === BTS) return { tone: 'dark' }
   const chosen = top === STUDIO ? chosenNow(picked.get()) : null
   return chosen ? { tone: inkOn(chosen.color) === '#fff' ? 'dark' : 'plain', ground: chosen.color } : { tone: 'plain', ground: PAPER }
 }
@@ -483,8 +453,8 @@ export function WorkspaceApp() {
   const top = useStore(sys, (s) => s.stacks[app][s.stacks[app].length - 1] ?? null)
   return (
     <>
-      <NavStack>{(view) => (view === STUDIO ? <Studio top={top === STUDIO} /> : view === BUY ? <Buy /> : view === OWNERS ? <Owners /> : view === BTS ? <Bts /> : <Colors />)}</NavStack>
-      <SheetHost>{(name) => (name === LOGIN ? <LogInSheet /> : name === MORE_SHEET ? <MoreSheet /> : null)}</SheetHost>
+      <NavStack>{(view) => (view === STUDIO ? <Studio top={top === STUDIO} /> : view === OWNERS ? <Owners /> : view === BTS ? <Bts /> : <Colors />)}</NavStack>
+      <SheetHost>{(name) => (name === LOGIN ? <LogInSheet /> : name === CHECKOUT ? <CheckoutTray /> : name === VIP ? <MyVipSheet /> : name === MORE_SHEET ? <MoreSheet /> : null)}</SheetHost>
     </>
   )
 }
