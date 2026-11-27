@@ -4,9 +4,9 @@
 //
 // They are Shrug's own: the names, finishes and values are from the Workspace design as redrawn on 25 Nov
 // (the "Sixteen more" board of the Shrug.VIP v1 designs, set from the catalog's swatches converted to sRGB;
-// where a swatch and the reference photographs disagree, as for Hulk Green and Dazzling Pink, the
-// photographs won). The reference photographs are the standard for the paint: a value here is where the
-// match starts. Change one here and everything that shows the color follows.
+// where a swatch and the reference photographs disagree, the photographs won). The reference photographs
+// are the standard for the paint: a value here is where the match starts. Change one here and everything
+// that shows the color follows.
 
 /** How a paint is finished. One paint material, in seven settings (and Matte Leather's, which has no gloss). */
 export type Finish = 'matte' | 'gloss' | 'pearl' | 'metallic' | 'shift' | 'holo' | 'uv'
@@ -41,11 +41,14 @@ export const MORE_COLORS: MoreColor[] = [
   { id: 'nuclear-pink', name: 'Nuclear Pink', color: '#fa9a9a', finish: 'uv' },
   { id: 'championship-green', name: 'Championship Green', color: '#0b9d6e', finish: 'metallic' },
   { id: 'interstellar-black', name: 'Interstellar Black', color: '#2d3140', finish: 'holo', shift: ['#23242e', '#4f6488', '#6a5690', '#2d3140'] },
-  { id: 'hulk-green', name: 'Hulk Green', color: '#42a549', finish: 'metallic' },
+  // (Proton Sparkle took Hulk Green's place on 27 Nov, Hulk Green being too near Mantis Green: a paint that goes
+  // from maroon to copper, its values taken from the paint in its own photographs)
+  { id: 'proton-sparkle', name: 'Proton Sparkle', color: '#9a4c36', finish: 'shift', shift: ['#561d1a', '#9a4c36', '#d07c58'] },
   { id: 'reserve-green', name: 'Reserve Green', color: '#978d47', finish: 'shift', shift: ['#15431d', '#3e7839', '#b98e44', '#f5c077'] },
   { id: 'nuclear-green', name: 'Nuclear Green', color: '#aaf68e', finish: 'uv' },
   { id: 'nuclear-violet', name: 'Nuclear Violet', color: '#e9a6e8', finish: 'uv' },
-  { id: 'dazzling-pink', name: 'Dazzling Pink', color: '#ce184e', finish: 'metallic' },
+  // (Dazzling Pink is the magenta of its photographs, which since 27 Nov are the Luxury Pink set: it was a pink-red)
+  { id: 'dazzling-pink', name: 'Dazzling Pink', color: '#e434a6', finish: 'metallic' },
   { id: 'palleon-panther', name: 'Palleon Panther', color: '#939f9b', finish: 'shift', shift: ['#9da2aa', '#8fb8b0', '#8fa9c9'] },
   { id: 'giallo-yellow', name: 'Giallo Yellow', color: '#f2c81b', finish: 'gloss' },
   // (Manhattan Blue took Tiffany Blue's place on the launch list of 27 Nov: a pale aqua metallic, its value taken

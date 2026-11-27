@@ -122,6 +122,13 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
     await page.goBack(); await sleep(800)
   }
 
+  // (loaded again, the studio's row of dots is the eight and the way to the rest: what was added to it on the
+  // last visit is not in it. Dom, 27 Nov: kept from visit to visit, the row opened with too many)
+  await arrive('workspace')
+  await page.locator(`${top('workspace')} .wsp-slab`, { hasText: 'Solar Orange' }).tap(); await sleep(1400)
+  const again = await page.evaluate((sel) => [...document.querySelectorAll(`${sel} .wsp-dot`)].map((d) => d.getAttribute('aria-label')), top('workspace'))
+  say(again.length === 9 && again[8] === 'More colors' && !again.includes('Championship Green'), 'loaded again, a color picked from the eight opens the studio on the eight: what was added last visit is not in the row', again.join())
+
   // ---- Books: the shelf, a book's page, the Library and the reader ----
   await arrive('books')
   const shelf = await page.evaluate((sel) => { const cards = [...document.querySelectorAll(`${sel} .st-card`)].map((c) => c.getBoundingClientRect()); const screen = document.querySelector(sel).getBoundingClientRect(); return { title: document.querySelector(`${sel} .ios-large`)?.textContent, books: [...document.querySelectorAll(`${sel} .st-card__name`)].map((b) => b.textContent), covers: document.querySelectorAll(`${sel} .st-card__pic > :is(img, .st-cover)`).length, buttons: [...document.querySelectorAll(`${sel} .st-card__go`)].map((b) => b.textContent), two: cards.length >= 2 && Math.abs(cards[0].top - cards[1].top) < 1 && cards[1].left > cards[0].right && cards[0].width < screen.width / 2, tabs: [...document.querySelectorAll(`${sel} .bkp-tabs [role=tab]`)].map((t) => `${t.textContent}:${t.getAttribute('aria-selected')}`), ground: getComputedStyle(document.querySelector(sel).querySelector('.ios-screen')).backgroundColor, frames: document.querySelectorAll('.sb-slot[data-front] iframe').length } }, top('books'))

@@ -202,7 +202,7 @@ const check = (name, ok, detail = '') => {
   await p.waitForSelector(`${W} .mc-sheet`, { timeout: 8000 })
   await p.waitForTimeout(400)
   const more = await p.evaluate((W) => { const w = document.querySelector(W); const sheet = w.querySelector('.wx-more .mc-sheet'); const sw = [...w.querySelectorAll('.mc-swatch')]; const rows = new Set(sw.map((x) => Math.round(x.getBoundingClientRect().top))); const cols = new Set(sw.map((x) => Math.round(x.getBoundingClientRect().left))); const box = sheet.getBoundingClientRect(); const tops = sw.map((x) => x.getBoundingClientRect().top); const feet = sw.map((x) => x.getBoundingClientRect().bottom); return { role: sheet.getAttribute('role'), names: sw.map((x) => x.textContent.trim()), rows: rows.size, cols: cols.size, text: sheet.innerText, x: !!sheet.querySelector('.wx-x'), fills: Math.min(...tops) - box.top <= 16 && box.bottom - Math.max(...feet) <= 16, colored: sw.every((x) => getComputedStyle(x).backgroundImage !== 'none' || getComputedStyle(x).backgroundColor !== 'rgba(0, 0, 0, 0)') } }, W)
-  check('the last dot lets down a sheet over the window: sixteen more colors, four by four, each a slab of its color with its own name on it', more.role === 'dialog' && more.names.length === 16 && more.rows === 4 && more.cols === 4 && more.x && more.colored && more.names.join(' | ') === 'Neutron Star | Gummi Berry | Luxury Bronze | Smurf | Nuclear Pink | Championship Green | Interstellar Black | Hulk Green | Reserve Green | Nuclear Green | Nuclear Violet | Dazzling Pink | Palleon Panther | Giallo Yellow | Manhattan Blue | Fractured Love', JSON.stringify(more.names))
+  check('the last dot lets down a sheet over the window: sixteen more colors, four by four, each a slab of its color with its own name on it', more.role === 'dialog' && more.names.length === 16 && more.rows === 4 && more.cols === 4 && more.x && more.colored && more.names.join(' | ') === 'Neutron Star | Gummi Berry | Luxury Bronze | Smurf | Nuclear Pink | Championship Green | Interstellar Black | Proton Sparkle | Reserve Green | Nuclear Green | Nuclear Violet | Dazzling Pink | Palleon Panther | Giallo Yellow | Manhattan Blue | Fractured Love', JSON.stringify(more.names))
   check('the colors fill the sheet, from its top to its foot, and nothing is written over them ("More colors", "16 more, each made to order")', more.fills && !/More colors|each made to order/i.test(more.text), JSON.stringify({ fills: more.fills, text: more.text.slice(0, 80) }))
   check('the sheet has no "Owned by" and no "Your own" in it', !/Owned by|Your own/i.test(more.text), more.text.slice(0, 200))
   await p.locator(`${W} .mc-swatch`, { hasText: 'Championship Green' }).click()
@@ -211,7 +211,7 @@ const check = (name, ok, detail = '') => {
   s = await studio()
   const moreIn = await p.evaluate((W) => { const w = document.querySelector(W); const o = w.querySelector('button.fl-owners'); const tags = w.querySelector('.st-tags').getBoundingClientRect(); const win = w.querySelector('.ss-window').getBoundingClientRect(); return { owners: !!o && o.getClientRects().length > 0 && getComputedStyle(o).visibility !== 'hidden', tagsLeft: Math.round(tags.left - win.left), tagsFoot: Math.round(win.bottom - tags.bottom), own: /your own/i.test(w.innerText), dots: [...w.querySelectorAll('.fl-dot')].map((d) => d.getAttribute('aria-label') + (d.classList.contains('on') ? '*' : '')).join(' | ') } }, W)
   check('one picked, the studio is in it: its name, its finish and "Made to Order · 2–3 weeks" at the bottom left, and no "Owned by" (nor "Your own")', s.view === 'studio' && s.name === 'Championship Green' && s.ground === 'rgb(11, 157, 110)' && s.tags === 'Metallic | Made to Order · 2–3 weeks' && !moreIn.owners && !moreIn.own && moreIn.tagsLeft < 80 && moreIn.tagsFoot < 90 && s.buy === 'From $1,200 / Order', JSON.stringify({ s: { name: s.name, ground: s.ground, tags: s.tags, buy: s.buy }, moreIn }))
-  check('and it is added to the tray, where it stays, with the way to the sixteen still at the tray’s end', moreIn.dots === 'Matte Leather | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | Championship Green* | More colors', moreIn.dots)
+  check('and it is added to the tray, where it stays for the visit, with the way to the sixteen still at the tray’s end', moreIn.dots === 'Matte Leather | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | Championship Green* | More colors', moreIn.dots)
 
   // ---- buying, in this window: the store's own page for that chair, in the chair's color through to the receipt
   await p.locator(`${W} .fl-dot[aria-label="Championship Green"]`).click()
@@ -276,7 +276,9 @@ const check = (name, ok, detail = '') => {
   check('Alexandrite is color-shifting: the cove is its colors, and it says to turn it', s.image === 'linear-gradient' && s.tags === 'Color-shifting | Available now' && /Turn it to see it shift\.$/.test(await p.locator(`${W} .fl-info p`).innerText()), JSON.stringify(s))
   check('nothing went wrong on the way', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
 
-  // ---- a gallery that is all upright: two side by side as one slide, and one whole inside the window
+  // ---- a gallery with upright photographs in it: two side by side are one slide
+  // (one upright photograph by itself is shown whole inside the window, on a blur of itself: none of the
+  // twenty-four has one since Dazzling Pink's photographs became the Luxury Pink set, all landscapes, on 27 Nov)
   const fromSheet = async (name) => {
     await p.locator(`${W} .fl-dot.more`).click()
     await p.waitForSelector(`${W} .mc-sheet`, { timeout: 8000 })
@@ -285,16 +287,12 @@ const check = (name, ok, detail = '') => {
     await p.waitForTimeout(1500)
   }
   const strip = () => p.evaluate((W) => [...document.querySelectorAll(`${W} .st-shots .st-shot`)].map((b) => b.getAttribute('aria-label')).join(' | '), W)
-  await fromSheet('Dazzling Pink')
-  check('Dazzling Pink has no landscape photograph: its gallery is a pair and one upright', (await strip()) === 'The chair in 3D | Photographs 1 and 2 of 3 | Photograph 3 of 3', await strip())
-  await p.locator(`${W} .st-shot[aria-label="Photographs 1 and 2 of 3"]`).click()
+  await fromSheet('Giallo Yellow')
+  check('Giallo Yellow has two landscape photographs and a pair of upright ones: its gallery is three slides', (await strip()) === 'The chair in 3D | Photograph 1 of 4 | Photograph 2 of 4 | Photographs 3 and 4 of 4', await strip())
+  await p.locator(`${W} .st-shot[aria-label="Photographs 3 and 4 of 4"]`).click()
   await p.waitForTimeout(1500)
   photo = await photoAt()
-  check('two upright photographs are one slide: side by side and a hair apart, they fill the window between them, with nothing dim round them', photo.fills && photo.fit === 'pair' && photo.pics.length === 2 && photo.pics[0].left === 0 && photo.pics[1].right === 0 && photo.winTall > 0 && photo.pics.every((x) => x.tall === photo.winTall && x.fit === 'cover') && photo.gap >= 1 && photo.gap <= 5 && !photo.behind && photo.loaded && /pair-left/.test(photo.pics[0].file) && /pair-right/.test(photo.pics[1].file) && photo.alt === 'Dazzling Pink Workspace chair, close-up of the back | Dazzling Pink Workspace chair, close-up of the back', JSON.stringify(photo))
-  await p.locator(`${W} .st-shot[aria-label="Photograph 3 of 3"]`).click()
-  await p.waitForTimeout(1500)
-  photo = await photoAt()
-  check('one upright photograph is whole inside the window, not cut to it: clear of the bar and of the foot, on a blur of itself', photo.fills && photo.fit === 'whole' && photo.pics.length === 1 && photo.pics[0].fit === 'contain' && photo.pics[0].top >= 40 && photo.pics[0].tall < photo.winTall - 100 && photo.behind && photo.loaded && /portrait/.test(photo.pics[0].file) && photo.alt === 'Dazzling Pink Workspace chair, in a photo studio', JSON.stringify(photo))
+  check('two upright photographs are one slide: side by side and a hair apart, they fill the window between them, with nothing dim round them', photo.fills && photo.fit === 'pair' && photo.pics.length === 2 && photo.pics[0].left === 0 && photo.pics[1].right === 0 && photo.winTall > 0 && photo.pics.every((x) => x.tall === photo.winTall && x.fit === 'cover') && photo.gap >= 1 && photo.gap <= 5 && !photo.behind && photo.loaded && /pair-left/.test(photo.pics[0].file) && /pair-right/.test(photo.pics[1].file) && photo.alt === 'Giallo Yellow Workspace chair, outdoors | Giallo Yellow Workspace chair, outdoors', JSON.stringify(photo))
   await p.locator(`${W} .st-shot[aria-label="The chair in 3D"]`).click()
   await p.waitForTimeout(1100)
   await fromSheet('Interstellar Black')
@@ -333,6 +331,17 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(600)
   const mine = (await v.locator('body').innerText()).replace(/\s*\n\s*/g, ' | ')
   check('the chair is in My VIP, with what it earned: 200 points awarded for it', /Championship Green/.test(mine) && /Awarded for .*Championship Green[^|]*\| [^|]*\| ?\+200|\+200/.test(mine) && /Balance \| 200/.test(mine), mine.slice(mine.indexOf('Purchase history'), mine.indexOf('Purchase history') + 420))
+  // ---- loaded again, the studio's tray is the eight: what was added to it on the last visit is not on it (Dom, 27 Nov)
+  await p.click('.dock [data-dock-app="workspace"]')
+  await p.waitForSelector(`${W}[data-open] .fl-slab`, { timeout: 15000 })
+  await p.waitForTimeout(500)
+  await p.locator(`${W} .fl-slab`).nth(1).click()
+  await p.waitForSelector(`${W} .fl-dock .fl-dot`, { timeout: 15000 })
+  await p.waitForTimeout(900)
+  const again = await p.evaluate((W) => [...document.querySelectorAll(`${W} .fl-dot`)].map((x) => x.getAttribute('aria-label')).join(' | '), W)
+  check('loaded again, a color picked from the eight opens the studio on the eight: the colors added last visit are in the grid, not on the tray', again === 'Matte Leather | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | More colors' && (await p.evaluate(() => window.localStorage.getItem('shrug:workspace.bar.v1'))) === null, again)
+  await p.locator(`${W} button[aria-label^="Close"]`).click()
+  await p.waitForTimeout(600)
   check('nothing went wrong on the way (after the reload)', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 
