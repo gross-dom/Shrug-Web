@@ -3,7 +3,7 @@
 // are a grid of four by four. A color picked floods the window and is the studio's; the chair turns, and a
 // photograph of it fills the window; who owns one is under the colors; BTS is a wall of how it is made, with a
 // viewer over the whole window; the price is said only to someone logged in, and the chair is bought here, on
-// the store's own page for it, in the chair's color through to the receipt, which says what was earned. The
+// the store's own page for it, dark as ArtStore's is, through to the receipt, which says what was earned. The
 // Dock's icon takes the color and keeps it.
 // (The 3D is drawn where the browser can; the demo shows templated owners and film tiles.)
 //   node workspace.cjs http://127.0.0.1:4273/
@@ -117,22 +117,31 @@ const check = (name, ok, detail = '') => {
 
   // ---- its gallery: Shrug's photographs of the chair in this color, a slide each beside the 3D chair. A slide
   // is a landscape photograph (it fills the window), two upright ones side by side (they fill it between
-  // them) or one upright one (whole, inside it): Scuderia Red's are three landscapes
+  // them) or one upright one (whole, inside it). Every color with them opens on its two renders on a backdrop
+  // of its color (Dom, 27 Nov), the landscape and then the upright; Scuderia Red's three landscapes come after
   const shots = await p.evaluate((W) => [...document.querySelectorAll(`${W} .st-shots .st-shot`)].map((b) => `${b.getAttribute('aria-label')}${b.getAttribute('aria-pressed') === 'true' ? '*' : ''}`).join(' | '), W)
-  check('beside the chair are its pictures: the 3D chair, which is on show, and the slides of its gallery in this color', shots === 'The chair in 3D* | Photograph 1 of 3 | Photograph 2 of 3 | Photograph 3 of 3', shots)
+  check('beside the chair are its pictures: the 3D chair, which is on show, and the slides of its gallery in this color', shots === 'The chair in 3D* | Photograph 1 of 5 | Photograph 2 of 5 | Photograph 3 of 5 | Photograph 4 of 5 | Photograph 5 of 5', shots)
   /** The photograph on show: how it is laid out, and each picture in it, measured against the window. */
   const photoAt = () => p.evaluate((W) => { const ph = document.querySelector(`${W} .st-photo`); const win = document.querySelector(`${W} .ss-window`).getBoundingClientRect(); const r = ph?.getBoundingClientRect(); const pics = [...(ph?.querySelectorAll('.st-photo__pic') ?? [])]; const back = ph?.querySelector('.st-photo__back'); const shade = ph?.querySelector('.st-photo__shade')?.getBoundingClientRect(); const foot = document.querySelector(`${W} .st-foot`)?.getBoundingClientRect(); return { fit: ph?.dataset.fit, fills: !!r && Math.abs(r.left - win.left) <= 1 && Math.abs(r.right - win.right) <= 1 && Math.abs(r.top - win.top) <= 1 && Math.abs(r.bottom - win.bottom) <= 1, pics: pics.map((x) => { const b = x.getBoundingClientRect(); return { left: Math.round(b.left - win.left), right: Math.round(win.right - b.right), top: Math.round(b.top - win.top), tall: Math.round(b.height), fit: getComputedStyle(x).objectFit, file: x.currentSrc.split('/').slice(-2).join('/') } }), winTall: Math.round(win.height), gap: pics.length === 2 ? Math.round(pics[1].getBoundingClientRect().left - pics[0].getBoundingClientRect().right) : null, behind: !!back && getComputedStyle(back).display !== 'none', loaded: pics.length > 0 && pics.every((x) => x.complete && x.naturalWidth > 0), alt: pics.map((x) => x.alt).join(' | '), shade: !!shade && shade.bottom >= win.bottom - 1 && shade.height > 60, on: document.querySelector(`${W} .st-shot[aria-pressed="true"]`)?.getAttribute('aria-label'), ink: getComputedStyle(document.querySelector(`${W} .ss-window`)).color } }, W)
-  await p.locator(`${W} .st-shot[aria-label="Photograph 2 of 3"]`).click()
+  await p.locator(`${W} .st-shot[aria-label="Photograph 4 of 5"]`).click()
   // (it pushes in over the chair, and the words turn white once it has covered the window)
   await p.waitForTimeout(1500)
   let photo = await photoAt()
-  check('a landscape photograph fills the window, edge to edge, with nothing dim round it and a shade at the foot for the words, which are white on it; it is Shrug’s own file, and says what it shows', photo.fills && photo.fit === 'fill' && photo.pics.length === 1 && photo.pics[0].left === 0 && photo.pics[0].right === 0 && photo.pics[0].tall === photo.winTall && photo.pics[0].fit === 'cover' && !photo.behind && photo.loaded && /^gallery\/02__5F4A0487-copy(-[sm]\.webp|\.jpg)$/.test(photo.pics[0].file) && photo.alt === 'Scuderia Red Workspace chair, base being spray-painted' && photo.shade && photo.on === 'Photograph 2 of 3' && photo.ink === 'rgb(255, 255, 255)', JSON.stringify(photo))
+  check('a landscape photograph fills the window, edge to edge, with nothing dim round it and a shade at the foot for the words, which are white on it; it is Shrug’s own file, and says what it shows', photo.fills && photo.fit === 'fill' && photo.pics.length === 1 && photo.pics[0].left === 0 && photo.pics[0].right === 0 && photo.pics[0].tall === photo.winTall && photo.pics[0].fit === 'cover' && !photo.behind && photo.loaded && /^gallery\/02__5F4A0487-copy(-[sm]\.webp|\.jpg)$/.test(photo.pics[0].file) && photo.alt === 'Scuderia Red Workspace chair, base being spray-painted' && photo.shade && photo.on === 'Photograph 4 of 5' && photo.ink === 'rgb(255, 255, 255)', JSON.stringify(photo))
+  await p.locator(`${W} .st-shot[aria-label="Photograph 1 of 5"]`).click()
+  await p.waitForTimeout(1500)
+  photo = await photoAt()
+  check('the first is the render of the chair on a backdrop of its color: a landscape that fills the window, edge to edge, and says what it shows', photo.fills && photo.fit === 'fill' && photo.pics.length === 1 && photo.pics[0].left === 0 && photo.pics[0].right === 0 && photo.pics[0].fit === 'cover' && !photo.behind && photo.loaded && /^lead\/landscape(-[sm]\.webp|\.jpg)$/.test(photo.pics[0].file) && photo.alt === 'Scuderia Red Workspace chair, three-quarter view from behind, on a matching backdrop' && photo.on === 'Photograph 1 of 5', JSON.stringify(photo))
+  await p.locator(`${W} .st-shot[aria-label="Photograph 2 of 5"]`).click()
+  await p.waitForTimeout(1500)
+  photo = await photoAt()
+  check('the second is its upright render, whole inside the window, not cut to it: clear of the bar and of the foot, on a blur of itself', photo.fills && photo.fit === 'whole' && photo.pics.length === 1 && photo.pics[0].fit === 'contain' && photo.pics[0].top >= 40 && photo.pics[0].tall < photo.winTall - 100 && photo.behind && photo.loaded && /^lead\/portrait(-[sm]\.webp|\.jpg)$/.test(photo.pics[0].file) && photo.alt === 'Scuderia Red Workspace chair, three-quarter view from behind, on a matching backdrop', JSON.stringify(photo))
   await p.locator(`${W} .st-shot[aria-label="The chair in 3D"]`).click()
   await p.waitForTimeout(1200)
   check('and the 3D chair comes back when it is picked', (await p.locator(`${W} .st-photo`).count()) === 0 && (await studio()).still)
   await p.locator(`${W} .fl-dot[aria-label="Solar Orange"]`).click()
   await p.waitForTimeout(700)
-  check('every color has a gallery of its own: Solar Orange’s three are beside its chair', (await p.locator(`${W} .st-shots .st-shot`).count()) === 4 && (await studio()).name === 'Solar Orange', '')
+  check('every color has a gallery of its own: Solar Orange’s two renders and three photographs are beside its chair', (await p.locator(`${W} .st-shots .st-shot`).count()) === 6 && (await studio()).name === 'Solar Orange', '')
   await p.locator(`${W} .fl-dot[aria-label="Scuderia Red"]`).click()
   await p.waitForTimeout(700)
 
@@ -213,7 +222,7 @@ const check = (name, ok, detail = '') => {
   check('one picked, the studio is in it: its name, its finish and "Made to Order · 2–3 weeks" at the bottom left, and no "Owned by" (nor "Your own")', s.view === 'studio' && s.name === 'Championship Green' && s.ground === 'rgb(11, 157, 110)' && s.tags === 'Metallic | Made to Order · 2–3 weeks' && !moreIn.owners && !moreIn.own && moreIn.tagsLeft < 80 && moreIn.tagsFoot < 90 && s.buy === 'From $1,200 / Order', JSON.stringify({ s: { name: s.name, ground: s.ground, tags: s.tags, buy: s.buy }, moreIn }))
   check('and it is added to the tray, where it stays for the visit, with the way to the sixteen still at the tray’s end', moreIn.dots === 'Matte Leather | Scuderia Red | Solar Orange | Alexandrite | Illusion Blue | Supersonic | Pearl Lavender | Mantis Green | Championship Green* | More colors', moreIn.dots)
 
-  // ---- buying, in this window: the store's own page for that chair, in the chair's color through to the receipt
+  // ---- buying, in this window: the store's own page for that chair, dark as ArtStore's is (Dom, 27 Nov), through to the receipt
   await p.locator(`${W} .fl-dot[aria-label="Championship Green"]`).click()
   await p.waitForFunction((W) => getComputedStyle(document.querySelector(`${W} .ss-window`)).backgroundColor === 'rgb(11, 157, 110)', W, { timeout: 15000 }).catch(() => {})
   await p.waitForTimeout(500)
@@ -227,15 +236,16 @@ const check = (name, ok, detail = '') => {
   let at = await inFrame()
   const page = () => p.evaluate((W) => { const fr = document.querySelector(`${W} .wx-buy iframe`); const d = fr.contentDocument; const avg = (c) => { const m = /rgba?\((\d+), (\d+), (\d+)/.exec(c); return m ? `${m[1]},${m[2]},${m[3]}` : c }; return { tint: d.documentElement.dataset.tint ?? null, ground: avg(getComputedStyle(d.body).backgroundColor), col: d.querySelector('.ui-col').innerText.replace(/\s*\n\s*/g, ' | '), title: d.querySelector('.ui-col h1, .ui-col .t-title')?.textContent.trim() } }, W)
   let pg = await page()
-  check('Order opens the store’s page for that chair inside Workspace: no other window, a Back to the color, and their balance in the bar', s.view === 'buy' && (await p.evaluate(() => document.querySelector('.wf[data-active]')?.dataset.app)) === 'workspace' && at.path === '/vip/store/' && at.search === '?k=chairs&p=chair-championship-green&c=0b9d6e' && s.back === 'Back to Championship Green' && s.wallet === '200', JSON.stringify({ view: s.view, at, back: s.back, wallet: s.wallet }))
-  check('the page is in the chair’s own color, and the chair is called by its color: "Championship Green", not "Workspace, …", with no "Chair" over it', pg.tint !== null && pg.ground === '11,157,110' && pg.title === 'Championship Green' && !/^Chair \|/.test(pg.col) && !/Workspace,/.test(pg.col), JSON.stringify(pg))
+  check('Order opens the store’s page for that chair inside Workspace: no other window, a Back to the color, and their balance in the bar', s.view === 'buy' && (await p.evaluate(() => document.querySelector('.wf[data-active]')?.dataset.app)) === 'workspace' && at.path === '/vip/store/' && at.search === '?k=chairs&p=chair-championship-green' && s.back === 'Back to Championship Green' && s.wallet === '200', JSON.stringify({ view: s.view, at, back: s.back, wallet: s.wallet }))
+  check('the page is dark, as ArtStore’s is: not drawn in the chair’s color but on the store’s own ground, and so is the window round it; and the chair is called by its color: "Championship Green", not "Workspace, …", with no "Chair" over it', pg.tint === null && pg.ground === '12,12,13' && s.ground === 'rgb(12, 12, 13)' && pg.title === 'Championship Green' && !/^Chair \|/.test(pg.col) && !/Workspace,/.test(pg.col), JSON.stringify(pg))
   check('it is priced in dollars, their points bring it down, and nothing says how much points can take off', /Price \| \$1,200 \|.*200 points \| of your 200 \| −\$20 \|.*Shipping \| \$70 \| Total \| \$1,250 \| Buy for \$1,250( \||$)/.test(pg.col) && !/Points can take up to/i.test(pg.col), pg.col)
   check('the chair’s page fits the window', at.over <= 0 && at.wide <= 0, JSON.stringify(at))
-  // Its pictures are Shrug's studio shots of the chair in that color, the hero first: each whole (not cut to
-  // the panel), on a panel painted as the shot's own two sides are, so that nothing dim is set round it
+  // Its pictures are the renders of the chair on a backdrop of its color, and nothing else (Dom, 27 Nov): the
+  // landscape first, which fills the panel and is cut to its middle where the panel is another shape, as
+  // ArtStore's pictures made to fill are. (Championship Green has a landscape render and no upright one)
   await f.locator('.ui-media-pic').evaluate((img) => img.complete || new Promise((done) => { img.addEventListener('load', done, { once: true }); setTimeout(done, 8000) }))
-  const media = await f.locator('.ui-media').evaluate((fig) => { const img = fig.querySelector('.ui-media-pic'); const a = fig.getBoundingClientRect(); const b = img.getBoundingClientRect(); const ground = fig.querySelector('.ui-media-ground'); return { src: img.currentSrc.split('/').slice(-2).join('/'), loaded: img.complete && img.naturalWidth >= 200, within: b.left >= a.left - 1 && b.right <= a.right + 1 && b.top >= a.top - 1 && b.bottom <= a.bottom + 1, tall: Math.abs(a.height - b.height) < 2, fit: getComputedStyle(img).objectFit, behind: !!fig.querySelector('.ui-media-bg'), ground: !!ground && /linear-gradient/.test(getComputedStyle(ground).backgroundImage) && Math.abs(ground.getBoundingClientRect().width - a.width) < 1, dots: fig.querySelectorAll('.ui-dots button').length, alt: img.alt } })
-  check('the chair’s picture is Shrug’s studio shot of it in that color, whole in its panel, which is painted as the shot’s own sides are; there are three of them to click through, and each says what it shows', /^checkout\/01__5F4A3345(-[sm]\.webp|\.jpg)$/.test(media.src) && media.loaded && media.within && media.tall && media.fit === 'contain' && !media.behind && media.ground && media.dots === 3 && media.alt === 'Championship Green Workspace chair, from behind', JSON.stringify(media))
+  const media = await f.locator('.ui-media').evaluate((fig) => { const img = fig.querySelector('.ui-media-pic'); const a = fig.getBoundingClientRect(); const b = img.getBoundingClientRect(); const ground = fig.querySelector('.ui-media-ground'); return { src: img.currentSrc.split('/').slice(-2).join('/'), loaded: img.complete && img.naturalWidth >= 200, within: b.left >= a.left - 1 && b.right <= a.right + 1 && b.top >= a.top - 1 && b.bottom <= a.bottom + 1, tall: Math.abs(a.height - b.height) < 2, fit: getComputedStyle(img).objectFit, behind: !!fig.querySelector('.ui-media-bg'), ground: !!ground && /linear-gradient/.test(getComputedStyle(ground).backgroundImage) && Math.abs(ground.getBoundingClientRect().width - a.width) < 1, dots: fig.querySelectorAll('.ui-dots button').length, alt: img.alt, cover: Math.abs(a.left - b.left) < 2 && Math.abs(a.right - b.right) < 2 && Math.abs(a.top - b.top) < 2 && Math.abs(a.bottom - b.bottom) < 2, middle: getComputedStyle(img).objectPosition } })
+  check('the chair’s picture is its landscape render, filling its panel edge to edge and cut to its middle, with nothing dim round it; it is the only one, and says what it shows', /^lead\/landscape(-[sm]\.webp|\.jpg)$/.test(media.src) && media.loaded && media.cover && media.fit === 'cover' && media.middle === '50% 50%' && !media.behind && !media.ground && media.dots === 0 && media.alt === 'Championship Green Workspace chair, three-quarter view from behind, on a matching backdrop', JSON.stringify(media))
   const rail = await f.locator('.ui-rail a, .ui-rail button').evaluateAll((els) => els.map((el) => el.textContent.replace(/\s+/g, ' ').trim()).join(' | '))
   const gaps = await f.locator('.ui-rail li').evaluateAll((els) => els.slice(0, 6).map((el, i, all) => (i ? Math.round(el.getBoundingClientRect().left - all[i - 1].getBoundingClientRect().right) : 99)))
   check('along its foot are the chair’s other colors, with room between them, and nothing of another store', /Scuderia Red/.test(rail) && /Mantis Green/.test(rail) && !/Art No|America Must Win|Chromatic/.test(rail) && gaps.every((g) => g >= 6), JSON.stringify({ rail: rail.slice(0, 160), gaps }))
@@ -243,7 +253,7 @@ const check = (name, ok, detail = '') => {
   await f.locator('.ui-btn', { hasText: 'Pay with card' }).waitFor({ timeout: 20000 })
   await p.waitForTimeout(500)
   pg = await page()
-  check('checkout keeps the color, and names the chair by it', pg.ground === '11,157,110' && /Checkout \| Championship Green/.test(pg.col) && !/Workspace,/.test(pg.col), JSON.stringify(pg))
+  check('checkout is dark too, and names the chair by its color', pg.ground === '12,12,13' && /Checkout \| Championship Green/.test(pg.col) && !/Workspace,/.test(pg.col), JSON.stringify(pg))
   await f.locator('.ui-btn', { hasText: 'Pay with card' }).click()
   await f.locator('textarea.ui-area').waitFor({ timeout: 20000 })
   await f.locator('textarea.ui-area').fill('Riley Chen\n1 Example St\nSan Francisco, CA 94110')
@@ -253,16 +263,16 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(1200)
   pg = await page()
   s = await studio()
-  check('bought: the receipt is still in the chair’s color, and says what was earned: "You earned 200 points for this purchase."', pg.ground === '11,157,110' && /You earned 200 points for this purchase\./.test(pg.col), pg.col.slice(0, 500))
+  check('bought: the receipt is dark too, and says what was earned: "You earned 200 points for this purchase."', pg.ground === '12,12,13' && /You earned 200 points for this purchase\./.test(pg.col), pg.col.slice(0, 500))
   check('the balance in the bar is theirs after it: the 100 spent, and 200 earned', s.wallet === '200', String(s.wallet))
   const after = await p.evaluate((W) => { const d = document.querySelector(`${W} .wx-buy iframe`).contentDocument; return { yours: [...d.querySelectorAll('.ui-media *, .ui-shot *, figure *')].filter((e) => /^Yours$/.test(e.textContent.trim())).length, drawing: /A drawing, not a photograph/i.test(d.body.innerText) } }, W)
   check('nothing over the picture says "Yours", or that it is a drawing', after.yours === 0 && !after.drawing, JSON.stringify(after))
-  // another color picked along the foot is the studio's color too, and the page takes it
+  // another color picked along the foot is the studio's color too; the page stays dark
   await f.locator('.ui-rail a', { hasText: 'Solar Orange' }).first().click()
   await p.waitForTimeout(1200)
   at = await inFrame()
   pg = await page()
-  check('another color picked along the foot: the page is that chair’s, in that color', /p=chair-solar-orange/.test(at.search) && pg.ground === '255,121,0' && pg.title === 'Solar Orange', JSON.stringify({ at, pg: { ground: pg.ground, title: pg.title } }))
+  check('another color picked along the foot: the page is that chair’s, and still dark', /p=chair-solar-orange/.test(at.search) && !/[?&]c=/.test(at.search) && pg.ground === '12,12,13' && pg.title === 'Solar Orange', JSON.stringify({ at, pg: { ground: pg.ground, title: pg.title } }))
   await p.locator(`${W} .wxbar__back`).click()
   // (the cove eases to the color, and the 3D chair is drawn again meanwhile, which a machine with no GPU is slow at)
   await p.waitForFunction((W) => getComputedStyle(document.querySelector(`${W} .ss-window`)).backgroundColor === 'rgb(255, 121, 0)', W, { timeout: 15000 }).catch(() => {})
@@ -288,15 +298,15 @@ const check = (name, ok, detail = '') => {
   }
   const strip = () => p.evaluate((W) => [...document.querySelectorAll(`${W} .st-shots .st-shot`)].map((b) => b.getAttribute('aria-label')).join(' | '), W)
   await fromSheet('Giallo Yellow')
-  check('Giallo Yellow has two landscape photographs and a pair of upright ones: its gallery is three slides', (await strip()) === 'The chair in 3D | Photograph 1 of 4 | Photograph 2 of 4 | Photographs 3 and 4 of 4', await strip())
-  await p.locator(`${W} .st-shot[aria-label="Photographs 3 and 4 of 4"]`).click()
+  check('Giallo Yellow has its two renders, two landscape photographs and a pair of upright ones: its gallery is five slides', (await strip()) === 'The chair in 3D | Photograph 1 of 6 | Photograph 2 of 6 | Photograph 3 of 6 | Photograph 4 of 6 | Photographs 5 and 6 of 6', await strip())
+  await p.locator(`${W} .st-shot[aria-label="Photographs 5 and 6 of 6"]`).click()
   await p.waitForTimeout(1500)
   photo = await photoAt()
   check('two upright photographs are one slide: side by side and a hair apart, they fill the window between them, with nothing dim round them', photo.fills && photo.fit === 'pair' && photo.pics.length === 2 && photo.pics[0].left === 0 && photo.pics[1].right === 0 && photo.winTall > 0 && photo.pics.every((x) => x.tall === photo.winTall && x.fit === 'cover') && photo.gap >= 1 && photo.gap <= 5 && !photo.behind && photo.loaded && /pair-left/.test(photo.pics[0].file) && /pair-right/.test(photo.pics[1].file) && photo.alt === 'Giallo Yellow Workspace chair, outdoors | Giallo Yellow Workspace chair, outdoors', JSON.stringify(photo))
   await p.locator(`${W} .st-shot[aria-label="The chair in 3D"]`).click()
   await p.waitForTimeout(1100)
   await fromSheet('Interstellar Black')
-  check('Interstellar Black’s gallery is one pair, and that is all there is beside its chair', (await strip()) === 'The chair in 3D | Photographs 1 and 2 of 2', await strip())
+  check('Interstellar Black’s gallery is its two renders and one pair, and that is all there is beside its chair', (await strip()) === 'The chair in 3D | Photograph 1 of 4 | Photograph 2 of 4 | Photographs 3 and 4 of 4', await strip())
   // (and back to Alexandrite, which is the color the visit is left in)
   await p.locator(`${W} .fl-dot[aria-label="Alexandrite"]`).click()
   await p.waitForTimeout(900)
@@ -358,17 +368,17 @@ const check = (name, ok, detail = '') => {
   const onStage = () => p.evaluate((W) => ({ on: document.querySelector(`${W} .st-shot[aria-pressed="true"]`)?.getAttribute('aria-label') ?? null, photo: document.querySelector(`${W} .fl`).hasAttribute('data-photo'), next: document.querySelector(`${W} .st-shot[data-next]`)?.getAttribute('aria-label') ?? null, ready: [...document.querySelectorAll(`${W} .st-photo[data-ahead] .st-photo__pic`)].every((i) => i.complete && i.naturalWidth > 0), layers: [...document.querySelectorAll(`${W} .st-photo`)].map((l) => (l.dataset.enter ? `in ${l.dataset.enter}` : l.dataset.leave ? `out ${l.dataset.leave}` : l.hasAttribute('data-ahead') ? 'ahead' : 'on')).join(' | ') }), W)
   await p.waitForTimeout(3000)
   let stageNow = await onStage()
-  check('to begin with it is the chair in 3D, with its first photograph marked as the one that comes next and held ready, out of sight', stageNow.on === 'The chair in 3D' && !stageNow.photo && stageNow.next === 'Photograph 1 of 3' && stageNow.layers === 'ahead' && stageNow.ready, JSON.stringify(stageNow))
+  check('to begin with it is the chair in 3D, with its first photograph marked as the one that comes next and held ready, out of sight', stageNow.on === 'The chair in 3D' && !stageNow.photo && stageNow.next === 'Photograph 1 of 5' && stageNow.layers === 'ahead' && stageNow.ready, JSON.stringify(stageNow))
   await p.waitForSelector(`${W} .st-photo[data-enter]`, { timeout: 12000 })
   stageNow = await onStage()
   const moving = await p.evaluate((W) => { const l = document.querySelector(`${W} .st-photo[data-enter]`); const win = document.querySelector(`${W} .ss-window`).getBoundingClientRect(); return { left: Math.round(l.getBoundingClientRect().left - win.left), chair: getComputedStyle(document.querySelector(`${W} .st-table`)).visibility } }, W)
-  check('after a while its first photograph pushes in from the right, over the chair, which is still there under it as it comes', stageNow.on === 'Photograph 1 of 3' && /^in 1/.test(stageNow.layers) && !stageNow.photo && moving.left > 0 && moving.chair === 'visible', JSON.stringify({ stageNow, moving }))
+  check('after a while its first photograph pushes in from the right, over the chair, which is still there under it as it comes', stageNow.on === 'Photograph 1 of 5' && /^in 1/.test(stageNow.layers) && !stageNow.photo && moving.left > 0 && moving.chair === 'visible', JSON.stringify({ stageNow, moving }))
   await p.waitForTimeout(1100)
   stageNow = await onStage()
-  check('it fills the window, and the next is marked in its turn', stageNow.on === 'Photograph 1 of 3' && stageNow.photo && stageNow.next === 'Photograph 2 of 3' && /^on/.test(stageNow.layers), JSON.stringify(stageNow))
-  await p.waitForFunction((W) => document.querySelector(`${W} .st-shot[aria-pressed="true"]`)?.getAttribute('aria-label') === 'Photograph 2 of 3', W, { timeout: 9000 }).catch(() => {})
+  check('it fills the window, and the next is marked in its turn: past the upright render, which is left for whoever picks it', stageNow.on === 'Photograph 1 of 5' && stageNow.photo && stageNow.next === 'Photograph 3 of 5' && /^on/.test(stageNow.layers), JSON.stringify(stageNow))
+  await p.waitForFunction((W) => document.querySelector(`${W} .st-shot[aria-pressed="true"]`)?.getAttribute('aria-label') === 'Photograph 3 of 5', W, { timeout: 9000 }).catch(() => {})
   stageNow = await onStage()
-  check('and the next pushes that one off, the two going as one', stageNow.on === 'Photograph 2 of 3' && /out 1/.test(stageNow.layers) && /in 1/.test(stageNow.layers), JSON.stringify(stageNow))
+  check('and the next pushes that one off, the two going as one', stageNow.on === 'Photograph 3 of 5' && /out 1/.test(stageNow.layers) && /in 1/.test(stageNow.layers), JSON.stringify(stageNow))
   await p.waitForTimeout(900)
   await p.locator(`${W} .st-shot[aria-label="The chair in 3D"]`).click()
   await p.waitForTimeout(11000)

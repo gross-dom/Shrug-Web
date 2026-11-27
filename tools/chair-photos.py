@@ -10,13 +10,18 @@ The folder has one folder per colourway, named as the launch list names it, and 
                  01__X.jpg                                 a landscape slide
                  02-pair-left__X.jpg, 02-pair-right__Y.jpg two portraits, side by side, as ONE slide
                  03-portrait__X.jpg                        one portrait, whole, inside the landscape window
-    checkout/  upright studio shots for the page a chair is bought on; 01 is its hero
+    checkout/  upright studio shots for the page a chair is bought on, 01 its hero: only for a color that has
+               no lead yet (Dom, 27 Nov: where there is a lead, checkout shows the lead's two and nothing else)
+    lead/      landscape.jpg and portrait.jpg: the chair in this color on a backdrop of it (Shrug's renders of
+               27 Nov). Both its gallery and its checkout open on them, landscape first, then the upright, ahead
+               of the photographs. At checkout the landscape fills its tile and is cut to its middle as the page
+               narrows ("fill"), as ArtStore's pictures made to fill a tile are; the upright is shown whole.
 
 Folders whose names begin with "_" (_Alternatives) and the full-resolution originals are left alone.
 
 Each photograph is copied as it is, byte for byte, to
 
-    store/public/pictures/workspace/<color id>/gallery|checkout/<its name>.jpg
+    store/public/pictures/workspace/<color id>/gallery|checkout|lead/<its name>.jpg
 
 and is the largest size the pages have of it: it came ready for the web (sRGB, 2,400 on its long side) and
 is not made again. Beside it two smaller copies are made for small and plain screens (-s.webp, 760 on the
@@ -145,7 +150,7 @@ def again():
                 else:
                     one.pop('view', None)
                 one.pop('ground', None)
-                if part == 'checkout':
+                if part == 'checkout' and not one.get('fill'):
                     with Image.open(os.path.join(OUT, color, one['file'] + '.jpg')) as opened:
                         one['sides'] = sides_of(ImageOps.exif_transpose(opened).convert('RGB'))
     with open(MANIFEST, 'w') as out:
@@ -184,7 +189,7 @@ def main():
     for color, (name, at) in found.items():
         kept = {'name': name, 'gallery': [], 'checkout': []}
 
-        def photograph(part, file):
+        def photograph(part, file, sided=None):
             path = os.path.join(at, part, file)
             with Image.open(path) as opened:
                 if opened.format != 'JPEG':
@@ -200,7 +205,7 @@ def main():
             for key, copy in copies.items():
                 if copy is not None:
                     one[key] = copy.size[0]
-            if part == 'checkout':
+            if part == 'checkout' if sided is None else sided:
                 one['sides'] = sides_of(im)
             view = views.get(f'{color}/{part}/{stem}')
             if view:
@@ -213,6 +218,29 @@ def main():
                     if copy is not None:
                         copy.save(os.path.join(out, f'{stem}-{key}.webp'), 'WEBP', quality=84, method=6, **({'icc_profile': profile} if profile else {}))
             return one
+
+        # ---- the lead: the landscape render, then the upright one, first in the gallery and first at checkout
+        lead, heads = {}, []
+        for file in listed(os.path.join(at, 'lead')):
+            stem = os.path.splitext(file)[0].lower()
+            if stem in ('landscape', 'portrait'):
+                lead[stem] = file
+            else:
+                notes.append(f'{name}/lead/{file}: neither landscape.jpg nor portrait.jpg; left out')
+        if 'landscape' in lead:
+            one = photograph('lead', lead['landscape'], sided=False)
+            if one['h'] >= one['w']:
+                notes.append(f'{name}/lead/{lead["landscape"]}: is not a landscape')
+            kept['gallery'].append({'kind': 'wide', 'photos': [one]})
+            heads.append(dict(one, fill=True))
+        if 'portrait' in lead:
+            one = photograph('lead', lead['portrait'], sided=True)
+            if one['h'] <= one['w']:
+                notes.append(f'{name}/lead/{lead["portrait"]}: is not upright')
+            kept['gallery'].append({'kind': 'portrait', 'photos': [{k: v for k, v in one.items() if k != 'sides'}]})
+            heads.append(one)
+        if lead and set(lead) != {'landscape', 'portrait'}:
+            notes.append(f'{name}/lead: has only its {", ".join(sorted(lead))}')
 
         # ---- the gallery: slides, by the figures their names begin with
         slides = {}
@@ -245,9 +273,11 @@ def main():
 
         # ---- the checkout: upright studio shots, the first its hero
         files = listed(os.path.join(at, 'checkout'))
-        kept['checkout'] = [photograph('checkout', f) for f in files]
-        if not files:
-            notes.append(f'{name}: no checkout shots')
+        kept['checkout'] = heads + [photograph('checkout', f) for f in files]
+        if not kept['checkout']:
+            notes.append(f'{name}: nothing for its checkout')
+        elif not lead:
+            notes.append(f'{name}: no lead renders yet, so its checkout shows its studio shots')
         if len(files) > 3:
             notes.append(f'{name}: {len(files)} checkout shots, more than three')
         if not kept['gallery']:

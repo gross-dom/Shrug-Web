@@ -30,8 +30,8 @@ import '../styles/desk/workspace.css'
 // has the eight), and at its end the dot that lets
 // the sixteen down. In a narrower window it holds fewer dots, and those it has no room for are in the grid
 // with the sixteen. The price is said to someone logged in. Buy opens the store's own page for
-// that chair inside this window (storefront.tsx), in that chair's color: the same checkout as everywhere,
-// in dollars, with their points to bring it down and their address already on file.
+// that chair inside this window (storefront.tsx), dark, as ArtStore's is (Dom, 27 Nov): the same checkout as
+// everywhere, in dollars, with their points to bring it down and their address already on file.
 //
 // Two more things are in its bar: BTS, a wall of how a chair is made, and Notable Owners. Each has a way back.
 //
@@ -207,8 +207,8 @@ export function WorkspaceApp() {
   /** How many photographs come before a slide, and how many there are in all: what each is called by. */
   const before = (n: number) => shots.slice(0, n).reduce((sum, slide) => sum + slide.shots.length, 0)
   const photographs = before(shots.length)
-  /** The store's page for a chair, in that chair's color. */
-  const pageOf = (c: Chosen) => `${addressOf('chairs', c.paint.product)}&c=${c.color.slice(1)}`
+  /** The store's page for a chair. (It is not drawn in the chair's color: checkout is dark, as ArtStore's is.) */
+  const pageOf = (c: Chosen) => addressOf('chairs', c.paint.product)
   const buy = () => {
     if (!chosen) return
     setView('buy')
@@ -220,15 +220,16 @@ export function WorkspaceApp() {
     askLogIn('price', `${chosen.name} is kept while you log in.`)
   }
 
-  const coloured = (view === 'studio' || view === 'buy') && !!chosen
+  const coloured = view === 'studio' && !!chosen
+  /** Buying: the window is the store's own dark ground, as ArtStore's is, and its words are white. */
+  const buying = view === 'buy'
   // Over a photograph the words are white, on the shade laid under them
-  const ink = view === 'studio' && covered ? '#fff' : coloured ? inkOn(chosen.color) : '#141414'
+  const ink = buying || (view === 'studio' && covered) ? '#fff' : coloured ? inkOn(chosen.color) : '#141414'
   const dark = ink === '#fff'
-  // (at checkout a shifting paint is its one color: the store's page, which is drawn in it, has one ground)
-  const cove = view === 'buy' && chosen ? chosen.color : coloured ? ground(chosen) : PAPER
+  const cove = buying ? STORE_GROUND : coloured ? ground(chosen) : PAPER
   // How the chips are set off from the ground: on paper a little darker; on a color a little lighter, as the
   // design has them, unless white words could not then be read on one (data/workspace.ts)
-  const chips = view === 'studio' && covered ? ' dark shade' : !coloured ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
+  const chips = buying ? ' dark' : view === 'studio' && covered ? ' dark shade' : !coloured ? '' : dark ? (shadedOn(chosen.color) ? ' dark shade' : ' dark') : ' hue'
   /** Who owns one, as the studio says it under the colors: owners of this color first. */
   const owners = chosen ? [...OWNERS_SHOWN.filter((o) => o.paint === chosen.id), ...OWNERS_SHOWN.filter((o) => o.paint !== chosen.id)] : OWNERS_SHOWN
 
@@ -468,8 +469,8 @@ export function WorkspaceApp() {
       {view === 'bts' && look && <Look piece={look} onClose={() => setLook(null)} />}
       {/* The sixteen more colors, to pick from */}
       {more && <More picked={chosen?.id ?? null} ahead={view === 'studio' ? crowded : []} onPick={pickMore} onClose={() => setMore(false)} />}
-      {/* Buying: the store's own page for this chair, in this window and in its color. The colors along its
-          foot are the other chairs; "View all" comes back to the studio */}
+      {/* Buying: the store's own page for this chair, in this window, dark as ArtStore's is. The colors along
+          its foot are the other chairs; "View all" comes back to the studio */}
       {framed && (
         <div className="wx-buy" hidden={view !== 'buy'}>
           <StoreFrame
@@ -479,12 +480,9 @@ export function WorkspaceApp() {
             first={chosen ? pageOf(chosen) : addressOf('chairs')}
             onAt={(place) => {
               if (!place.product) return setView((now) => (now === 'buy' ? 'studio' : now))
-              // Another color picked along the foot of the store's page: the studio follows, and so does the page's own color
+              // Another color picked along the foot of the store's page: the studio follows
               const paint = ALL_PAINTS.find((p) => p.product === place.product)
-              if (paint && paint.id !== picked.get()?.id) {
-                choose(chosenOf(paint))
-                frame.current?.tint(paint.color)
-              }
+              if (paint && paint.id !== picked.get()?.id) choose(chosenOf(paint))
             }}
           />
         </div>
@@ -560,6 +558,9 @@ function Look({ piece, onClose }: { piece: Making; onClose: () => void }) {
     </div>
   )
 }
+
+/** The store's own ground, which ArtStore's window is too: Workspace's window is it while a chair is bought. */
+const STORE_GROUND = '#0c0c0d'
 
 /** How large the color's name is set behind the chair, at most; and how much of the studio's width its longest word may take. */
 const WORD = 176

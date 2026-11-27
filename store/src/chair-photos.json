@@ -2,97 +2,68 @@
  "alexandrite": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3266",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#443e41",
-      "#5a535a",
-      "#595358",
-      "#474142",
-      "#383031",
-      "#342e30",
-      "#6f676f",
-      "#514749"
-     ],
-     [
-      "#453f43",
-      "#615a62",
-      "#5b555b",
-      "#383132",
-      "#2a2121",
-      "#2a2224",
-      "#4f464b",
-      "#42393b"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A9070",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1438,
+    "s": 578,
     "sides": [
      [
-      "#f9f8fc",
-      "#fcfcfe",
-      "#fdfdff",
-      "#fefefe",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff"
+      "#252326",
+      "#2e2c2f",
+      "#343235",
+      "#302e31",
+      "#312e31",
+      "#2d2a2d",
+      "#332f32",
+      "#4b464a"
      ],
      [
-      "#ffffff",
-      "#ffffff",
-      "#fefeff",
-      "#fdfdff",
-      "#fdfdff",
-      "#fdfdff",
-      "#fdfdff",
-      "#fefefe"
+      "#211f21",
+      "#2d2b2e",
+      "#323033",
+      "#333134",
+      "#323033",
+      "#2e2c2f",
+      "#3c393c",
+      "#4b464a"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A9126",
-    "h": 2109,
-    "m": 1079,
-    "s": 512,
-    "sides": [
-     [
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff"
-     ],
-     [
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#fefefe",
-      "#fefefe",
-      "#fefefe",
-      "#fefefe",
-      "#ffffff"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1422
+    "view": "from behind, on a matching backdrop",
+    "w": 1094
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1438,
+      "s": 578,
+      "view": "from behind, on a matching backdrop",
+      "w": 1094
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -138,97 +109,27 @@
  "championship-green": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3345",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#494343",
-      "#5e5959",
-      "#656160",
-      "#5d5655",
-      "#585050",
-      "#463f3e",
-      "#645c5c",
-      "#493e3b"
-     ],
-     [
-      "#4d4647",
-      "#666161",
-      "#726d6d",
-      "#564f4d",
-      "#433937",
-      "#372d2b",
-      "#493f3d",
-      "#463c3b"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/02__1a-copy",
-    "h": 2400,
-    "m": 1200,
-    "s": 570,
-    "sides": [
-     [
-      "#051401",
-      "#061b01",
-      "#072101",
-      "#082602",
-      "#082401",
-      "#061e01",
-      "#051601",
-      "#041100"
-     ],
-     [
-      "#051401",
-      "#061d01",
-      "#082401",
-      "#092b01",
-      "#092d01",
-      "#072001",
-      "#051401",
-      "#041100"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1800
-   },
-   {
-    "file": "checkout/03__5F4A9028",
-    "h": 2142,
-    "m": 1045,
-    "s": 496,
-    "sides": [
-     [
-      "#fcfcfe",
-      "#fcfcfe",
-      "#fcfcfe",
-      "#fcfcfe",
-      "#fafafc",
-      "#fcfcfe",
-      "#fdfdff",
-      "#fefefe"
-     ],
-     [
-      "#fafafc",
-      "#fbfbfd",
-      "#fcfcfe",
-      "#fbfbfd",
-      "#fafafc",
-      "#fcfcfe",
-      "#fdfdff",
-      "#fefefe"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1399
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -546,97 +447,68 @@
  "giallo-yellow": {
   "checkout": [
    {
-    "file": "checkout/01__catalog-p89-000",
-    "h": 2400,
-    "m": 1280,
-    "s": 608,
-    "sides": [
-     [
-      "#24201f",
-      "#252122",
-      "#262222",
-      "#262222",
-      "#262322",
-      "#252525",
-      "#292929",
-      "#252525"
-     ],
-     [
-      "#202020",
-      "#212121",
-      "#212121",
-      "#202020",
-      "#202020",
-      "#202020",
-      "#202020",
-      "#1f1f1f"
-     ]
-    ],
-    "view": "side view",
-    "w": 1920
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__catalog-p89-002",
-    "h": 2130,
-    "m": 1280,
-    "s": 608,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#121112",
-      "#121111",
-      "#121213",
-      "#1d1c1e",
-      "#1f1b1b",
-      "#222327",
-      "#3b3c40",
-      "#69594d"
+      "#fdbb1a",
+      "#fdbf22",
+      "#fdc023",
+      "#fdc123",
+      "#fdc124",
+      "#fdc023",
+      "#fdc126",
+      "#fdc52e"
      ],
      [
-      "#1c1817",
-      "#1c1817",
-      "#1c1917",
-      "#1c1817",
-      "#1e1917",
-      "#1d1918",
-      "#1c1817",
-      "#1c1716"
+      "#fdbe1c",
+      "#fdc225",
+      "#fec328",
+      "#fdc328",
+      "#fdc225",
+      "#fdc123",
+      "#fec122",
+      "#fdc428"
      ]
     ],
-    "view": "close-up of the back",
-    "w": 1704
-   },
-   {
-    "file": "checkout/03__catalog-p86-000",
-    "h": 2400,
-    "m": 1200,
-    "s": 570,
-    "sides": [
-     [
-      "#b9cddf",
-      "#9fa7c2",
-      "#a5adc4",
-      "#7590ac",
-      "#5d5e65",
-      "#4d4229",
-      "#8e8a8d",
-      "#c3bfc5"
-     ],
-     [
-      "#ccb5ae",
-      "#d7c7cc",
-      "#e0d2d7",
-      "#e0d2d5",
-      "#ebe9f1",
-      "#e9e8f0",
-      "#cbc9d8",
-      "#a5a9be"
-     ]
-    ],
-    "view": "outdoors",
-    "w": 1800
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -690,97 +562,68 @@
  "gummi-berry": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3170",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#7f747b",
-      "#aaa1aa",
-      "#b7b1b9",
-      "#a69ea4",
-      "#94888c",
-      "#77676d",
-      "#a99fa9",
-      "#a5959a"
-     ],
-     [
-      "#706169",
-      "#958a92",
-      "#a99fa7",
-      "#817478",
-      "#5a4a4a",
-      "#503f3f",
-      "#a4979f",
-      "#907c7c"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A3170_ref",
-    "h": 2400,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1438,
+    "s": 578,
     "sides": [
      [
-      "#7f747b",
-      "#aaa2aa",
-      "#b7b1b8",
-      "#a59ea3",
-      "#94888c",
-      "#75676c",
-      "#a9a0a8",
-      "#a5959a"
+      "#210a1c",
+      "#290d21",
+      "#2a0e23",
+      "#2c0f24",
+      "#2e1027",
+      "#2b0f24",
+      "#32132c",
+      "#35152e"
      ],
      [
-      "#6e6268",
-      "#958a92",
-      "#a99fa7",
-      "#807478",
-      "#5a494a",
-      "#503e3f",
-      "#a4979e",
-      "#907b7c"
+      "#190714",
+      "#20091b",
+      "#270b22",
+      "#2a0c24",
+      "#2b0d25",
+      "#260b21",
+      "#371431",
+      "#381531"
      ]
     ],
-    "view": "from behind",
-    "w": 1601
-   },
-   {
-    "file": "checkout/03__02",
-    "h": 2400,
-    "m": 1081,
-    "s": 513,
-    "sides": [
-     [
-      "#4f494b",
-      "#7a747a",
-      "#9b969c",
-      "#8d888d",
-      "#6e6566",
-      "#504646",
-      "#332b2a",
-      "#938d94"
-     ],
-     [
-      "#585157",
-      "#7f7880",
-      "#a49fa6",
-      "#898289",
-      "#504645",
-      "#3c3130",
-      "#423739",
-      "#8c828b"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1621
+    "view": "from behind, on a matching backdrop",
+    "w": 1094
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1438,
+      "s": 578,
+      "view": "from behind, on a matching backdrop",
+      "w": 1094
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -806,26 +649,6 @@
       "w": 2124
      }
     ]
-   },
-   {
-    "kind": "pair",
-    "photos": [
-     {
-      "file": "gallery/03-pair-left__01a",
-      "h": 2400,
-      "m": 1352,
-      "s": 642,
-      "view": "close-up of the back",
-      "w": 2028
-     },
-     {
-      "file": "gallery/03-pair-right__9a",
-      "h": 1659,
-      "s": 608,
-      "view": "close-up of the paint",
-      "w": 1327
-     }
-    ]
    }
   ],
   "name": "Gummi Berry"
@@ -833,97 +656,68 @@
  "illusion-blue": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A8947",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#f0eff7",
-      "#f3f2f8",
-      "#f4f3f9",
-      "#f4f3f9",
-      "#f0eff7",
-      "#f3f2f9",
-      "#f8f7fc",
-      "#f9f8fd"
-     ],
-     [
-      "#f3f2f8",
-      "#f5f4fa",
-      "#f6f5fa",
-      "#f4f3f9",
-      "#f0eef7",
-      "#f3f2f9",
-      "#f9f8fd",
-      "#faf9fe"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A9532",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1438,
+    "s": 578,
     "sides": [
      [
-      "#f9f9fb",
-      "#fbfbfd",
-      "#fbfbfd",
-      "#fbfbfd",
-      "#fcfcfe",
-      "#fdfdff",
-      "#fefefe",
-      "#fcfcfe"
+      "#00052a",
+      "#010734",
+      "#00083c",
+      "#000a3f",
+      "#00083a",
+      "#010838",
+      "#011155",
+      "#01135b"
      ],
      [
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#fefefe"
+      "#000427",
+      "#000630",
+      "#00083a",
+      "#00093e",
+      "#000941",
+      "#00093e",
+      "#01135b",
+      "#01135d"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A3325",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#584c4c",
-      "#726666",
-      "#837877",
-      "#786d6b",
-      "#635754",
-      "#473937",
-      "#8a8082",
-      "#70615f"
-     ],
-     [
-      "#716768",
-      "#9c9395",
-      "#b9b3b7",
-      "#988f90",
-      "#675b59",
-      "#4f413f",
-      "#9c9296",
-      "#807374"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "view": "from behind, on a matching backdrop",
+    "w": 1094
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1438,
+      "s": 578,
+      "view": "from behind, on a matching backdrop",
+      "w": 1094
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -949,19 +743,6 @@
       "w": 1959
      }
     ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A9108",
-      "h": 1530,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 1959
-     }
-    ]
    }
   ],
   "name": "Illusion Blue"
@@ -969,67 +750,68 @@
  "interstellar-black": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3526",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#4d4344",
-      "#584e4f",
-      "#5f5556",
-      "#574d4d",
-      "#493e3c",
-      "#463a39",
-      "#655a5c",
-      "#807375"
-     ],
-     [
-      "#615759",
-      "#786e73",
-      "#867f85",
-      "#675e5f",
-      "#514644",
-      "#4c3e3c",
-      "#857a80",
-      "#938990"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A3528",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1402,
+    "s": 608,
     "sides": [
      [
-      "#655a5b",
-      "#766b6d",
-      "#7c7071",
-      "#736866",
-      "#635554",
-      "#5e4f4d",
-      "#7a6d6e",
-      "#9e9194"
+      "#101012",
+      "#151517",
+      "#19191b",
+      "#1a1a1c",
+      "#19191b",
+      "#171718",
+      "#232325",
+      "#2c2c2e"
      ],
      [
-      "#84787b",
-      "#9e949b",
-      "#a9a1a9",
-      "#837879",
-      "#706160",
-      "#6c5c5a",
-      "#aea3ac",
-      "#b5acb5"
+      "#0e0e0f",
+      "#121214",
+      "#171719",
+      "#19191b",
+      "#18181a",
+      "#161618",
+      "#212123",
+      "#262628"
      ]
     ],
-    "view": "three-quarter view from behind",
-    "w": 1414
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1122
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1402,
+      "s": 608,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1122
+     }
+    ]
+   },
    {
     "kind": "pair",
     "photos": [
@@ -1057,97 +839,68 @@
  "luxury-bronze": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3409",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#463d3d",
-      "#5a5253",
-      "#5e5656",
-      "#524947",
-      "#423835",
-      "#2e2320",
-      "#514747",
-      "#7e7475"
-     ],
-     [
-      "#453b3a",
-      "#564d4c",
-      "#5c5453",
-      "#49403d",
-      "#3a2f2b",
-      "#302420",
-      "#534847",
-      "#736a6d"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 941,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1672
    },
    {
-    "file": "checkout/02__5F4A3411",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#483d3b",
-      "#5e5251",
-      "#625755",
-      "#544744",
-      "#463834",
-      "#342522",
-      "#524442",
-      "#796a69"
+      "#2c201b",
+      "#352720",
+      "#3c2c25",
+      "#43322a",
+      "#46342d",
+      "#403028",
+      "#493730",
+      "#5c4841"
      ],
      [
-      "#5f5252",
-      "#857a7c",
-      "#8b8183",
-      "#574a48",
-      "#463834",
-      "#433432",
-      "#978e92",
-      "#a8a0a5"
+      "#231a15",
+      "#2d211b",
+      "#34251e",
+      "#382922",
+      "#3b2b24",
+      "#392922",
+      "#513f37",
+      "#5f4c44"
      ]
     ],
-    "view": "three-quarter view from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A3420",
-    "h": 1863,
-    "m": 1382,
-    "s": 656,
-    "sides": [
-     [
-      "#4e4443",
-      "#5d5352",
-      "#605655",
-      "#584e4c",
-      "#4a403c",
-      "#3e3330",
-      "#2c211d",
-      "#676062"
-     ],
-     [
-      "#756c6d",
-      "#888183",
-      "#969193",
-      "#787070",
-      "#514744",
-      "#473c3a",
-      "#372b29",
-      "#807a7f"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1609
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 941,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1672
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -1173,19 +926,6 @@
       "w": 2225
      }
     ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A9051",
-      "h": 1530,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 1959
-     }
-    ]
    }
   ],
   "name": "Luxury Bronze"
@@ -1193,67 +933,68 @@
  "manhattan-blue": {
   "checkout": [
    {
-    "file": "checkout/01__2ab",
-    "h": 2400,
-    "m": 1280,
-    "s": 608,
-    "sides": [
-     [
-      "#fafafa",
-      "#fafafa",
-      "#f8f8f8",
-      "#f7f5f6",
-      "#f7f5f6",
-      "#f9f8f8",
-      "#f9f9f9",
-      "#fbfbfb"
-     ],
-     [
-      "#e5dce0",
-      "#e9e2e5",
-      "#eae4e7",
-      "#efeaec",
-      "#f3eff2",
-      "#f5f4f5",
-      "#fbfbfb",
-      "#fbfbfb"
-     ]
-    ],
-    "view": "side view",
-    "w": 1920
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A1323-copy1",
-    "h": 2400,
-    "m": 1280,
-    "s": 608,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#3f6e90",
-      "#eaeef1",
-      "#f9f9f9",
-      "#f8f6f7",
-      "#f8f6f7",
-      "#fafafa",
-      "#fafafa",
-      "#fcfcfc"
+      "#5bafc3",
+      "#71c0d3",
+      "#84cbdb",
+      "#7bc5d5",
+      "#6fbdcf",
+      "#73c2d4",
+      "#8bd1e0",
+      "#86cbdb"
      ],
      [
-      "#3783ae",
-      "#4a95bd",
-      "#eae1e6",
-      "#eee8eb",
-      "#f2edf1",
-      "#f5f4f6",
-      "#fcfcfc",
-      "#fcfcfc"
+      "#4ea5b9",
+      "#5cb2c6",
+      "#66bbce",
+      "#66bbce",
+      "#66bacd",
+      "#6bbdd0",
+      "#7eccdd",
+      "#76c6d7"
      ]
     ],
-    "view": "side view",
-    "w": 1920
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -1306,97 +1047,68 @@
  "mantis-green": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3245",
-    "h": 1926,
-    "m": 1293,
-    "s": 614,
-    "sides": [
-     [
-      "#272324",
-      "#2e2a2b",
-      "#332f30",
-      "#343031",
-      "#302c2d",
-      "#252223",
-      "#353034",
-      "#2f2b2a"
-     ],
-     [
-      "#282526",
-      "#2d2b2c",
-      "#332f31",
-      "#2f2b2c",
-      "#282425",
-      "#221f1f",
-      "#2f2b2c",
-      "#332f30"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1557
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A9274",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#b5b0bf",
-      "#cfccda",
-      "#dfddea",
-      "#e8e6f2",
-      "#edecf5",
-      "#f2f1f8",
-      "#f5f4fa",
-      "#f7f6fb"
+      "#447b1b",
+      "#4d8621",
+      "#579129",
+      "#5b972d",
+      "#5b982d",
+      "#609e34",
+      "#71ad42",
+      "#6ba63c"
      ],
      [
-      "#f9f9fc",
-      "#f5f4f9",
-      "#efeef5",
-      "#ecebf3",
-      "#e9e8f0",
-      "#ecebf2",
-      "#f6f5fa",
-      "#f8f8fa"
+      "#467d1e",
+      "#518a27",
+      "#59952e",
+      "#5c9730",
+      "#5b962f",
+      "#64a038",
+      "#70ad41",
+      "#68a239"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A9276",
-    "h": 1986,
-    "m": 1216,
-    "s": 577,
-    "sides": [
-     [
-      "#ebe8f7",
-      "#f5f4fc",
-      "#faf9fe",
-      "#fcfcff",
-      "#fdfdff",
-      "#fefefe",
-      "#ffffff",
-      "#ffffff"
-     ],
-     [
-      "#ffffff",
-      "#ffffff",
-      "#fefefe",
-      "#fdfdff",
-      "#fdfdff",
-      "#fefeff",
-      "#ffffff",
-      "#ffffff"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1509
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -1407,19 +1119,6 @@
       "s": 760,
       "view": "close-up of the back",
       "w": 2323
-     }
-    ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/02__5F4A3247",
-      "h": 1285,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 2332
      }
     ]
    },
@@ -1442,37 +1141,68 @@
  "matte-black": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A4563",
-    "h": 2120,
-    "m": 1067,
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 941,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1672
+   },
+   {
+    "file": "lead/portrait",
+    "h": 1535,
     "s": 507,
     "sides": [
      [
-      "#151515",
-      "#151515",
-      "#171616",
-      "#191818",
-      "#181617",
-      "#161515",
-      "#161415",
-      "#151515"
+      "#101010",
+      "#131313",
+      "#161616",
+      "#171717",
+      "#181818",
+      "#171717",
+      "#242424",
+      "#343333"
      ],
      [
-      "#2a282b",
-      "#252326",
-      "#201e20",
-      "#201e1f",
-      "#1f1d1e",
-      "#1c1a1b",
-      "#1d1b1c",
-      "#1a191a"
+      "#121212",
+      "#191919",
+      "#1b1b1b",
+      "#1d1d1d",
+      "#1b1b1b",
+      "#1a1a1a",
+      "#272627",
+      "#2c2b2b"
      ]
     ],
-    "view": "side view",
-    "w": 1414
+    "view": "from behind, on a matching backdrop",
+    "w": 1025
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 941,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1672
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1535,
+      "s": 507,
+      "view": "from behind, on a matching backdrop",
+      "w": 1025
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -1483,19 +1213,6 @@
       "s": 760,
       "view": "from behind, outdoors",
       "w": 2400
-     }
-    ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/02__5F4A9302",
-      "h": 1476,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 2031
      }
     ]
    },
@@ -1518,96 +1235,68 @@
  "neutron-star": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3097",
-    "h": 2120,
-    "m": 1067,
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1024,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1536
+   },
+   {
+    "file": "lead/portrait",
+    "h": 1536,
     "s": 507,
     "sides": [
      [
-      "#3a2926",
-      "#3a2e2c",
-      "#463c3e",
-      "#393132",
-      "#443d41",
-      "#3d353a",
-      "#837c88",
-      "#bdb7c4"
+      "#0b0e1c",
+      "#0e1121",
+      "#101326",
+      "#101326",
+      "#0f1225",
+      "#0f1224",
+      "#1a1e37",
+      "#252946"
      ],
      [
-      "#371c13",
-      "#2b150c",
-      "#261712",
-      "#2e2525",
-      "#251d1d",
-      "#372e2f",
-      "#7b7078",
-      "#a59ba4"
+      "#0d101f",
+      "#101527",
+      "#14192c",
+      "#11162a",
+      "#111528",
+      "#101427",
+      "#1e2239",
+      "#242841"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/02__5F4A3539",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#7c6b6a",
-      "#8a7a7a",
-      "#857370",
-      "#76635e",
-      "#5d473e",
-      "#79625c",
-      "#9c8988",
-      "#b5a5a4"
-     ],
-     [
-      "#9a8786",
-      "#aa9c9e",
-      "#9e8f8f",
-      "#7d675f",
-      "#745a50",
-      "#8e756f",
-      "#b6a8ab",
-      "#beb2b7"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A9030",
-    "h": 1740,
-    "s": 501,
-    "sides": [
-     [
-      "#fefefe",
-      "#ffffff",
-      "#ffffff",
-      "#fefefe",
-      "#fefefe",
-      "#ffffff",
-      "#ffffff",
-      "#fefefe"
-     ],
-     [
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1148
+    "view": "from behind, on a matching backdrop",
+    "w": 1024
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1024,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1536
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1536,
+      "s": 507,
+      "view": "from behind, on a matching backdrop",
+      "w": 1024
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -1653,97 +1342,68 @@
  "nuclear-green": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A9067-2",
-    "h": 2120,
-    "m": 1067,
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
+   },
+   {
+    "file": "lead/portrait",
+    "h": 1536,
     "s": 507,
     "sides": [
      [
-      "#bbbdca",
-      "#bcbecb",
-      "#bdbfcb",
-      "#b4b4bf",
-      "#a8a6ad",
-      "#bbbbc4",
-      "#ced0dc",
-      "#d3d5e1"
+      "#6cd060",
+      "#72d666",
+      "#76da69",
+      "#76db69",
+      "#75db69",
+      "#74db68",
+      "#6fd664",
+      "#79dd6d"
      ],
      [
-      "#b5b3c0",
-      "#b2afbc",
-      "#b2b0bd",
-      "#a9a5b0",
-      "#a39daa",
-      "#bcbbca",
-      "#ced0dd",
-      "#d9dbe7"
+      "#6bd25f",
+      "#73da68",
+      "#76dd6a",
+      "#77df6a",
+      "#76df6a",
+      "#75df69",
+      "#72dd66",
+      "#77e06b"
      ]
     ],
-    "view": "three-quarter view from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/02__5F4A4447",
-    "h": 2148,
-    "m": 1040,
-    "s": 494,
-    "sides": [
-     [
-      "#86838e",
-      "#48434b",
-      "#151215",
-      "#0e0c0d",
-      "#090909",
-      "#0c0b0c",
-      "#272426",
-      "#524d52"
-     ],
-     [
-      "#262227",
-      "#2b262c",
-      "#181518",
-      "#110f10",
-      "#151315",
-      "#181418",
-      "#413c43",
-      "#4c464e"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1396
-   },
-   {
-    "file": "checkout/03__5F4A9068",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#d2d5dc",
-      "#d3d5dc",
-      "#d3d5dd",
-      "#d0d1d8",
-      "#c7c8cc",
-      "#cbcbcf",
-      "#dfe0e8",
-      "#e3e6eb"
-     ],
-     [
-      "#d5d5dd",
-      "#d6d6de",
-      "#dbdbe3",
-      "#dadae2",
-      "#d7d7df",
-      "#d4d4dc",
-      "#dfe1e9",
-      "#e9eaf0"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "view": "from behind, on a matching backdrop",
+    "w": 1024
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1536,
+      "s": 507,
+      "view": "from behind, on a matching backdrop",
+      "w": 1024
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -1769,19 +1429,6 @@
       "w": 1959
      }
     ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A9067-2_wide",
-      "h": 1350,
-      "m": 1600,
-      "s": 760,
-      "view": "from behind",
-      "w": 2400
-     }
-    ]
    }
   ],
   "name": "Nuclear Green"
@@ -1789,97 +1436,68 @@
  "nuclear-pink": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A9150",
-    "h": 2111,
-    "m": 1077,
-    "s": 512,
-    "sides": [
-     [
-      "#fafafc",
-      "#fafafc",
-      "#fbfbfd",
-      "#fafafc",
-      "#fbfbfd",
-      "#fbfbfd",
-      "#fbfbfd",
-      "#fcfcfe"
-     ],
-     [
-      "#ffffff",
-      "#ffffff",
-      "#fdfdfe",
-      "#fdfdff",
-      "#fdfdff",
-      "#fdfdff",
-      "#fdfdfe",
-      "#fefefe"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1421
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A4458",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1448,
+    "s": 570,
     "sides": [
      [
-      "#3c383a",
-      "#2f2d2e",
-      "#2a2829",
-      "#2a2829",
-      "#282626",
-      "#2f2c2d",
-      "#4b4645",
-      "#73696a"
+      "#cf5458",
+      "#dd6165",
+      "#e5696c",
+      "#e86b6f",
+      "#e76a6f",
+      "#ed7175",
+      "#fb8d90",
+      "#fa989a"
      ],
      [
-      "#534f52",
-      "#413f41",
-      "#302e2f",
-      "#312f30",
-      "#333132",
-      "#343233",
-      "#5a5459",
-      "#71676e"
+      "#cb5054",
+      "#d85a5e",
+      "#e36568",
+      "#ec6e72",
+      "#e86a6e",
+      "#f07377",
+      "#fc8b8f",
+      "#fc9195"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A9152",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#fafafc",
-      "#f9f9fc",
-      "#f8f7fc",
-      "#f5f4fa",
-      "#f3f2f8",
-      "#f1f1f7",
-      "#f0f0f7",
-      "#f1f2f7"
-     ],
-     [
-      "#fafafc",
-      "#f6f5fa",
-      "#efeef5",
-      "#ebe9f2",
-      "#e7e5ef",
-      "#e7e5ee",
-      "#efeef5",
-      "#f2f1f7"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1086
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1448,
+      "s": 570,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1086
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -1905,19 +1523,6 @@
       "w": 1966
      }
     ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A9154_wide",
-      "h": 1350,
-      "m": 1600,
-      "s": 760,
-      "view": "from behind",
-      "w": 2400
-     }
-    ]
    }
   ],
   "name": "Nuclear Pink"
@@ -1925,67 +1530,68 @@
  "nuclear-violet": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A4471",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#5f5454",
-      "#676063",
-      "#1a1515",
-      "#070404",
-      "#0c0808",
-      "#251e1e",
-      "#5c5252",
-      "#897f7f"
-     ],
-     [
-      "#322d2e",
-      "#555054",
-      "#423e3f",
-      "#2a2627",
-      "#343031",
-      "#373334",
-      "#756d73",
-      "#887e86"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A4480",
-    "h": 2120,
-    "m": 1067,
+    "file": "lead/portrait",
+    "h": 1536,
     "s": 507,
     "sides": [
      [
-      "#1e1e1e",
-      "#1d1d1d",
-      "#1a1a1a",
-      "#1a1a1a",
-      "#1a1a1a",
-      "#1b1b1b",
-      "#1e1e1e",
-      "#1f1f1f"
+      "#72429e",
+      "#7e4baa",
+      "#8651b1",
+      "#8953b3",
+      "#8752b2",
+      "#844fb0",
+      "#8651b0",
+      "#8e57b8"
      ],
      [
-      "#1a1a1a",
-      "#1a1a1a",
-      "#1a1a1a",
-      "#1b1b1b",
-      "#1b1b1b",
-      "#1c1c1c",
-      "#1d1d1d",
-      "#1d1d1d"
+      "#70409a",
+      "#7c49a6",
+      "#804dab",
+      "#804dab",
+      "#804cab",
+      "#7c49a6",
+      "#834eae",
+      "#8b54b6"
      ]
     ],
-    "view": "side view",
-    "w": 1414
+    "view": "from behind, on a matching backdrop",
+    "w": 1024
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1536,
+      "s": 507,
+      "view": "from behind, on a matching backdrop",
+      "w": 1024
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2039,67 +1645,68 @@
  "palleon-panther": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3381",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#3e2f28",
-      "#4e3f3a",
-      "#554641",
-      "#493a33",
-      "#3f3027",
-      "#2f1f16",
-      "#6d5d5a",
-      "#796660"
-     ],
-     [
-      "#53433c",
-      "#6c5c57",
-      "#81726f",
-      "#5e4f48",
-      "#46342d",
-      "#3c2a20",
-      "#756461",
-      "#9b8f8f"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1024,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1536
    },
    {
-    "file": "checkout/02__5F4A3383",
-    "h": 2400,
-    "m": 1067,
+    "file": "lead/portrait",
+    "h": 1536,
     "s": 507,
     "sides": [
      [
-      "#4a3a32",
-      "#5b4c46",
-      "#63544f",
-      "#594841",
-      "#4f3c35",
-      "#3e2b21",
-      "#86736f",
-      "#8b756d"
+      "#4e4442",
+      "#5c524f",
+      "#675d5a",
+      "#69605b",
+      "#625855",
+      "#5b524f",
+      "#544b49",
+      "#837675"
      ],
      [
-      "#5d4b44",
-      "#7a6861",
-      "#91827d",
-      "#715f59",
-      "#534039",
-      "#4d362c",
-      "#8e7e7b",
-      "#a59694"
+      "#47403d",
+      "#5a504e",
+      "#655b59",
+      "#655b59",
+      "#615755",
+      "#594f4d",
+      "#574e4c",
+      "#8c807e"
      ]
     ],
-    "view": "three-quarter view from behind",
-    "w": 1601
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1024
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1024,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1536
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1536,
+      "s": 507,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1024
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2110,19 +1717,6 @@
       "s": 760,
       "view": "close-up of the back",
       "w": 2224
-     }
-    ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/02__5F4A0394-1",
-      "h": 1601,
-      "m": 1600,
-      "s": 760,
-      "view": "on a printed page",
-      "w": 2400
      }
     ]
    },
@@ -2153,37 +1747,68 @@
  "pearl-lavender": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A9062",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
+   },
+   {
+    "file": "lead/portrait",
+    "h": 1402,
+    "s": 608,
     "sides": [
      [
-      "#d8d7e7",
-      "#dad9e9",
-      "#dddcec",
-      "#e1e0f0",
-      "#dedcec",
-      "#dedcec",
-      "#ececf8",
-      "#f1f1fa"
+      "#b499cf",
+      "#c5aadd",
+      "#cbb3e3",
+      "#ccb4e4",
+      "#cbb1e2",
+      "#cab0e2",
+      "#d1bae8",
+      "#bea4d8"
      ],
      [
-      "#bfb6cb",
-      "#baafc3",
-      "#bdb4c8",
-      "#beb5ca",
-      "#bdb4ca",
-      "#cfcae0",
-      "#e2e1f2",
-      "#eeeef9"
+      "#b397cd",
+      "#c4a9db",
+      "#cab0e1",
+      "#cab0e1",
+      "#c7acdf",
+      "#c8aee0",
+      "#d2bae9",
+      "#bca1d6"
      ]
     ],
-    "view": "side view",
-    "w": 1414
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1122
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1402,
+      "s": 608,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1122
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2209,19 +1834,6 @@
       "w": 2121
      }
     ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A9059",
-      "h": 1530,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 1959
-     }
-    ]
    }
   ],
   "name": "Pearl Lavender"
@@ -2229,97 +1841,68 @@
  "proton-sparkle": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A9050-2",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#e0dfef",
-      "#e1e0f0",
-      "#e3e1f0",
-      "#dcdaea",
-      "#d0cada",
-      "#e4e2ef",
-      "#f0eef9",
-      "#f5f4fb"
-     ],
-     [
-      "#dedaeb",
-      "#e3dfef",
-      "#e3e0f0",
-      "#e1deef",
-      "#dad5e8",
-      "#e0ddee",
-      "#eeedf9",
-      "#f6f5fc"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A3459",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#685656",
-      "#7e6d6e",
-      "#817172",
-      "#705e5a",
-      "#604943",
-      "#543b34",
-      "#968385",
-      "#b4a4a6"
+      "#241612",
+      "#2c1a16",
+      "#311f18",
+      "#301e18",
+      "#2f1e17",
+      "#311e18",
+      "#5d3b33",
+      "#6c463d"
      ],
      [
-      "#866f6d",
-      "#9c8b8b",
-      "#a7979a",
-      "#86716d",
-      "#6c534b",
-      "#664a40",
-      "#967c78",
-      "#b5a6ab"
+      "#241711",
+      "#301d17",
+      "#301d17",
+      "#2f1b16",
+      "#301d17",
+      "#331f19",
+      "#533329",
+      "#684336"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A3461",
-    "h": 2142,
-    "m": 1046,
-    "s": 497,
-    "sides": [
-     [
-      "#61504d",
-      "#74615f",
-      "#776460",
-      "#6c5954",
-      "#554038",
-      "#543d36",
-      "#9d8c8e",
-      "#ab9998"
-     ],
-     [
-      "#9b898b",
-      "#b1a4a9",
-      "#b8aeb3",
-      "#8a7773",
-      "#705851",
-      "#6b5149",
-      "#ab9a9c",
-      "#bdb1b7"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1400
+    "view": "from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2365,97 +1948,68 @@
  "reserve-green": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3254",
-    "h": 1866,
-    "m": 1378,
-    "s": 655,
-    "sides": [
-     [
-      "#312c2a",
-      "#3d3635",
-      "#4c4341",
-      "#534947",
-      "#4e4442",
-      "#36312f",
-      "#35302f",
-      "#766a6a"
-     ],
-     [
-      "#494343",
-      "#6b6464",
-      "#999293",
-      "#756c6c",
-      "#413a38",
-      "#332f2e",
-      "#322e2d",
-      "#746a6a"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1607
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A2378",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#422e22",
-      "#4f392c",
-      "#4f3b30",
-      "#55423b",
-      "#5e4c46",
-      "#675552",
-      "#b8a7a5",
-      "#c7b8b4"
+      "#011810",
+      "#021911",
+      "#021c13",
+      "#021d14",
+      "#021c13",
+      "#021811",
+      "#021a12",
+      "#0f3627"
      ],
      [
-      "#453224",
-      "#5b483e",
-      "#75625b",
-      "#806d68",
-      "#83706c",
-      "#826f6b",
-      "#897672",
-      "#bdaaa7"
+      "#01160f",
+      "#011911",
+      "#021e15",
+      "#011d14",
+      "#011b12",
+      "#011810",
+      "#021b12",
+      "#0c3123"
      ]
     ],
-    "view": "three-quarter view from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A3260",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#2d2527",
-      "#3a3336",
-      "#463f41",
-      "#463e40",
-      "#372e2f",
-      "#352e32",
-      "#726a75",
-      "#675d64"
-     ],
-     [
-      "#322c2f",
-      "#413b3e",
-      "#4d484c",
-      "#3a3335",
-      "#2c2324",
-      "#2c2426",
-      "#655d65",
-      "#6b626b"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1414
+    "view": "from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2501,97 +2055,68 @@
  "scuderia-red": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A0203",
-    "h": 2141,
-    "m": 1047,
-    "s": 497,
-    "sides": [
-     [
-      "#ededf5",
-      "#ededf6",
-      "#ececf6",
-      "#ecebf5",
-      "#efeef7",
-      "#f4f3f9",
-      "#f5f4fa",
-      "#f4f3f9"
-     ],
-     [
-      "#f8f7fc",
-      "#f7f6fb",
-      "#f7f6fb",
-      "#f6f5fb",
-      "#f4f3f9",
-      "#f5f4f9",
-      "#f8f7fc",
-      "#f7f6fb"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1401
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A2984",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1448,
+    "s": 570,
     "sides": [
      [
-      "#1a110c",
-      "#261912",
-      "#332520",
-      "#241a16",
-      "#261c1a",
-      "#3f3535",
-      "#514748",
-      "#605250"
+      "#060101",
+      "#0a0001",
+      "#0e0000",
+      "#110000",
+      "#130101",
+      "#130001",
+      "#1d0102",
+      "#2d0205"
      ],
      [
-      "#150d08",
-      "#1a110c",
-      "#1e1410",
-      "#221713",
-      "#251a17",
-      "#271d1b",
-      "#2a1f1c",
-      "#63524f"
+      "#080001",
+      "#0a0000",
+      "#0f0000",
+      "#160002",
+      "#180002",
+      "#120001",
+      "#1a0102",
+      "#290104"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A0223",
-    "h": 2141,
-    "m": 1047,
-    "s": 497,
-    "sides": [
-     [
-      "#efeffa",
-      "#ececf9",
-      "#ebeaf9",
-      "#e9e8f8",
-      "#f0effc",
-      "#f6f5fe",
-      "#f8f7fd",
-      "#f7f6fd"
-     ],
-     [
-      "#fdfdfe",
-      "#fdfcff",
-      "#fcfbff",
-      "#fbfaff",
-      "#faf9ff",
-      "#fcfbff",
-      "#fdfdff",
-      "#fcfbff"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1401
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1086
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1448,
+      "s": 570,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1086
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2637,97 +2162,68 @@
  "smurf": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A8937",
-    "h": 2121,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#ede7eb",
-      "#efeaf0",
-      "#efebf1",
-      "#f0ebf1",
-      "#efeaf0",
-      "#efeaf0",
-      "#f7f4f9",
-      "#f8f7fc"
-     ],
-     [
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#fefeff",
-      "#fbfaff",
-      "#faf9fe",
-      "#fcfbfd",
-      "#f3eff5"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 940,
+    "s": 760,
+    "view": "from behind, on a matching backdrop",
+    "w": 1672
    },
    {
-    "file": "checkout/02__CAM15780",
-    "h": 2121,
-    "m": 1067,
+    "file": "lead/portrait",
+    "h": 1536,
     "s": 507,
     "sides": [
      [
-      "#383536",
-      "#403f40",
-      "#4e4d4f",
-      "#57585a",
-      "#606064",
-      "#606064",
-      "#747579",
-      "#b6b6bf"
+      "#029be7",
+      "#04a0eb",
+      "#06a2ed",
+      "#07a3ee",
+      "#07a5ee",
+      "#08a4ee",
+      "#0daaf3",
+      "#13b2fa"
      ],
      [
-      "#2c2a29",
-      "#353434",
-      "#3d3d3d",
-      "#424242",
-      "#414143",
-      "#3a3a3a",
-      "#454447",
-      "#68686f"
+      "#05a2ec",
+      "#08a7f0",
+      "#09aaf2",
+      "#0aabf3",
+      "#09abf4",
+      "#0aacf4",
+      "#0dadf5",
+      "#0eadf6"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A9230",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#f3f1f6",
-      "#f6f5fa",
-      "#f7f6fb",
-      "#f7f6fb",
-      "#f7f6fb",
-      "#f9f8fd",
-      "#faf9fd",
-      "#f9f9fc"
-     ],
-     [
-      "#fdfdff",
-      "#f8f8fb",
-      "#f2f1f7",
-      "#edecf2",
-      "#ebe8ef",
-      "#f0eef4",
-      "#f7f6fa",
-      "#f7f6fb"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "view": "from behind, on a matching backdrop",
+    "w": 1024
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 940,
+      "s": 760,
+      "view": "from behind, on a matching backdrop",
+      "w": 1672
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1536,
+      "s": 507,
+      "view": "from behind, on a matching backdrop",
+      "w": 1024
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2753,19 +2249,6 @@
       "w": 1966
      }
     ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A9112",
-      "h": 1530,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 1959
-     }
-    ]
    }
   ],
   "name": "Smurf"
@@ -2773,97 +2256,68 @@
  "solar-orange": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A9604",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#fdfdfd",
-      "#fdfdfd",
-      "#fdfdfd",
-      "#fdfdfd",
-      "#fefefe",
-      "#ffffff",
-      "#fefefe",
-      "#fdfdfd"
-     ],
-     [
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#fefefe",
-      "#ffffff",
-      "#ffffff",
-      "#fefefe"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A2964",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#0b0707",
-      "#120b0b",
-      "#160e0e",
-      "#1c1416",
-      "#231c1e",
-      "#251f21",
-      "#322a31",
-      "#78707e"
+      "#340d03",
+      "#3d0f02",
+      "#451102",
+      "#4c1303",
+      "#451203",
+      "#421103",
+      "#3a0e02",
+      "#5f1802"
      ],
      [
-      "#0d090a",
-      "#0f0b0c",
-      "#110d0e",
-      "#141011",
-      "#151112",
-      "#130e10",
-      "#1a1315",
-      "#584c52"
+      "#290902",
+      "#350d03",
+      "#401002",
+      "#431103",
+      "#491303",
+      "#421103",
+      "#491202",
+      "#872501"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A9616",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#f9f9fb",
-      "#fafafc",
-      "#fafafc",
-      "#fafafc",
-      "#fbfbfd",
-      "#fdfdfe",
-      "#fdfdfd",
-      "#fdfdff"
-     ],
-     [
-      "#ffffff",
-      "#ffffff",
-      "#ffffff",
-      "#fefefe",
-      "#fdfdfd",
-      "#fefefe",
-      "#ffffff",
-      "#fefefe"
-     ]
-    ],
-    "view": "three-quarter view from behind",
-    "w": 1414
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -2909,97 +2363,68 @@
  "supersonic": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A0338",
-    "h": 2400,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#e9e8f3",
-      "#eeecf6",
-      "#f0eff6",
-      "#eceaf5",
-      "#eceaf5",
-      "#f2f1f7",
-      "#f4f3f9",
-      "#f1f0f6"
-     ],
-     [
-      "#fefefe",
-      "#fdfdfd",
-      "#fbfaff",
-      "#f9f8fd",
-      "#f7f6fb",
-      "#f8f7fc",
-      "#faf9fe",
-      "#f8f7fc"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1601
+    "file": "lead/landscape",
+    "fill": true,
+    "h": 1086,
+    "s": 760,
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1448
    },
    {
-    "file": "checkout/02__5F4A2353-2",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "lead/portrait",
+    "h": 1346,
+    "s": 660,
     "sides": [
      [
-      "#1b120d",
-      "#241913",
-      "#251913",
-      "#251a16",
-      "#2d211d",
-      "#362b28",
-      "#877470",
-      "#9b8883"
+      "#afa9a9",
+      "#bbb5b5",
+      "#c1bbbb",
+      "#c4bebe",
+      "#c4bebe",
+      "#c2bcbc",
+      "#c9c3c3",
+      "#cec8c8"
      ],
      [
-      "#1b120e",
-      "#32251e",
-      "#4c3e36",
-      "#534541",
-      "#524542",
-      "#453834",
-      "#8f7d78",
-      "#9a8781"
+      "#a49e9e",
+      "#b4aeae",
+      "#bcb6b6",
+      "#bdb7b7",
+      "#bcb6b6",
+      "#bab4b4",
+      "#c7c1c1",
+      "#cac4c4"
      ]
     ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/03__5F4A0356",
-    "h": 2400,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#0b0a0d",
-      "#0a0a0d",
-      "#303138",
-      "#363940",
-      "#2d2b38",
-      "#706f7b",
-      "#9e9baa",
-      "#c6c3d5"
-     ],
-     [
-      "#fcfcfe",
-      "#fafafc",
-      "#f7f6fc",
-      "#f6f5fb",
-      "#f5f4fa",
-      "#f8f7fb",
-      "#f9f9fb",
-      "#f9f9fb"
-     ]
-    ],
-    "view": "close-up of the back",
-    "w": 1601
+    "view": "three-quarter view from behind, on a matching backdrop",
+    "w": 1169
    }
   ],
   "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "lead/landscape",
+      "h": 1086,
+      "s": 760,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1448
+     }
+    ]
+   },
+   {
+    "kind": "portrait",
+    "photos": [
+     {
+      "file": "lead/portrait",
+      "h": 1346,
+      "s": 660,
+      "view": "three-quarter view from behind, on a matching backdrop",
+      "w": 1169
+     }
+    ]
+   },
    {
     "kind": "wide",
     "photos": [
@@ -3022,19 +2447,6 @@
       "m": 1600,
       "s": 760,
       "view": "base being spray-painted",
-      "w": 2400
-     }
-    ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A0338_wide",
-      "h": 1350,
-      "m": 1600,
-      "s": 760,
-      "view": "from behind",
       "w": 2400
      }
     ]

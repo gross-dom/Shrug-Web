@@ -1284,6 +1284,11 @@
   display: none;
 }
 
+/* Buying is dark, as ArtStore is (Dom, 27 Nov): the way back is a pill a little lighter than the ground */
+.wxwin.buying .wxbar__back {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bts-pic img {
     transition: none;

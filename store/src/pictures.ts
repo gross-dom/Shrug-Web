@@ -94,9 +94,12 @@ const tall = (shot: Shot) => !shot.ground && !shot.fills && !shot.alone && shape
 
 // ---- The chair's own photography (Shrug's selects of 27 Nov)
 //
-// Each color has a folder of its own (store/public/pictures/workspace/<color>/), with two sets in it:
+// Each color has a folder of its own (store/public/pictures/workspace/<color>/), with three sets in it:
+//   lead/      the chair on a backdrop of its color, a landscape and an upright (Dom's renders of 27 Nov). The
+//              gallery and the checkout both open on them, landscape first. At checkout the landscape fills its
+//              tile, cut to its middle as the page narrows, as ArtStore's pictures made to fill are (`fill`)
 //   gallery/   what Workspace shows in its window: slides, each a landscape, a pair of uprights or one upright
-//   checkout/  upright studio shots for the page the chair is bought on, one to three, the first its hero
+//   checkout/  upright studio shots for the page the chair is bought on, one to three, after the lead's two
 // `python3 -I tools/chair-photos.py <Shrug's folder>` copies them in as they are and writes what there is to
 // chair-photos.json, which is all that is read here. (Until 27 Nov a chair's page showed pictures made from
 // its model in a white studio: every color has its own photographs now, and those are gone.)
@@ -111,6 +114,8 @@ interface Kept {
   m?: number
   sides?: string[][]
   view?: string
+  /** It fills whatever shows it, cut to its middle (the lead's landscape, at checkout). */
+  fill?: boolean
 }
 const PHOTOS = CHAIR_PHOTOS as Record<string, { name: string; gallery: { kind: string; photos: Kept[] }[]; checkout: Kept[] } | undefined>
 
@@ -124,21 +129,21 @@ const kept = (color: string, name: string, one: Kept): Shot => {
     small: one.s ? `${at1}-s.webp` : one.m ? `${at1}-m.webp` : whole,
     set: [one.s ? `${at1}-s.webp ${one.s}w` : '', one.m ? `${at1}-m.webp ${one.m}w` : '', `${whole} ${one.w}w`].filter(Boolean).join(', '),
     aspect: one.w / one.h,
-    sides: one.sides,
+    ...(one.fill ? { fills: true } : { sides: one.sides }),
     alt: `${name} Workspace chair${one.view ? `, ${one.view}` : ''}`,
     alone: true,
   }
 }
 
 
-/** A color's checkout shots, the hero first; none where it has none yet. */
+/** A color's checkout shots, the hero first (its lead's landscape, where it has one); none where it has none yet. */
 const studio = (color: string): Shot[] => (PHOTOS[color]?.checkout ?? []).map((one) => kept(color, PHOTOS[color]!.name, one))
 /** And the slides of its gallery. */
 const slides = (color: string): Slide[] =>
   (PHOTOS[color]?.gallery ?? []).map((slide) => ({ kind: slide.kind === 'pair' ? 'pair' : slide.kind === 'portrait' ? 'portrait' : 'wide', shots: slide.photos.map((one) => kept(color, PHOTOS[color]!.name, one)) }))
 
-/** A chair's pictures on the page it is bought on: its studio shots (one to three, the hero first, a page
- * each). A color with no folder yet has none, and is shown the drawing anything without a picture is. */
+/** A chair's pictures on the page it is bought on: its lead's landscape and upright, then its studio shots
+ * (one to three), a page each. A color with no folder yet has none, and is shown the drawing anything without a picture is. */
 const chair = (color: string): Shot[] => {
   // (made once for each color: a page that asks twice is given the same pictures, not ones like them)
   const made = MADE.get(color)
