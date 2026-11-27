@@ -205,8 +205,9 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(600)
   await p.locator(`${U} .upd-row[data-doc="update-4"] button`).click()
   await p.waitForSelector(`${P} .pv-canvas[data-drawn]`, { timeout: 30000 })
-  await p.waitForTimeout(500)
-  b = await bar(p)
+  // (the page already drawn may be the last document's: this one is waited for by its own name and pages,
+  // however long a busy machine takes over it, and not for a fixed half second)
+  for (let i = 0; i < 150; i++) { b = await bar(p); if (b.name === 'Shrug 4 update, Q3 2026.pdf' && /^Page 1 of/.test(b.sub ?? '')) break; await p.waitForTimeout(200) }
   const [got] = await Promise.all([p.waitForEvent('download'), p.locator(`${P} .pvbar button[aria-label="Download"]`).click()])
   check('another document may be saved: Download hands it over by its name', b.name === 'Shrug 4 update, Q3 2026.pdf' && b.sub === 'Page 1 of 4' && !b.noDownload && got.suggestedFilename() === 'Shrug 4 update, Q3 2026.pdf', JSON.stringify(b))
 
