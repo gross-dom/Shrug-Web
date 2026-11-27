@@ -5,6 +5,7 @@ import { shotsOf, type Shot } from '../../../store/src/pictures'
 import { badgeOf, keptOf, owned, shipsOf, shipsWhen } from '../../../store/src/words'
 import { askLogIn } from '../../os/account'
 import { useShop } from '../../os/shop'
+import { haptic } from '../native'
 import { BackButton, Screen } from '../ui'
 import { checkOut } from './Buying'
 import { drawnOn, optionName, Pic } from './storebits'
@@ -224,7 +225,7 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
             {figure && <b>{figure}</b>}
             {under && <small>{under}</small>}
           </span>
-          <button type="button" className="pd-buy__go" disabled={button.off} onClick={button.act}>
+          <button type="button" className="pd-buy__go" disabled={button.off} onClick={() => (haptic(), button.act?.())}>
             {button.text}
           </button>
         </div>
@@ -251,7 +252,7 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
             </span>
             <div className="pd-swatches" role="group" aria-label={label}>
               {product.options.map((choice) => (
-                <button key={choice} type="button" aria-pressed={option === choice} aria-label={optionName(choice)} onClick={() => setOption(choice)}>
+                <button key={choice} type="button" aria-pressed={option === choice} aria-label={optionName(choice)} onClick={() => (haptic(), setOption(choice))}>
                   <span style={{ background: colorOf(choice) ?? '#3a3a3c' }} />
                 </button>
               ))}
@@ -263,11 +264,11 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
           <div className="pd-qty">
             <span className="pd-label">Quantity</span>
             <span className="pd-stepper" role="group" aria-label="Quantity">
-              <button type="button" aria-label="One fewer" disabled={count <= 1} onClick={() => setCount((n) => Math.max(1, n - 1))}>
+              <button type="button" aria-label="One fewer" disabled={count <= 1} onClick={() => (haptic(), setCount((n) => Math.max(1, n - 1)))}>
                 <Minus size={18} strokeWidth={2.4} aria-hidden />
               </button>
               <output aria-live="polite">{count}</output>
-              <button type="button" aria-label="One more" disabled={count >= MOST_AT_ONCE} onClick={() => setCount((n) => Math.min(MOST_AT_ONCE, n + 1))}>
+              <button type="button" aria-label="One more" disabled={count >= MOST_AT_ONCE} onClick={() => (haptic(), setCount((n) => Math.min(MOST_AT_ONCE, n + 1)))}>
                 <Plus size={18} strokeWidth={2.4} aria-hidden />
               </button>
             </span>

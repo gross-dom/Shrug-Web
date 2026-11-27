@@ -248,13 +248,15 @@ const touchOf = (t) => ({
     say(JSON.stringify(dock) === '["app Messages","app Contacts","app Notes","app Workspace"]', 'the Dock holds Messages, Contacts and Notes, and Workspace, each an app of the phone’s (Workspace was a link to its store until 27 Nov)', JSON.stringify(dock))
     const TOP = '.sb-slot[data-front] .ios-page[data-pos="top"]'
     await A.at(p, 'messages', [], null, 900)
-    let exit = p.locator(`${TOP} .ios-bar button`, { hasText: 'Exit' })
-    say((await exit.count()) === 1 && (await p.locator(`${TOP} .ios-bar .ios-menu`).count()) === 0, 'Messages\' list has Exit where its filter was')
+    // (27 Nov: every app's first screen has the way back to the Home Screen in its bar's first corner, the
+    // round Back; Messages and Notes had a word, Exit, across the bar)
+    let exit = p.locator(`${TOP} .ios-bar__side:not(.ios-bar__side--end) button[aria-label="Home Screen"]`)
+    say((await exit.count()) === 1 && (await p.locator(`${TOP} .ios-bar button`, { hasText: 'Exit' }).count()) === 0 && (await p.locator(`${TOP} .ios-bar .ios-menu`).count()) === 0, 'Messages\' list has the way back to the Home Screen in its first corner, and nothing where its filter was')
     await exit.tap(); await p.waitForTimeout(900)
     say((await A.state(p)).place?.app === null, 'which goes to the Home Screen')
     await A.at(p, 'notes', [], null, 900)
-    exit = p.locator(`${TOP} .ios-bar button`, { hasText: 'Exit' })
-    say((await exit.count()) === 1 && (await p.locator(`${TOP} .ios-bar button`, { hasText: 'Edit' }).count()) === 0, 'Notes\' folders have Exit where Edit was')
+    exit = p.locator(`${TOP} .ios-bar__side:not(.ios-bar__side--end) button[aria-label="Home Screen"]`)
+    say((await exit.count()) === 1 && (await p.locator(`${TOP} .ios-bar button`, { hasText: 'Exit' }).count()) === 0 && (await p.locator(`${TOP} .ios-bar button`, { hasText: 'Edit' }).count()) === 0, 'Notes\' folders have it there too (and no Edit until there is a folder of their own to take away)')
     await exit.tap(); await p.waitForTimeout(900)
     say((await A.state(p)).place?.app === null, 'which goes to the Home Screen too')
     // Contacts has the round Back that it has in that corner on an iPhone, named for where it leads

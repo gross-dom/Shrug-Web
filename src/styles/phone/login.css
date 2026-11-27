@@ -55,6 +55,17 @@
   appearance: none;
 }
 
+/* (an address the browser has filled in keeps the tray's colours, and is not turned pale yellow) */
+.ios-tray--dark .lt-field input:-webkit-autofill {
+  box-shadow: inset 0 0 0 100px #2c2c2e;
+  -webkit-text-fill-color: #fff;
+}
+
+.ios-tray:not(.ios-tray--dark) .lt-field input:-webkit-autofill {
+  box-shadow: inset 0 0 0 100px #ececf0;
+  -webkit-text-fill-color: #000;
+}
+
 .lt-field input::placeholder {
   color: var(--label-3);
 }

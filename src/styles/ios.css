@@ -515,6 +515,22 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
   /* A field given the keyboard while its screen is still sliding in must not scroll the stack sideways to show itself */
   overflow: hidden;
   overflow: clip;
+  transform-origin: 50% 0;
+  transition:
+    transform 0.4s var(--glide),
+    border-radius 0.4s var(--glide);
+}
+
+/* Behind a sheet that runs the height of the screen the app falls back, as it does on an iPhone: a little
+   smaller, its top corners rounded, with black round it; and comes forward again as the sheet goes. (The
+   sheet is drawn beside the app's screens: ui.tsx.) */
+.sb-live:has(> .ios-sheet[data-detent='large']) {
+  background: #000;
+}
+
+.sb-live:has(> .ios-sheet[data-detent='large']:not([data-closing])) > .ios-nav {
+  border-radius: 14px 14px 0 0;
+  transform: translateY(max(var(--status) - 8px, 0px)) scale(0.925);
 }
 
 /* The screen on top takes the keyboard when it arrives; it is not a control, and wears no ring */
@@ -1018,6 +1034,8 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
 }
 
 .ios-sheet[data-detent='tray'] .ios-sheet__panel {
+  animation-duration: 0.36s;
+  animation-timing-function: var(--spring);
   top: auto;
   right: 8px;
   bottom: max(8px, var(--home) - 16px);
@@ -1233,6 +1251,7 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
 @media (prefers-reduced-motion: reduce) {
   .ios-tray__hug,
   .ios-tray__step,
+  .ios-nav,
   .ios-page,
   .ios-page[data-enter],
   .ios-sheet__panel,

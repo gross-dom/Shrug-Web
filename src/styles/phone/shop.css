@@ -173,17 +173,19 @@
   opacity: 1;
 }
 
-/* (square, but never so tall that what it is and what it costs are off the foot of a short screen) */
+/* (square, but never so tall that what it is and what it costs are off the foot of a short screen: on one
+   that is, or a phone on its side, it is as wide as the screen and a share of its height) */
 .pd-gallery {
   position: relative;
-  aspect-ratio: 1;
-  max-height: 58cqh;
+  /* (the first is for a browser that has no container units yet) */
+  height: min(100vw, 58vh);
+  height: min(100cqw, 58cqh);
   background: #1c1c1e;
 }
 
 .pd-gallery[data-tall] {
-  aspect-ratio: 4 / 5;
-  max-height: 60cqh;
+  height: min(125vw, 60vh);
+  height: min(125cqw, 60cqh);
 }
 
 .pd-gallery--none {
@@ -243,7 +245,8 @@
 .pd-track {
   display: flex;
   height: 100%;
-  overflow: auto hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
@@ -293,7 +296,8 @@
 .pd-whole__track {
   display: flex;
   height: 100%;
-  overflow: auto hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior: contain;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
@@ -599,6 +603,14 @@
   border-radius: 50%;
   background: #30d158;
   color: #fff;
+  animation: co-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.08s both;
+}
+
+@keyframes co-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
 }
 
 .co-item {
@@ -805,6 +817,14 @@
   height: 52px;
 }
 
+/* (a field the browser has filled in for them keeps the tray's colours, and is not turned pale yellow) */
+.co-field input:-webkit-autofill,
+.co-field textarea:-webkit-autofill {
+  box-shadow: inset 0 0 0 100px #2c2c2e;
+  -webkit-text-fill-color: #fff;
+  caret-color: var(--blue);
+}
+
 .co-field textarea,
 .vp-edit textarea {
   padding: 14px 16px;
@@ -915,8 +935,35 @@
   opacity: 0.4;
 }
 
+/* (busy: the button keeps its shape and a wheel turns in it, as a button on an iPhone waits) */
 .co .ui-btn[data-busy] {
-  opacity: 0.6;
+  position: relative;
+  opacity: 1;
+  color: transparent;
+}
+
+.co .ui-btn[data-busy]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 20px;
+  height: 20px;
+  margin: auto;
+  border: 2.5px solid rgb(0 0 0 / 0.18);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: co-spin 0.7s linear infinite;
+}
+
+.co .ui-btn.sec[data-busy]::after {
+  border-color: rgb(255 255 255 / 0.2);
+  border-top-color: #fff;
+}
+
+@keyframes co-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .co .ui-link {
@@ -1393,7 +1440,8 @@
   }
 
   .pd-whole,
-  .pd-whole__slide img {
+  .pd-whole__slide img,
+  .co-check {
     animation: none;
   }
 }

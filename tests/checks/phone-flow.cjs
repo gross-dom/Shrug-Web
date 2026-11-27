@@ -81,7 +81,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
   // after Case Studies. Nothing on the Home Screen is a link out, and VIP's old link is gone ----
   const stores = await page.evaluate(() => ({ links: document.querySelectorAll('.sb-home a.sb-icon').length, home: [...document.querySelectorAll('.sb-grid > button.sb-icon')].map((b) => b.getAttribute('aria-label')), dock: [...document.querySelectorAll('.sb-dock > button.sb-icon')].map((b) => b.getAttribute('aria-label')), drawn: [...document.querySelectorAll('.sb-home button.sb-icon')].every((b) => !!b.querySelector('.sb-icon__tile svg')) }))
   say(stores.links === 0 && stores.home.join(' | ') === 'Case Studies | One-pager | ArtStore | Books' && stores.dock.length === 4 && /^Workspace/.test(stores.dock[3]) && stores.drawn, 'Case Studies, the one-pager, ArtStore and Books are on the Home Screen and Workspace is the last icon in the Dock, each an app under its own tile: nothing there is a link out of the site', JSON.stringify(stores))
-  for (const [label, id, inside] of [['Workspace', 'workspace', '.wsp-slab'], ['ArtStore', 'store', 'iframe.storewin__frame'], ['Books', 'books', '.bkp-shelf'], ['One-pager', 'preview', '.pp-page']]) {
+  for (const [label, id, inside] of [['Workspace', 'workspace', '.wsp-slab'], ['ArtStore', 'store', '.st-grid'], ['Books', 'books', '.bkp-shelf'], ['One-pager', 'preview', '.pp-page']]) {
     const tabs = ctx.pages().length
     await page.locator(`.sb-icon[aria-label^="${label}"]`).first().tap()
     await page.waitForSelector(`${front(id)} ${inside}`, { timeout: 8000, state: 'attached' }).catch(() => {})

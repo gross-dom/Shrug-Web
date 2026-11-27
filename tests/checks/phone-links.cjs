@@ -51,7 +51,7 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator('.ph [data-top]').tap()
   await sleep(1600)
   s = await st()
-  say(ctx.pages().length === tabs && s?.app === 'myvip' && (await page.locator('.sb-slot[data-front][data-app="myvip"] iframe.storewin__frame').count()) === 1 && (await page.locator('.ph [data-spot-item]').count()) === 0, 'pressed, it opens My VIP on the phone, in no tab of its own, and search closes', JSON.stringify({ tabs: ctx.pages().length - tabs, app: s?.app ?? null, rows: await page.locator('.ph [data-spot-item]').count() }))
+  say(ctx.pages().length === tabs && s?.app === 'myvip' && (await page.locator('.sb-slot[data-front][data-app="myvip"] .vp').count()) === 1 && (await page.locator('.sb-slot[data-front][data-app="myvip"] iframe').count()) === 0 && (await page.locator('.ph [data-spot-item]').count()) === 0, 'pressed, it opens My VIP on the phone, in no tab of its own, and search closes', JSON.stringify({ tabs: ctx.pages().length - tabs, app: s?.app ?? null, rows: await page.locator('.ph [data-spot-item]').count() }))
   await home()
   // The drops were what the VIP app held: search no longer lists them, since there is nowhere on the phone to open one
   await page.locator('.sb-search').tap(); await sleep(800)

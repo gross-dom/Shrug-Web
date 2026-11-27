@@ -10,6 +10,7 @@ import { launchApp } from '../os/launch'
 import { useStore } from '../os/store'
 import { wm } from '../os/wm'
 import { chrome } from './chrome'
+import { haptic } from './native'
 import { closeSheet, launchAt, onPhone, openSheet, sys } from './system'
 import { Tray, useApp } from './ui'
 import '../styles/phone/login.css'
@@ -192,7 +193,8 @@ function Flow({ who, why, says, dark }: { who: Member | null; why: Why; says?: s
       if (!stage.adding) return { head: 'What’s your number?', lead: 'We’ll text you a code to use for logging in.' }
       const linked = who?.via === 'link'
       return {
-        head: linked ? `Welcome${who?.first ? `, ${who.first}` : ''}` : who?.needs.phone ? 'Email confirmed' : 'A new number',
+        // (someone whose payment has just made them an account confirmed nothing: they are only asked for a number)
+        head: linked ? `Welcome${who?.first ? `, ${who.first}` : ''}` : who?.needs.phone ? (who.via === 'pay' ? 'Add your number' : 'Email confirmed') : 'A new number',
         lead: linked ? `Your link confirmed ${who!.email}. Add a phone number to finish. It’s how you’ll log in next time.` : 'Add a phone number. It’s how you’ll log in next time, with a texted code.',
       }
     }
@@ -381,7 +383,7 @@ function Pictures({ who, onSaved }: { who: Member; onSaved: () => void }) {
         {FACES.map((face) => {
           const on = 'face' in picture && picture.face === face.id
           return (
-            <button key={face.id} type="button" role="radio" aria-checked={on} aria-label={face.says} data-on={on || undefined} onClick={() => setPicture({ face: face.id })}>
+            <button key={face.id} type="button" role="radio" aria-checked={on} aria-label={face.says} data-on={on || undefined} onClick={() => (haptic(), setPicture({ face: face.id }))}>
               <Face picture={{ face: face.id }} size={60} />
             </button>
           )
