@@ -343,7 +343,7 @@ async function terminal(browser) {
   await app.locator('.term__input').press('Enter')
   await p.waitForTimeout(1600)
   const vipAt = (await A.state(p)).place
-  check('phone: open vip opens My VIP, the phone’s own app, on the store’s pages for what is theirs: no link, and no tab', vipAt?.app === 'myvip' && t.ctx.pages().length === tabsBefore && (await p.locator('.sb-slot[data-front][data-app="myvip"] iframe.storewin__frame').count()) === 1 && (await p.locator('.sb-slot[data-app="photos"]').count()) === 0, JSON.stringify({ place: vipAt, tabs: t.ctx.pages().length - tabsBefore }))
+  check('phone: open vip opens My VIP, the phone’s own app and a screen of the phone’s own (no frame): no link, and no tab', vipAt?.app === 'myvip' && t.ctx.pages().length === tabsBefore && (await p.locator('.sb-slot[data-front][data-app="myvip"] .vp').count()) === 1 && (await p.locator('.sb-slot[data-front][data-app="myvip"] iframe').count()) === 0 && (await p.locator('.sb-slot[data-app="photos"]').count()) === 0, JSON.stringify({ place: vipAt, tabs: t.ctx.pages().length - tabsBefore }))
   await A.at(p, 'terminal', [])
   // every app help offers opens something. The phone has no About Shrug: Shrug's own card in Contacts opens
   const term = p.locator('.sb-slot[data-app="terminal"]')
