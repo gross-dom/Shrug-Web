@@ -324,14 +324,19 @@
   visibility: hidden;
 }
 
-/* A photograph on the stage covers it: one wide enough is cut to it, two tall ones share it side by side, and
-   a tall one alone is set whole on a blur of itself. One pushes the last off, the way a carousel is pushed */
+/* A photograph on the stage (Dom, 27 Nov, with Apple's store beside it): a card with rounded corners, set in
+   from the stage's edges and cut to the card's shape about its middle, where the chair is, so that it sits on
+   the color the way a picture sits on that store's page. (It covered the stage before: a studio's gray
+   walls over a blue page.) Two tall ones share the card side by side. The row of pictures is under the
+   card, on the color. One pushes the last off, the way a carousel is pushed */
 .wsp-photo {
   position: absolute;
-  inset: 0;
+  inset: calc(var(--status) + var(--bar) + 6px) 16px 72px;
   z-index: 1;
   overflow: hidden;
+  border-radius: 24px;
   background: #0c0c0d;
+  box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.35);
   touch-action: pan-y;
 }
 
@@ -343,19 +348,15 @@
   -webkit-user-drag: none;
 }
 
-.wsp-photo__back {
-  object-fit: cover;
-  filter: blur(30px) brightness(0.6);
-  transform: scale(1.2);
+/* (the card is the photograph's own shape now: nothing is set behind it, or shaded over it) */
+.wsp-photo__back,
+.wsp-photo__shade {
+  display: none;
 }
 
 .wsp-photo__pic {
   object-fit: cover;
 }
-
-/* (Dom, 27 Nov: a photograph fills the stage, edge to edge, cut to its shape about its middle, where the
-   chair is; it was shown whole between dark bands, with the row of pictures on the band under it. The row
-   floats over the photograph now) */
 
 .wsp-photo[data-fit='pair'] .wsp-photo__pic {
   width: calc(50% - 1px);
@@ -363,13 +364,6 @@
 
 .wsp-photo[data-fit='pair'] .wsp-photo__pic + .wsp-photo__pic {
   left: auto;
-}
-
-.wsp-photo__shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(rgb(0 0 0 / 0.36), rgb(0 0 0 / 0) 92px), linear-gradient(to top, rgb(0 0 0 / 0.22), rgb(0 0 0 / 0) 76px);
-  pointer-events: none;
 }
 
 .wsp-photo[data-enter='1'] {
@@ -390,29 +384,29 @@
 
 @keyframes wsp-on {
   from {
-    transform: translateX(100%);
+    transform: translateX(calc(100% + 34px));
   }
 }
 
 @keyframes wsp-on-back {
   from {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% - 34px));
   }
 }
 
 @keyframes wsp-off {
   to {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% - 34px));
   }
 }
 
 @keyframes wsp-off-back {
   to {
-    transform: translateX(100%);
+    transform: translateX(calc(100% + 34px));
   }
 }
 
-/* The chair's pictures, in a row floating over the foot of the stage: the 3D chair first, then its photographs */
+/* The chair's pictures, in a row at the foot of the stage, on a strip of glass: the 3D chair first, then its photographs */
 .wsp-shots {
   position: absolute;
   bottom: 10px;
@@ -432,8 +426,7 @@
   transform: translateX(-50%);
 }
 
-[data-dark] > .wsp-stage .wsp-shots,
-.wsp-stage[data-shot] .wsp-shots {
+[data-dark] > .wsp-stage .wsp-shots {
   background: rgb(40 40 44 / 0.46);
   box-shadow:
     0 0 0 0.5px rgb(255 255 255 / 0.14),
@@ -462,12 +455,6 @@
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
 }
 
-.wsp-stage[data-shot] .wsp-shot {
-  background: rgb(0 0 0 / 0.4);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.22);
-  color: #fff;
-}
-
 .wsp-shot svg {
   margin-bottom: -5px;
 }
@@ -487,10 +474,6 @@
 .wsp-shot[aria-pressed='true'] {
   outline: 2px solid currentColor;
   outline-offset: 1px;
-}
-
-.wsp-stage[data-shot] .wsp-shot[aria-pressed='true'] {
-  outline-color: #fff;
 }
 
 /* (the picture that comes next by itself: a line along its foot fills while the one on the stage is looked at) */

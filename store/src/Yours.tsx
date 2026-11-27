@@ -98,9 +98,9 @@ const NO_NAME = ['Your name', 'here']
 
 /** The three stores, as My VIP leads to them (the desk's window has the same three: src/apps/MyVip.tsx). */
 const DOORS: { room: Room; name: string; says: string }[] = [
-  { room: 'art', name: 'ArtStore', says: 'Six pieces, in editions of fifty.' },
-  { room: 'books', name: 'Books', says: 'Five books, two on pre-order.' },
-  { room: 'chairs', name: 'Workspace', says: 'The chair, in every color.' },
+  { room: 'art', name: 'ArtStore', says: 'Tech Culture art for your walls' },
+  { room: 'books', name: 'Books', says: 'Beautifully designed reading material' },
+  { room: 'chairs', name: 'Workspace', says: 'Your new daily driver' },
 ]
 
 export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop: Shop; phone: boolean; backend: Backend; onChange: () => void; onSignOut: () => void }) {

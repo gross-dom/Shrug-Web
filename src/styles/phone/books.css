@@ -1,80 +1,7 @@
-/* Books on the phone (src/phone/apps/Books.tsx): the desk's shelf and reader (desk/books.css, whose covers,
-   tabs and pages these are) set out for a hand. */
+/* Books on the phone (src/phone/apps/Books.tsx): its two places at the foot, and the desk's reader
+   (desk/books.css, whose pages these are) set out for a hand. */
 
-/* ---- The shelf: two covers to a row, each with its name under it */
-
-.bkp-shelf {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 26px 16px;
-  margin: 0;
-  padding: 14px 20px 0;
-  list-style: none;
-}
-
-.bkp-book {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 100%;
-  color: inherit;
-  text-align: left;
-}
-
-.bkp-book .bk-cover {
-  border-radius: 7px;
-  transition: transform 0.2s var(--ui);
-}
-
-.bkp-book:active .bk-cover {
-  transform: scale(0.97);
-}
-
-/* (a cover drawn from its title: its words at a phone's cover's size) */
-.bkp-book .bk-drawn {
-  padding: 30px 14px 14px;
-}
-
-.bkp-book .bk-drawn b {
-  font-size: 21px;
-}
-
-.bkp-book .bk-tab {
-  top: 8px;
-  right: 8px;
-  font-size: 12px;
-}
-
-.bkp-book > b {
-  margin-top: 11px;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.22;
-  letter-spacing: -0.015em;
-}
-
-.bkp-book > small {
-  margin-top: 2px;
-  color: var(--label-2);
-  font-size: 13.5px;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-}
-
-.bkp-book > .bkp-ships {
-  color: #ffb340;
-}
-
-.bkp-book--wait .bk-cover {
-  box-shadow: none;
-  animation: bkp-wait 1.2s ease-in-out infinite alternate;
-}
-
-@keyframes bkp-wait {
-  to {
-    opacity: 0.5;
-  }
-}
+/* (the shelf is the stores' own: shop.css, the cards) */
 
 .bkp-none {
   margin: 0;
@@ -103,19 +30,15 @@
   justify-content: center;
   gap: 3px;
   border-radius: 26px;
-  color: rgb(255 255 255 / 0.72);
+  color: rgb(60 60 67 / 0.78);
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0;
 }
 
 .bkp-tabs button[aria-selected='true'] {
-  background: rgb(255 255 255 / 0.16);
-  color: #fff;
-}
-
-.bkp-tabs button[aria-selected='true'] svg {
-  color: #ff9f0a;
+  background: rgb(120 120 128 / 0.16);
+  color: #0071e3;
 }
 
 /* ---- The reader: the desk's pages, one to a screen, with nothing at their sides (a swipe or a tap turns them) */

@@ -45,10 +45,11 @@ export const PHONE: Record<PhoneApp, PhoneAppSpec> = {
   terminal: { label: 'Case Studies', Root: TerminalApp, first: () => ({ tone: 'dark' }), eager: true },
   // Workspace is the studio: paper, then whichever color is picked (apps/Workspace.tsx)
   workspace: { label: 'Workspace', Root: WorkspaceApp, first: workspaceFirst },
-  // The stores are black, every screen of them: ArtStore's shelf and a piece's page (apps/Shop.tsx,
-  // Product.tsx), Books' shelf and reader (apps/Books.tsx), and My VIP (apps/MyVip.tsx)
-  store: { label: 'ArtStore', Root: ArtStoreApp, first: () => ({ tone: 'dark' }) },
-  books: { label: 'Books', Root: BooksApp, first: () => ({ tone: 'dark' }) },
+  // The stores are set on the pale gray Apple's own store is (apps/Shop.tsx, Product.tsx, Books.tsx); My VIP
+  // is the one dark screen, as their card is (apps/MyVip.tsx)
+  store: { label: 'ArtStore', Root: ArtStoreApp, first: () => ({ tone: 'grouped' }) },
+  // (the reader's pages are dark; the shelf and a book's page are the stores' pale gray)
+  books: { label: 'Books', Root: BooksApp, first: (top) => ({ tone: top?.startsWith('r:') ? 'dark' : 'grouped' }) },
   myvip: { label: 'My VIP', Root: MyVipApp, first: () => ({ tone: 'dark' }) },
   // Documents, on the gray they lie on: the one-pager (the desk's Preview: here the app is the document), and
   // the folder kept for Shrug's LPs (apps/Papers.tsx)

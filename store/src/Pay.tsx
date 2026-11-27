@@ -36,6 +36,8 @@ interface Props {
   address: ReactNode
   onDone: (placed: Placed) => void
   onError: (said: string) => void
+  /** It is drawn on a pale ground (the phone's checkout): Stripe's own button and form are asked for in their pale dress. Dark, where it is not said. */
+  pale?: boolean
 }
 
 const WHY: Record<string, string> = {
@@ -109,7 +111,7 @@ const stripeJs = () =>
     document.head.append(script)
   }))
 
-function StripePay({ backend, product, option, count, points, cents, stripeKey, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError }: Props) {
+function StripePay({ backend, product, option, count, points, cents, stripeKey, shipTo, needsAddress, email, name, byCard, onCard, onOptions, address, onDone, onError, pale }: Props) {
   const express = useRef<HTMLDivElement>(null)
   const cardBox = useRef<HTMLDivElement>(null)
   const kit = useRef<{ stripe: any; elements: any } | null>(null)
@@ -170,14 +172,16 @@ function StripePay({ backend, product, option, count, points, cents, stripeKey, 
           mode: 'payment',
           amount: cents,
           currency: 'usd',
-          appearance: { theme: 'night', variables: { colorPrimary: '#f5f5f7', colorBackground: '#17171a', colorText: '#f5f5f7', borderRadius: '12px', fontFamily: 'Inter, -apple-system, system-ui, sans-serif' } },
+          appearance: pale
+            ? { theme: 'stripe', variables: { colorPrimary: '#0071e3', colorBackground: '#ffffff', colorText: '#1d1d1f', borderRadius: '12px', fontFamily: '-apple-system, Inter, system-ui, sans-serif' } }
+            : { theme: 'night', variables: { colorPrimary: '#f5f5f7', colorBackground: '#17171a', colorText: '#f5f5f7', borderRadius: '12px', fontFamily: 'Inter, -apple-system, system-ui, sans-serif' } },
         })
         kit.current = { stripe, elements }
         const postage = postageCents(product)
         const button = elements.create('expressCheckout', {
           buttonType: { applePay: 'plain', googlePay: 'plain' },
-          buttonTheme: { applePay: 'white', googlePay: 'white' },
-          buttonHeight: 52,
+          buttonTheme: pale ? { applePay: 'black', googlePay: 'black' } : { applePay: 'white', googlePay: 'white' },
+          buttonHeight: pale ? 50 : 52,
           // With no address on file the wallet is asked for one, and it is kept
           shippingAddressRequired: needsAddress,
           // Shipping is already in the amount: it is the same wherever the thing goes
@@ -201,7 +205,7 @@ function StripePay({ backend, product, option, count, points, cents, stripeKey, 
       gone = true
       for (const element of made) element.destroy()
     }
-  }, [product.id, option, count, cents, stripeKey, needsAddress]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [product.id, option, count, cents, stripeKey, needsAddress, pale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const waiting = needsAddress && !shipTo
   const payByCard = async () => {

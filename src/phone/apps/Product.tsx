@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Minus, Plus, X } from 'lucide-react'
+import { Layers, Minus, Plus, Truck, X } from 'lucide-react'
 import { dueCents, fmtCents, has, MOST_AT_ONCE, mostPoints, postageCents, priceCents, sellsMany, soldOut, times, wayOf, type Product } from '../../../store/shared/rules'
 import { shotsOf, type Shot } from '../../../store/src/pictures'
-import { badgeOf, keptOf, owned, shipsOf, shipsWhen } from '../../../store/src/words'
+import { keptOf, owned, shipsOf, shipsWhen } from '../../../store/src/words'
 import { askLogIn } from '../../os/account'
 import { useShop } from '../../os/shop'
 import { haptic } from '../native'
@@ -11,17 +11,20 @@ import { checkOut } from './Buying'
 import { drawnOn, optionName, Pic } from './storebits'
 import { Wallet } from './Wallet'
 
-// One thing the store sells, as a screen of the phone's own: its photographs across the top, edge to edge
-// and square (or upright, for a thing that is: a book), drawn across with a finger; under them what it is
-// and what it costs; and at the foot, always in reach, its price and the one button. The button brings
-// checkout up over this page (Buying.tsx): nobody leaves the page to buy.
+// One thing the store sells, as a screen of the phone's own, set out as Apple's store sets one out (Dom,
+// 27 Nov: its product page is the basis for ours): its name and what it costs at the head of the page; its
+// photographs in a card with rounded corners, on the photograph's own ground so that it sits flush in it,
+// the next one showing at the card's side, drawn across with a finger, with dots under it that say which;
+// then what there is to choose (a colour, how many), what is known of its sending, and, floating at the foot
+// and always in reach, its price and the one button. The button brings checkout up over this page
+// (Buying.tsx): nobody leaves the page to buy.
 
 /** The colours a thing comes in, as they are drawn. An option may carry its own ("Sand #c8b89a"); these are known without. */
 const COLORS: Record<string, string> = { black: '#1b1c1f', stone: '#b9b2a3', white: '#f4f4f1' }
 const colorOf = (option: string): string | null => /\s(#[0-9a-f]{3,8})$/i.exec(option)?.[1] ?? COLORS[optionName(option).toLowerCase()] ?? null
 
-/** A photograph, whole, on black, over everything: the gallery cuts each to its own shape, and a piece is
- * worth seeing to its edges. A finger draws the next across here too; a press anywhere, or its x, puts it away. */
+/** A photograph, whole, on black, over everything: the card cuts a photograph to its own shape, and a piece
+ * is worth seeing to its edges. A finger draws the next across here too; a press anywhere, or its x, puts it away. */
 function Whole({ product, shots, at, onClose }: { product: Product; shots: Shot[]; at: number; onClose: () => void }) {
   const track = useRef<HTMLDivElement>(null)
   const close = useRef<HTMLButtonElement>(null)
@@ -44,7 +47,8 @@ function Whole({ product, shots, at, onClose }: { product: Product; shots: Shot[
         if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') track.current?.scrollBy({ left: (e.key === 'ArrowRight' ? 1 : -1) * track.current.clientWidth, behavior: 'smooth' })
       }}
     >
-      <div ref={track} className="pd-whole__track" onClick={onClose} onScroll={(e) => setSeen(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}>
+      {/* (it can be drawn across with the keyboard too: the arrows, on the track or on its x) */}
+      <div ref={track} className="pd-whole__track" tabIndex={0} role="group" aria-label={`Picture ${seen + 1} of ${shots.length}`} onClick={onClose} onScroll={(e) => setSeen(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}>
         {shots.map((shot, n) => (
           <div key={shot.full} className="pd-whole__slide">
             <img src={shot.full} srcSet={shot.set} sizes="100vw" alt={shot.alt ?? (shots.length > 1 ? `${product.name}: picture ${n + 1} of ${shots.length}` : product.name)} decoding="async" draggable={false} />
@@ -55,7 +59,7 @@ function Whole({ product, shots, at, onClose }: { product: Product; shots: Shot[
         <X size={20} strokeWidth={2.4} aria-hidden />
       </button>
       {shots.length > 1 && (
-        <div className="pd-dots" aria-hidden>
+        <div className="pd-dots pd-dots--over" aria-hidden>
           {shots.map((shot, n) => (
             <i key={shot.full} data-at={n === seen || undefined} />
           ))}
@@ -65,36 +69,45 @@ function Whole({ product, shots, at, onClose }: { product: Product; shots: Shot[
   )
 }
 
-/** A product's photographs, side by side: a finger draws the next across, and it comes to rest whole. */
+/** A product's photographs, each in a card, side by side: a finger draws the next across, and it comes to rest. */
 function Gallery({ product, shots, drawn }: { product: Product; shots: Shot[]; drawn: string }) {
   const track = useRef<HTMLDivElement>(null)
   const [seen, setSeen] = useState(0)
   /** Which photograph is being looked at whole, over the page; none, as a rule. */
   const [whole, setWhole] = useState<number | null>(null)
-  // (upright for a thing that is photographed upright; square for everything else)
-  const tall = (shots[0]?.aspect ?? 1) < 0.9
-  const to = (n: number) => track.current?.scrollTo({ left: n * track.current.clientWidth, behavior: 'smooth' })
+  /** How far it is from one card to the next. */
+  const stride = () => {
+    const el = track.current
+    const first = el?.firstElementChild as HTMLElement | null
+    const next = first?.nextElementSibling as HTMLElement | null
+    return first && next ? next.offsetLeft - first.offsetLeft : (el?.clientWidth ?? 1)
+  }
+  const to = (n: number) => track.current?.scrollTo({ left: n * stride(), behavior: 'smooth' })
   // Nothing photographed yet: a book is drawn as its cover, from its title, as the shelf draws it; anything
   // else is its name on the same ground
   if (!shots.length)
     return (
-      <div className="pd-gallery pd-gallery--none" data-book={product.kind === 'Book' || undefined} aria-hidden>
-        <span className="pd-drawn" style={{ background: drawn }}>
-          <b>{product.name}</b>
-          {product.kind === 'Book' && <small>Shrug</small>}
-        </span>
+      <div className="pd-gallery" aria-hidden>
+        <div className="pd-track" data-one>
+          <span className="pd-slide pd-slide--drawn" data-book={product.kind === 'Book' || undefined}>
+            <span className="pd-drawn" style={{ background: drawn }}>
+              <b>{product.name}</b>
+              {product.kind === 'Book' && <small>Shrug</small>}
+            </span>
+          </span>
+        </div>
       </div>
     )
   return (
-    <div className="pd-gallery" data-tall={tall || undefined}>
+    <div className="pd-gallery">
       <div
         ref={track}
         className="pd-track"
+        data-one={shots.length === 1 || undefined}
         role="group"
         aria-roledescription="carousel"
         aria-label={shots.length > 1 ? `${product.name}: picture ${seen + 1} of ${shots.length}` : product.name}
-        tabIndex={shots.length > 1 ? 0 : undefined}
-        onScroll={(e) => setSeen(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}
+        onScroll={(e) => setSeen(Math.min(shots.length - 1, Math.round(e.currentTarget.scrollLeft / Math.max(1, stride()))))}
         onKeyDown={(e) => {
           if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') e.preventDefault(), to(Math.min(shots.length - 1, Math.max(0, seen + (e.key === 'ArrowRight' ? 1 : -1))))
         }}
@@ -104,12 +117,12 @@ function Gallery({ product, shots, drawn }: { product: Product; shots: Shot[]; d
             <Pic
               src={shot.full}
               srcSet={shot.set}
-              sizes="100vw"
+              sizes="90vw"
               alt=""
               loading={n === 0 ? 'eager' : 'lazy'}
               decoding="async"
               draggable={false}
-              // (a thing on a plain ground is shown whole on that ground, which runs to the edges; a photograph fills the place)
+              // (a thing on a plain ground is shown whole on that ground, which is the card's; a photograph fills the card)
               data-whole={shot.ground ? '' : undefined}
               style={shot.at && !shot.ground ? { objectPosition: shot.at } : undefined}
             />
@@ -133,21 +146,6 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
   const product = got?.shop.products.find((p) => p.id === id) ?? null
   const [option, setOption] = useState('')
   const [count, setCount] = useState(1)
-  // Over its photographs the bar is only its buttons; once they have gone up under it, it is a bar again,
-  // with the thing's name in it
-  const [past, setPast] = useState(false)
-  const page = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = page.current
-    if (!el) return
-    const read = () => {
-      const gallery = el.querySelector<HTMLElement>('.pd-gallery')
-      setPast(!!gallery && el.scrollTop > gallery.offsetHeight - 96)
-    }
-    el.addEventListener('scroll', read, { passive: true })
-    read()
-    return () => el.removeEventListener('scroll', read)
-  }, [product?.id])
   // (something that comes one way is that way)
   const only = product && product.options.length === 1 ? product.options[0]! : ''
   useEffect(() => {
@@ -156,8 +154,16 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
 
   if (!got || !product)
     return (
-      <Screen title={back} tone="dark" className="pd" leading={<BackButton label={back} />}>
-        {got ? <p className="st-none">That is not in the store just now.</p> : <div className="pd-gallery pd-gallery--wait" aria-busy="true" aria-label="Opening" />}
+      <Screen title={back} tone="grouped" className="pd" leading={<BackButton label={back} />}>
+        {got ? (
+          <p className="st-none">That is not in the store just now.</p>
+        ) : (
+          <div className="pd-gallery" aria-busy="true" aria-label="Opening">
+            <div className="pd-track" data-one>
+              <span className="pd-slide pd-slide--wait" />
+            </div>
+          </div>
+        )}
       </Screen>
     )
 
@@ -173,7 +179,6 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
   const asked = has(shop.orders, product)
   const bought = owned(shop.orders, product)
   const out = soldOut(product) && way !== 'request'
-  const badge = badgeOf(product, shop.orders)
   const kept = keptOf(product)
   const colors = product.options.map(colorOf)
   const label = colors.length > 0 && colors.every(Boolean) ? 'Color' : 'Choice'
@@ -198,29 +203,28 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
     return { text: product.status === 'Pre-order' ? 'Pre-order' : price + postage === 0 ? 'Claim' : 'Buy', act: go }
   })()
 
-  /** What it costs, as the foot says it: a figure, and under it what else there is to know of it. */
+  /** What one of it costs, as the head of the page says it. */
+  const each = way === 'request' ? 'On request' : product.priceHidden ? 'Log in for price' : way === 'reserve' ? 'Pre-order' : priceCents(product) === 0 ? 'Free' : fmtCents(priceCents(product))
+  /** What it comes to, as the foot says it: a figure, and under it what else there is to know of it. */
   const figure = way === 'request' ? 'On request' : product.priceHidden ? 'Log in for price' : way === 'reserve' ? '' : price === 0 ? 'Free' : fmtCents(price)
-  const under =
-    way !== 'buy' || product.priceHidden || out
-      ? ''
-      : most > 0 && price > 0
-        ? `${fmtCents(least)} with your points`
-        : postage > 0
-          ? `+ ${fmtCents(postage)} shipping`
-          : ''
+  const under = way !== 'buy' || product.priceHidden || out ? '' : most > 0 && price > 0 ? `${fmtCents(least)} with your points` : postage > 0 ? `+ ${fmtCents(postage)} shipping` : ''
+  // What can be said for certain of its sending, and of which of an edition it is
+  const ships = [product.status === 'Pre-order' && way === 'buy' && sent ? `Ships ${sent}` : '', way === 'buy' && !product.priceHidden && postage > 0 ? `${fmtCents(postageCents(product))} shipping` : ''].filter(Boolean)
+  const edition = product.editionOf ? [`Edition of ${product.editionOf}`, product.left !== null && !out ? `${product.left} left` : ''].filter(Boolean) : []
+  // Under its name: what it costs and, where there is something to say of it in a word, that
+  const said = bought ? 'You own this' : out ? 'Sold out' : product.status === 'Pre-order' && way === 'buy' ? 'Pre-order' : ''
 
   return (
     <Screen
       title={product.name}
-      tone="dark"
-      // (its first photograph is under the status bar: the bar's ink is chosen for that, pale ground or dark)
-      under={past ? undefined : shots[0]?.ground ? 'pale' : 'dark'}
-      className={`pd${past ? ' pd--past' : ''}`}
-      scrollRef={page}
+      large
+      subtitle={[each, said].filter(Boolean).join(' · ')}
+      tone="grouped"
+      className="pd"
       leading={<BackButton label={back} />}
       trailing={<Wallet />}
       foot={
-        <div className="ios-glass pd-buy" data-dark role="region" aria-label={`Buy ${product.name}`}>
+        <div className="ios-glass pd-buy" role="region" aria-label={`Buy ${product.name}`}>
           <span className="pd-buy__price">
             {figure && <b>{figure}</b>}
             {under && <small>{under}</small>}
@@ -233,27 +237,21 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
     >
       <Gallery product={product} shots={shots} drawn={drawnOn(shop.products, product)} />
       <div className="pd-info">
-        {((badge && !bought) || kept) && (
-          <p className="pd-badges">
-            {badge && !bought && <span data-tone={badge.tone}>{badge.text}</span>}
-            {kept && <span>{kept}</span>}
-          </p>
-        )}
-        <h3 className="pd-name">{product.name}</h3>
-        {bought && <p className="pd-owned">You own this</p>}
         {product.description && <p className="pd-words">{product.description}</p>}
-        {product.status === 'Pre-order' && !asked && !bought && <p className="pd-words pd-ships">{way === 'reserve' ? `Reserve a copy and we’ll let you know when it’s ready.${dated ? ` It ships ${dated}.` : ''}` : sent ? `Ships ${sent}.` : 'We’ll email you when it ships.'}</p>}
+        {kept && <p className="pd-words">{kept}</p>}
+        {product.status === 'Pre-order' && way === 'reserve' && !asked && !bought && <p className="pd-words">Reserve a copy and we’ll let you know when it’s ready.{dated ? ` It ships ${dated}.` : ''}</p>}
         {way !== 'buy' && asked && <p className="pd-words">{way === 'request' ? 'We’ll write to you about it.' : 'We’ll let you know when it’s ready.'} It is in My VIP.</p>}
 
         {product.options.length > 0 && (
           <div className="pd-choice">
-            <span className="pd-label">
-              {label} <b>{option ? optionName(option) : 'Choose one'}</b>
-            </span>
+            <h4 className="pd-label">
+              {label}
+              {option ? ` - ${optionName(option)}` : ''}
+            </h4>
             <div className="pd-swatches" role="group" aria-label={label}>
               {product.options.map((choice) => (
                 <button key={choice} type="button" aria-pressed={option === choice} aria-label={optionName(choice)} onClick={() => (haptic(), setOption(choice))}>
-                  <span style={{ background: colorOf(choice) ?? '#3a3a3c' }} />
+                  <span style={{ background: colorOf(choice) ?? '#d2d2d7' }} />
                 </button>
               ))}
             </div>
@@ -261,20 +259,48 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
         )}
 
         {many && way === 'buy' && !out && (
-          <div className="pd-qty">
-            <span className="pd-label">Quantity</span>
+          <div className="pd-box pd-qty">
+            <span>
+              <small>Quantity</small>
+              <output aria-live="polite">{count}</output>
+            </span>
             <span className="pd-stepper" role="group" aria-label="Quantity">
               <button type="button" aria-label="One fewer" disabled={count <= 1} onClick={() => (haptic(), setCount((n) => Math.max(1, n - 1)))}>
-                <Minus size={18} strokeWidth={2.4} aria-hidden />
+                <Minus size={18} strokeWidth={2.2} aria-hidden />
               </button>
-              <output aria-live="polite">{count}</output>
               <button type="button" aria-label="One more" disabled={count >= MOST_AT_ONCE} onClick={() => (haptic(), setCount((n) => Math.min(MOST_AT_ONCE, n + 1)))}>
-                <Plus size={18} strokeWidth={2.4} aria-hidden />
+                <Plus size={18} strokeWidth={2.2} aria-hidden />
               </button>
             </span>
           </div>
         )}
 
+        {(ships.length > 0 || edition.length > 0) && (
+          <dl className="pd-facts">
+            {ships.length > 0 && (
+              <div>
+                <dt>
+                  <Truck size={22} strokeWidth={1.5} aria-hidden />
+                  Shipping:
+                </dt>
+                {ships.map((line) => (
+                  <dd key={line}>{line}</dd>
+                ))}
+              </div>
+            )}
+            {edition.length > 0 && (
+              <div>
+                <dt>
+                  <Layers size={22} strokeWidth={1.5} aria-hidden />
+                  Edition:
+                </dt>
+                {edition.map((line) => (
+                  <dd key={line}>{line}</dd>
+                ))}
+              </div>
+            )}
+          </dl>
+        )}
       </div>
     </Screen>
   )

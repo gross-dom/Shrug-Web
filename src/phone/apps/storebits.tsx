@@ -1,4 +1,4 @@
-import type { ImgHTMLAttributes } from 'react'
+import type { ImgHTMLAttributes, ReactNode } from 'react'
 import type { Product } from '../../../store/shared/rules'
 import { shotsOf } from '../../../store/src/pictures'
 
@@ -43,5 +43,30 @@ export function Pic(props: ImgHTMLAttributes<HTMLImageElement>) {
       }}
       onLoad={(e) => e.currentTarget.setAttribute('data-in', '')}
     />
+  )
+}
+
+/** One thing on a shelf, as Apple's own store sets one out (Dom, 27 Nov: its listing is the basis for ours):
+ * a white card on the gray, its picture in the middle on its own ground, a quiet line where there is
+ * something to say of it (how many are left, that it is a pre-order), its name, what it costs, and a small
+ * blue button. The whole card is the way to its page. `small`: two to a row. */
+export function StoreCard({ small, pic, note, tone, name, price, under, action, quiet, more, onOpen }: { small?: boolean; pic: ReactNode; note?: string | null; tone?: string; name: string; price?: string | null; under?: string | null; action: string; quiet?: boolean; more?: string; onOpen: () => void }) {
+  return (
+    <button type="button" className={`st-card${small ? ' st-card--small' : ''}`} onClick={onOpen}>
+      <span className="st-card__pic">{pic}</span>
+      {note && (
+        <small className="st-card__note" data-tone={tone}>
+          {note}
+        </small>
+      )}
+      <b className="st-card__name">{name}</b>
+      {price && <span className="st-card__price">{price}</span>}
+      {under && <small className="st-card__under">{under}</small>}
+      <span className="st-card__gap" aria-hidden />
+      <span className="st-card__go" data-quiet={quiet || undefined}>
+        {action}
+      </span>
+      {more && <span className="sr-only">{more}</span>}
+    </button>
   )
 }

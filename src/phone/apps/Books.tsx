@@ -10,19 +10,22 @@ import { pop, push } from '../system'
 import { BackButton, GlassGroup, GroupButton, Menu, NavStack, Screen, useApp } from '../ui'
 import { StoreSheets } from './Buying'
 import { ProductPage } from './Product'
+import { Pic, StoreCard } from './storebits'
 import { Wallet } from './Wallet'
+// (the reader's pages are the desk's own: desk/books.css)
 import '../../styles/desk/books.css'
 import '../../styles/phone/shop.css'
 import '../../styles/phone/books.css'
 
 // Books on the phone (Dom, 27 Nov: it was the store's shelf of books in a tab of its own, and is to be the
-// thing the desk has). It is the desk's Books (src/apps/Books.tsx) as an iPhone has its own: a shelf of
-// covers under a large title, and at the screen's foot the two places it has, Book Store and Library.
+// thing the desk has). At the screen's foot are the two places it has, Book Store and Library.
 //
-// In the Book Store a book opens on its own page, which is the store's (in this app's frame: Shop.tsx): its
-// photographs, what it costs, how many, and the same checkout as everywhere. The Library is the books that
-// can be read here (src/data/editions.ts): one opens in the reader, a page at a time, turned by a swipe or a
-// tap at either side of the page, with the contents and the size of the letters in its bar.
+// The Book Store is a shelf set out as Apple's own store sets one out (its listing is the basis for the
+// three stores): the books two to a row, each a card with its cover, its name, what it costs and a small
+// button. A book opens on its own page (Product.tsx, the same screen a piece has in ArtStore), where it is
+// bought through the tray every store has. The Library is the books that can be read here (src/data/
+// editions.ts): one opens in the reader, a page at a time, turned by a swipe or a tap at either side of the
+// page, with the contents and the size of the letters in its bar.
 //
 // What there is and what it costs is the store's to say (os/shop.ts). A cover is the book's own photograph
 // where Shrug has supplied one, and is drawn from its title where it has not, as on the desk.
@@ -45,16 +48,16 @@ function priceOf(book: Product): string | null {
 }
 
 const TONES = ['#1f3a5f', '#5a2a3c', '#2f4a3a', '#4a3a6a', '#6a4a22']
-const Drawn = ({ title, n }: { title: string; n: number }) => (
-  <span className="bk-drawn" aria-hidden style={{ background: `linear-gradient(160deg, ${TONES[n % TONES.length]}, #101114)` }}>
-    <b>{title}</b>
-    <small>Shrug</small>
-  </span>
-)
-function Cover({ book, n }: { book: Product; n: number }) {
-  const shot = shotsOf(book)[0]
-  if (shot) return <img src={shot.small} srcSet={shot.set} sizes="50vw" alt="" loading="lazy" decoding="async" draggable={false} style={shot.at ? { objectPosition: shot.at } : undefined} />
-  return <Drawn title={book.name} n={n} />
+/** A book's cover, standing in its card: its photograph, or its title drawn where there is none. */
+function Cover({ book, n, title }: { book: Product | null; n: number; title: string }) {
+  const shot = book ? shotsOf(book)[0] : undefined
+  if (shot) return <Pic src={shot.small} srcSet={shot.set} sizes="45vw" alt="" loading="lazy" decoding="async" draggable={false} data-whole={shot.ground ? '' : undefined} style={shot.at && !shot.ground ? { objectPosition: shot.at } : undefined} />
+  return (
+    <span className="st-cover" aria-hidden style={{ background: `linear-gradient(160deg, ${TONES[n % TONES.length]}, #101114)` }}>
+      <b>{title}</b>
+      <small>Shrug</small>
+    </span>
+  )
 }
 
 function Shelves() {
@@ -73,12 +76,12 @@ function Shelves() {
     <Screen
       title={side === 'library' ? 'Library' : 'Book Store'}
       large
-      tone="dark"
+      tone="grouped"
       trailing={<Wallet />}
-      className="bkp"
+      className="st bkp"
       scrollRef={scroller}
       foot={
-        <div className="ios-glass bkp-tabs" data-dark role="tablist" aria-label="Books">
+        <div className="ios-glass bkp-tabs" role="tablist" aria-label="Books">
           <button type="button" role="tab" aria-selected={side === 'store'} onClick={() => setSide('store')}>
             <BookOpen size={21} strokeWidth={1.9} aria-hidden />
             Book Store
@@ -92,70 +95,56 @@ function Shelves() {
     >
       {side === 'library' ? (
         EDITIONS.length === 0 ? (
-          <p className="bkp-none">Nothing to read here yet. A book that can be read on screen is kept here.</p>
+          <p className="st-none">Nothing to read here yet. A book that can be read on screen is kept here.</p>
         ) : (
-          <ol className="bkp-shelf">
+          <ol className="st-list st-list--two">
             {EDITIONS.map((edition, n) => {
               const of = bookOf(edition.of)
               return (
                 <li key={edition.of}>
-                  <button type="button" className="bkp-book" onClick={() => push(READ + edition.of)}>
-                    <span className="bk-cover">
-                      {of ? <Cover book={of} n={books.indexOf(of)} /> : <Drawn title={edition.title} n={n} />}
-                      <i className="bk-tab">Preview</i>
-                    </span>
-                    <b>{edition.title}</b>
-                    <small>Made by Shrug</small>
-                    <span className="sr-only">
-                      . Read the preview. {n + 1} of {EDITIONS.length}
-                    </span>
-                  </button>
+                  <StoreCard small pic={<Cover book={of} n={of ? books.indexOf(of) : n} title={edition.title} />} note="Preview" name={edition.title} action="Read" more={`. Read the preview. ${n + 1} of ${EDITIONS.length}`} onOpen={() => push(READ + edition.of)} />
                 </li>
               )
             })}
           </ol>
         )
       ) : !shelf ? (
-        <ol className="bkp-shelf" aria-busy="true" aria-label="Opening the Book Store">
+        <ol className="st-list st-list--two" aria-busy="true" aria-label="Opening the Book Store">
           {[0, 1, 2, 3].map((n) => (
             <li key={n} aria-hidden>
-              <span className="bkp-book bkp-book--wait">
-                <span className="bk-cover" />
+              <span className="st-card st-card--small st-card--wait">
+                <span className="st-card__pic" />
               </span>
             </li>
           ))}
         </ol>
       ) : shelf.down ? (
-        <p className="bkp-none" role="status">
+        <p className="st-none" role="status">
           The Book Store isn’t answering. Nothing was charged. Close Books and open it again in a moment.
         </p>
       ) : books.length === 0 ? (
-        <p className="bkp-none">No books just now. New ones land here first.</p>
+        <p className="st-none">No books just now. New ones land here first.</p>
       ) : (
-        <ol className="bkp-shelf">
+        <ol className="st-list st-list--two">
           {books.map((b, n) => {
-            const tab = tabOf(b, orderOf(b))
-            const price = priceOf(b)
+            const mine = orderOf(b)
+            const tab = tabOf(b, mine)
+            const out = soldOut(b)
             return (
               <li key={b.id}>
-                <button type="button" className="bkp-book" onClick={() => push(BOOK + b.id)}>
-                  <span className="bk-cover">
-                    <Cover book={b} n={n} />
-                    {tab && (
-                      <i className="bk-tab" data-mine={orderOf(b) ? '' : undefined}>
-                        {tab}
-                      </i>
-                    )}
-                  </span>
-                  <b>{b.name}</b>
-                  <small>
-                    Made by Shrug{price ? ` · ${price}` : ''}
-                  </small>
-                  {shipsWhen(b, true) && <small className="bkp-ships">Ships {shipsWhen(b, true)}</small>}
-                  <span className="sr-only">
-                    {n + 1} of {books.length}
-                  </span>
-                </button>
+                <StoreCard
+                  small
+                  pic={<Cover book={b} n={n} title={b.name} />}
+                  note={tab}
+                  tone={mine ? 'on' : tab === 'Pre-order' ? 'gold' : undefined}
+                  name={b.name}
+                  price={priceOf(b)}
+                  under={shipsWhen(b, true) ? `Ships ${shipsWhen(b, true)}` : null}
+                  action={out ? 'Sold Out' : mine ? 'View' : tab === 'Pre-order' ? 'Pre-order' : 'Buy'}
+                  quiet={out}
+                  more={`. ${n + 1} of ${books.length}`}
+                  onOpen={() => push(BOOK + b.id)}
+                />
               </li>
             )
           })}

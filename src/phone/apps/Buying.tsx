@@ -18,10 +18,11 @@ import '../../styles/phone/shop.css'
 
 // Buying, on the phone: one tray (ui.tsx, `Tray`), up over whatever is being bought, wherever that is: a
 // piece in ArtStore, a book in Books, a chair in Workspace. It is the store's own checkout (store/src/
-// Product.tsx) drawn as the phone's: what it is, where it is going, the sums (with the points a member would
-// use, theirs to ease off), and the ways to pay; then, in the same tray, the receipt. The sums are the
-// store's rules (store/shared/rules.ts) and the payment is the store's own (store/src/Pay.tsx): nothing about
-// money is worked out here that is not worked out there.
+// Product.tsx) drawn as the phone's: what it is, the points a member would use (theirs to ease off), where it
+// is going, the total, and the ways to pay, set as Apple's store sets its two (Apple Pay's in black, the
+// other in blue); then, in the same tray, the receipt. The sums are the store's rules (store/shared/rules.ts)
+// and the payment is the store's own (store/src/Pay.tsx): nothing about money is worked out here that is not
+// worked out there.
 //
 // Nobody is taken anywhere to buy: the tray comes up over the page they were on, and put away leaves them
 // on it. An address is asked for only once a way to finish is chosen that needs one (a card, or points
@@ -134,7 +135,7 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
           : 'We’ll email you when it is on its way.'
     const to = onFile(typed) ? typed : shop.member.shipTo
     return (
-      <Tray label="Receipt" dark step="done" title={<span className="co-head">{head}</span>} leading={<Tick />}>
+      <Tray label="Receipt" step="done" title={<span className="co-head">{head}</span>} leading={<Tick />}>
         <div className="co" data-at="done">
           <p className="co-words">{words}</p>
           <dl className="co-rows">
@@ -185,7 +186,7 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
   // ---- The address on file, being changed
   if (changing !== null)
     return (
-      <Tray label="Shipping address" dark step="address" title={<span className="co-head">Ship to</span>}>
+      <Tray label="Shipping address" step="address" title={<span className="co-head">Ship to</span>}>
         <div className="co" data-at="address">
           {area(changing, setChanging)}
           {said}
@@ -206,7 +207,7 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
   const waiting = finishing && needsAddress && !onFile(typed)
   const verb = way === 'request' ? 'Request' : way === 'reserve' ? 'Reserve' : null
   return (
-    <Tray label="Checkout" dark step="review" title={<span className="co-head">{verb ?? 'Checkout'}</span>}>
+    <Tray label="Checkout" step="review" title={<span className="co-head">{verb ?? 'Checkout'}</span>}>
       <div className="co" data-at="review">
         <div className="co-item">
           <Thumb product={product} drawn={drawnOn(shop.products, product)} />
@@ -230,7 +231,31 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
           </div>
         )}
 
-        {way === 'buy' && (
+        {/* The points they would use, theirs to ease off: said, with the knob under it */}
+        {choosing && (
+          <div className="co-points">
+            <p className="co-points__said">
+              <b>
+                <PointsMark size={15} />
+                {fmtPoints(points)} <small>of your {fmtPoints(balance)} points</small>
+              </b>
+              <span>{points > 0 ? `−${fmtCents(offCents(points))}` : fmtCents(0)}</span>
+            </p>
+            <input
+              type="range"
+              className="co-range"
+              min={0}
+              max={most}
+              step={most % 10 === 0 ? 10 : 1}
+              value={points}
+              style={{ ['--at' as string]: `${most ? (points / most) * 100 : 0}%` }}
+              aria-label={`Points to use, up to ${fmtPoints(most)}`}
+              aria-valuetext={`${fmtPoints(points)} points, ${fmtCents(offCents(points))} off, ${fmtCents(due)} to pay`}
+              onChange={(e) => setWanted(Number(e.target.value))}
+            />
+          </div>
+        )}
+        {way === 'buy' && ((ships && onFile(shop.member.shipTo)) || postage > 0 || price + postage > 0) && (
           <dl className="co-rows">
             {ships && onFile(shop.member.shipTo) && (
               <div className="co-row">
@@ -241,27 +266,6 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
                     <ChevronRight size={16} strokeWidth={2.6} aria-hidden />
                   </button>
                 </dd>
-              </div>
-            )}
-            {choosing && (
-              <div className="co-row co-points">
-                <dt>
-                  <PointsMark size={15} />
-                  {fmtPoints(points)} <small>of your {fmtPoints(balance)} points</small>
-                </dt>
-                <dd>{points > 0 ? `−${fmtCents(offCents(points))}` : fmtCents(0)}</dd>
-                <input
-                  type="range"
-                  className="co-range"
-                  min={0}
-                  max={most}
-                  step={most % 10 === 0 ? 10 : 1}
-                  value={points}
-                  style={{ ['--at' as string]: `${most ? (points / most) * 100 : 0}%` }}
-                  aria-label={`Points to use, up to ${fmtPoints(most)}`}
-                  aria-valuetext={`${fmtPoints(points)} points, ${fmtCents(offCents(points))} off, ${fmtCents(due)} to pay`}
-                  onChange={(e) => setWanted(Number(e.target.value))}
-                />
               </div>
             )}
             {postage > 0 && <Row name="Shipping">{fmtCents(postage)}</Row>}
@@ -301,6 +305,7 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
                 address={addressField}
                 onDone={finish}
                 onError={setError}
+                pale
               />
             </div>
           ) : (
@@ -342,7 +347,7 @@ export function CheckoutTray() {
   const product = got && asked ? (got.shop.products.find((p) => p.id === asked.id) ?? null) : null
   if (!asked || !got || !product)
     return (
-      <Tray label="Checkout" dark title={<span className="co-head">Checkout</span>}>
+      <Tray label="Checkout" title={<span className="co-head">Checkout</span>}>
         <div className="co" aria-busy={!got || undefined}>
           {got && <p className="co-words">That is not in the store just now.</p>}
         </div>

@@ -55,10 +55,10 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
     ['contacts', 'finder', []], ['company', 'finder', ['co:Varda']], ['company with no site', 'finder', ['co:HQ Trivia']], ['my card', 'finder', ['me']],
     ['notes list', 'notes', ['f:faqs']], ['note', 'notes', ['f:faqs', 'n:4']], ['folders', 'notes', []], ['new folder', 'notes', [], 'new-folder'], ['notes folder', 'notes', ['f:notes']],
     ['terminal', 'terminal', []],
-    // (the phone's own apps for the stores, the one-pager and Updates, since 27 Nov. The store's pages in a frame
-    // are the store's own, and are looked at where the desk's window holds them: terminal-vip-axe.cjs)
+    // (the phone's own apps for the stores, the one-pager and Updates, since 27 Nov: every screen of them is
+    // the phone's own now, with no frame, so all of them are looked at here)
     ['workspace: the colors', 'workspace', []], ['workspace: a studio', 'workspace', ['studio']], ['workspace: the sixteen more', 'workspace', [], 'more'], ['workspace: owners', 'workspace', ['owners']], ['workspace: BTS', 'workspace', ['bts']],
-    ['books: the shelf', 'books', []], ['books: the reader', 'books', ['r:frequently asked']], ['artstore', 'store', []], ['my vip', 'myvip', []], ['the one-pager', 'preview', []], ['updates, locked', 'updates', []], ['log in', 'updates', [], 'login'],
+    ['books: the shelf', 'books', []], ['books: a book', 'books', ['b:chromatic']], ['books: the reader', 'books', ['r:frequently asked']], ['artstore', 'store', []], ['artstore: a piece', 'store', ['p:art-1']], ['my vip', 'myvip', []], ['the one-pager', 'preview', []], ['updates, locked', 'updates', []], ['log in', 'updates', [], 'login'],
   ]) { await at(app, stack, sheet ?? null); if (app === 'workspace' || app === 'preview') await sleep(900); await run(where) }
   // Screens reached by their own controls
   const must = async (what, step) => { try { await step() } catch (e) { errors.push(`could not reach ${what}: ${e.message.split('\n')[0]}`) } }
@@ -81,6 +81,21 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await at('notes', ['f:faqs']); await top().locator('button[aria-label="More"]').first().tap(); await sleep(500); await run('notes menu'); await page.keyboard.press('Escape'); await sleep(300)
   await top().locator('input[aria-label*="Search" i]').fill('drop'); await sleep(500); await run('notes search')
   await at('notes', []); await top().locator('button[aria-label="New Note"]').first().tap(); await sleep(900); await page.keyboard.type('Mine'); await run('own note')
+  // Buying, as a visitor and then as the member the payment makes: a photograph whole, checkout's tray, the
+  // receipt, the tray that asks for a number, My VIP as a sheet and as a screen, and the account's tray
+  await at('store', ['p:art-1']); await sleep(600)
+  await must('a photograph, whole', async () => { await top().locator('.pd-slide').first().tap({ timeout: 8000 }); await sleep(500) }); await run('artstore: a photograph whole')
+  await must('the photograph put away', async () => { await top().locator('.pd-whole__close').tap({ timeout: 8000 }); await sleep(400) })
+  await must('checkout', async () => { await top().locator('.pd-buy__go').tap({ timeout: 8000 }); await sleep(900) }); await run('checkout, nobody logged in')
+  await must('a purchase', async () => { await page.locator('.ios-tray .co-fields input').first().fill('Axe Guest', { timeout: 8000 }); await page.locator('.ios-tray .co-fields input').nth(1).fill('axe.guest@example.com'); await page.locator('.ios-tray .co-pay .ui-btn').first().tap(); await page.waitForSelector('.ios-tray .co[data-at="done"]', { timeout: 8000 }) }); await sleep(500); await run('the receipt')
+  await must('the number asked for', async () => { await page.locator('.ios-tray .ui-btn', { hasText: 'Add Phone Number' }).tap({ timeout: 8000 }); await sleep(900) }); await run('log in: a number')
+  await must('that tray put away', async () => { await page.locator('.ios-sheet.ios-tray button[aria-label="Close"]').tap({ timeout: 8000 }); await sleep(700) })
+  await must('checkout, logged in', async () => { await at('store', ['p:art-2']); await sleep(500); await top().locator('.pd-buy__go').tap({ timeout: 8000 }); await sleep(900) }); await run('checkout, logged in')
+  await at('store', ['p:art-2'], 'vip'); await sleep(500); await run('my vip, over a store')
+  await at('myvip', []); await sleep(500); await run('my vip, logged in')
+  await at('myvip', [], 'login'); await sleep(600); await run('the account')
+  await must('a name to change', async () => { await page.locator('.ios-tray .lt-row', { hasText: 'Name and Picture' }).tap({ timeout: 8000 }); await sleep(600) }); await run('log in: a name')
+  await must('a picture to change', async () => { await page.locator('.ios-tray .lt-go').tap({ timeout: 8000 }); await sleep(900) }); await run('log in: a picture')
   await browser.close()
   console.log(`${screens} screens looked at${errors.length ? '; page errors: ' + [...new Set(errors)].slice(0, 4).join(' | ') : ''}`)
   if (!found.size) return console.log('no violations')

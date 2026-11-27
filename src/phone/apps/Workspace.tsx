@@ -122,7 +122,6 @@ function MoreSheet() {
   }
   return (
     <Sheet label="More colors" title="Custom Coloring" className="wsp-more">
-      <p className="wsp-more__says">Sixteen more, each made to order in two to three weeks.</p>
       <div className="wsp-more__grid" role="group" aria-label="Colors">
         {MORE.map(chosenOf).map((c) => (
           <button key={c.id} type="button" className="wsp-swatch" style={{ background: ground(c), color: inkOn(c.color) }} aria-pressed={kept?.id === c.id} onClick={() => pickMore(c)}>
@@ -258,7 +257,7 @@ function Studio({ top }: { top: boolean }) {
   const buy = () => product && checkOut(product)
 
   return (
-    <Screen title={chosen.name} center={<></>} leading={<BackButton label="Colors" />} trailing={<Wallet />} tone={dark ? 'dark' : 'plain'} ground={chosen.shift ? { top: chosen.shift[0]!, foot: chosen.shift[chosen.shift.length - 1]! } : chosen.color} under={covered ? 'dark' : undefined} fixed className="wsp wsp-studio">
+    <Screen title={chosen.name} center={<></>} leading={<BackButton label="Colors" />} trailing={<Wallet />} tone={dark ? 'dark' : 'plain'} ground={chosen.shift ? { top: chosen.shift[0]!, foot: chosen.shift[chosen.shift.length - 1]! } : chosen.color} fixed className="wsp wsp-studio">
       <div className="wsp-st" data-dark={dark || undefined} data-photo={covered || undefined} style={{ background: ground(chosen), color: ink }}>
         <div className="wsp-stage" data-shot={covered || undefined} onPointerDownCapture={() => setAuto(false)}>
           <span className="wsp-light" aria-hidden />

@@ -1,12 +1,20 @@
-/* The stores on the phone, drawn as the phone's own screens: a shelf (apps/Shop.tsx), one thing's page
-   (apps/Product.tsx), checkout's tray (apps/Buying.tsx) and My VIP (apps/MyVip.tsx). One ground runs through
-   all of them: black, as the stores are, with what sits on it (a card, a row of sums) a shade up from it; a
-   sheet or a tray over them is that shade itself, and what sits on it one shade up again. */
+/* The stores on the phone, drawn as the phone's own screens: a shelf (apps/Shop.tsx, Books.tsx), one thing's
+   page (apps/Product.tsx), checkout's tray (apps/Buying.tsx) and My VIP (apps/MyVip.tsx).
+
+   Apple's own store is the basis for the three of them (Dom, 27 Nov, with its screens beside ours): a pale
+   gray page with white cards on it; a thing's picture in the middle of its card, on the picture's own ground
+   so that it sits flush in it; its name, what it costs and a small blue button under it; on a thing's page a
+   card with rounded corners for its photographs, with dots beneath; and its own inks: near-black words,
+   gray for what is said quietly, one blue for what is pressed. My VIP is the one dark screen: it is their
+   card, and a card is black. */
 .st,
 .pd,
-.vp-screen {
-  --cell: #1c1c1e;
-  --field: rgb(118 118 128 / 0.24);
+.co {
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #86868b;
+  --line: #d2d2d7;
+  --buy: #0071e3;
 }
 
 /* In a bar's end: the balance (which brings My VIP up), or Log In; in My VIP's, their own picture */
@@ -26,46 +34,57 @@
   padding: 0;
 }
 
-/* ---- A shelf: two to a row ---- */
-.st-grid {
+/* ---- A shelf: a card to each thing. In single file (ArtStore), or two to a row (Books) ---- */
+.st-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px 12px;
+  gap: 12px;
   margin: 8px 0 0;
   padding: 0 16px;
   list-style: none;
 }
 
-.st-tile {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  letter-spacing: -0.02em;
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
+.st-list--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.st-pic {
-  position: relative;
-  display: block;
-  overflow: hidden;
-  aspect-ratio: 4 / 5;
-  margin-bottom: 9px;
-  border-radius: 18px;
-  background: #1c1c1e;
+.st-list > li {
+  display: flex;
+}
+
+.st-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 26px 22px 26px;
+  border: 0;
+  border-radius: 22px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: -0.02em;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
   transition: transform 0.2s var(--ui);
 }
 
-.st-tile:active .st-pic {
-  transform: scale(0.965);
+.st-card:active {
+  transform: scale(0.98);
 }
 
-.st-pic img,
+.st-card__pic {
+  display: block;
+  flex: none;
+  width: 100%;
+  height: min(62vw, 250px);
+  height: min(62cqw, 250px);
+  margin-bottom: 18px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.st-card__pic img,
 .pd-slide img,
 .co-thumb img {
   display: block;
@@ -74,67 +93,174 @@
   object-fit: cover;
 }
 
-/* (a picture comes up as it arrives, and is not dropped in a strip at a time: storebits.tsx marks it when it has) */
-.st-pic img,
-.pd-slide img {
-  opacity: 0;
-  transition: opacity 0.28s ease;
-}
-
-.st-pic img[data-in],
-.pd-slide img[data-in] {
-  opacity: 1;
-}
-
-/* (a thing on a plain ground is shown whole, on that ground) */
-.st-pic img[data-whole],
+/* (a thing on a plain ground is shown whole, on that ground, which is the card's own. A photograph's white is
+   seldom quite the card's: laid on it as ink is, what is nearly white in it is the card's white, and no edge
+   of the photograph shows) */
+.st-card__pic img[data-whole],
 .pd-slide img[data-whole],
 .co-thumb img[data-whole] {
   object-fit: contain;
 }
 
-.st-badge,
-.pd-badges span {
-  padding: 4px 9px;
-  border-radius: 99px;
-  font-size: 12px;
-  font-style: normal;
+.st-card__pic img[data-whole],
+.pd-slide img[data-whole] {
+  mix-blend-mode: multiply;
+}
+
+/* (a picture comes up as it arrives, and is not dropped in a strip at a time: storebits.tsx marks it when it has) */
+.st-card__pic img,
+.pd-slide img {
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+.st-card__pic img[data-in],
+.pd-slide img[data-in] {
+  opacity: 1;
+}
+
+/* (with nothing photographed: a piece's name on a ground of its own; a book as a cover the shape of one) */
+.st-drawn,
+.st-cover {
+  display: flex;
+  color: #fff;
+  text-align: left;
+}
+
+.st-drawn {
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.st-cover {
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  aspect-ratio: 3 / 4;
+  margin: 0 auto;
+  padding: 18px 12px 12px;
+  border-radius: 2px 6px 6px 2px;
+  box-shadow:
+    inset 2px 0 0 rgb(255 255 255 / 0.08),
+    0 6px 16px rgb(0 0 0 / 0.22);
+}
+
+.st-cover b {
+  font-family: 'New York', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.st-cover small {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.st-card__note {
+  margin-bottom: 5px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+}
+
+/* (a pre-order, in the orange Apple's store says New in; theirs already, in green) */
+.st-card__note[data-tone='gold'] {
+  color: #b64400;
+}
+
+.st-card__note[data-tone='on'] {
+  color: #1b7f37;
+}
+
+.st-card__name {
+  font-size: 19px;
   font-weight: 600;
   line-height: 1.2;
-  letter-spacing: 0;
-  white-space: nowrap;
+  text-wrap: balance;
 }
 
-.st-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgb(20 20 22 / 0.62);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  color: #fff;
-}
-
-.st-badge[data-tone='gold'],
-.pd-badges span[data-tone='gold'] {
-  color: #e6c987;
-}
-
-.st-tile b {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.st-tile small {
-  margin-top: 1px;
-  color: var(--label-2);
+.st-card__price {
+  margin-top: 8px;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
 
-.st-tile--wait .st-pic {
+.st-card__under {
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.st-card__go {
+  display: grid;
+  flex: none;
+  place-items: center;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 18px;
+  background: var(--buy);
+  color: #fff;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+/* (what keeps the button clear of the words over it, and at the foot of its card: the buttons of a row are
+   then in a line whatever is over them) */
+.st-card__gap {
+  flex: 1;
+  min-height: 16px;
+}
+
+.st-card__go[data-quiet] {
+  background: #e8e8ed;
+  color: var(--ink-2);
+}
+
+/* Two to a row: the same card, smaller */
+.st-card--small {
+  padding: 16px 12px 18px;
+  border-radius: 20px;
+}
+
+.st-card--small .st-card__pic {
+  height: 39vw;
+  height: 39cqw;
+  margin-bottom: 14px;
+}
+
+.st-card--small .st-card__name {
+  font-size: 16px;
+}
+
+.st-card--small .st-card__price {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.st-card--small .st-card__go {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 14.5px;
+}
+
+.st-card--wait {
+  min-height: 300px;
   animation: st-wait 1.2s ease-in-out infinite alternate;
+}
+
+.st-card--small.st-card--wait {
+  min-height: 250px;
 }
 
 @keyframes st-wait {
@@ -145,109 +271,47 @@
 
 .st-none {
   margin: 24px 20px;
-  color: var(--label-2);
+  color: var(--ink-2, var(--label-2));
   font-size: 16px;
   line-height: 1.4;
 }
 
 /* ---- One thing's page ---- */
-
-/* Its photographs begin at the very top of the screen, under the bar's buttons, and run edge to edge */
 .pd > .ios-screen__scroll {
-  padding-top: 0;
-  padding-bottom: calc(var(--foot-gap) + 64px + 28px);
+  padding-bottom: calc(var(--foot-gap) + 62px + 28px);
 }
 
-/* (nothing is smudged over the photograph, and the page says its name under it: the bar is only its
-   buttons until the photographs have gone up under it, and then a bar again, with the name in it) */
-.pd:not(.pd--past) .ios-bar__edge {
-  opacity: 0;
-}
-
-.pd .ios-bar__title {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.pd.pd--past .ios-bar__title {
-  opacity: 1;
-}
-
-/* (square, but never so tall that what it is and what it costs are off the foot of a short screen: on one
-   that is, or a phone on its side, it is as wide as the screen and a share of its height) */
-.pd-gallery {
-  position: relative;
-  /* (the first is for a browser that has no container units yet) */
-  height: min(100vw, 58vh);
-  height: min(100cqw, 58cqh);
-  background: #1c1c1e;
-}
-
-.pd-gallery[data-tall] {
-  height: min(125vw, 60vh);
-  height: min(125cqw, 60cqh);
-}
-
-.pd-gallery--none {
-  display: grid;
-  place-items: center;
-  background: #0d0d0f;
-}
-
-/* (with nothing photographed: its name, drawn. A book's is a cover the shape of one, standing on the dark) */
-.pd-drawn {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 100%;
-  height: 100%;
-  padding: calc(var(--status) + var(--bar) + 28px) 24px 28px;
-  color: #fff;
-}
-
-.pd-drawn b {
-  font-family: 'New York', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  font-size: 34px;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+/* Its name and what it costs, at the head of the page, at the size Apple's store says them */
+.pd .ios-large {
+  margin-bottom: 2px;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 33px;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
-.pd-drawn small {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  opacity: 0.8;
+.pd .ios-large-sub {
+  margin: 0 20px 4px;
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
-.pd-gallery--none[data-book] .pd-drawn {
-  width: 54%;
-  height: auto;
-  aspect-ratio: 3 / 4;
-  margin-top: calc((var(--status) + var(--bar)) / 2);
-  padding: 34px 18px 16px;
-  border-radius: 3px 8px 8px 3px;
-  box-shadow:
-    inset 3px 0 0 rgb(255 255 255 / 0.08),
-    0 18px 44px rgb(0 0 0 / 0.6);
-}
-
-.pd-gallery--none[data-book] .pd-drawn b {
-  font-size: 24px;
-}
-
-.pd-gallery--wait {
-  animation: st-wait 1.2s ease-in-out infinite alternate;
+/* Its photographs: a card each, with rounded corners, the next showing at the side; a finger draws it across */
+.pd-gallery {
+  margin-top: 14px;
 }
 
 .pd-track {
   display: flex;
-  height: 100%;
+  gap: 12px;
+  padding: 0 16px;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
+  scroll-padding-inline: 16px;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -257,25 +321,304 @@
   display: none;
 }
 
-.pd-track:focus-visible {
-  outline-offset: -4px;
+/* (so that the last card comes to rest with the page's margin beside it, as the first has) */
+.pd-track:not([data-one])::after {
+  content: '';
+  flex: none;
+  width: 4px;
 }
 
 .pd-slide {
   display: block;
   flex: none;
-  width: 100%;
-  height: 100%;
+  width: calc(100% - 26px);
+  aspect-ratio: 10 / 7;
   padding: 0;
+  overflow: hidden;
   border: 0;
-  background: none;
-  scroll-snap-align: center;
+  border-radius: 22px;
+  background: #fff;
+  scroll-snap-align: start;
   scroll-snap-stop: always;
   -webkit-tap-highlight-color: transparent;
 }
 
+.pd-track[data-one] .pd-slide {
+  width: 100%;
+}
+
 .pd-slide:focus-visible {
   outline-offset: -4px;
+}
+
+.pd-slide--wait {
+  animation: st-wait 1.2s ease-in-out infinite alternate;
+}
+
+/* (with nothing photographed: its name, drawn. A book's is a cover the shape of one, standing in the card) */
+.pd-slide--drawn {
+  display: grid;
+  place-items: center;
+}
+
+.pd-drawn {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  color: #fff;
+  text-align: left;
+}
+
+.pd-drawn b {
+  font-family: 'New York', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.pd-drawn small {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.pd-slide--drawn[data-book] .pd-drawn {
+  width: auto;
+  height: 82%;
+  aspect-ratio: 3 / 4;
+  padding: 24px 14px 14px;
+  border-radius: 3px 8px 8px 3px;
+  box-shadow:
+    inset 3px 0 0 rgb(255 255 255 / 0.08),
+    0 10px 26px rgb(0 0 0 / 0.26);
+}
+
+.pd-slide--drawn[data-book] .pd-drawn b {
+  font-size: 19px;
+}
+
+/* Which photograph: dots, beneath the card */
+.pd-dots {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 0 2px;
+}
+
+.pd-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a1a1a6;
+  transition: background-color 0.2s ease;
+}
+
+.pd-dots i[data-at] {
+  background: var(--ink, #1d1d1f);
+}
+
+.pd-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 20px 0;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.pd-words {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1.42;
+  text-wrap: pretty;
+}
+
+/* What there is to choose: its name in the heading, as Apple's store has "Colour - Black" */
+.pd-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.pd-label {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pd-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pd-swatches button {
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.16s ease;
+}
+
+.pd-swatches button[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px var(--buy);
+}
+
+.pd-swatches span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.16);
+}
+
+/* How many: a box with a line round it, as that store's own choices are */
+.pd-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 62px;
+  padding: 8px 10px 8px 18px;
+  border: 1px solid var(--ink-3);
+  border-radius: 14px;
+}
+
+.pd-qty small {
+  display: block;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.pd-qty output {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pd-stepper {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.pd-stepper button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #e8e8ed;
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pd-stepper button:disabled {
+  color: #b8b8bd;
+}
+
+.pd-stepper button:not(:disabled):active {
+  background: #dcdce1;
+}
+
+/* What is known of its sending, and of the edition: a sign, a word in bold, and the lines under it */
+.pd-facts {
+  display: grid;
+  gap: 16px;
+  margin: 6px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 16px;
+  line-height: 1.42;
+}
+
+.pd-facts dt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.pd-facts dt svg {
+  flex: none;
+  color: var(--ink);
+}
+
+.pd-facts dd {
+  margin: 0 0 0 32px;
+}
+
+/* At the foot, always in reach: what it comes to, and the one button */
+.pd-buy {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 8px 9px 8px 22px;
+  border-radius: 31px;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.pd-buy__price {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pd-buy__price b {
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pd-buy__price small {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pd-buy__go {
+  flex: none;
+  height: 44px;
+  margin-left: auto;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--buy);
+  color: #fff;
+  font: inherit;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.pd-buy__go:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.pd-buy__go:disabled {
+  background: #e8e8ed;
+  color: var(--ink-2);
 }
 
 /* A photograph, whole, on black, over the whole of the app (its bar and its foot too): Product.tsx, `Whole` */
@@ -305,6 +648,10 @@
 
 .pd-whole__track::-webkit-scrollbar {
   display: none;
+}
+
+.pd-whole__track:focus-visible {
+  outline-offset: -4px;
 }
 
 .pd-whole__slide {
@@ -340,241 +687,20 @@
   height: 44px;
 }
 
-.pd-whole .pd-dots {
-  bottom: calc(var(--home) + 4px);
-}
-
-/* Which photograph: dots, floating over the foot of it */
-.pd-dots {
+.pd-dots--over {
   position: absolute;
-  bottom: 12px;
-  left: 50%;
-  display: flex;
-  gap: 6px;
-  padding: 7px 9px;
-  border-radius: 99px;
-  background: rgb(30 30 32 / 0.42);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  transform: translateX(-50%);
+  right: 0;
+  bottom: calc(var(--home) + 6px);
+  left: 0;
   pointer-events: none;
 }
 
-.pd-dots i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.42);
-  transition: background-color 0.2s ease;
+.pd-dots--over i {
+  background: rgb(255 255 255 / 0.4);
 }
 
-.pd-dots i[data-at] {
+.pd-dots--over i[data-at] {
   background: #fff;
-}
-
-.pd-info {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 18px 20px 0;
-  letter-spacing: -0.02em;
-}
-
-.pd-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-}
-
-.pd-badges span {
-  background: var(--fill);
-  color: var(--label-2);
-}
-
-.pd-name {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  text-wrap: balance;
-}
-
-.pd-owned {
-  margin: -4px 0 0;
-  color: #30d158;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.pd-words {
-  margin: 0;
-  color: var(--label-2);
-  font-size: 16px;
-  line-height: 1.42;
-  text-wrap: pretty;
-}
-
-.pd-label {
-  color: var(--label-2);
-  font-size: 15px;
-}
-
-.pd-label b {
-  color: var(--label);
-  font-weight: 600;
-}
-
-.pd-choice {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-.pd-swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.pd-swatches button {
-  width: 40px;
-  height: 40px;
-  padding: 4px;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  box-shadow: inset 0 0 0 2px transparent;
-  transition: box-shadow 0.16s ease;
-}
-
-.pd-swatches button[aria-pressed='true'] {
-  box-shadow: inset 0 0 0 2px #fff;
-}
-
-.pd-swatches span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.3);
-}
-
-.pd-qty {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 52px;
-}
-
-.pd-qty {
-  margin-top: 6px;
-  padding: 0 8px 0 16px;
-  border-radius: 18px;
-  background: var(--cell);
-}
-
-.pd-qty .pd-label {
-  color: var(--label);
-  font-size: 16px;
-}
-
-.pd-stepper {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 12px;
-  background: var(--fill);
-}
-
-.pd-stepper button {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 36px;
-  border: 0;
-  background: none;
-  color: var(--label);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.pd-stepper button:disabled {
-  color: var(--label-3);
-}
-
-.pd-stepper button:not(:disabled):active {
-  opacity: 0.5;
-}
-
-.pd-stepper output {
-  min-width: 26px;
-  font-size: 17px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-/* At the foot, always in reach: what it costs, and the one button */
-.pd-buy {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-  min-height: 64px;
-  padding: 8px 8px 8px 22px;
-  border-radius: 32px;
-  letter-spacing: -0.02em;
-}
-
-.pd-buy__price {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.pd-buy__price b {
-  font-size: 19px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.pd-buy__price small {
-  overflow: hidden;
-  color: rgb(235 235 245 / 0.72);
-  font-size: 13px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.pd-buy__go {
-  flex: none;
-  height: 48px;
-  margin-left: auto;
-  padding: 0 26px;
-  border: 0;
-  border-radius: 24px;
-  background: #fff;
-  color: #000;
-  font: inherit;
-  font-size: 17px;
-  font-weight: 600;
-  -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 0.16s ease,
-    opacity 0.16s ease;
-}
-
-.pd-buy__go:not(:disabled):active {
-  transform: scale(0.96);
-}
-
-.pd-buy__go:disabled {
-  background: rgb(255 255 255 / 0.16);
-  color: rgb(255 255 255 / 0.62);
 }
 
 /* ---- Checkout: a tray over whatever is being bought ---- */
@@ -582,7 +708,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  color: var(--label);
+  color: var(--ink);
   font-size: 16px;
   letter-spacing: -0.02em;
 }
@@ -625,6 +751,7 @@
   overflow: hidden;
   border-radius: 12px;
   background: var(--cell);
+  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.08);
 }
 
 .co-what {
@@ -641,7 +768,7 @@
 }
 
 .co-what small {
-  color: var(--label-2);
+  color: var(--ink-2);
   font-size: 14px;
 }
 
@@ -651,19 +778,19 @@
   font-variant-numeric: tabular-nums;
 }
 
-.co-rows {
+.co-rows,
+.co-points {
   margin: 0;
   padding: 0 16px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--cell);
 }
 
 .co-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0 12px;
+  gap: 12px;
   min-height: 48px;
 }
 
@@ -672,14 +799,7 @@
 }
 
 .co-row dt {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--label-2);
-}
-
-.co-row dt small {
-  font-size: 14px;
+  color: var(--ink-2);
 }
 
 .co-row dd {
@@ -691,23 +811,40 @@
 
 .co-total dt,
 .co-total dd {
-  color: var(--label);
+  color: var(--ink);
   font-size: 18px;
   font-weight: 700;
 }
 
+/* The points they would use: how many, what that takes off, and a knob to ease them off with */
 .co-points {
-  padding: 12px 0 8px;
+  padding-top: 13px;
+  padding-bottom: 6px;
 }
 
-.co-points dt {
-  color: var(--label);
+.co-points__said {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+
+.co-points__said b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
 }
 
-.co-points dt small {
-  color: var(--label-2);
+.co-points__said b small {
+  color: var(--ink-2);
+  font-size: 14px;
   font-weight: 400;
+}
+
+.co-points__said span {
+  font-variant-numeric: tabular-nums;
 }
 
 .co-change {
@@ -719,22 +856,21 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--label);
+  color: var(--ink);
   font: inherit;
   text-align: right;
 }
 
 .co-change svg {
   flex: none;
-  color: var(--label-3);
+  color: var(--ink-3);
 }
 
-/* How many points: a white track as far as they are used, and a knob to draw along it */
 .co-range {
-  flex-basis: 100%;
+  display: block;
   width: 100%;
   height: 34px;
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   background: none;
   -webkit-appearance: none;
   appearance: none;
@@ -743,13 +879,13 @@
 .co-range::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 3px;
-  background: linear-gradient(to right, #fff var(--at, 100%), rgb(120 120 128 / 0.36) var(--at, 100%));
+  background: linear-gradient(to right, var(--buy) var(--at, 100%), rgb(120 120 128 / 0.24) var(--at, 100%));
 }
 
 .co-range::-moz-range-track {
   height: 6px;
   border-radius: 3px;
-  background: linear-gradient(to right, #fff var(--at, 100%), rgb(120 120 128 / 0.36) var(--at, 100%));
+  background: linear-gradient(to right, var(--buy) var(--at, 100%), rgb(120 120 128 / 0.24) var(--at, 100%));
 }
 
 .co-range::-webkit-slider-thumb {
@@ -760,8 +896,8 @@
   border-radius: 50%;
   background: #fff;
   box-shadow:
-    0 0.5px 4px rgb(0 0 0 / 0.2),
-    0 3px 10px rgb(0 0 0 / 0.3);
+    0 0.5px 4px rgb(0 0 0 / 0.16),
+    0 3px 10px rgb(0 0 0 / 0.2);
   -webkit-appearance: none;
   appearance: none;
 }
@@ -773,8 +909,8 @@
   border-radius: 50%;
   background: #fff;
   box-shadow:
-    0 0.5px 4px rgb(0 0 0 / 0.2),
-    0 3px 10px rgb(0 0 0 / 0.3);
+    0 0.5px 4px rgb(0 0 0 / 0.16),
+    0 3px 10px rgb(0 0 0 / 0.2);
 }
 
 .co-fields {
@@ -790,7 +926,7 @@
 .co-field > span:not(.sr-only) {
   display: block;
   margin: 0 4px 6px;
-  color: var(--label-2);
+  color: var(--ink-2);
   font-size: 14px;
 }
 
@@ -801,14 +937,14 @@
   width: 100%;
   padding: 0 16px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 14px;
   outline: 0;
   background: var(--field);
   color: var(--label);
   font: inherit;
   font-size: 17px;
   letter-spacing: -0.02em;
-  caret-color: var(--blue);
+  caret-color: var(--buy, var(--blue));
   -webkit-appearance: none;
   appearance: none;
 }
@@ -820,9 +956,8 @@
 /* (a field the browser has filled in for them keeps the tray's colours, and is not turned pale yellow) */
 .co-field input:-webkit-autofill,
 .co-field textarea:-webkit-autofill {
-  box-shadow: inset 0 0 0 100px #2c2c2e;
-  -webkit-text-fill-color: #fff;
-  caret-color: var(--blue);
+  box-shadow: inset 0 0 0 100px #ececf0;
+  -webkit-text-fill-color: #1d1d1f;
 }
 
 .co-field textarea,
@@ -839,12 +974,12 @@
 
 .co-field :is(input, textarea):focus,
 .vp-edit textarea:focus {
-  box-shadow: inset 0 0 0 1.5px var(--blue);
+  box-shadow: inset 0 0 0 1.5px var(--buy, var(--blue));
 }
 
 .co-words {
   margin: 0;
-  color: var(--label-2);
+  color: var(--ink-2);
   line-height: 1.36;
   text-wrap: pretty;
 }
@@ -855,7 +990,7 @@
 
 .co-fine {
   margin: 0;
-  color: var(--label-3);
+  color: var(--ink-3);
   font-size: 13px;
   line-height: 1.35;
   text-align: center;
@@ -866,19 +1001,20 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: #e6c987;
+  color: #8a5a00;
   font-size: 15px;
 }
 
 .co-said,
 .co .ui-note {
   margin: 0;
-  color: #ff6961;
+  color: #d70015;
   font-size: 15px;
   line-height: 1.3;
 }
 
-/* The ways to pay: the store's own (store/src/Pay.tsx), drawn as the tray's buttons */
+/* The ways to pay: the store's own (store/src/Pay.tsx), drawn as that store's two buttons are: Apple Pay's in
+   black, the other in blue, each the width of the tray with its corners rounded */
 .co-pay,
 .co .pay-card:not([hidden]) {
   display: flex;
@@ -904,15 +1040,14 @@
   flex: none;
   place-items: center;
   width: 100%;
-  height: 52px;
+  height: 50px;
   padding: 0 18px;
   border: 0;
-  border-radius: 26px;
-  background: #fff;
-  color: #000;
+  border-radius: 14px;
+  background: #000;
+  color: #fff;
   font: inherit;
   font-size: 17px;
-  font-weight: 600;
   letter-spacing: -0.02em;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
@@ -922,17 +1057,16 @@
 }
 
 .co .ui-btn.sec {
-  background: var(--cell);
-  color: var(--label);
+  background: var(--buy);
 }
 
 .co .ui-btn:not(:disabled):active {
-  transform: scale(0.975);
+  transform: scale(0.98);
 }
 
 .co .ui-btn:disabled,
 .co .ui-btn.off {
-  opacity: 0.4;
+  opacity: 0.36;
 }
 
 /* (busy: the button keeps its shape and a wheel turns in it, as a button on an iPhone waits) */
@@ -949,15 +1083,10 @@
   width: 20px;
   height: 20px;
   margin: auto;
-  border: 2.5px solid rgb(0 0 0 / 0.18);
-  border-top-color: #000;
+  border: 2.5px solid rgb(255 255 255 / 0.28);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: co-spin 0.7s linear infinite;
-}
-
-.co .ui-btn.sec[data-busy]::after {
-  border-color: rgb(255 255 255 / 0.2);
-  border-top-color: #fff;
 }
 
 @keyframes co-spin {
@@ -972,7 +1101,7 @@
   padding: 0 8px;
   border: 0;
   background: none;
-  color: var(--blue);
+  color: #0066cc;
   font: inherit;
   font-size: 16px;
   -webkit-tap-highlight-color: transparent;
@@ -1423,25 +1552,22 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .st-pic,
+  .st-card,
   .pd-buy__go,
   .co .ui-btn {
     transition: none;
   }
 
-  .st-tile--wait .st-pic,
-  .pd-gallery--wait {
-    animation: none;
-  }
-
-  .st-pic img,
-  .pd-slide img {
-    transition: none;
-  }
-
+  .st-card--wait,
+  .pd-slide--wait,
   .pd-whole,
   .pd-whole__slide img,
   .co-check {
     animation: none;
+  }
+
+  .st-card__pic img,
+  .pd-slide img {
+    transition: none;
   }
 }

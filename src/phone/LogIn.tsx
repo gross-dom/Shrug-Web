@@ -410,6 +410,8 @@ function Menu({ who, onEdit, onPhone }: { who: Member; onEdit: () => void; onPho
   const dollars = who.points / POINTS_PER_DOLLAR
   const { app } = useApp()
   const to = (id: 'myvip' | 'updates') => {
+    // (over a store, My VIP is the sheet a store has for it, so that nobody is taken out of the store)
+    if (id === 'myvip' && (app === 'store' || app === 'books' || app === 'workspace')) return openSheet('vip')
     closeSheet()
     // (My VIP, asked for from My VIP itself, is where they are)
     if (id !== app) setTimeout(() => launchApp(id), 60)
@@ -475,8 +477,8 @@ export function LogInSheet() {
   const member = who.status === 'member' ? who : null
   // It is as dark or as light as the app it is over: dark over a store, pale over the folder of updates
   const { app } = useApp()
-  // (and dark over Workspace whatever colour is on its stage: checkout's tray there is, and the two are a pair)
-  const dark = useStore(chrome, (c) => c[app] === 'dark' || app === 'workspace')
+  // (never dark over a store, whatever colour Workspace has on its stage: checkout's tray there is pale, and the two are a pair)
+  const dark = useStore(chrome, (c) => c[app] === 'dark' && app !== 'workspace' && app !== 'store' && app !== 'books')
   if (who.status === 'checking')
     return (
       <Tray label="Log in" dark={dark}>

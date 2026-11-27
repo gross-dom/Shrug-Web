@@ -49,11 +49,11 @@ const WORDS: Record<string, string> = { Founder: 'Founder', LP: 'Limited partner
 /** What is on a card where a name would be, until its member has given one. */
 const NO_NAME = ['Your name', 'here']
 
-/** The three stores, as My VIP leads to them. */
+/** The three stores, as My VIP leads to them, each in Dom's line for it (27 Nov). */
 const DOORS = [
-  { app: 'store', name: 'ArtStore', says: 'Six pieces, in editions of fifty.' },
-  { app: 'books', name: 'Books', says: 'Five books, two on pre-order.' },
-  { app: 'workspace', name: 'Workspace', says: 'The chair, in every color.' },
+  { app: 'store', name: 'ArtStore', says: 'Tech Culture art for your walls' },
+  { app: 'books', name: 'Books', says: 'Beautifully designed reading material' },
+  { app: 'workspace', name: 'Workspace', says: 'Your new daily driver' },
 ] as const
 
 const Pts = ({ n, sign = '' }: { n: number; sign?: string }) => (
@@ -236,8 +236,9 @@ export function VipBody({ doors }: { doors?: boolean }) {
       </dl>
       <p className="vp-fine">{POINTS_EXPLAINED}</p>
 
+      {doors && <h3 className="vp-sect">Our Shops</h3>}
       {doors && (
-        <nav className="vp-group" aria-label="The stores">
+        <nav className="vp-group" aria-label="Our Shops">
           {DOORS.map((door) => (
             <button key={door.app} type="button" className="vp-row" onClick={() => launchApp(door.app)}>
               <span className="vp-who">
