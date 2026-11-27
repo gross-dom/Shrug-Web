@@ -1320,25 +1320,22 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 }
 
 /* From one app straight into another: the new one slides in from the right, over the one it came from */
+/* One app opened from inside another (Dom, 27 Nov: it came in from the side, and looked as if it were being
+   made there). It is there at once instead: a flat screen in its own colour, white or black, over the app it
+   is leaving, with its own screens up on that a blink later, as an iPhone shows an app's launch screen and
+   then the app. The one underneath stays where it is until it is covered */
 .sb-slot[data-slide='in'] > .sb-card {
-  box-shadow: -12px 0 32px rgb(0 0 0 / 0.16);
-  animation: sb-slide-in 0.46s var(--spring);
+  animation: sb-flash-in 0.14s ease-out both;
 }
 
-@keyframes sb-slide-in {
+@keyframes sb-flash-in {
   from {
-    transform: translateX(100%);
+    opacity: 0;
   }
 }
 
-.sb-slot[data-slide='under'] > .sb-card {
-  animation: sb-slide-under 0.46s var(--spring) forwards;
-}
-
-@keyframes sb-slide-under {
-  to {
-    transform: translateX(-28%);
-  }
+.sb-slot[data-slide='in'] .sb-live {
+  animation: sb-live-in 0.2s ease 0.1s both;
 }
 
 /* Brought back by a swipe to the right along the home indicator (Springboard.tsx marks the screen for as
@@ -1346,7 +1343,11 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
    as it does on an iPhone, and the one it covers gives way to the right */
 .ph[data-swept] .sb-slot[data-slide='in'] > .sb-card {
   box-shadow: 12px 0 32px rgb(0 0 0 / 0.16);
-  animation-name: sb-slide-back;
+  animation: sb-slide-back 0.4s var(--spring);
+}
+
+.ph[data-swept] .sb-slot[data-slide='in'] .sb-live {
+  animation: none;
 }
 
 @keyframes sb-slide-back {
@@ -1356,7 +1357,7 @@ html:not([data-input='touch']) :is(.sb-lock, .sb-home, .sb-apps[data-switcher]) 
 }
 
 .ph[data-swept] .sb-slot[data-slide='under'] > .sb-card {
-  animation-name: sb-slide-aside;
+  animation: sb-slide-aside 0.4s var(--spring) forwards;
 }
 
 @keyframes sb-slide-aside {

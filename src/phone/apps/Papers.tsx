@@ -232,7 +232,7 @@ function NotYours({ paper }: { paper: Paper }) {
 
 /** One-pager: the app is the document. */
 export function OnePagerApp() {
-  return <NavStack>{() => <Reader paper={onePager} lead={null} />}</NavStack>
+  return <NavStack>{() => <Reader paper={onePager} />}</NavStack>
 }
 
 // ---- Updates
@@ -300,7 +300,6 @@ function Folder() {
       title="Updates"
       large
       tone="grouped"
-      leading={null}
       className="upp"
       subtitle={lp && who.status === 'member' ? `LP${who.funds.length ? ` · ${fundsOf(who.funds)}` : ''}` : undefined}
       trailing={

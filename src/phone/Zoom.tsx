@@ -30,7 +30,7 @@ import { useReducedMotion } from '../kit/reduced-motion'
 
 /** How long an app takes to open and to be put away. Both follow the phone's spring (`--spring`, ios.css):
  * off from a standstill, most of the way in the first third of the time, and a long soft landing. */
-export const ZOOM = { open: 500, close: 440 }
+export const ZOOM = { open: 400, close: 340 }
 
 export function Zoom({
   open,

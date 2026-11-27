@@ -522,11 +522,12 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
   outline: none;
 }
 
+/* (0.38s: a push on an iPhone is over in about a third of a second, and one that takes longer reads as slow) */
 .ios-page {
   position: absolute;
   inset: 0;
   transition:
-    transform 0.5s var(--spring),
+    transform 0.38s var(--spring),
     visibility 0s;
 }
 
@@ -535,8 +536,8 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
   transform: translateX(-30%);
   visibility: hidden;
   transition:
-    transform 0.5s var(--spring),
-    visibility 0s 0.4s;
+    transform 0.38s var(--spring),
+    visibility 0s 0.3s;
 }
 
 .ios-page[data-pos='gone'] {
@@ -549,7 +550,7 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
 }
 
 .ios-page[data-enter] {
-  animation: ios-push 0.5s var(--spring);
+  animation: ios-push 0.38s var(--spring);
 }
 
 @keyframes ios-push {

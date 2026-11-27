@@ -69,7 +69,7 @@ function Colors() {
     push(STUDIO)
   }
   return (
-    <Screen title="Workspace" center={<Mark />} leading={null} trailing={<Wallet />} ground={PAPER} className="wsp wsp-first">
+    <Screen title="Workspace" center={<Mark />} trailing={<Wallet />} ground={PAPER} className="wsp wsp-first">
       <h3 className="wsp-head">Your new daily driver</h3>
       <div className="wsp-chips">
         {MAKING_SHOWN.length > 0 && (

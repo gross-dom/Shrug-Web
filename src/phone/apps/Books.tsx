@@ -74,7 +74,6 @@ function Shelves() {
       title={side === 'library' ? 'Library' : 'Book Store'}
       large
       tone="dark"
-      leading={null}
       trailing={<Wallet />}
       className="bkp"
       scrollRef={scroller}

@@ -4,7 +4,7 @@ import { Popover } from '../kit/motion/Popover'
 import { focusFirst, focusLost, holdFocus, useReturnFocus } from '../os/focus'
 import { createStore, useStore } from '../os/store'
 import { COLOR, setTone, sheeted, type Ground } from './chrome'
-import { closeSheet, pop, sys, type PhoneApp } from './system'
+import { closeSheet, goHome, pop, sys, type PhoneApp } from './system'
 
 // The parts every app on the phone is built from, drawn the way the current
 // iOS draws them: a screen with its floating glass buttons and a large title
@@ -245,7 +245,8 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
       {/* Not a <header>: that would make every screen's bar a banner for the whole page, which has one of its own */}
       <div className="ios-bar">
         <div className="ios-bar__edge" aria-hidden />
-        <div className="ios-bar__side">{leading !== undefined ? leading : depth > 0 && <BackButton />}</div>
+        {/* (an app's first screen has the way out there: the Home Screen is what is behind it) */}
+        <div className="ios-bar__side">{leading !== undefined ? leading : depth > 0 ? <BackButton /> : <BackButton label="Home Screen" onClick={goHome} />}</div>
         {/* The bar's own name is for the eye: the screen's heading (its large title, or the one that is only read) says it once */}
         <div className="ios-bar__title" aria-hidden={center === undefined ? true : undefined}>
           {center ?? (
@@ -366,13 +367,13 @@ export function NavStack({ children }: { children: (view: string | null, depth: 
     const el = nav.current
     if (first.current || !el || !motion) return
     el.setAttribute('data-sliding', '')
-    const t = setTimeout(() => el.removeAttribute('data-sliding'), 560)
+    const t = setTimeout(() => el.removeAttribute('data-sliding'), 440)
     return () => clearTimeout(t)
   }, [depth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!seen.gone.length) return
-    const t = setTimeout(() => setSeen((s) => (s.gone.length ? { ...s, gone: [] } : s)), 400)
+    const t = setTimeout(() => setSeen((s) => (s.gone.length ? { ...s, gone: [] } : s)), 320)
     return () => clearTimeout(t)
   }, [seen.gone])
 

@@ -14,7 +14,9 @@ import { LockClock } from './LockClock'
 import { Boundary } from '../os/Boundary'
 import { prefersReducedMotion } from '../os/dom'
 import { firstControl, focusFirst, focusLost } from '../os/focus'
+import { shop, wantShop } from '../os/shop'
 import { createStore, useStore } from '../os/store'
+import { shotsOf } from '../../store/src/pictures'
 import { setTitle } from '../os/title'
 import { DOCKED, ON_HOME, PHONE } from './apps'
 import { companyOf, GROUP_VIEW, MY_CARD } from './apps/routes'
@@ -527,6 +529,26 @@ function Home() {
 
 // ---- Apps ----
 
+let shopWarm = false
+/** Reads the catalogue once, in the background, and fetches the first picture of everything on the two shelves. */
+function warmShop() {
+  if (shopWarm) return
+  shopWarm = true
+  wantShop()
+  const fetched = new Set<string>()
+  const fetchAll = () => {
+    const now = shop.get()
+    if (now.status !== 'ready') return
+    for (const product of now.products) {
+      if (product.kind !== 'Art' && product.kind !== 'Book') continue
+      const small = shotsOf(product)[0]?.small
+      if (small && !fetched.has(small)) (fetched.add(small), (new Image().src = small))
+    }
+  }
+  shop.subscribe(fetchAll)
+  fetchAll()
+}
+
 /** How long a card takes to settle into the App Switcher, or out of it. */
 const SETTLE = 380
 
@@ -548,7 +570,7 @@ function Face({ id, origin }: { id: PhoneApp; origin: string | null }) {
 
 /** How long an app opening out of its icon stays a flat launch screen before its own screens come up: by
  * then it has all but filled the phone (the move is quickest at its start). */
-const REVEAL = 250
+const REVEAL = 190
 
 function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const front = useStore(sys, (s) => s.app === id)
@@ -589,7 +611,9 @@ function AppSlot({ id, order }: { id: PhoneApp; order: number }) {
   const [dest, setDest] = useState<string | null>(null)
   // Cards stay drawn for a moment after the switcher closes, while they clear the screen
   const [lingering, setLingering] = useState(false)
-  // One app opened from inside another slides in over it, as iOS takes you from app to app
+  // One app opened from inside another is there at once, flat and in its own colour, over the one it is
+  // leaving, and its screens come up on that (phone.css): nothing comes in from the side. (`in` and `under`
+  // are still what the two are called: brought back by a swipe along the home indicator, they do slide)
   const [slide, setSlide] = useState<'in' | 'under' | null>(null)
   const wasSwitcher = useRef(switcher)
   const slot = useRef<HTMLDivElement>(null)
@@ -1366,7 +1390,10 @@ export function Springboard({ framed }: { framed: boolean }) {
   useEffect(() => {
     if (!opened) return
     const t = setTimeout(warmLogos, 1200)
-    return () => clearTimeout(t)
+    // The stores are asked what they sell ahead of being opened, too, and their shelves' pictures fetched:
+    // ArtStore and Books then open with their shelves full, and a chair in Workspace with its price
+    const u = setTimeout(warmShop, 700)
+    return () => (clearTimeout(t), clearTimeout(u))
   }, [opened])
   // A reload comes back to where the phone was. A screen that names something the visitor made (a note,
   // a folder of theirs) is only there to come back to if that was kept: where it was not, the phone lands

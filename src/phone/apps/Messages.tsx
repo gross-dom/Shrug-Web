@@ -18,7 +18,7 @@ import { atPerson, linkTo } from '../../os/place'
 import { useStore } from '../../os/store'
 import { sheeted } from '../chrome'
 import { share } from '../native'
-import { closeSheet, goHome, openSheet, pop, push, sys, topOf } from '../system'
+import { closeSheet, openSheet, pop, push, sys, topOf } from '../system'
 import { useNewCount } from '../unread'
 import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, NavStack, scaleOf, Screen, SearchBar, Section, Sheet, SheetHost, Switch, useApp } from '../ui'
 // (The apps' names on this phone. That file draws this one, and this one reads that one's names: each is
@@ -198,12 +198,6 @@ function ListScreen() {
       title="Messages"
       large
       className="msg-list"
-      // The way out: this is as far back as the app goes, and the Home Screen is next
-      trailing={
-        <GlassButton label="Exit to the Home Screen" wide onClick={goHome}>
-          Exit
-        </GlassButton>
-      }
       foot={
         <>
           {/* (The compose button keeps its corner: this takes up the room a search field had) */}

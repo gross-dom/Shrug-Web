@@ -8,7 +8,7 @@ import { useStore } from '../../os/store'
 import { openOnePager } from '../../os/papers'
 import '../../styles/phone/notes.css'
 import { pageUrl, share } from '../native'
-import { closeSheet, goHome, launchAt, openSheet, pop, push, sys, topOf } from '../system'
+import { closeSheet, launchAt, openSheet, pop, push, sys, topOf } from '../system'
 import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, GlassGroup, GroupButton, List, Menu, NavStack, scaleOf, Screen, SearchBar, ShareGlyph, Sheet, SheetHost, type MenuItem } from '../ui'
 import {
   FAQS_ID,
@@ -401,25 +401,18 @@ function Folders() {
       tone="grouped"
       className="notes-screen"
       scrollRef={scroll}
-      // Where Notes has Edit, the way out: this is as far back as the app goes, and the Home Screen is next.
-      // (Edit is still there, across the bar, once there is a folder of the visitor's own to take away)
-      leading={
-        !search.active && !editing && folders.length > 0 ? (
-          <GlassButton label="Edit" wide onClick={() => setEditing(true)}>
-            Edit
-          </GlassButton>
-        ) : undefined
-      }
+      // The way out is the bar's first corner, as on every app's first screen (ui.tsx). Edit is across the
+      // bar, as Notes has it, once there is a folder of the visitor's own to take away
       trailing={
         search.active ? undefined : editing ? (
           <GlassButton label="Done" prominent onClick={() => setEditing(false)}>
             <Check size={22} strokeWidth={2.8} aria-hidden />
           </GlassButton>
-        ) : (
-          <GlassButton label="Exit to the Home Screen" wide onClick={goHome}>
-            Exit
+        ) : folders.length > 0 ? (
+          <GlassButton label="Edit" wide onClick={() => setEditing(true)}>
+            Edit
           </GlassButton>
-        )
+        ) : undefined
       }
       foot={
         <>
