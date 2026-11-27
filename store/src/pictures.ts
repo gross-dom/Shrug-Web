@@ -118,7 +118,9 @@ interface Kept {
   /** It fills whatever shows it, cut to its middle (the lead's landscape, at checkout). */
   fill?: boolean
 }
-const PHOTOS = CHAIR_PHOTOS as Record<string, { name: string; gallery: { kind: string; photos: Kept[] }[]; checkout: Kept[] } | undefined>
+/** (`catalog`: a color's own photograph for Workspace's catalogue, put in its folder by hand and listed by
+ * `tools/chair-photos.py --again`.) */
+const PHOTOS = CHAIR_PHOTOS as Record<string, { name: string; gallery: { kind: string; photos: Kept[] }[]; checkout: Kept[]; catalog?: Kept[] } | undefined>
 
 /** One of them as a picture: the file as Shrug supplied it is its largest size, and is sent only to a screen
  * that can show it. */
@@ -246,7 +248,7 @@ const CATALOG_PICK: Record<string, string> = { 'scuderia-red': 'gallery/03__5F4A
 export function catalogOf(color: string): Shot | null {
   const has = PHOTOS[color]
   if (!has) return null
-  const own = (has as { catalog?: Kept[] }).catalog?.[0]
+  const own = has.catalog?.[0]
   const inGallery = has.gallery.flatMap((slide) => slide.photos)
   const photographs = inGallery.filter((one) => !one.file.startsWith('lead/'))
   const one = own ?? photographs.find((p) => p.file === CATALOG_PICK[color]) ?? photographs.find((p) => p.h > p.w) ?? photographs.find((p) => !/^close-up/.test(p.view ?? '')) ?? photographs[0] ?? inGallery[0] ?? has.checkout[0]

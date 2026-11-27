@@ -37,6 +37,11 @@ What a photograph is a view of is read from chair-photo-views.json beside this s
 ({"<color id>/gallery/01__X": "from behind"}), which is written by hand, and only where the view is plain
 to see.
 
+A color's photograph for Workspace's catalogue (its grid of upright photographs, one a color) is not in
+Website Selects: it is put straight into the site, at …/workspace/<color id>/catalog/01.jpg, and --again
+lists it (and makes its two smaller copies, where they are not beside it already). A color with none is
+shown in the catalogue by the best of its gallery (store/src/pictures.ts, catalogOf).
+
 --check reads the folder and reports on it without copying anything. --again needs no folder: it goes over
 the list as it stands from the copies already in the site, and writes in what chair-photo-views.json says
 of each (taking out any view that file no longer has) and each studio shot's sides, for when the photographs
@@ -135,12 +140,45 @@ def listed(folder):
     return sorted(f for f in os.listdir(folder) if re.search(r'\.jpe?g$', f, re.I) and not f.startswith('.'))
 
 
+def catalogued(color):
+    """A color's catalogue photographs, which are put straight into the site (…/workspace/<color id>/catalog/01.jpg,
+    upright, at most 2,400 on its long side) and not brought in from Website Selects: each as the list keeps a
+    photograph, with its two smaller copies beside it, which are made here where they are not there already."""
+    folder = os.path.join(OUT, color, 'catalog')
+    found = []
+    for file in listed(folder):
+        stem = os.path.splitext(file)[0]
+        with Image.open(os.path.join(folder, file)) as opened:
+            profile = opened.info.get('icc_profile')
+            im = ImageOps.exif_transpose(opened).convert('RGB')
+        one = {'file': f'catalog/{stem}', 'w': im.size[0], 'h': im.size[1]}
+        for key, long_side in (('s', SMALL), ('m', MIDDLE)):
+            path = os.path.join(folder, f'{stem}-{key}.webp')
+            if os.path.exists(path):
+                with Image.open(path) as copy:
+                    one[key] = copy.size[0]
+                continue
+            copy = smaller(im, long_side)
+            if copy is not None:
+                copy.save(path, 'WEBP', quality=84, method=6, **({'icc_profile': profile} if profile else {}))
+                one[key] = copy.size[0]
+        found.append(one)
+    return found
+
+
 def again():
-    """The list as it stands, gone over from the copies in the site: each view, and each studio shot's sides."""
+    """The list as it stands, gone over from the copies in the site: each view, each studio shot's sides, and
+    whatever catalogue photographs a color's folder has."""
     views = json.load(open(VIEWS)) if os.path.exists(VIEWS) else {}
     manifest = json.load(open(MANIFEST))
-    known, said = set(), 0
+    known, said, catalogue = set(), 0, 0
     for color, kept in manifest.items():
+        shots = catalogued(color)
+        catalogue += len(shots)
+        if shots:
+            kept['catalog'] = shots
+        else:
+            kept.pop('catalog', None)
         for part, photos in (('gallery', [p for slide in kept['gallery'] for p in slide['photos']]), ('checkout', kept['checkout'])):
             for one in photos:
                 key = f"{color}/{one['file']}"
@@ -158,6 +196,7 @@ def again():
         json.dump(manifest, out, indent=1, sort_keys=True)
         out.write('\n')
     print(f'{said} of {len(known)} photographs say what they are a view of')
+    print(f'{catalogue} catalogue photographs, of {sum(1 for kept in manifest.values() if kept.get("catalog"))} of {len(manifest)} colors')
     for key in sorted(set(views) - known):
         print(f'  {key}: no such photograph')
     for key in sorted(known - set(views)):
