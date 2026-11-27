@@ -268,7 +268,7 @@ function Studio({ top }: { top: boolean }) {
             const on = n === shot
             const going = stage.moving && n === stage.from && !on
             return (
-              <div key={slide.shots[0]!.full} className="wsp-photo" data-fit={slide.kind === 'pair' ? 'pair' : 'whole'} data-enter={on && stage.moving ? stage.dir : undefined} data-leave={going ? stage.dir : undefined} aria-hidden={on ? undefined : true} onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={() => (swipe.current = null)}>
+              <div key={slide.shots[0]!.full} className="wsp-photo" data-fit={slide.kind === 'pair' ? 'pair' : slide.kind === 'portrait' ? 'upright' : 'whole'} data-enter={on && stage.moving ? stage.dir : undefined} data-leave={going ? stage.dir : undefined} aria-hidden={on ? undefined : true} onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={() => (swipe.current = null)}>
                 {slide.kind !== 'pair' && <img className="wsp-photo__back" src={slide.shots[0]!.small} alt="" aria-hidden draggable={false} />}
                 {slide.shots.map((one, i) => (
                   <img key={one.full} className="wsp-photo__pic" src={one.full} srcSet={one.set} sizes={slide.kind === 'pair' ? '50vw' : '100vw'} alt={on ? (one.alt ?? `${chosen.name}: photograph ${before(n) + i + 1} of ${photographs}`) : ''} draggable={false} />

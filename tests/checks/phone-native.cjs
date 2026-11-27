@@ -128,6 +128,11 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await page.locator(`${top('workspace')} .wsp-slab`, { hasText: 'Solar Orange' }).tap(); await sleep(1400)
   const again = await page.evaluate((sel) => [...document.querySelectorAll(`${sel} .wsp-dot`)].map((d) => d.getAttribute('aria-label')), top('workspace'))
   say(again.length === 9 && again[8] === 'More colors' && !again.includes('Championship Green'), 'loaded again, a color picked from the eight opens the studio on the eight: what was added last visit is not in the row', again.join())
+  // (its gallery opens on the chair's renders, a landscape and then an upright one. The landscape is cut to the
+  // card about its middle; the upright one is whole in it, where cut to the card it lost the chair's head and base)
+  await page.locator(`${top('workspace')} .wsp-shot`).nth(2).tap(); await sleep(1500)
+  const upright = await page.evaluate((sel) => { const card = document.querySelector(`${sel} .wsp-photo:not([aria-hidden])`); const pic = card?.querySelector('.wsp-photo__pic'); if (!card || !pic) return null; const c = card.getBoundingClientRect(); const r = pic.getBoundingClientRect(); return { fit: card.dataset.fit, whole: Math.abs(r.width / r.height - pic.naturalWidth / pic.naturalHeight) < 0.02 && Math.abs(r.height - c.height) < 2 && r.width < c.width - 20, middle: Math.abs(r.left + r.width / 2 - (c.left + c.width / 2)) < 2, behind: getComputedStyle(card.querySelector('.wsp-photo__back')).display !== 'none' } }, top('workspace'))
+  say(!!upright && upright.fit === 'upright' && upright.whole && upright.middle && upright.behind, 'an upright picture by itself is whole in its card, in the middle of it, on a blur of itself', JSON.stringify(upright))
 
   // ---- Books: the shelf, a book's page, the Library and the reader ----
   await arrive('books')
