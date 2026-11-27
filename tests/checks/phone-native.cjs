@@ -249,18 +249,18 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   }
   await shot('one-pager')
 
-  // ---- Updates: locked to a visitor, and an LP's own documents ----
+  // ---- Updates: what anyone is shown of it, and an LP's own documents ----
   await arrive('updates')
-  const locked = await page.evaluate((sel) => ({ title: document.querySelector(`${sel} .ios-large`)?.textContent, says: document.querySelector(`${sel} .ios-empty`)?.textContent, rows: document.querySelectorAll(`${sel} .upp-row`).length, ways: [...document.querySelectorAll(`${sel} .upp-locked button`)].map((b) => b.textContent) }), top('updates'))
-  say(locked.title === 'Updates' && /for Shrug LPs only/.test(locked.says ?? '') && locked.rows === 0 && locked.ways.join() === 'Log In,Enquire about becoming an LP', 'Updates says who it is for and shows nothing of what is in it: the way to log in, and the way to ask about becoming an LP', JSON.stringify(locked))
-  await page.locator(`${top('updates')} .upp-locked .pp-go`).tap(); await sleep(800)
+  const locked = await page.evaluate((sel) => ({ title: document.querySelector(`${sel} .ios-large`)?.textContent, rows: [...document.querySelectorAll(`${sel} .upp-row`)].map((r) => `${r.querySelector('.ios-cell__title')?.textContent}:${r.querySelector('.ios-cell__value')?.textContent ?? 'open'}`).join(' | '), foot: document.querySelector(`${sel} .ios-section__footer`)?.textContent ?? '', ways: [...document.querySelectorAll(`${sel} .upp-locked button`)].map((b) => b.textContent), bar: [...document.querySelectorAll(`${sel} .ios-bar button`)].map((b) => b.getAttribute('aria-label')) }), top('updates'))
+  say(locked.title === 'Updates' && locked.rows === 'Update 1:LPs only | Update 2:LPs only | Update 3:LPs only | Update 4:open' && /Updates with a lock are for Shrug LPs only\./.test(locked.foot) && locked.ways.join() === 'Enquire about becoming an LP' && locked.bar.includes('Log In'), 'Updates opens for anyone (Dom, 27 Nov): the update that is for everyone to read, the others named and locked, Log In in its bar and the way to ask about becoming an LP under them', JSON.stringify(locked))
+  await page.locator(`${top('updates')} .ios-bar button[aria-label="Log In"]`).tap(); await sleep(800)
   say((await page.locator('.ios-tray .lt-head').innerText()) === 'Log in to open Updates' && (await page.locator('.ios-sheet.ios-tray:not(.ios-tray--dark)').count()) === 1, 'Log In there brings the tray up saying so, pale over a pale app')
   // (a number of their own: the one above is on the other account by now, and a number is one account's)
   const lp = await logIn('lp@example.com', 'Jordan Avery', '4155550177')
   const folder = await page.evaluate((sel) => ({ sub: document.querySelector(`${sel} .ios-large-sub`)?.textContent, groups: [...document.querySelectorAll(`${sel} .ios-section__header`)].map((h) => h.textContent), rows: [...document.querySelectorAll(`${sel} .upp-row .ios-cell__title`)].map((t) => t.textContent), acts: [...document.querySelectorAll(`${sel} .upp-act`)].map((t) => t.textContent) }), top('updates'))
   say(lp.join(' > ') === 'Check your inbox > Email confirmed > Enter the code > What’s your name? > Pick a picture' && lp.kept && (await page.locator('.ios-sheet:not([data-closing])').count()) === 0, 'an address on the list is confirmed by its inbox, asked for a number to use from then on (and the six digits texted to it), a name and a picture, in the same tray and the same field', lp.join(' > '))
-  say(/^LP · /.test(folder.sub ?? '') && folder.groups.join() === 'Funds,SPVs' && folder.rows.length >= 3 && folder.acts.includes('Request'), 'an LP is shown their documents, under Funds and SPVs, each to open or to ask for', JSON.stringify(folder).slice(0, 300))
-  await page.locator(`${top('updates')} .upp-row`).first().tap()
+  say(/^LP · /.test(folder.sub ?? '') && folder.groups.join() === 'Funds' && folder.rows.join() === 'Update 1,Update 2,Update 3,Update 4' && folder.acts.join() === 'Request,Request', 'an LP is shown the four updates: their own fund’s and the one for everyone to open, the other funds’ to ask for', JSON.stringify(folder).slice(0, 300))
+  await page.locator(`${top('updates')} .upp-row`, { hasText: 'Update 2' }).tap()
   await page.waitForSelector(`${top('updates')} .pp-page canvas[data-drawn]`, { timeout: 15000 }).catch(() => {})
   await sleep(600)
   s = await st()

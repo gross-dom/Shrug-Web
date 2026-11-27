@@ -35,8 +35,10 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(900)
   const opened = await p.evaluate(() => { const f = document.querySelector('.wf[data-app="store"] iframe'); return { search: f.contentWindow.location.search, title: f.contentDocument.querySelector('.ui-col h1, .ui-col .t-title')?.textContent ?? '', front: document.querySelector('.wf[data-active]')?.dataset.app } })
   check('pressed, it opens ArtStore on the piece that was showing', opened.front === 'store' && /^\?k=art&p=art-2$/.test(opened.search) && opened.title === 'Becoming Steve Jobs', JSON.stringify(opened))
-  const clear = await p.evaluate(() => { const w = document.querySelector('.wf[data-app="store"]').getBoundingClientRect(); const a = document.querySelector('.aw').getBoundingClientRect(); return !(w.left < a.right && a.left < w.right && w.top < a.bottom && a.top < w.bottom) })
-  check('the window opens clear of it, as windows do of the widget over it', clear)
+  // (ArtStore's window is drawn 1120 across. With the desk's icons in two lines, a desk 1440 across has 1030
+  // between the widgets and the icons, so the window lies on the edge of each: a sliver of the widget, not it)
+  const clear = await p.evaluate(() => { const w = document.querySelector('.wf[data-app="store"]').getBoundingClientRect(); const a = document.querySelector('.aw').getBoundingClientRect(); const over = Math.max(0, Math.min(w.right, a.right) - Math.max(w.left, a.left)) * Math.max(0, Math.min(w.bottom, a.bottom) - Math.max(w.top, a.top)); return { share: Math.round((over / (a.width * a.height)) * 100), wide: Math.round(w.width) } })
+  check('the window opens beside it: on no more than its edge (a fifth of it at most)', clear.share <= 20 && clear.wide === 1120, JSON.stringify(clear))
   check('nothing went wrong on the way', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 
@@ -85,17 +87,18 @@ const check = (name, ok, detail = '') => {
   now = await line(p)
   check('and back over the head of the line, it is the first in it', /^notes updates /.test(now.line) && now.free === '' && now.over === 0, JSON.stringify(now))
 
-  // ---- the locked folder: the way to ask about becoming an LP
+  // ---- the Updates folder, to someone who is not an LP: the way to ask about becoming one. It opens
+  // Accredited Investors Only (Dom, 27 Nov: it opened a message to Shrug in Messages)
   await p.goto(new URL('?still&empty&open=updates', BASE).href)
-  await p.waitForSelector('.wf[data-app="updates"][data-open] .updates__locked', { timeout: 20000 })
+  await p.waitForSelector('.wf[data-app="updates"][data-open] .upd-note', { timeout: 20000 })
   await p.waitForTimeout(600)
-  const locked = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="updates"] .updates__locked button')].map((b) => b.textContent.trim()).join(' | '))
-  check('the locked folder has, under Log In, the way to ask about becoming an LP', locked === 'Log In | Enquire about becoming an LP', locked)
+  const locked = await p.evaluate(() => [...document.querySelectorAll('.wf[data-app="updates"] .upd-note button')].map((b) => b.textContent.trim()).join(' | '))
+  check('under its list the folder has, beside Log In, the way to ask about becoming an LP', locked === 'Log In | Enquire about becoming an LP', locked)
   await p.locator('.updates__enquire').click()
-  await p.waitForSelector('.wf[data-app="messages"][data-open]', { timeout: 15000 })
+  await p.waitForSelector('.wf[data-app="investors"][data-open] .inv-page', { timeout: 15000 })
   await p.waitForTimeout(900)
-  const writing = await p.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.dataset.app, to: document.querySelector('.wf[data-app="messages"] .im-to')?.textContent.replace(/\s+/g, ' ').trim() ?? '' }))
-  check('pressed, it opens a message to Shrug', writing.front === 'messages' && /^To: Shrug$/.test(writing.to), JSON.stringify(writing))
+  const asking = await p.evaluate(() => ({ front: document.querySelector('.wf[data-active]')?.dataset.app, head: document.querySelector('.wf[data-app="investors"] .inv-page h1')?.textContent ?? '', messages: !!document.querySelector('.wf[data-app="messages"] .im-to') }))
+  check('pressed, it opens Accredited Investors Only, in front, on its first page; no message to Shrug is begun', asking.front === 'investors' && asking.head === 'Accredited Investors Only' && !asking.messages, JSON.stringify(asking))
   check('nothing went wrong on the way', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()
 

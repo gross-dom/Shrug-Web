@@ -60,7 +60,8 @@ export async function POST(request: Request) {
       const listedRow = rows.find((row) => row.id === text(body.product, 40))
       const listed = listedRow ? productOf(listedRow) : null
       const update = listed ? updateOf(who.member, listed, orders) : null
-      if (!listedRow || !listed || !update) return json({ error: 'hidden' }, { status: 404 })
+      // (named to them and closed, as a listed update is to anyone who is not an LP, it is not theirs to ask for either)
+      if (!listedRow || !listed || !update || update.state === 'closed') return json({ error: 'hidden' }, { status: 404 })
       if (update.state !== 'request') return json({ error: has(orders, listed) ? 'already' : 'hidden' }, { status: 400 })
       return json({ ok: true, ...(await ask(who.row, listedRow, listed, '')) })
     }

@@ -12,7 +12,7 @@ export type Who = Member & { number: string; since: number | null; reason: strin
 
 /** What the server says of whoever is asking: a visitor (nobody signed in), who is shown the store and nothing
  * of anybody's, or a member, with everything that is theirs. */
-export type StoreAnswer = { status: 'visitor'; products: Product[]; stripeKey: string } | { status: 'member'; member: Who; products: Product[]; updates: Update[]; orders: Order[]; stripeKey: string; needs?: Needs; via?: Via }
+export type StoreAnswer = { status: 'visitor'; products: Product[]; updates?: Update[]; stripeKey: string } | { status: 'member'; member: Who; products: Product[]; updates: Update[]; orders: Order[]; stripeKey: string; needs?: Needs; via?: Via }
 export type Shop = Extract<StoreAnswer, { status: 'member' }>
 
 /** The store as a visitor has it, in the shape the pages are drawn from: the same shelves, and a member who is

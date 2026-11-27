@@ -145,8 +145,9 @@ export interface Product {
  *   locked     theirs to unlock: it has a price in points, and they have not paid it yet
  *   request    listed to them, but written for others: they may ask
  *   requested  they have asked
- *   soon       listed, with no file yet */
-export type UpdateState = 'open' | 'locked' | 'request' | 'requested' | 'soon'
+ *   soon       listed, with no file yet
+ *   closed     listed, and written for others: named, and not theirs to read or to ask for (anyone who is not an LP) */
+export type UpdateState = 'open' | 'locked' | 'request' | 'requested' | 'soon' | 'closed'
 
 export interface Update {
   id: string
@@ -164,16 +165,27 @@ export interface Update {
 
 export const UPDATE_GROUPS = ['Funds', 'SPVs']
 
-/** A document as an update for one member, or null where they are not shown it at all. */
+/** The group that is everybody, logged in or not: a document ticked for it in Products → Visible to is anyone's
+ * to read (Dom, 27 Nov: one update is for everyone). It is a word of its own because "Everyone" on a document
+ * means every LP: that box was ticked when everyone on the list was one, and must not by itself put an LP's
+ * update in front of the public. */
+export const PUBLIC = 'Public'
+export const forAnyone = (product: Pick<Product, 'visibleTo'>): boolean => product.visibleTo.includes(PUBLIC)
+
+/** A document as an update for one person, or null where they are not shown it at all. Anyone is shown the
+ * ones that are for anyone, and the ones that are listed: an LP may ask for a listed one written for another
+ * fund's LPs; to anyone else it is named and closed. */
 export function updateOf(member: Pick<Member, 'roles' | 'funds'>, product: Product, orders: Pick<Order, 'productId' | 'status'>[]): Update | null {
-  // Only an LP is shown an update, or told that one exists: not its name, and not that it can be asked for
-  if (product.kind !== 'Document' || !isLP(member)) return null
-  const theirs = canSee(member, product)
+  if (product.kind !== 'Document') return null
+  const anyones = forAnyone(product)
+  const lp = isLP(member)
+  // (an LP's update is an LP's only: someone who is not one does not have it for being in a group it names)
+  const theirs = anyones || (lp && canSee(member, product))
   if (!theirs && !product.listed) return null
   // Theirs to read once it has a file. One with a price is unlocked first, with points; one written for
-  // others is asked for
-  const state: UpdateState = !product.hasFile ? 'soon' : theirs && (free(product) || has(orders, product)) ? 'open' : theirs ? 'locked' : has(orders, product) ? 'requested' : 'request'
-  return { id: product.id, name: product.name, group: product.group || UPDATE_GROUPS[0]!, forWhom: product.visibleTo.includes('Everyone') ? 'Everyone on the list' : product.visibleTo.join(', '), state, points: Math.max(0, Math.round(product.points ?? 0)), date: product.added ?? null }
+  // others is asked for by an LP, and closed to anyone else
+  const state: UpdateState = !theirs && !lp ? 'closed' : !product.hasFile ? 'soon' : theirs && (anyones || free(product) || has(orders, product)) ? 'open' : theirs ? 'locked' : has(orders, product) ? 'requested' : 'request'
+  return { id: product.id, name: product.name, group: product.group || UPDATE_GROUPS[0]!, forWhom: anyones ? 'Everyone' : product.visibleTo.includes('Everyone') ? 'Everyone on the list' : product.visibleTo.join(', '), state, points: Math.max(0, Math.round(product.points ?? 0)), date: product.added ?? null }
 }
 
 /** An address kept on file is a few lines of text: a name, a street, a city. Two lines at least. */
@@ -218,7 +230,7 @@ export function groupsOf(member: Pick<Member, 'roles' | 'funds'>): string[] {
 
 /** Whether a member is shown a product. One that nobody is ticked for is shown to nobody. */
 export function canSee(member: Pick<Member, 'roles' | 'funds'>, product: Pick<Product, 'visibleTo'>): boolean {
-  if (product.visibleTo.includes('Everyone')) return true
+  if (product.visibleTo.includes('Everyone') || product.visibleTo.includes(PUBLIC)) return true
   const groups = groupsOf(member)
   return product.visibleTo.some((group) => groups.includes(group))
 }
@@ -227,7 +239,7 @@ export function canSee(member: Pick<Member, 'roles' | 'funds'>, product: Pick<Pr
  * "Everyone" on a document means every LP. It was written when everyone was on the list, and anyone can sign
  * in now, so a box ticked in Airtable cannot by itself put an LP update in front of the public. */
 export const mayHave = (member: Pick<Member, 'roles' | 'funds'>, product: Pick<Product, 'visibleTo' | 'kind'>): boolean =>
-  canSee(member, product) && (product.kind !== 'Document' || isLP(member))
+  canSee(member, product) && (product.kind !== 'Document' || isLP(member) || forAnyone(product))
 
 /** The groups a product is kept to, for the label on it: nothing where everyone sees it. */
 export const keptTo = (product: Pick<Product, 'visibleTo'>): string[] => (product.visibleTo.includes('Everyone') ? [] : product.visibleTo)

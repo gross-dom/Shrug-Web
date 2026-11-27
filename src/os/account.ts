@@ -1,4 +1,4 @@
-import { STARTING_POINTS, endOf, phoneOf, type Needs, type Picture, type Update, type Via } from '../../store/shared/rules'
+import { PUBLIC, STARTING_POINTS, endOf, phoneOf, updateOf, type Needs, type Picture, type Product, type Update, type Via } from '../../store/shared/rules'
 import { samplePdf } from '../../store/shared/sample'
 import { createStore } from './store'
 
@@ -25,7 +25,8 @@ export const ACCOUNT_DEMO = !LIVE
  *   locked     theirs, at a price in points: the VIP Store is where it is unlocked
  *   request    written for the LPs of another fund: they may ask for it
  *   requested  they have asked
- *   soon       listed, with no file yet */
+ *   soon       listed, with no file yet
+ *   closed     written for a fund's LPs, and shown by name to someone who is not an LP: not theirs to read or ask for */
 export interface Doc {
   id: string
   name: string
@@ -60,7 +61,11 @@ export interface Member {
   docs: Doc[]
 }
 
-export type Account = { status: 'checking' | 'anon' | 'down' } | ({ status: 'member' } & Member)
+/** (`docs` on nobody logged in: what anyone is shown of the Updates folder. One update may be for everyone.) */
+export type Account = { status: 'checking' | 'down' } | { status: 'anon'; docs?: Doc[] } | ({ status: 'member' } & Member)
+
+/** The Updates folder's documents as someone is shown them: their own, or, logged out, what anyone is. */
+export const docsOf = (who: Account): Doc[] => (who.status === 'member' ? who.docs : who.status === 'anon' ? (who.docs ?? []) : [])
 
 export const account = createStore<Account>({ status: 'checking' })
 
@@ -70,7 +75,7 @@ export const isLP = (who: Account): boolean => who.status === 'member' && who.ro
 // ---- The sheet: let down by Log In itself, or by something locked that needs someone logged in
 
 /** What the sheet was opened for, where something locked opened it: it says so at its head. */
-export type Why = 'updates' | 'request' | 'post' | 'price' | 'booth' | 'name' | null
+export type Why = 'updates' | 'request' | 'post' | 'price' | 'booth' | 'name' | 'invest' | 'mail' | null
 
 /** An LP has just logged in: when, and how many documents are theirs. The desk says so once (Surface.tsx). */
 export const unlocked = createStore<{ at: number; docs: number } | null>(null)
@@ -97,7 +102,7 @@ export type Started = { step: 'phone' } | { step: 'text'; to: string; resendIn: 
 export type Texted = { ok: true; phone: string; resendIn: number }
 
 type StoreAnswer =
-  | { status: 'visitor' }
+  | { status: 'visitor'; updates?: Update[] }
   | { status: 'member'; member: { name: string; first: string; email: string; points: number; roles: string[]; funds: string[]; picture: Picture | null }; needs: Needs; via: Via; updates: Update[] }
   | { error: string }
 
@@ -112,16 +117,17 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T 
 }
 
 /** The folder holds the same list as the server's updates, which is where it is said what each member is shown. */
-const docsOf = (updates: (Update & { download?: boolean })[]): Doc[] =>
+const asDocs = (updates: (Update & { download?: boolean })[]): Doc[] =>
   updates.map((update) => {
     const all = update.forWhom === 'Everyone on the list'
+    const anyone = update.forWhom === 'Everyone'
     return {
       id: update.id,
       name: update.name,
       group: update.group,
       forWhom: all ? 'All LPs' : update.forWhom,
       // "Shrug 2 LPs, Shrug 4 LPs" is tagged "Shrug 2, Shrug 4"
-      tag: all ? 'All' : update.forWhom.replace(/ LPs\b/g, ''),
+      tag: all ? 'All' : anyone ? 'Everyone' : update.forWhom.replace(/ LPs\b/g, ''),
       date: update.date ?? '',
       state: update.state,
       points: update.points,
@@ -158,9 +164,20 @@ interface Demo {
   asked?: Record<string, string[]>
 }
 
-/** What the demo's LP, who is in Shrug 2 and Shrug 4, is shown: each of the states a document can be in. */
+// The demo's Updates folder (Dom, 27 Nov): four updates. Updates 1, 2 and 3 were written for the LPs of Shrug
+// 1, 2 and 3, and are locked to everyone else; Update 4 is for everyone, logged in or not. They are dummy
+// files, standing where Shrug's own will (each to be called "Shrug Capital Update" when it is uploaded: a
+// document's name is its row's in Products). Who is shown what is worked out by the store's own rule
+// (updateOf, store/shared/rules.ts), as the server works it out, so the demo cannot say otherwise: the demo's
+// LP, who is in Shrug 2 and Shrug 4, reads Update 2 and Update 4 and may ask for 1 and 3.
+const dummy = (n: number, visibleTo: string[], added: string): Product => ({ id: `update-${n}`, name: `Update ${n}`, kind: 'Document', status: 'Available', visibleTo, points: 0, floor: null, postage: null, description: '', picture: null, hasFile: true, options: [], editionOf: null, left: null, limited: false, needsAddress: false, place: n, listed: true, group: 'Funds', added })
+const DEMO_UPDATES: Product[] = [dummy(1, ['Shrug 1 LPs'], '2026-08-14T17:00:00Z'), dummy(2, ['Shrug 2 LPs'], '2026-09-12T17:00:00Z'), dummy(3, ['Shrug 3 LPs'], '2026-10-11T17:00:00Z'), dummy(4, [PUBLIC], '2026-11-24T17:00:00Z')]
+/** The demo's fuller folder, for an LP, at an address that says ?docs=more: each of the states a document
+ * can be in, which the four above do not all show (one read here and not saved, one still to come, one under
+ * SPVs). It is there for the checks, which need every state to look at. */
+const MORE_DOCS = typeof window !== 'undefined' && /[?&]docs=more\b/.test(window.location.search)
 const paper = (id: string, name: string, tag: string, date: string, state: Doc['state'], more: Partial<Doc> = {}): Doc => ({ id, name, group: 'Funds', forWhom: `${tag} LPs`, tag, date, state, points: 0, download: true, ...more })
-const DEMO_DOCS: Doc[] = [
+const FULLER: Doc[] = [
   paper('update-4', 'Shrug 4 update, Q3 2026', 'Shrug 4', '2026-11-14T17:00:00Z', 'open'),
   // (one that Shrug has said is to be read here and not saved)
   paper('update-2', 'Shrug 2 update, Q3 2026', 'Shrug 2', '2026-11-12T17:00:00Z', 'open', { download: false }),
@@ -169,8 +186,13 @@ const DEMO_DOCS: Doc[] = [
   paper('letter-2', 'Shrug 2 annual letter', 'Shrug 2', 'December', 'soon'),
   paper('update-spv', 'SPV update', 'SPV', '2026-10-03T17:00:00Z', 'request', { group: 'SPVs' }),
 ]
+/** What someone is shown of them: `asked` is the ones they have asked for. */
+const demoDocs = (who: { roles: string[]; funds: string[] }, asked: string[] = []): Doc[] =>
+  MORE_DOCS && who.roles.includes('LP')
+    ? FULLER.map((doc) => (doc.state === 'request' && asked.includes(doc.id) ? { ...doc, state: 'requested' as const } : doc))
+    : asDocs(DEMO_UPDATES.map((product) => updateOf(who, product, asked.map((productId) => ({ productId, status: 'Requested' as const })))).filter((update): update is Update => !!update))
 /** How many pages each of the demo's documents has: a stand-in is drawn with that many. */
-const DEMO_PAGES: Record<string, number> = { 'update-4': 4, 'update-2': 6, 'update-capital': 14 }
+const DEMO_PAGES: Record<string, number> = MORE_DOCS ? { 'update-4': 4, 'update-2': 6, 'update-capital': 14 } : { 'update-1': 5, 'update-2': 6, 'update-3': 4, 'update-4': 8 }
 /** How long the demo pauses codes for after five wrong guesses: long enough to see, short enough to wait out. */
 const DEMO_PAUSE = 30
 const DEMO_AGAIN = 20
@@ -271,9 +293,9 @@ function demoGuess(code: string): Failed | null {
 function demoAccount(): Account {
   const s = state()
   const row = s.in ? s.rows[s.in] : null
-  if (!row) return { status: 'anon' }
+  if (!row) return { status: 'anon', docs: demoDocs({ roles: [], funds: [] }) }
   const name = row.name || row.shrugName
-  return { status: 'member', first: name.split(/\s+/)[0] ?? '', name, email: row.email, points: row.points, roles: row.roles, funds: row.funds, picture: row.picture, needs: { phone: !row.phone, profile: !row.name }, via: s.via, docs: row.roles.includes('LP') ? DEMO_DOCS.map((doc) => (doc.state === 'request' && s.asked?.[row.email]?.includes(doc.id) ? { ...doc, state: 'requested' as const } : doc)) : [] }
+  return { status: 'member', first: name.split(/\s+/)[0] ?? '', name, email: row.email, points: row.points, roles: row.roles, funds: row.funds, picture: row.picture, needs: { phone: !row.phone, profile: !row.name }, via: s.via, docs: demoDocs(row, s.asked?.[row.email] ?? []) }
 }
 
 // ---- Asking
@@ -290,9 +312,9 @@ export async function refreshAccount(): Promise<Account> {
       'error' in answer
         ? { status: 'down' }
         : answer.status === 'member'
-          ? { status: 'member', ...answer.member, needs: answer.needs, via: answer.via, docs: docsOf(answer.updates ?? []) }
-          : // Nobody logged in: the store calls them a visitor, and shows them its shelves
-            { status: 'anon' }
+          ? { status: 'member', ...answer.member, needs: answer.needs, via: answer.via, docs: asDocs(answer.updates ?? []) }
+          : // Nobody logged in: the store calls them a visitor, and shows them its shelves and the updates anyone is shown
+            { status: 'anon', docs: asDocs(answer.updates ?? []) }
   }
   account.set(next)
   return next
@@ -442,7 +464,9 @@ export async function logOut() {
   } catch {
     // Nothing kept, nothing to forget
   }
-  account.set({ status: 'anon' })
+  // (logged out, the Updates folder is as anyone is shown it)
+  account.set(LIVE ? { status: 'anon' } : { status: 'anon', docs: demoDocs({ roles: [], funds: [] }) })
+  if (LIVE) void refreshAccount()
 }
 
 function save(blob: Blob, name: string) {
@@ -469,7 +493,8 @@ const bytes = (text: string) => Uint8Array.from(text, (c) => c.charCodeAt(0) & 0
 export async function readDoc(doc: Doc): Promise<Uint8Array | NotHere> {
   if (!LIVE) {
     await lag(500)
-    if (account.get().status !== 'member') return { error: 'anon' }
+    // (one that is for everyone is read by anyone; anything else by someone logged in whom it is for)
+    if (account.get().status !== 'member' && doc.state !== 'open') return { error: 'anon' }
     // (the demo's way to see a file that is gone: an address that says ?doc=missing)
     if (/[?&]doc=missing\b/.test(window.location.search)) return { error: 'missing' }
     return doc.state === 'open' ? bytes(samplePages(doc)) : { error: doc.state === 'soon' ? 'missing' : 'not-yours' }

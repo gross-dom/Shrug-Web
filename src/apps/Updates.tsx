@@ -1,27 +1,31 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { FolderOpen, Lock } from 'lucide-react'
 import { UPDATE_GROUPS } from '../../store/shared/rules'
 import { Window } from '../kit/window'
-import { account, askLogIn, isLP, requestDoc, type Doc } from '../os/account'
+import { account, askLogIn, docsOf, isLP, requestDoc, type Doc } from '../os/account'
 import { formatter } from '../os/dates'
 import { PdfIcon } from '../os/icons'
 import { launchApp } from '../os/launch'
 import { openPaper, paperOf } from '../os/papers'
 import { useStore } from '../os/store'
-import { writeToShrug } from '../os/write'
 import '../styles/desk/v1.css'
 import '../styles/desk/updates.css'
 
-/** What the folder says to anyone it is not for. */
+/** What the folder says to anyone it is not for, where there is nothing in it they are shown. */
 export const LOCKED = 'This folder is for Shrug LPs only. Please log in with your LP email to access its contents.'
+/** And where there is: under the list, what the locks on its rows mean. */
+export const SOME_LOCKED = 'Updates with a lock are for Shrug LPs only.'
 
-// The Updates folder on the desk, opened (design/v1, "Updates"): a Finder's list of the documents that are
-// this LP's to read, under Funds and SPVs, each row naming the fund it was written for. Which those are is
-// decided by the store's server from Airtable (os/account.ts): an update for the LPs of one fund is theirs,
-// and one written for another fund may be listed to them to ask for. A document opens in Preview.
+// The Updates folder on the desk, opened (design/v1, "Updates"): a Finder's list of documents, under Funds and
+// SPVs, each row naming who it was written for. Which someone is shown, and what they may do with each, is
+// decided by the store's server from Airtable (os/account.ts; the rule is updateOf, store/shared/rules.ts):
+// an update for the LPs of one fund is theirs to read, and one written for another fund's may be asked for.
+// A document opens in Preview.
 //
-// The folder is always on the desk, with a lock. Nobody but an LP is shown what is in it, not even the names
-// of the files: someone logged in who is not an LP is told who it is for.
+// It opens for anyone (Dom, 27 Nov: it was shut to all but LPs, who alone were shown what was in it). An
+// update may be for everyone, and that one anyone reads, logged in or not. An update written for a fund's
+// LPs is named to anyone else with a lock on it, and is not theirs to open: the way in is to log in as an
+// LP, or to ask about becoming one, which opens Accredited Investors Only (src/apps/Investors.tsx).
 
 /** The day a document is dated: Nov 14, 2026, as the desk writes its days. One still to come says when in words. */
 export function dayOf(date: string) {
@@ -63,7 +67,7 @@ function Row({ doc, picked, onPick }: { doc: Doc; picked: boolean; onPick: () =>
       </span>
       <span>
         <b>{doc.name}</b>
-        <small>{failed ? 'That didn’t send. Try again.' : `Written for ${doc.forWhom.replace(/^All\b/, 'all')}`}</small>
+        <small>{failed ? 'That didn’t send. Try again.' : `Written for ${doc.forWhom.replace(/^(All|Everyone)\b/, (word) => word.toLowerCase())}`}</small>
       </span>
       <span className="v-chip">{doc.tag}</span>
       <span className="d">{dayOf(doc.date)}</span>
@@ -81,6 +85,12 @@ function Row({ doc, picked, onPick }: { doc: Doc; picked: boolean; onPick: () =>
           <button type="button" className="v-btn v-btn--grey v-btn--pill" aria-label={`Unlock ${doc.name} in My VIP`} onClick={() => (onPick(), launchApp('myvip'))}>
             Unlock
           </button>
+        ) : doc.state === 'closed' ? (
+          // Written for a fund's LPs, and this is not one of them: it is named, and that is all
+          <span className="t upd-kept">
+            <Lock size={11} strokeWidth={2.6} aria-hidden />
+            LPs only
+          </span>
         ) : (
           <span className="t">{doc.state === 'requested' ? 'Requested' : 'Coming soon'}</span>
         )}
@@ -89,7 +99,7 @@ function Row({ doc, picked, onPick }: { doc: Doc; picked: boolean; onPick: () =>
   )
 }
 
-function List({ docs, name }: { docs: Doc[]; name: string }) {
+function List({ docs, name, aside }: { docs: Doc[]; /** Whose it was prepared for: nobody's, logged out. */ name: string | null; /** Under the list, for someone some of it is locked to. */ aside?: ReactNode }) {
   const [picked, setPicked] = useState<string | null>(null)
   const groups = [...UPDATE_GROUPS, ...docs.map((doc) => doc.group).filter((group) => !UPDATE_GROUPS.includes(group))].filter((group, i, all) => all.indexOf(group) === i && docs.some((doc) => doc.group === group))
   const inOrder = groups.flatMap((group) => docs.filter((doc) => doc.group === group))
@@ -122,9 +132,11 @@ function List({ docs, name }: { docs: Doc[]; name: string }) {
           </section>
         ))}
       </div>
+      {aside}
       <div className="upd-foot">
         <span>
-          {docs.length === 1 ? '1 document' : `${docs.length} documents`} · Prepared for {name}
+          {docs.length === 1 ? '1 document' : `${docs.length} documents`}
+          {name ? ` · Prepared for ${name}` : ''}
         </span>
         <span>Opens in Preview</span>
       </div>
@@ -132,11 +144,12 @@ function List({ docs, name }: { docs: Doc[]; name: string }) {
   )
 }
 
-/** For someone the folder is locked to: the way to ask Shrug about becoming an LP (Niv, 27 Nov). It opens a
- * message to Shrug in Messages, about that. */
+/** For someone the folder, or some of it, is locked to: the way to ask Shrug about becoming an LP (Niv, 27
+ * Nov). It opens Accredited Investors Only, which is a few questions and is sent to Shrug (Dom, 27 Nov: it
+ * opened a message to Shrug in Messages). */
 function Enquire() {
   return (
-    <button type="button" className="updates__enquire" onClick={() => writeToShrug({ subject: 'Becoming an LP' })}>
+    <button type="button" className="updates__enquire" onClick={() => launchApp('investors')}>
       Enquire about becoming an LP
     </button>
   )
@@ -145,14 +158,15 @@ function Enquire() {
 export function UpdatesApp() {
   const who = useStore(account, (s) => s)
   const lp = isLP(who)
-  const docs = who.status === 'member' ? who.docs : []
+  const docs = docsOf(who)
+  const anon = who.status !== 'member'
   const bar = (
     <div className="updbar">
       <b className="updbar__title">Updates</b>
       <span className="updbar__grow" />
       {lp && who.status === 'member' ? (
         <span className="v-chip v-chip--blue">LP{who.funds.length ? ` · ${fundsOf(who.funds)}` : ''}</span>
-      ) : (
+      ) : docs.some((doc) => doc.state === 'open') ? null : (
         <span className="v-chip v-chip--lock">
           <Lock size={10} strokeWidth={2.6} aria-hidden />
           Locked
@@ -162,24 +176,21 @@ export function UpdatesApp() {
   )
   return (
     <Window className="app v1 updwin" lightsSize="large" lead={bar} body={{ className: 'updwin__body' }}>
-      {who.status !== 'member' ? (
-        // Nobody logged in. (The folder on the desk lets down Log In instead of opening this: it is reached
-        // by an address that names it, or by logging out while it is open)
+      {who.status === 'checking' ? (
         <div className="v-empty updates__locked">
           <Lock size={38} strokeWidth={1.6} aria-hidden />
-          <p>{who.status === 'checking' ? 'One moment…' : LOCKED}</p>
-          {who.status !== 'checking' && (
+          <p>One moment…</p>
+        </div>
+      ) : docs.length === 0 && !lp ? (
+        // Nothing in it that they are shown: it is locked, and says who it is for
+        <div className="v-empty updates__locked">
+          <Lock size={38} strokeWidth={1.6} aria-hidden />
+          <p>{LOCKED}</p>
+          {anon && (
             <button type="button" className="v-btn v-btn--lg" onClick={() => askLogIn('updates')}>
               Log In
             </button>
           )}
-          {who.status !== 'checking' && <Enquire />}
-        </div>
-      ) : !lp ? (
-        // Logged in, and not an LP: still locked. They are told who it is for, and shown nothing of what is in it
-        <div className="v-empty updates__locked">
-          <Lock size={38} strokeWidth={1.6} aria-hidden />
-          <p>{LOCKED}</p>
           <Enquire />
         </div>
       ) : docs.length === 0 ? (
@@ -189,7 +200,30 @@ export function UpdatesApp() {
           <p>Updates written for your funds will appear in this folder. We’ll email you when the first one does.</p>
         </div>
       ) : (
-        <List docs={docs} name={who.name || who.email} />
+        <List
+          docs={docs}
+          name={who.status === 'member' ? who.name || who.email : null}
+          aside={
+            // Someone who is not an LP: what the locks mean, and the two ways past them
+            !lp && docs.some((doc) => doc.state === 'closed') ? (
+              <div className="upd-note">
+                <p>
+                  <Lock size={12} strokeWidth={2.4} aria-hidden />
+                  {SOME_LOCKED}
+                  {anon ? ' Log in with your LP email to open them.' : ''}
+                </p>
+                <span className="upd-note__ways">
+                  {anon && (
+                    <button type="button" className="v-btn v-btn--pill" onClick={() => askLogIn('updates')}>
+                      Log In
+                    </button>
+                  )}
+                  <Enquire />
+                </span>
+              </div>
+            ) : undefined
+          }
+        />
       )}
     </Window>
   )

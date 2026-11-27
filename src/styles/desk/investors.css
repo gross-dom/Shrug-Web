@@ -1,0 +1,428 @@
+/* Accredited Investors Only (src/apps/Investors.tsx): a few questions, one to a page, set out as Apple sets
+   a setup out. A large question in the middle of the window, its choices as rows to press with a round mark
+   at their end, one wide button at the foot, and the way back and how far along at the head. A page comes in
+   from the side it is gone to. It is drawn in the kit's own colours, so it is light or dark as the desk is. */
+
+.invwin > .ss-window__bar {
+  background: none;
+  border-bottom: 0;
+}
+
+.invwin__body {
+  display: flex;
+  min-height: 0;
+  background: var(--ss-surface);
+}
+
+.inv {
+  --inv-ink: var(--ss-text-strong);
+  --inv-ink-2: var(--ss-text);
+  --inv-fill: color-mix(in srgb, var(--ss-text-strong) 6%, transparent);
+  --inv-fill-2: color-mix(in srgb, var(--ss-text-strong) 10%, transparent);
+  --inv-blue: #0a84ff;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  color: var(--inv-ink);
+}
+
+.inv--wait {
+  align-items: center;
+  justify-content: center;
+  color: var(--ss-text);
+  font-size: 14px;
+}
+
+/* ---- Its head: the way back, and how far along */
+
+.inv-top {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  margin-top: -6px;
+  padding: 0 22px;
+}
+
+.inv-back {
+  position: absolute;
+  left: 16px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--inv-fill);
+  color: var(--inv-ink);
+}
+
+@media (hover: hover) {
+  .inv-back:hover {
+    background: var(--inv-fill-2);
+  }
+}
+
+.inv-steps {
+  display: flex;
+  gap: 6px;
+}
+
+.inv-steps i {
+  width: 26px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--inv-fill-2);
+  transition: background 0.3s;
+}
+
+.inv-steps i[data-on] {
+  background: var(--inv-blue);
+}
+
+/* ---- A page */
+
+.inv-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  padding: 18px 44px 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  text-align: center;
+  animation: inv-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.inv-page[data-dir='-1'] {
+  animation-name: inv-back;
+}
+
+.inv-page[data-kind='intro'],
+.inv-page[data-kind='done'] {
+  justify-content: center;
+  padding-bottom: 34px;
+}
+
+@keyframes inv-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes inv-back {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+
+.inv-page h1 {
+  max-width: 420px;
+  margin: 0;
+  outline: none;
+  color: var(--inv-ink);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+
+.inv-page > p {
+  max-width: 380px;
+  margin: 10px 0 0;
+  color: var(--inv-ink-2);
+  font-size: 15px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.inv-icon {
+  display: block;
+  width: 92px;
+  height: 92px;
+  margin-bottom: 22px;
+  filter: drop-shadow(0 8px 16px rgb(0 0 0 / 0.22));
+}
+
+.inv-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Choices: rows to press, each with a round mark at its end */
+
+.inv-choices {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 22px;
+}
+
+/* (a long list, the categories, is two to a line so that it is all on the page) */
+.inv-choices[data-long] {
+  grid-template-columns: 1fr 1fr;
+  max-width: 440px;
+}
+
+.inv-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 14px 8px 16px;
+  border-radius: 14px;
+  background: var(--inv-fill);
+  box-shadow: inset 0 0 0 1.5px transparent;
+  color: var(--inv-ink);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: left;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s;
+}
+
+.inv-choice:active {
+  transform: scale(0.985);
+}
+
+@media (hover: hover) {
+  .inv-choice:hover {
+    background: var(--inv-fill-2);
+  }
+}
+
+.inv-choice i {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--inv-ink) 26%, transparent);
+  color: #fff;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.inv-choices[data-many] .inv-choice i {
+  border-radius: 7px;
+}
+
+.inv-choice[aria-checked='true'] {
+  background: color-mix(in srgb, var(--inv-blue) 12%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--inv-blue);
+}
+
+.inv-choice[aria-checked='true'] i {
+  background: var(--inv-blue);
+  box-shadow: none;
+}
+
+.inv-choice[aria-checked='true'] i svg {
+  animation: inv-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes inv-pop {
+  from {
+    transform: scale(0.4);
+  }
+}
+
+/* ---- Fields */
+
+.inv-fields {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 22px;
+  text-align: left;
+}
+
+.inv-field {
+  display: grid;
+  gap: 6px;
+}
+
+.inv-field > span {
+  padding-left: 4px;
+  color: var(--inv-ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.inv-field input,
+.inv-field textarea {
+  width: 100%;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--inv-fill);
+  box-shadow: inset 0 0 0 1.5px transparent;
+  color: var(--inv-ink);
+  font: inherit;
+  font-size: 15px;
+  transition: box-shadow 0.15s;
+}
+
+.inv-field input {
+  height: 46px;
+}
+
+.inv-field textarea {
+  min-height: 78px;
+  padding: 11px 14px;
+  line-height: 1.35;
+  resize: none;
+}
+
+.inv-field input::placeholder,
+.inv-field textarea::placeholder {
+  color: color-mix(in srgb, var(--inv-ink) 36%, transparent);
+}
+
+.inv-field input:focus,
+.inv-field textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--inv-blue);
+}
+
+/* ---- Its last page */
+
+.inv-tick {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 22px;
+  border-radius: 50%;
+  background: #30d158;
+  color: #fff;
+  animation: inv-tick 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes inv-tick {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+.inv-page > .inv-demo {
+  margin-top: 14px;
+  color: color-mix(in srgb, var(--inv-ink) 44%, transparent);
+  font-size: 12.5px;
+}
+
+/* ---- Its foot: what went wrong, and the one button */
+
+.inv-foot {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 44px 26px;
+}
+
+.inv-said {
+  min-height: 16px;
+  margin: 0;
+  color: #ff453a;
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.inv-go {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 320px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--inv-blue);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    opacity 0.15s,
+    transform 0.12s,
+    filter 0.15s;
+}
+
+.inv-go:active {
+  transform: scale(0.985);
+}
+
+.inv-go[aria-disabled='true'] {
+  opacity: 0.36;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .inv-go:hover {
+    filter: brightness(1.08);
+  }
+}
+
+.inv-link {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--inv-blue);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.inv-back:focus-visible,
+.inv-choice:focus-visible,
+.inv-go:focus-visible,
+.inv-link:focus-visible {
+  outline: 2px solid var(--inv-blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-page,
+  .inv-tick,
+  .inv-choice[aria-checked='true'] i svg {
+    animation: none;
+  }
+}
+
+/* ---- Investor Portal (src/apps/Portal.tsx): a folder with nothing in it */
+
+.portal__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--ss-surface);
+}
+
+.portal__empty {
+  flex: 1;
+}
+
+.portal__foot {
+  flex: none;
+  padding: 7px 14px;
+  border-top: 1px solid color-mix(in srgb, var(--ss-text-strong) 10%, transparent);
+  color: var(--ss-text);
+  font-size: 11.5px;
+  text-align: center;
+}

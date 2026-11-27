@@ -47,6 +47,7 @@ run "Updates, Preview, the one-pager" node preview.cjs $BASE
 run "Mail"                           node mail.cjs $BASE
 run "the desk's apps, and a message" node desk-apps.cjs $BASE
 run "the desk: widget, folder, line"  node desk-extras.cjs $BASE
+run "investors, catalog, locked mail" node investors.cjs $BASE
 run "Workspace"                      node workspace.cjs $BASE
 run "desktop shell"                  node desktop-shell.cjs $BASE
 run "forced colours, reduced motion" node forced-colours.cjs $BASE

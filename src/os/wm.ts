@@ -167,15 +167,29 @@ function shared(a: Rect, b: Rect) {
  * under the menu bar to above the Dock, always at the one size and `pitch` apart (Dom, 27 Nov: nothing on
  * the desk is ever drawn smaller). Where one line will not hold them all they are in two or more, beside
  * one another and as even as can be made. */
-export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, pitch: 96 }
+export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, pitch: 96, tall: 17 }
 
 /** How many icons to a line, for so many of them on a desk so tall: as many lines as it takes at the one
  * spacing, and the icons shared out evenly among them. */
 export function deskRows(count: number, tall: number): number {
   const { top, bottom, gap, pitch } = DESK_ICONS
-  const fits = Math.max(1, Math.floor((tall - top - bottom + gap) / pitch))
+  // (one icon's name is on two lines, Accredited Investors Only, and the line it is in is that much longer:
+  // `tall` is the room kept for it, so that the last icon of its line is never under the Dock)
+  const fits = Math.max(1, Math.floor((tall - top - bottom - DESK_ICONS.tall + gap) / pitch))
   const lines = Math.ceil(Math.max(1, count) / fits)
   return Math.ceil(Math.max(1, count) / lines)
+}
+
+/** Where each of so many icons goes, in lines of at most `rows`: its line (1 is the one at the desk's edge) and
+ * its place down it. They are shared out as evenly as can be: ten in three lines are four, three and three,
+ * the longer line first, where filling each line in turn would leave two in the last. */
+export function deskPlaces(count: number, rows: number): { line: number; row: number }[] {
+  const lines = Math.max(1, Math.ceil(count / Math.max(1, rows)))
+  const least = Math.floor(count / lines)
+  const more = count % lines
+  const places: { line: number; row: number }[] = []
+  for (let line = 0; line < lines; line++) for (let row = 0; row < least + (line < more ? 1 : 0); row++) places.push({ line: line + 1, row: row + 1 })
+  return places
 }
 
 /** How many icons the desk has. The desktop says (Surface.tsx), as soon as it is loaded: the first window
@@ -202,7 +216,7 @@ function deskIcons(viewport: Size): Rect {
   const each = deskRows(onDesk, viewport.h)
   const lines = Math.ceil(onDesk / each)
   const w = lines * wide + (lines - 1) * gap
-  return { x: viewport.w - right - w, y: top, w, h: each * pitch - gap }
+  return { x: viewport.w - right - w, y: top, w, h: each * pitch - gap + DESK_ICONS.tall }
 }
 
 /** The smallest screen the desk's widget is shown on: under it the room is the
@@ -310,8 +324,14 @@ function placed(id: AppId, s: WM): Rect {
   // favour: it covers what it covered before the move, or after it if that is
   // more. And a place that makes the window smaller is charged what the
   // window gives up, or the smallest place would always look the clearest
-  const tries = [...xs].map((x) => {
-    const at: Rect = { x, y: home.y, w, h }
+  // (Across the desk at its own height; and, beside the desk's edges, higher and lower too: with the icons in
+  // two lines a wide desk has less room across, and the place beside the pile is no clearer than on it unless
+  // it is also above or below. The first tried is still the middle.)
+  const ys = [home.y]
+  if (h + edge * 2 <= box.h) ys.push(box.y + edge, box.y + box.h - edge - h)
+  const spots = [...xs].flatMap((x, i) => (i === 0 ? [{ x, y: home.y }] : ys.map((y) => ({ x, y }))))
+  const tries = spots.map(({ x, y }) => {
+    const at: Rect = { x, y, w, h }
     const to = cleared(at)
     return { to, cost: Math.max(over(at), over(to)) + kept(to) * 4 + lost(to) }
   })

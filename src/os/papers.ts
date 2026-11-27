@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { account, downloadDoc, readDoc, requestDoc, type Doc, type NotHere } from './account'
+import { account, docsOf, downloadDoc, readDoc, requestDoc, type Doc, type NotHere } from './account'
 import { dockPoint } from './dom'
 import { launchApp } from './launch'
 import { createStore } from './store'
@@ -74,7 +74,8 @@ export function paperOf(doc: Doc): Paper {
   return {
     id: `update:${doc.id}`,
     name: `${doc.name}.pdf`,
-    preparedFor: who.status === 'member' ? who.name || who.email : '',
+    // (one that is for everyone is nobody's in particular: it is not tagged Private, and has no name under it)
+    preparedFor: doc.tag === 'Everyone' ? null : who.status === 'member' ? who.name || who.email : '',
     pages: { kind: 'pdf', read: () => readDoc(doc) },
     download: doc.download && doc.state === 'open' ? () => downloadDoc(doc) : null,
     ask: doc.state === 'request' || doc.state === 'requested' ? { forWhom: doc.tag, asked: doc.state === 'requested', send: () => requestDoc(doc) } : undefined,
@@ -93,8 +94,8 @@ if (typeof window !== 'undefined') {
     if (paper?.preparedFor != null && now !== was && was) {
       preview.set({ paper: null, wanted: null })
       if (wm.get().wins.preview.open) closeApp('preview')
-    } else if (paper?.id.startsWith('update:') && who.status === 'member') {
-      const doc = who.docs.find((d) => `update:${d.id}` === paper.id)
+    } else if (paper?.id.startsWith('update:')) {
+      const doc = docsOf(who).find((d) => `update:${d.id}` === paper.id)
       const next = doc ? paperOf(doc) : null
       // Only where it says something new: the same paper, opened again, would begin its pages over
       if (next && (next.ask?.asked ?? null) !== (paper.ask?.asked ?? null)) preview.set({ paper: { ...paper, ask: next.ask }, wanted: null })

@@ -81,7 +81,7 @@ function Mark() {
 
 function useMenus(): MenuDef[] {
   const active = useStore(wm, activeApp)
-  const open = useStore(wm, (s) => DOCK.concat('about', 'wallpapers', 'updates').filter((id) => s.wins[id].open).join(' '))
+  const open = useStore(wm, (s) => DOCK.concat('about', 'wallpapers', 'updates', 'investors', 'portal').filter((id) => s.wins[id].open).join(' '))
   const tile = useStore(wm, (s) => (active ? s.wins[active].tile : null))
   const compact = useStore(wm, (s) => s.compact)
   const paused = useStore(chat, (s) => s.paused)

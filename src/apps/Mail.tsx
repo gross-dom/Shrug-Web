@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
-import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Trash2, Undo2, X, Zap } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Lock, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Trash2, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
 import { SITE } from '../data/site'
@@ -8,7 +8,7 @@ import { launchApp, showCompany } from '../os/launch'
 import { mail, markDone, markUnread, openExchange, star } from '../os/mail'
 import { linkTo } from '../os/place'
 import { useStore } from '../os/store'
-import { account } from '../os/account'
+import { account, askLogIn } from '../os/account'
 import { CAN_POST, mailtoShrug, postToShrug, SHRUG_MAIL } from '../phone/apps/outbox'
 import '../styles/desk/mail.css'
 
@@ -20,7 +20,9 @@ import '../styles/desk/mail.css'
 //
 // Every one of Superhuman's shortcuts is answered. The ones that move about, open, search and ask for the
 // command palette do what they do there; so do the ones above; the ones that would send, snooze, label or
-// delete say that nothing of the kind happens here. Everything in Mail is public.
+// delete say that nothing of the kind happens here. Mail is public, except the exchanges that are for someone
+// logged in (data/mail.ts, `locked`; Dom, 27 Nov): to anyone else one of those is a row with a lock on it,
+// who it was from and its subject and none of what it says, and opening it asks them to log in.
 //
 // The shortcuts are COMMANDS, below: each has its name, its keys as Superhuman has them, and what it does
 // here. The sheet that ? opens lists them all; the command palette (Cmd K, or the lightning bolt) lists only
@@ -203,14 +205,22 @@ export function MailApp() {
   const q = (query ?? '').trim().toLowerCase()
   /** Which split an exchange is under: Done once it is marked done (it has left the inbox), Starred if it is starred, or its own. */
   const under = (x: Exchange, id: Split) => (id === 'done' ? done.includes(x.id) : id === 'starred' ? starred.includes(x.id) : !done.includes(x.id) && (id === 'all' || x.led === id))
+  // Some of the twenty are for someone logged in (data/mail.ts, `locked`). To anyone else one of those is a
+  // row with a lock on it: who it was from and its subject, and none of what it says. Opened, it asks them to
+  // log in, and is there to read once they have.
+  const member = useStore(account, (s) => s.status === 'member')
+  const shut = (x: Exchange) => !!x.locked && !member
   const rows = useMemo(
-    // (a search looks through all twenty, wherever they are)
-    () => EXCHANGES.filter((x) => (q ? [x.from, x.subject, x.first, x.led, x.ledTo].some((text) => text.toLowerCase().includes(q)) : under(x, split))),
+    // (a search looks through all twenty, wherever they are; and through no more of a locked one than its row shows)
+    () => EXCHANGES.filter((x) => (q ? [x.from, x.subject, x.led, ...(shut(x) ? [] : [x.first, x.ledTo])].some((text) => text.toLowerCase().includes(q)) : under(x, split))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [split, q, done, starred],
+    [split, q, done, starred, member],
   )
   const cursor = Math.min(at, Math.max(0, rows.length - 1))
-  const thread = open ? (EXCHANGES.find((x) => x.id === open) ?? null) : null
+  const opened = open ? (EXCHANGES.find((x) => x.id === open) ?? null) : null
+  /** The conversation that is open to read; and the one that is asked for and is not theirs to read until they log in. */
+  const thread = opened && !shut(opened) ? opened : null
+  const kept = opened && shut(opened) ? opened : null
   const count = (id: Split) => EXCHANGES.filter((x) => under(x, id)).length
   /** The splits along the bar: the inbox's, and Starred once something is starred. Done is not among them: it
    * is somewhere G then E goes (and the command palette's Go to Done), as it is in Superhuman, and while it is
@@ -252,7 +262,11 @@ export function MailApp() {
     root.current?.querySelector('.ml-tabs .on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [split, done.length, starred.length])
 
-  const show = (x: Exchange) => setOpen(x.id)
+  /** Opens a conversation. One that is locked to them is asked for: Log In is let down, and it opens when they are in. */
+  const show = (x: Exchange) => {
+    setOpen(x.id)
+    if (shut(x)) askLogIn('mail')
+  }
   // A conversation opens on its newest email: the earlier ones are a line each until they are asked for.
   // (Whatever opened it: a row, a key, or a link that named it)
   useEffect(() => {
@@ -286,7 +300,7 @@ export function MailApp() {
         return void (!thread && rows[cursor] && show(rows[cursor]!))
       case 'back':
         if (zero) return setZero(false)
-        if (thread) return setOpen(null)
+        if (thread || kept) return setOpen(null)
         if (query !== null) return setQuery(null)
         return
       case 'next-split':
@@ -538,7 +552,7 @@ export function MailApp() {
               id={`mail-${x.id}`}
               role="option"
               aria-selected={i === cursor}
-              className={`ml-row${i === cursor ? ' on' : ''}${unread.includes(x.id) ? ' unread' : ''}`}
+              className={`ml-row${i === cursor ? ' on' : ''}${unread.includes(x.id) ? ' unread' : ''}${shut(x) ? ' locked' : ''}`}
               data-group={head ? group : undefined}
               onPointerMove={(e) => e.pointerType === 'mouse' && sweepTo(i)}
               onClick={() => (setAt(i), show(x))}
@@ -550,8 +564,11 @@ export function MailApp() {
               <span className="s">
                 {starred.includes(x.id) && <Star className="ml-star" size={12} strokeWidth={0} fill="currentColor" aria-label="Starred" role="img" />}
                 <span className={`ml-chip ${x.led.toLowerCase()}`}>{x.led.toLowerCase()}</span>
-                <em>{x.subject}</em>
-                {x.first}
+                <em>
+                  {shut(x) && <Lock className="ml-lock" size={11} strokeWidth={2.4} aria-label="Locked" role="img" />}
+                  {x.subject}
+                </em>
+                {shut(x) ? 'Log in to read' : x.first}
               </span>
               {i === cursor ? (
                 // (what there is to do with the row it is on, as Superhuman sets it there: done, and the command palette.
@@ -729,6 +746,21 @@ export function MailApp() {
               back()
             }}
           />
+        ) : kept ? (
+          // One that is for someone logged in, asked for by someone who is not: what it is, and the way in
+          <div className="ml-main ml-thread ml-shut" role="group" aria-label={`${kept.subject}: locked`}>
+            <button type="button" className="ml-back" aria-label="Back to inbox" onClick={() => setOpen(null)}>
+              <ArrowLeft size={15} strokeWidth={1.7} aria-hidden />
+            </button>
+            <div className="ml-shut__in">
+              <Lock size={30} strokeWidth={1.6} aria-hidden />
+              <h1>{kept.subject}</h1>
+              <p>From {kept.from}. This one is for people who are logged in.</p>
+              <button type="button" className="ml-shut__go" onClick={() => askLogIn('mail')}>
+                Log In to Read
+              </button>
+            </div>
+          </div>
         ) : thread ? (
           <Thread
             x={thread}

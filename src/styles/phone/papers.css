@@ -91,6 +91,11 @@
   padding-bottom: 40px;
 }
 
+/* (under the list, for someone some of it is locked to) */
+.upp-locked--under {
+  padding: 18px 0 30px;
+}
+
 .pp-said .ios-empty,
 .upp-locked .ios-empty {
   padding-bottom: 22px;

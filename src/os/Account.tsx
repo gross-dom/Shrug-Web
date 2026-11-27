@@ -49,6 +49,8 @@ export const HEADS: Record<NonNullable<Why> | 'plain', { head: string; lead: str
   post: { head: 'Log in to post', lead: 'Every photo on the wall has a name behind it. Yours is kept while you log in.' },
   price: { head: 'Log in to enquire', lead: 'Log in or sign up to get started.' },
   booth: { head: 'Log in to use Photo Booth', lead: 'Log in or sign up to get started.' },
+  invest: { head: 'Log in as an LP', lead: 'Log in with your LP email to be asked which deals you want to see.' },
+  mail: { head: 'Log in to read this', lead: 'Some of Shrug’s mail is for people who are logged in.' },
   // (let down for someone already logged in, to ask what they are called: nobody is shown these two)
   name: { head: 'Welcome to Shrug VIP', lead: 'Log in or sign up to get started.' },
 }

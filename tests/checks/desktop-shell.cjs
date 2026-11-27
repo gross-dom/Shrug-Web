@@ -214,16 +214,16 @@ const parts = {
       await t.ctx.close()
     }
     // A small desk: the conversation, which opens by itself, opens narrower rather than on the desk's icons, its list still beside it
-    // (the icons are never drawn smaller, so on a desk too short for one line of them they are in two: on the
-    // narrowest of these that leaves less beside them than the conversation's list needs, 536 of 560, and it
-    // opens at that least width, on the edge of their line and on none of their pictures)
+    // (the icons are never drawn smaller, so on a desk too short for one line of the ten they are in two, or
+    // three. Where that leaves less beside them than the conversation's list needs, it opens at that least
+    // width against the desk's far side, and lies on the nearest of their lines: the line at the desk's edge,
+    // which is the first of them, is always clear)
     for (const [w, h] of [[760, 600], [900, 650], [1000, 700]]) {
       t = await fresh({ w, h, dpr: 1 }, 'still')
       const over = await lying(t.page, 'messages', '.desk__item')
-      const drawn = await lying(t.page, 'messages', '.desk__icon')
-      const chat = await t.page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"]'); const side = el.querySelector('.chat-side'); const left = Math.min(...[...document.querySelectorAll('.desk__item')].map((i) => i.getBoundingClientRect().left)); return { wide: Math.round(el.getBoundingClientRect().width), list: !!side && side.getBoundingClientRect().width > 120, room: Math.round(left - 12 - 8) } })
+      const chat = await t.page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"]'); const side = el.querySelector('.chat-side'); const lefts = [...document.querySelectorAll('.desk__item')].map((i) => Math.round(i.getBoundingClientRect().left)); const left = Math.min(...lefts); return { wide: Math.round(el.getBoundingClientRect().width), list: !!side && side.getBoundingClientRect().width > 120, room: Math.round(left - 12 - 8), edge: lefts.map((l) => l === Math.max(...lefts)) } })
       if (chat.room >= 560) check(`windows: at ${w}x${h} the conversation opens beside the desk's icons, not on them, and keeps its list`, over.length === A.DESK.length && over.every((v) => v === 0) && chat.wide >= 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
-      else check(`windows: at ${w}x${h}, with ${chat.room}px beside the desk's two lines of icons, the conversation opens at its least width, on none of their pictures, and keeps its list`, over.length === A.DESK.length && drawn.length === A.DESK.length && drawn.every((v) => v === 0) && chat.wide === 560 && chat.list, JSON.stringify({ over, drawn, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
+      else check(`windows: at ${w}x${h}, with ${chat.room}px beside the desk's lines of icons, the conversation opens at its least width, clear of the line at the desk's edge, and keeps its list`, over.length === A.DESK.length && over.every((v, i) => !chat.edge[i] || v === 0) && chat.wide === 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
       await t.ctx.close()
     }
 
@@ -364,8 +364,11 @@ const parts = {
     // An upright iPad: the opening window leaves the icons clear
     for (const [w, h] of [[820, 1180], [768, 1024], [810, 1080], [834, 1194]]) {
       t = await fresh({ w, h, dpr: 1, touch: true, mouse: true }, 'still')
-      const over = await t.page.evaluate(() => { const a = document.querySelector('.wf[data-app="messages"]').getBoundingClientRect(); return [...document.querySelectorAll('.desk__item')].map((el) => { const b = el.getBoundingClientRect(); return Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) }) })
-      check(`touch: at ${w}x${h} the opening window covers neither desktop icon`, over.every((v) => v === 0), JSON.stringify(over) + ' ' + JSON.stringify(await rects(t.page)))
+      // (the desk's ten icons are in two lines on these, which leaves the conversation a little less than its
+      // least width beside them on the narrowest: it lies on the edge of their line there, and on no icon's
+      // picture or name)
+      const over = await t.page.evaluate(() => { const a = document.querySelector('.wf[data-app="messages"]').getBoundingClientRect(); return [...document.querySelectorAll('.desk__icon, .desk__name')].map((el) => { const b = el.getBoundingClientRect(); return Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) }) })
+      check(`touch: at ${w}x${h} the opening window covers no desktop icon's picture or name`, over.length === A.DESK.length * 2 && over.every((v) => v === 0), JSON.stringify(over) + ' ' + JSON.stringify(await rects(t.page)))
       if (w === 768) await t.page.screenshot({ path: path.join(OUT, 'ipad-768.png') })
       await t.ctx.close()
     }

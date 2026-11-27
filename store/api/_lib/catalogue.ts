@@ -66,8 +66,13 @@ export async function shelvesForAVisitor(): Promise<Product[]> {
     .sort((a, b) => a.place - b.place || a.name.localeCompare(b.name))
 }
 
+/** The updates someone who is not signed in is shown: the documents that are for anyone, and the listed ones, closed. */
+export async function updatesForAVisitor(): Promise<Update[]> {
+  return updatesFor(VISITOR, await all(T.products), [])
+}
+
 /** The updates a member is shown: every document that is theirs, or listed to everyone, in its order. */
-export function updatesFor(member: Member, rows: Row[], orders: Order[]): Update[] {
+export function updatesFor(member: Pick<Member, 'roles' | 'funds'>, rows: Row[], orders: Order[]): Update[] {
   return rows
     .map(productOf)
     .filter((product): product is Product => !!product)

@@ -69,6 +69,35 @@ export function QuickTimeIcon() {
   )
 }
 
+/** A seal's edge: a circle with twelve scallops round it. */
+const seal = (() => {
+  const pts: string[] = []
+  for (let i = 0; i < 144; i++) {
+    const t = (i / 144) * Math.PI * 2
+    const r = 27.4 + 2.5 * Math.cos(12 * t)
+    pts.push(`${(50 + r * Math.cos(t)).toFixed(2)} ${(50 + r * Math.sin(t)).toFixed(2)}`)
+  }
+  return `M${pts.join('L')}Z`
+})()
+
+/** Accredited Investors Only: a gold seal with a tick in it, on black: what is accredited has one. */
+export function InvestorsIcon() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <Tile fill={['#2b2b30', '#0b0b0d']}>
+      <defs>
+        <linearGradient id={`${id}-gold`} x1="0.15" y1="0" x2="0.85" y2="1">
+          <stop offset="0" stopColor="#f3dc9c" />
+          <stop offset="0.55" stopColor="#d7b160" />
+          <stop offset="1" stopColor="#a87b2e" />
+        </linearGradient>
+      </defs>
+      <path d={seal} fill={`url(#${id}-gold)`} />
+      <path d="M37.5 50.5l8.6 8.6L63 41.6" fill="none" stroke="#17130a" strokeWidth="6.4" strokeLinecap="round" strokeLinejoin="round" />
+    </Tile>
+  )
+}
+
 /** Weather: the Mac's: a sun behind a white cloud, on a blue sky. */
 export function WeatherIcon() {
   const id = useId().replace(/:/g, '')

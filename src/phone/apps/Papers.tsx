@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as Reac
 import { FileQuestion, FolderOpen, Lock } from 'lucide-react'
 import { UPDATE_GROUPS } from '../../../store/shared/rules'
 import { onePager, useShown } from '../../apps/Preview'
-import { dayOf, fundsOf, LOCKED } from '../../apps/Updates'
-import { account, askLogIn, isLP, requestDoc, type Doc } from '../../os/account'
+import { dayOf, fundsOf, LOCKED, SOME_LOCKED } from '../../apps/Updates'
+import { account, askLogIn, docsOf, isLP, requestDoc, type Doc } from '../../os/account'
 import { PdfIcon } from '../../os/icons'
 import { paperOf, type Paper } from '../../os/papers'
 import { useStore } from '../../os/store'
@@ -258,12 +258,12 @@ function Row({ doc }: { doc: Doc }) {
         </span>
       }
       title={doc.name}
-      subtitle={failed ? 'That didn’t send. Try again.' : [`For ${doc.forWhom.replace(/^All\b/, 'all')}`, day].filter(Boolean).join(' · ')}
+      subtitle={failed ? 'That didn’t send. Try again.' : [`For ${doc.forWhom.replace(/^(All|Everyone)\b/, (word) => word.toLowerCase())}`, day].filter(Boolean).join(' · ')}
       chevron={opens}
       onClick={opens ? () => push(DOC + doc.id) : doc.state === 'request' ? ask : doc.state === 'locked' ? () => launch('myvip') : undefined}
       // (what pressing it does, where that is not opening it, in the blue of something to press; and where
       // nothing does anything yet, how it stands)
-      value={doc.state === 'open' ? undefined : doc.state === 'requested' ? 'Requested' : doc.state === 'request' || doc.state === 'locked' ? undefined : 'Coming soon'}
+      value={doc.state === 'open' ? undefined : doc.state === 'requested' ? 'Requested' : doc.state === 'request' || doc.state === 'locked' ? undefined : doc.state === 'closed' ? 'LPs only' : 'Coming soon'}
       trailing={doc.state === 'request' || doc.state === 'locked' ? <span className="upp-act">{doc.state === 'locked' ? 'Unlock' : busy ? 'Requesting…' : 'Request'}</span> : undefined}
       label={doc.state === 'open' ? `Open ${doc.name}` : doc.state === 'request' ? `Request ${doc.name}` : doc.state === 'locked' ? `Unlock ${doc.name} in My VIP` : undefined}
       className="upp-row"
@@ -293,7 +293,8 @@ function Locked({ anon }: { anon: boolean }) {
 function Folder() {
   const who = useStore(account, (s) => s)
   const lp = isLP(who)
-  const docs = who.status === 'member' ? who.docs : []
+  // (what is theirs; or, to anyone who is not an LP, the update that is for everyone and the names of the rest)
+  const docs = docsOf(who)
   const groups = [...UPDATE_GROUPS, ...docs.map((doc) => doc.group).filter((group) => !UPDATE_GROUPS.includes(group))].filter((group, i, all) => all.indexOf(group) === i && docs.some((doc) => doc.group === group))
   return (
     <Screen
@@ -312,7 +313,7 @@ function Folder() {
     >
       {who.status === 'checking' ? (
         <Empty title="One moment…" />
-      ) : who.status !== 'member' || !lp ? (
+      ) : docs.length === 0 && !lp ? (
         <Locked anon={who.status !== 'member'} />
       ) : docs.length === 0 ? (
         <Empty icon={<FolderOpen size={40} strokeWidth={1.6} />} title="Nothing here yet">
@@ -321,7 +322,7 @@ function Folder() {
       ) : (
         <List>
           {groups.map((group, i) => (
-            <Section key={group} header={group} footer={i === groups.length - 1 ? `${docs.length === 1 ? '1 document' : `${docs.length} documents`} · Prepared for ${who.name || who.email}` : undefined}>
+            <Section key={group} header={group} footer={i === groups.length - 1 ? [docs.length === 1 ? '1 document' : `${docs.length} documents`, who.status === 'member' ? `Prepared for ${who.name || who.email}` : '', !lp && docs.some((doc) => doc.state === 'closed') ? SOME_LOCKED : ''].filter(Boolean).join(' · ') : undefined}>
               {docs
                 .filter((doc) => doc.group === group)
                 .map((doc) => (
@@ -329,6 +330,14 @@ function Folder() {
                 ))}
             </Section>
           ))}
+          {/* Someone who is not an LP: the way to ask about becoming one, under what they are shown */}
+          {!lp && docs.some((doc) => doc.state === 'closed') && (
+            <div className="upp-locked upp-locked--under">
+              <button type="button" className="pp-link" onClick={() => writeToShrug({ subject: 'Becoming an LP' })}>
+                Enquire about becoming an LP
+              </button>
+            </div>
+          )}
         </List>
       )}
     </Screen>
@@ -338,7 +347,8 @@ function Folder() {
 /** A document of the folder, in the reader. One that is no longer theirs (logged out, or another account) is said to be. */
 function Document({ id }: { id: string }) {
   const who = useStore(account, (s) => s)
-  const doc = who.status === 'member' ? who.docs.find((d) => d.id === id) : null
+  // (one that is for everyone is anyone's to read; any other is read by the person logged in whom it is for)
+  const doc = docsOf(who).find((d) => d.id === id && (who.status === 'member' || d.state === 'open')) ?? null
   if (!doc)
     return (
       <Screen title="Updates" tone="grouped" leading={<BackButton label="Updates" />}>

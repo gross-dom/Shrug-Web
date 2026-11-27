@@ -13,11 +13,13 @@ import { SpotifyApp } from '../apps/Spotify'
 import { StoreApp } from '../apps/Store'
 import { TerminalApp } from '../apps/Terminal'
 import { UpdatesApp } from '../apps/Updates'
+import { InvestorsApp } from '../apps/Investors'
+import { PortalApp } from '../apps/Portal'
 import { WallpapersApp } from '../apps/Wallpapers'
 import { WorkspaceApp } from '../apps/Workspace'
 import { WeatherApp } from '../apps/Weather'
 import { YouTubeApp } from '../apps/YouTube'
-import { account, askLogIn, unlocked } from './account'
+import { docsOf, account, askLogIn, unlocked } from './account'
 import { APPS, APP_IDS, type AppId } from './apps'
 import { Boundary } from './Boundary'
 import { Dock } from './Dock'
@@ -35,7 +37,7 @@ import { saver } from './saver'
 import { ScreenSaver } from './ScreenSaver'
 import { useStore } from './store'
 import { setTitle } from './title'
-import { activeApp, deskHolds, deskRows, focusWindow, openApp, tileRect, wm } from './wm'
+import { activeApp, deskHolds, deskPlaces, deskRows, focusWindow, openApp, tileRect, wm } from './wm'
 import { WindowFrame } from './WindowFrame'
 
 // Everything on the desktop but its wallpaper: the menu bar, the things left
@@ -61,6 +63,8 @@ const WINDOWS: Record<AppId, () => JSX.Element> = {
   youtube: YouTubeApp,
   weather: WeatherApp,
   workspace: WorkspaceApp,
+  investors: InvestorsApp,
+  portal: PortalApp,
 }
 
 interface DeskItem {
@@ -74,34 +78,52 @@ interface DeskItem {
   open: () => void
 }
 
-/** What is left out on the desk, down its right-hand side, in this order (design/v1/DESIGN.md, section 3):
- * Updates, Portfolio, the one-pager, Wallpapers, QuickTime Player, Photo Booth, Spotify, YouTube. The Updates folder is
- * first: it is always there, locked to everyone but Shrug's LPs. Portfolio is a folder here as well as an icon
- * in the Dock (Niv, 27 Nov: it had been taken off the desk when it went into the Dock). (One whose app has
- * nothing real in it yet is left off the live site: os/held.ts.) */
-/** What the desk has besides Updates, Portfolio, the one-pager and Wallpapers, where it is not left out for now (held.ts). */
+/** What is left out on the desk, down its right-hand side, in this order (design/v1/DESIGN.md, section 3, and
+ * Dom's of 27 Nov): Updates, Accredited Investors Only, Investor Portal, Portfolio, the one-pager, Wallpapers,
+ * QuickTime Player, Photo Booth, Spotify, YouTube. The Updates folder is first: it is always there, with a lock
+ * for anyone who is not one of Shrug's LPs. What is for investors is next to it: the app that asks to become
+ * one, and a folder with nothing in it yet. Portfolio is a folder here as well as an icon in the Dock (Niv, 27
+ * Nov: it had been taken off the desk when it went into the Dock). (One whose app has nothing real in it yet
+ * is left off the live site: os/held.ts.) */
+/** What the desk has besides those six, where it is not left out for now (held.ts). */
 const ALSO_ON_DESK = ['quicktime', 'photobooth', 'spotify', 'youtube'] as const
 /** How many icons that makes. The window manager is told at once: a window can open before the desk is drawn. */
-const ON_DESK = 4 + ALSO_ON_DESK.filter((id) => !held(id)).length
+const ON_DESK = 6 + ALSO_ON_DESK.filter((id) => !held(id)).length
 deskHolds(ON_DESK)
 
 function useDesk(): DeskItem[] {
   const who = useStore(account, (s) => (s.status === 'member' ? (s.roles.includes('LP') ? 'lp' : 'member') : s.status === 'checking' ? 'checking' : 'nobody'))
   const onDesk = useStore(layout, (s) => s.desk)
   const locked = who !== 'lp'
+  /** Whether there is anything in the folder that someone who is not an LP may read (an update for everyone). */
+  const some = useStore(account, (s) => docsOf(s).some((doc) => doc.state === 'open'))
   const files: Record<string, DeskItem> = {
     updates: {
       id: 'updates',
       name: 'Updates',
       says: locked ? 'desktop icon, locked' : 'desktop icon',
       icon: <FolderIcon locked={locked} />,
-      tip: who === 'lp' ? undefined : who === 'member' ? 'For Shrug’s LPs.' : 'For Shrug’s LPs. Log in to open.',
+      tip: who === 'lp' ? undefined : some ? 'Some updates are for Shrug’s LPs only.' : who === 'member' ? 'For Shrug’s LPs.' : 'For Shrug’s LPs. Log in to open.',
       open: () => {
-        // Nobody logged in: the folder lets down Log In, which says what it was opened for. Someone logged
-        // in is shown the window: what is theirs, or, for someone who is not an LP, who it is for
-        if (account.get().status !== 'member') return askLogIn('updates')
+        // With nothing in it that anyone may read, and nobody logged in: the folder lets down Log In, which
+        // says what it was opened for. Otherwise the window opens: what is theirs to read, and what is locked
+        if (account.get().status !== 'member' && !docsOf(account.get()).length) return askLogIn('updates')
         openApp('updates', dockPoint('updates'))
         focusWindow('updates')
+      },
+    },
+    // Accredited Investors Only: its name takes two lines under its icon, and is kept to two (the last two
+    // words are held together: left to itself it is set on three, and its place in the line is a line taller)
+    investors: { id: 'investors', name: 'Accredited Investors\u00a0Only', says: 'desktop icon', icon: <AppIcon id="investors" />, open: () => launch('investors') },
+    // A folder with nothing in it yet (Dom, 27 Nov)
+    portal: {
+      id: 'portal',
+      name: 'Investor Portal',
+      says: 'desktop icon',
+      icon: <FolderIcon />,
+      open: () => {
+        openApp('portal', dockPoint('portal'))
+        focusWindow('portal')
       },
     },
     // The portfolio, as a folder: the window the Dock's own icon opens, out of this one
@@ -173,6 +195,7 @@ function DeskIcons() {
   // among as many lines as it takes at their one size (wm.ts)
   const tall = useStore(wm, (s) => s.viewport.h)
   const rows = deskRows(lined.length, tall)
+  const places = deskPlaces(lined.length, rows)
   // How wide the line of icons is, all told, for what lands beside it (a notification): one line of them, or
   // two on a screen too short for one (styles/os.css)
   const desk = useRef<HTMLUListElement>(null)
@@ -244,8 +267,8 @@ function DeskIcons() {
     window.addEventListener('pointercancel', up)
   }
 
-  const icon = (item: DeskItem, spot?: Spot) => (
-    <li key={item.id} className="desk__cell" style={spot ? { right: Math.max(8, spot.r), top: Math.max(34, spot.t) } : undefined}>
+  const icon = (item: DeskItem, spot?: Spot, at?: { line: number; row: number }) => (
+    <li key={item.id} className="desk__cell" style={spot ? { right: Math.max(8, spot.r), top: Math.max(34, spot.t) } : at ? { gridColumn: at.line, gridRow: at.row } : undefined}>
       <button
         type="button"
         className="desk__item"
@@ -282,7 +305,8 @@ function DeskIcons() {
   return (
     <>
       <ul ref={desk} className="desk" aria-label="On the desktop" style={{ '--desk-n': Math.max(1, lined.length), '--desk-rows': rows } as CSSProperties}>
-        {lined.map((item) => icon(item))}
+        {/* (each in its line and its place down it, the lines as even as can be: wm.ts, deskPlaces) */}
+        {lined.map((item, i) => icon(item, undefined, places[i]))}
       </ul>
       {placed.length > 0 && (
         <ul className="desk-free" aria-label="On the desktop, where you put them">

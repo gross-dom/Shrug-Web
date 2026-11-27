@@ -162,7 +162,9 @@ const check = (name, ok, detail = '') => {
   await t.ctx.close()
 
   // ---- an LP's documents: the list, and one opened
-  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty' })
+  // (the demo's fuller folder, ?docs=more: each of the states a document can be in. As the site comes, an LP's
+  // folder is four updates, which account.cjs and investors.cjs look at)
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&docs=more' })
   p = t.page
   await p.waitForTimeout(1600)
   await logInLP(p)
@@ -247,7 +249,7 @@ const check = (name, ok, detail = '') => {
   await t.ctx.close()
 
   // ---- a file that is gone (the demo's way to see it: an address that says ?doc=missing)
-  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&doc=missing' })
+  t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&docs=more&doc=missing' })
   p = t.page
   await p.waitForTimeout(1600)
   await logInLP(p)

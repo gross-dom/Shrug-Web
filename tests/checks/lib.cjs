@@ -75,6 +75,10 @@ exports.DOCK_IDS = exports.DOCK.map(([id]) => id)
 /** What is out on the desk, down its right-hand side, in its order: each icon's own name, and what it says of itself. */
 exports.DESK = [
   ['updates', 'Updates, desktop icon, locked'],
+  // (what is for investors is next to it: the app that asks to become one, whose name is on two lines with
+  // its last two words held together, and a folder with nothing in it yet. Dom, 27 Nov)
+  ['investors', 'Accredited Investors\u00a0Only, desktop icon'],
+  ['portal', 'Investor Portal, desktop icon'],
   ['portfolio', 'Portfolio, desktop icon'],
   ['one-pager', 'One-pager, desktop icon'],
   ['wallpapers', 'Wallpapers, desktop icon'],

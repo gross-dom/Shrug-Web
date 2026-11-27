@@ -161,6 +161,69 @@
   font-size: 12px;
 }
 
+/* A row that is named and no more: written for a fund's LPs, to someone who is not one */
+.upd-row .upd-kept {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* (its file's picture is dimmed; its name is set in the second ink, which can still be read) */
+.upd-row[data-state='closed'] > span:first-child {
+  opacity: 0.55;
+}
+
+.upd-row[data-state='closed'] b {
+  color: var(--v-ink-2);
+}
+
+/* Under the list, for someone some of it is locked to: what the locks mean, and the ways past them */
+.upd-note {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--v-hair);
+  background: color-mix(in srgb, var(--v-ink) 3%, transparent);
+}
+
+.upd-note p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--v-ink-2);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.upd-note p svg {
+  flex: none;
+}
+
+.upd-note__ways {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.upd-note .updates__enquire {
+  height: 28px;
+  margin-top: 0;
+  padding: 0 13px;
+  border-color: color-mix(in srgb, var(--v-ink) 22%, transparent);
+  color: var(--v-ink);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.upd-note .v-btn {
+  height: 28px;
+}
+
 .upd-foot {
   display: flex;
   flex: none;

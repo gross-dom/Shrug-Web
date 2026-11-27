@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, Download, FileQuestion, Lock, Maximize2, PanelLeft, ZoomIn, ZoomOut } from 'lucide-react'
 import { ONE_PAGER as PAGE } from '../data/onepager'
 import { Window } from '../kit/window'
-import { account, askLogIn } from '../os/account'
+import { docsOf, account, askLogIn } from '../os/account'
 import { ONE_PAGER, paperOf, preview, type Paper, type Sheet } from '../os/papers'
 import { useStore } from '../os/store'
 import { closeApp, wm } from '../os/wm'
@@ -166,7 +166,7 @@ export function PreviewApp() {
   // that is not theirs any more is not shown, and neither is another document in its place
   useEffect(() => {
     if (!held.wanted || who.status === 'checking') return
-    const doc = who.status === 'member' ? who.docs.find((d) => `update:${d.id}` === held.wanted) : null
+    const doc = docsOf(who).find((d) => `update:${d.id}` === held.wanted && (who.status === 'member' || d.state === 'open')) ?? null
     if (doc) return preview.set({ paper: paperOf(doc), wanted: null })
     preview.set({ paper: null, wanted: null })
     if (wm.get().wins.preview.open) closeApp('preview')

@@ -34,14 +34,24 @@ const check = (name, ok, detail = '') => {
   await p.locator('[data-desk="updates"]').click()
   await p.waitForTimeout(250)
   const tip = await p.evaluate(() => { const el = document.querySelector('[data-desk="updates"] + .desk__tip'); const r = el.getBoundingClientRect(); const next = document.querySelector('[data-desk="one-pager"]').getBoundingClientRect(); return { text: el.textContent, shown: getComputedStyle(el).opacity, clear: r.bottom <= next.top || r.right <= next.left, on: r.left >= 0 } })
-  check('picked, it says who it is for, clear of the icon under it', tip.text === 'For Shrug’s LPs. Log in to open.' && tip.shown === '1' && tip.clear && tip.on, JSON.stringify(tip))
+  check('picked, it says who it is for, clear of the icon under it', tip.text === 'Some updates are for Shrug’s LPs only.' && tip.shown === '1' && tip.clear && tip.on, JSON.stringify(tip))
 
-  // ---- opened by a visitor, the folder lets down Log In, which says what for; no window opens
+  // ---- opened by a visitor, the folder opens (Dom, 27 Nov: one update is for everyone): that one to read, the
+  // rest named and locked, and under them what the locks mean and the two ways past them. Log In there lets
+  // the sheet down, which says what for
   await p.locator('[data-desk="updates"]').dblclick()
+  await p.waitForSelector(`${W}[data-open] .upd-row`, { timeout: 15000 })
+  await p.waitForTimeout(500)
+  const anyone = await p.evaluate((W) => { const w = document.querySelector(W); return { rows: [...w.querySelectorAll('.upd-row')].map((r) => `${r.querySelector('b').textContent}:${r.dataset.state}:${r.querySelector('.s').textContent.trim()}`).join(' | '), note: w.querySelector('.upd-note p')?.textContent.trim(), ways: [...w.querySelectorAll('.upd-note button')].map((b) => b.textContent.trim()).join(' | '), chip: w.querySelector('.updbar .v-chip')?.textContent.trim() ?? null, foot: w.querySelector('.upd-foot')?.innerText.replace(/\s*\n\s*/g, ' / '), sheet: document.querySelectorAll('.account').length } }, W)
+  check('opened by a visitor, it opens: the update that is for everyone to read, and the others by name, each with a lock', anyone.rows === 'Update 1:closed:LPs only | Update 2:closed:LPs only | Update 3:closed:LPs only | Update 4:open:Open' && anyone.sheet === 0, anyone.rows)
+  check('under them it says what the locks mean, with Log In and the way to ask about becoming an LP; its foot names nobody', anyone.note === 'Updates with a lock are for Shrug LPs only. Log in with your LP email to open them.' && anyone.ways === 'Log In | Enquire about becoming an LP' && anyone.chip === null && anyone.foot === '4 documents / Opens in Preview', JSON.stringify(anyone))
+  await p.locator(`${W} .upd-note .v-btn`).click()
   await p.waitForTimeout(400)
-  check('opened by a visitor, it lets down Log In, which says what it was opened for', (await head(p)) === 'Log in to open Updates' && (await lead(p)) === 'Updates is for Shrug’s LPs. Log in with your LP email.' && (await p.evaluate((W) => !document.querySelector(`${W}[data-open]`), W)))
+  check('Log In there lets the sheet down, which says what it was opened for', (await head(p)) === 'Log in to open Updates' && (await lead(p)) === 'Updates is for Shrug’s LPs. Log in with your LP email.')
   await p.keyboard.press('Escape')
   await p.waitForTimeout(200)
+  await p.locator(`${W} button[aria-label^="Close"]`).click()
+  await p.waitForTimeout(500)
 
   // ---- the sheet: an email first
   await p.locator('.menubar__login').click()
@@ -118,13 +128,13 @@ const check = (name, ok, detail = '') => {
   const inBar = { text: await bar(p), ...(await p.evaluate(() => ({ face: !!document.querySelector('.menubar__login .face--emoji[aria-hidden]'), sheet: document.querySelectorAll('.account').length }))) }
   check('Done: the bar has their picture and first name, and the sheet is away', inBar.text === 'Riley' && inBar.face && inBar.sheet === 0, JSON.stringify(inBar))
 
-  // ---- logged in and not an LP: the folder is still locked, and says who it is for
+  // ---- logged in and not an LP: the folder still has its lock, and what is locked in it is still locked
   folder = await locked(p)
   check('logged in and not an LP, the folder is still locked', folder.lock, JSON.stringify(folder))
   await p.locator('[data-desk="updates"]').dblclick()
   await p.waitForTimeout(900)
-  const standard = await p.evaluate((W) => { const w = document.querySelector(W); return { open: w.hasAttribute('data-open'), text: w.querySelector('.updates__locked')?.innerText ?? '', rows: w.querySelectorAll('.upd-row').length, chip: w.querySelector('.updbar .v-chip')?.textContent.trim(), title: document.title } }, W)
-  check('opened, it tells them who it is for and shows nothing in it: its bar still says Locked', standard.open && /This folder is for Shrug LPs only\. Please log in with your LP email to access its contents\./.test(standard.text) && standard.rows === 0 && standard.chip === 'Locked' && /^Updates/.test(standard.title), JSON.stringify(standard))
+  const standard = await p.evaluate((W) => { const w = document.querySelector(W); return { open: w.hasAttribute('data-open'), rows: [...w.querySelectorAll('.upd-row')].map((r) => `${r.querySelector('b').textContent}:${r.dataset.state}`).join(' | '), note: w.querySelector('.upd-note p')?.textContent.trim(), ways: [...w.querySelectorAll('.upd-note button')].map((b) => b.textContent.trim()).join(' | '), foot: w.querySelector('.upd-foot')?.innerText.replace(/\s*\n\s*/g, ' / '), title: document.title } }, W)
+  check('opened, it shows them the update that is for everyone and the rest locked, with the way to ask about becoming an LP and no Log In', standard.open && standard.rows === 'Update 1:closed | Update 2:closed | Update 3:closed | Update 4:open' && standard.note === 'Updates with a lock are for Shrug LPs only.' && standard.ways === 'Enquire about becoming an LP' && /^4 documents · Prepared for /.test(standard.foot) && /^Updates/.test(standard.title), JSON.stringify(standard))
 
   // ---- the account sheet
   await p.locator('.menubar__login').click()
@@ -173,14 +183,14 @@ const check = (name, ok, detail = '') => {
   await p.locator('.account__go').click()
   await p.waitForTimeout(1100)
   const lp = await p.evaluate(() => ({ bar: [...document.querySelector('.menubar__login').childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), note: document.querySelector('.desk-note')?.innerText.replace(/\s*\n\s*/g, ' / ') ?? '', lock: !!document.querySelector('[data-desk="updates"] [data-lock]'), picked: document.querySelector('[data-desk="updates"]').hasAttribute('data-picked'), win: !!document.querySelector('.wf[data-app="updates"][data-open]') }))
-  check('an LP is in: the desk says Updates is unlocked, the folder has lost its lock and is picked, and nothing opens by itself', lp.bar === 'Jordan' && lp.note === 'Updates is unlocked / Three documents written for your funds.' && !lp.lock && lp.picked && !lp.win, JSON.stringify(lp))
+  check('an LP is in: the desk says Updates is unlocked, the folder has lost its lock and is picked, and nothing opens by itself', lp.bar === 'Jordan' && lp.note === 'Updates is unlocked / Two documents written for your funds.' && !lp.lock && lp.picked && !lp.win, JSON.stringify(lp))
   await p.locator('.desk-note').click()
   await p.waitForTimeout(900)
   const win = await p.evaluate((W) => { const w = document.querySelector(W); return { front: document.querySelector('.wf[data-active]')?.dataset.app, title: document.title, rows: [...w.querySelectorAll('.upd-row')].map((r) => `${r.querySelector('b').textContent} / ${r.querySelector('.s').textContent.trim()}`), chip: w.querySelector('.updbar .v-chip')?.textContent.trim(), foot: w.querySelector('.upd-foot')?.innerText.replace(/\s*\n\s*/g, ' / '), menu: document.querySelector('.menubar__menu[data-strong] .menubar__title')?.textContent, note: document.querySelectorAll('.desk-note').length } }, W)
   check('pressed, the note opens the folder, in front, named in the bar and in the tab', win.front === 'updates' && /^Updates/.test(win.title) && win.menu === 'Updates' && win.note === 0, JSON.stringify(win))
   // (what is in the folder, and what a document does when it is opened, is preview.cjs's)
-  check('it holds what this LP is shown: what is theirs to open, and what may be asked for or is still to come', win.rows.join(' | ') === 'Shrug 4 update, Q3 2026 / Open | Shrug 2 update, Q3 2026 / Open | Shrug Capital update, 2026 / Open | Shrug 3 update, Q3 2026 / Request | Shrug 2 annual letter / Coming soon | SPV update / Request', win.rows.join(' | '))
-  check('its bar says whose it is, and its foot who it was prepared for and where a document opens', win.chip === 'LP · Shrug 2, 4' && win.foot === '6 documents · Prepared for Jordan Avery / Opens in Preview', JSON.stringify({ chip: win.chip, foot: win.foot }))
+  check('it holds what this LP, who is in Shrug 2 and 4, is shown: the update written for their fund and the one for everyone to open, and the other funds’ to ask for', win.rows.join(' | ') === 'Update 1 / Request | Update 2 / Open | Update 3 / Request | Update 4 / Open', win.rows.join(' | '))
+  check('its bar says whose it is, and its foot who it was prepared for and where a document opens', win.chip === 'LP · Shrug 2, 4' && win.foot === '4 documents · Prepared for Jordan Avery / Opens in Preview', JSON.stringify({ chip: win.chip, foot: win.foot }))
   check('the folder is not in the Dock', (await p.evaluate(() => document.querySelectorAll('.dock [data-dock-app="updates"]').length)) === 0)
   await p.locator('.menubar__login').click()
   await p.waitForTimeout(300)
@@ -216,12 +226,12 @@ const check = (name, ok, detail = '') => {
   check('a personal link: the sheet is down, welcomes them by name and asks only for a number; the address no longer says so', linked.head === 'Welcome, Jordan' && /^Your link confirmed lp@example\.com\. Add a phone number to finish\./.test(linked.lead) && linked.focus === 'tel' && !/login/i.test(linked.address) && linked.bar === 'Jordan', JSON.stringify(linked))
   await t.ctx.close()
 
-  // ---- asked for by its address without logging in: it is locked, shows nothing, and has the way in
+  // ---- asked for by its address without logging in: what anyone is shown of it, and the way in under that
   t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&open=updates' })
   await t.page.waitForTimeout(2000)
-  const byAddress = await t.page.evaluate((W) => ({ text: document.querySelector(`${W} .updates__locked`)?.innerText ?? '', rows: document.querySelectorAll(`${W} .upd-row`).length, chip: document.querySelector(`${W} .updbar .v-chip`)?.textContent.trim() }), W)
-  check('opened by its address by a visitor, the folder is locked and empty, with Log In under it', byAddress.chip === 'Locked' && /This folder is for Shrug LPs only\. Please log in with your LP email to access its contents\./.test(byAddress.text) && /Log In/.test(byAddress.text) && byAddress.rows === 0, JSON.stringify(byAddress))
-  await t.page.locator(`${W} .updates__locked .v-btn`).click()
+  const byAddress = await t.page.evaluate((W) => ({ rows: [...document.querySelectorAll(`${W} .upd-row`)].map((r) => r.dataset.state).join(' '), note: document.querySelector(`${W} .upd-note p`)?.textContent.trim() ?? '', ways: [...document.querySelectorAll(`${W} .upd-note button`)].map((b) => b.textContent.trim()).join(' | ') }), W)
+  check('opened by its address by a visitor, the folder has the update for everyone and the rest locked, with Log In under them', byAddress.rows === 'closed closed closed open' && /^Updates with a lock are for Shrug LPs only\./.test(byAddress.note) && byAddress.ways === 'Log In | Enquire about becoming an LP', JSON.stringify(byAddress))
+  await t.page.locator(`${W} .upd-note .v-btn`).click()
   await t.page.waitForTimeout(400)
   check('which lets down the sheet, for Updates', (await head(t.page)) === 'Log in to open Updates')
   await t.ctx.close()

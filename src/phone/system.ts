@@ -21,7 +21,7 @@ import { ZOOM } from './Zoom'
  * the desktop's alone. The three stores, My VIP, the one-pager (Preview there: the app is the document
  * here) and Updates are apps here as they are windows there (Dom, 27 Nov: the stores and the one-pager were
  * links that opened in a tab of their own). */
-export type PhoneApp = Exclude<AppId, 'about' | 'wallpapers' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'weather'>
+export type PhoneApp = Exclude<AppId, 'about' | 'wallpapers' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'weather' | 'investors' | 'portal'>
 
 export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'workspace', 'store', 'books', 'myvip', 'preview', 'updates']
 

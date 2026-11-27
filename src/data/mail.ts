@@ -4,7 +4,8 @@ import { PEOPLE } from './people'
 //
 // The copy is templated for now, as the design has it: a sender, a subject and the lines of each email are
 // in [square brackets], and stand where the real exchanges will go, with addresses and personal details
-// removed. Everything in Mail is public. To put a real exchange in, replace a row of EXCHANGES: who it was
+// removed. Mail is public, except an exchange that says it is `locked`: that one is listed to everyone and
+// read only by someone logged in (Dom, 27 Nov). To put a real exchange in, replace a row of EXCHANGES: who it was
 // from, its subject, its first line, what it led to (which is also the split it is filed under), its date,
 // one line on what happened because of it, who was in it, and the emails themselves, oldest first.
 
@@ -36,6 +37,8 @@ export interface Exchange {
   /** Who was in it, and where each is from. */
   people: { name: string; of: string }[]
   emails: Email[]
+  /** It is for someone logged in: anyone else sees who it was from and its subject, with a lock, and is asked to log in to read it. */
+  locked?: boolean
 }
 
 export const SPLITS: { id: 'all' | Led; label: string }[] = [
@@ -63,6 +66,8 @@ export const EXCHANGES: Exchange[] = DAYS.map((day, i) => {
     subject: SUBJECTS[i % SUBJECTS.length]!,
     first: '[First line of the email, as written.]',
     led: LED[i]!,
+    // (in the template, the ones that led to an investment are the ones kept for someone logged in: seven of the twenty)
+    locked: LED[i] === 'Investment',
     date: day,
     ledTo: '[One line: what happened because of this exchange, and how soon.]',
     people: [

@@ -16,8 +16,11 @@ import { createStore } from './store'
 // Only the desktop reads this: a phone has neither a desk nor a Dock of this kind.
 
 /** What is on the desk as it comes: files and folders (which stay on the desk), then the apps that live there. */
-export const DESK_FILES = ['updates', 'portfolio', 'one-pager', 'wallpapers'] as const
-export const DESK_APPS: AppId[] = ['quicktime', 'photobooth', 'spotify', 'youtube']
+export const DESK_FILES = ['updates', 'portal', 'portfolio', 'one-pager', 'wallpapers'] as const
+export const DESK_APPS: AppId[] = ['investors', 'quicktime', 'photobooth', 'spotify', 'youtube']
+/** The order they come in, down the desk: what is for investors is together at its head (Updates, Accredited
+ * Investors Only, Investor Portal), then the rest of the files, then the apps. */
+const DESK_ORDER = ['updates', 'investors', 'portal', 'portfolio', 'one-pager', 'wallpapers', 'quicktime', 'photobooth', 'spotify', 'youtube']
 /** The one Dock icon that stays where it is, as the Finder's does on a Mac. */
 export const FIXED: AppId = 'finder'
 
@@ -35,7 +38,7 @@ export interface Layout {
   at: Record<string, Spot>
 }
 
-const fresh = (): Layout => ({ dock: [...DOCK], desk: [...DESK_FILES, ...DESK_APPS], at: {} })
+const fresh = (): Layout => ({ dock: [...DOCK], desk: [...DESK_FILES, ...DESK_APPS].sort((a, b) => DESK_ORDER.indexOf(a) - DESK_ORDER.indexOf(b)), at: {} })
 
 /** A layout that was kept, made good: nothing in it that is not here any more, and nothing here left out of it. */
 function sound(kept: Partial<Layout> | null): Layout {

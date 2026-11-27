@@ -7,7 +7,7 @@
 // or kept, so there is one checkout. An address can ask for each by name: `?open=artstore`, `books`,
 // `workspace`, `vip`.
 
-export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace' | 'books' | 'myvip' | 'weather'
+export type AppId = 'messages' | 'notes' | 'terminal' | 'finder' | 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace' | 'books' | 'myvip' | 'weather' | 'investors' | 'portal'
 
 export interface Size {
   w: number
@@ -213,6 +213,34 @@ export const APPS: Record<AppId, AppSpec> = {
     lightsY: 26,
     dock: null,
   },
+  // Accredited Investors Only (Dom, 27 Nov): a few questions, one to a page. An LP is asked which deals they
+  // want to see, and it ends by opening their Updates folder; anyone else is asked what an application to
+  // become an LP asks, and it is sent to Shrug. It is on the desk, by Updates. Its window is drawn for one
+  // size (src/apps/Investors.tsx)
+  investors: {
+    id: 'investors',
+    name: 'Accredited Investors Only',
+    blurb: 'A few questions, for accredited investors',
+    size: fit({ w: 0.39, h: 0.8 }, { w: 520, h: 560 }, { w: 560, h: 660 }),
+    min: { w: 520, h: 560 },
+    whole: true,
+    nudge: { x: -20, y: -6 },
+    resizable: false,
+    lightsY: 26,
+    dock: null,
+  },
+  // Investor Portal (Dom, 27 Nov): a folder on the desk, with nothing in it yet (src/apps/Portal.tsx)
+  portal: {
+    id: 'portal',
+    name: 'Investor Portal',
+    blurb: 'Nothing in it yet',
+    size: fit({ w: 0.46, h: 0.56 }, { w: 560, h: 380 }, { w: 760, h: 520 }),
+    min: { w: 420, h: 300 },
+    nudge: { x: 44, y: 18 },
+    resizable: true,
+    lightsY: 26,
+    dock: null,
+  },
   // Preview: the one viewer every document opens in (design/v1), after the Mac's own. The one-pager, which
   // is a file on the desk, and an LP's documents from Updates. It has no icon in the Dock until a document
   // is open; while one is, it is there after the Dock's rule (src/apps/Preview.tsx)
@@ -303,7 +331,7 @@ export const APP_IDS = Object.keys(APPS) as AppId[]
 export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
 
 /** The windows that are the desktop's alone, with nothing of theirs on a phone: an address that names one names nothing there. */
-export const DESK_ONLY: AppId[] = ['mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'weather']
+export const DESK_ONLY: AppId[] = ['mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'weather', 'investors', 'portal']
 
 /** The apps that are in the Dock only while they have something open, after its rule. */
 export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
@@ -340,6 +368,11 @@ export const ALIASES: Record<string, AppId> = {
   podcasts: 'spotify',
   videos: 'youtube',
   forecast: 'weather',
+  accredited: 'investors',
+  'accredited-investors': 'investors',
+  invest: 'investors',
+  apply: 'investors',
+  'investor-portal': 'portal',
   // (the one-pager is a file that opens in Preview: asked for by its own name, that is what opens, on it)
   'one-pager': 'preview',
   onepager: 'preview',

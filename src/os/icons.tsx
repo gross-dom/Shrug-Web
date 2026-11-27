@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { PDF, set } from '../data/lettering'
 import { MARK, MARK_TALL, MARK_WIDE, onGround, VIP_LETTERS } from '../data/logo'
 import type { AppId } from './apps'
-import { MailIcon, PhotoBoothIcon, QuickTimeIcon, SpotifyIcon, WeatherIcon, WorkspaceIcon, YouTubeIcon } from './icons-v1'
+import { InvestorsIcon, MailIcon, PhotoBoothIcon, QuickTimeIcon, SpotifyIcon, WeatherIcon, WorkspaceIcon, YouTubeIcon } from './icons-v1'
 
 // The desktop's own icons, drawn here: app icons in the rounded-square shape a
 // Dock expects, a document, a folder, and Shrug's logo. The group chat's, the
@@ -293,6 +293,8 @@ const ICONS: Record<AppId, () => ReactNode> = {
   youtube: YouTubeIcon,
   weather: WeatherIcon,
   workspace: WorkspaceIcon,
+  investors: InvestorsIcon,
+  portal: () => <FolderIcon />,
 }
 
 export function AppIcon({ id }: { id: AppId }) {
