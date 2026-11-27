@@ -649,13 +649,27 @@ const check = (name, ok, detail = '') => {
   check('Feels Like says what it feels like and what it is: at 58 with a breeze, the same', !!s.feel && s.feel.big === '58°' && s.feel.mid === 'Actual: 58°' && s.feel.gap === '=' && s.feel.says === 'Similar to the actual temperature.', JSON.stringify(s.feel))
   check('humidity and the chance of rain are the Service’s own numbers', s.humid === '76%' && s.rain === '10%', `${s.humid} ${s.rain}`)
   check('nothing in a tile is cut off, and the window does not scroll sideways', s.spilt === '' && s.wide <= 0, JSON.stringify({ spilt: s.spilt, wide: s.wide }))
-  check('the places are down its left, the one shown picked', /^San Francisco\* \| Los Angeles \| New York$/.test(s.places), s.places)
+  check('the places are down its left, the one shown picked: three in the United States, and London', /^San Francisco\* \| Los Angeles \| New York \| London$/.test(s.places), s.places)
   await p.locator(`${WT} .wt-seg button[aria-label*="ain"]`).first().click(); await p.waitForTimeout(300)
   const asRain = (await wt(p)).hours
   check('the hours ahead can be read as the chance of rain', /\d+%/.test(asRain), asRain)
   await p.locator(`${WT} .wt-card`, { hasText: 'New York' }).click(); await p.waitForTimeout(700)
   s = await wt(p)
   check('another place, picked, is shown', s.place === 'New York' && /New York\*/.test(s.places), JSON.stringify({ place: s.place, places: s.places }))
+  // London (Dom, 27 Nov) is not the Weather Service's to forecast: it is the Norwegian Meteorological Institute's,
+  // in Celsius, asked for once, and said to be theirs with the licence it is given under
+  const metAsked = []
+  p.on('request', (r) => /api\.met\.no/.test(r.url()) && metAsked.push({ url: r.url(), agent: Object.keys(r.headers()).filter((h) => !/^(accept|accept-language|accept-encoding|referer|origin|user-agent|sec-|connection|host|pragma|cache-control)/i.test(h)) }))
+  await p.locator(`${WT} .wt-card`, { hasText: 'London' }).click(); await p.waitForTimeout(900)
+  s = await wt(p)
+  const foot = await p.evaluate((WT) => ({ says: document.querySelector(`${WT} .wt-foot`)?.textContent.replace(/\s+/g, ' ').trim() ?? '', links: [...document.querySelectorAll(`${WT} .wt-foot a`)].map((a) => a.getAttribute('href')).join(' | ') }), WT)
+  check('London is shown from another service’s forecast, its Celsius put into Fahrenheit (9 is 48), with the tiles the others have', s.place === 'London' && /London\*/.test(s.places) && /^48°/.test(s.temp ?? '') && /^H:\d+° L:\d+°$/.test(s.range ?? '') && /Feels like \| Wind \| The hours ahead/.test(s.tiles) && s.humid === '81%' && s.spilt === '', JSON.stringify({ place: s.place, temp: s.temp, range: s.range, tiles: s.tiles, humid: s.humid, spilt: s.spilt }))
+  check('and its foot says whose the data is and under what licence, as their terms ask', /^Data from MET Norway/.test(foot.says) && /CC BY 4\.0/.test(foot.says) && /api\.met\.no\/doc\/License/.test(foot.links), JSON.stringify(foot))
+  await p.locator(`${WT} .wt-card`, { hasText: 'New York' }).click(); await p.waitForTimeout(500)
+  await p.locator(`${WT} .wt-card`, { hasText: 'London' }).click(); await p.waitForTimeout(700)
+  const london = metAsked.filter((r) => /lat=51\.5074&lon=-0\.1278/.test(r.url))
+  check('it is asked as their terms ask of a small site: the place to four decimals, nothing added to the request, and not again while its answer is good', london.length <= 1 && metAsked.every((r) => /\/weatherapi\/locationforecast\/2\.0\/complete\?lat=-?\d+\.\d{4}&lon=-?\d+\.\d{4}$/.test(r.url) && r.agent.length === 0), JSON.stringify(metAsked))
+  await p.locator(`${WT} .wt-card`, { hasText: 'New York' }).click(); await p.waitForTimeout(500)
   await p.locator(`${WT} .wt-find input`).fill('los'); await p.waitForTimeout(250)
   const found = (await wt(p)).places
   await p.locator(`${WT} .wt-find input`).fill('zzz'); await p.waitForTimeout(250)

@@ -109,9 +109,21 @@ exports.tabFrom = async (ctx, press) => {
 /** Answers for the weather service the desk's widget and the Weather window ask (api.weather.gov), so that
  * nothing a check finds depends on the weather or on the service: 58 degrees and mostly cloudy, by day, a
  * north-west wind at 12, and a week to follow. `as` changes the hour that is running; `as: 'down'` has the
- * service fail. */
-exports.weather = (ctx, as = {}) =>
-  ctx.route('https://api.weather.gov/**', (route) => {
+ * service fail. London's forecast is another service's (api.met.no), answered here as that one answers: 9
+ * degrees Celsius (48 Fahrenheit) and cloudy, an hour at a time for two days and six hours at a time after,
+ * good for half an hour by its own word. */
+exports.weather = async (ctx, as = {}) => {
+  await ctx.route('https://api.met.no/**', (route) => {
+    if (as === 'down') return route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+    const hour = 3600e3
+    const from = Math.floor(Date.now() / hour) * hour
+    const at = (ms) => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z')
+    const details = (i) => ({ air_temperature: 9 - (i % 4), relative_humidity: 81, dew_point_temperature: 6, wind_speed: 4, wind_from_direction: 225 })
+    const hourly = Array.from({ length: 48 }, (_, i) => ({ time: at(from + i * hour), data: { instant: { details: details(i) }, next_1_hours: { summary: { symbol_code: 'cloudy' }, details: { precipitation_amount: 0 } } } }))
+    const later = Array.from({ length: 28 }, (_, i) => ({ time: at(from + (48 + i * 6) * hour), data: { instant: { details: details(i) }, next_6_hours: { summary: { symbol_code: i % 3 ? 'partlycloudy_day' : 'lightrain' }, details: { precipitation_amount: 0.4 } } } }))
+    return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', expires: new Date(Date.now() + 1800e3).toUTCString() }, contentType: 'application/json', body: JSON.stringify({ type: 'Feature', properties: { timeseries: [...hourly, ...later] } }) })
+  })
+  return ctx.route('https://api.weather.gov/**', (route) => {
     if (as === 'down') return route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
     const url = route.request().url()
     const headers = { 'access-control-allow-origin': '*' }
@@ -127,6 +139,7 @@ exports.weather = (ctx, as = {}) =>
     const noon = new Date(); noon.setUTCHours(20, 0, 0, 0)
     return ok({ properties: { periods: Array.from({ length: 14 }, (_, i) => ({ startTime: new Date(noon.getTime() + i * 12 * 3600e3).toISOString(), isDaytime: i % 2 === 0, temperature: i % 2 === 0 ? 62 + (i % 4) : 50 + (i % 3), temperatureUnit: 'F', shortForecast: i % 6 === 2 ? 'Rain Showers Likely' : 'Mostly Cloudy', probabilityOfPrecipitation: { value: i % 6 === 2 ? 70 : 10 } })) } })
   })
+}
 
 /** Answers for Spotify, which the Spotify window asks for each row's title and cover (its oEmbed) and for its
  * player (its embed pages), so that nothing a check finds depends on Spotify or on the network: an episode is

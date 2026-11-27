@@ -24,9 +24,10 @@ export interface Place {
 // London (Dom, 27 Nov) is outside the United States, which is all the Weather Service forecasts: its forecast
 // is the Norwegian Meteorological Institute's, which forecasts the world and is free to use with its name
 // given (api.met.no, CC BY 4.0). Its terms are an agreement that someone at Shrug has to have read and
-// accepted before the site uses it (https://api.met.no/doc/TermsOfService), so until that is said London is
-// left out of the site: MET_ACCEPTED is the switch. A build made with VITE_MET_NORWAY=1 has it, to be looked at.
-const MET_ACCEPTED = false
+// accepted before the site uses it (https://api.met.no/doc/TermsOfService): Dom accepted them on 27 Nov 2026,
+// and London is in. MET_ACCEPTED is the switch, should that ever be taken back: off, every place of theirs is
+// left out of the site and nothing is asked of them.
+const MET_ACCEPTED = true
 const WITH_MET = MET_ACCEPTED || import.meta.env.VITE_MET_NORWAY === '1'
 
 /** The places the window has. The first is the widget's. */
