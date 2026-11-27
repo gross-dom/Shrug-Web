@@ -214,11 +214,16 @@ const parts = {
       await t.ctx.close()
     }
     // A small desk: the conversation, which opens by itself, opens narrower rather than on the desk's icons, its list still beside it
+    // (the icons are never drawn smaller, so on a desk too short for one line of them they are in two: on the
+    // narrowest of these that leaves less beside them than the conversation's list needs, 536 of 560, and it
+    // opens at that least width, on the edge of their line and on none of their pictures)
     for (const [w, h] of [[760, 600], [900, 650], [1000, 700]]) {
       t = await fresh({ w, h, dpr: 1 }, 'still')
       const over = await lying(t.page, 'messages', '.desk__item')
-      const chat = await t.page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"]'); const side = el.querySelector('.chat-side'); return { wide: Math.round(el.getBoundingClientRect().width), list: !!side && side.getBoundingClientRect().width > 120 } })
-      check(`windows: at ${w}x${h} the conversation opens beside the desk's icons, not on them, and keeps its list`, over.length === A.DESK.length && over.every((v) => v === 0) && chat.wide >= 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
+      const drawn = await lying(t.page, 'messages', '.desk__icon')
+      const chat = await t.page.evaluate(() => { const el = document.querySelector('.wf[data-app="messages"]'); const side = el.querySelector('.chat-side'); const left = Math.min(...[...document.querySelectorAll('.desk__item')].map((i) => i.getBoundingClientRect().left)); return { wide: Math.round(el.getBoundingClientRect().width), list: !!side && side.getBoundingClientRect().width > 120, room: Math.round(left - 12 - 8) } })
+      if (chat.room >= 560) check(`windows: at ${w}x${h} the conversation opens beside the desk's icons, not on them, and keeps its list`, over.length === A.DESK.length && over.every((v) => v === 0) && chat.wide >= 560 && chat.list, JSON.stringify({ over, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
+      else check(`windows: at ${w}x${h}, with ${chat.room}px beside the desk's two lines of icons, the conversation opens at its least width, on none of their pictures, and keeps its list`, over.length === A.DESK.length && drawn.length === A.DESK.length && drawn.every((v) => v === 0) && chat.wide === 560 && chat.list, JSON.stringify({ over, drawn, ...chat }) + ' ' + JSON.stringify(await rects(t.page)))
       await t.ctx.close()
     }
 

@@ -2262,6 +2262,13 @@ html[data-wm-busy] .dock__item .dock__label {
     height: 24px;
   }
 
+  /* (A grip is styled as pressed, with nothing a person sees: Chrome gives a finger's press to the nearest
+     thing that answers one, and takes a grip for such a thing only if pressing it is styled. Without this a
+     finger put down on the grip of a window beside the desk's icons picked up the icon 4px further on) */
+  .wf__grip:active {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   .wf__grip[data-edge='s'] {
     inset: auto 22px -16px;
     height: 24px;

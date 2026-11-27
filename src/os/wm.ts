@@ -266,8 +266,9 @@ function placed(id: AppId, s: WM): Rect {
    * it: beside the icons or the widget, or under them. Failing those, under
    * them a little shorter (a window that cannot be sized is not shortened);
    * and failing that, for a window that says it would sooner be (`slim`),
-   * beside the icons a little narrower. A place that is clear, or cannot be
-   * made so, is given back as it is. */
+   * beside the icons a little narrower, or at its least width if even that
+   * is not clear. A place that is clear, or cannot be made any clearer, is
+   * given back as it is. */
   const cleared = (spot: Rect): Rect => {
     const on = things.filter((thing) => shared(spot, thing) > 0)
     if (!on.length) return spot
@@ -285,7 +286,10 @@ function placed(id: AppId, s: WM): Rect {
     // Of the ways that do clear it, the one that covers least and goes least far
     const price = (way: Rect) => over(way) + apart(way, spot)
     const pick = (ways: Rect[]) => ways.filter((way) => kept(way) === 0).sort((a, b) => price(a) - price(b))[0]
-    return pick(whole) ?? pick(shorter) ?? pick(narrower) ?? spot
+    // (and on a desk with no room even for that, a small one whose icons are in two lines, at that least width
+    // against the far side: on the icons by as little as it can be, where its full width would cover them)
+    const least: Rect | null = on.includes(icons) && spec.slim && spec.slim < w ? { ...spot, x: box.x, w: spec.slim } : null
+    return pick(whole) ?? pick(shorter) ?? pick(narrower) ?? (least && kept(least) < kept(spot) ? least : spot)
   }
 
   const edge = 16
