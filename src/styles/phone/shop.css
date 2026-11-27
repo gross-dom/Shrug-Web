@@ -332,6 +332,8 @@
   display: block;
   flex: none;
   width: calc(100% - 26px);
+  /* (the floor is for a browser that does not yet keep a shape by its proportions) */
+  min-height: 180px;
   aspect-ratio: 10 / 7;
   padding: 0;
   overflow: hidden;
