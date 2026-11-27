@@ -19,6 +19,7 @@ export const SUPPLIED_LOGOS: Record<string, string> = {
   'Enigma': 'enigma.webp',
   'Galvanick': 'galvanick.webp',
   'Genies': 'genies.webp',
+  'Ghost': 'ghost.webp',
   'Giraffe360': 'giraffe360.webp',
   'HQ Trivia': 'hq-trivia.webp',
   'Hadrian': 'hadrian.webp',
