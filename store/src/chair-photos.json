@@ -274,98 +274,133 @@
  "dazzling-pink": {
   "checkout": [
    {
-    "file": "checkout/01__5F4A3394",
+    "file": "checkout/01__5F4A8992",
     "h": 2120,
     "m": 1067,
     "s": 507,
     "sides": [
      [
-      "#383030",
-      "#464040",
-      "#4b4545",
-      "#433c3b",
-      "#3a302e",
-      "#291f1d",
-      "#4b4242",
-      "#696060"
+      "#f4f3f8",
+      "#f4f3f8",
+      "#f5f4f9",
+      "#f6f5fa",
+      "#f1f0f5",
+      "#f5f4f8",
+      "#fafafc",
+      "#fafafc"
      ],
      [
-      "#3e3535",
-      "#4e4646",
-      "#5c5656",
-      "#47403f",
-      "#362c2a",
-      "#2c2220",
-      "#493f3f",
-      "#70676a"
+      "#f4f3f8",
+      "#f6f4f9",
+      "#f6f5fa",
+      "#f6f5fa",
+      "#f4f2f8",
+      "#f6f5fa",
+      "#fafafc",
+      "#fcfcfe"
      ]
     ],
-    "view": "three-quarter view",
+    "view": "from behind",
     "w": 1414
    },
    {
-    "file": "checkout/02__5F4A3401",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
+    "file": "checkout/02__5F4A4625",
+    "h": 2186,
+    "m": 1003,
+    "s": 477,
     "sides": [
      [
-      "#272221",
-      "#352e2e",
-      "#39312f",
-      "#302926",
-      "#1f1b19",
-      "#201b1b",
-      "#635b5e",
-      "#80777c"
+      "#877c7a",
+      "#877c78",
+      "#786d69",
+      "#675952",
+      "#60524a",
+      "#7d6f69",
+      "#a79d99",
+      "#aea4a0"
      ],
      [
-      "#312b2b",
-      "#514849",
-      "#5a5151",
-      "#332b29",
-      "#261f1d",
-      "#453d3e",
-      "#a69ea5",
-      "#bab4bc"
+      "#756c68",
+      "#918b8a",
+      "#80746f",
+      "#776861",
+      "#7b6c65",
+      "#958984",
+      "#aea4a3",
+      "#a99e9d"
      ]
     ],
-    "view": "low-angle view",
-    "w": 1414
+    "view": "from behind",
+    "w": 1371
+   },
+   {
+    "file": "checkout/03__5F4A4631",
+    "h": 1996,
+    "m": 1205,
+    "s": 572,
+    "sides": [
+     [
+      "#908280",
+      "#685d5c",
+      "#534a49",
+      "#4d4544",
+      "#443d3a",
+      "#59504f",
+      "#bbb4b4",
+      "#e3dfde"
+     ],
+     [
+      "#d6d1d5",
+      "#d0cbcf",
+      "#aca5a8",
+      "#999092",
+      "#968b8d",
+      "#a8a0a3",
+      "#d0cace",
+      "#dfd8dc"
+     ]
+    ],
+    "view": "three-quarter view from behind",
+    "w": 1503
    }
   ],
   "gallery": [
    {
-    "kind": "pair",
+    "kind": "wide",
     "photos": [
      {
-      "file": "gallery/01-pair-left__5F4A3397",
-      "h": 2120,
-      "m": 1067,
-      "s": 507,
-      "view": "close-up of the back",
-      "w": 1414
-     },
-     {
-      "file": "gallery/01-pair-right__5F4A3402",
-      "h": 2120,
-      "m": 1067,
-      "s": 507,
-      "view": "close-up of the back",
-      "w": 1414
+      "file": "gallery/01__5F4A8992_wide",
+      "h": 1350,
+      "m": 1600,
+      "s": 760,
+      "view": "from behind",
+      "w": 2400
      }
     ]
    },
    {
-    "kind": "portrait",
+    "kind": "wide",
     "photos": [
      {
-      "file": "gallery/02-portrait__5F4A3392",
-      "h": 2120,
-      "m": 1067,
-      "s": 507,
-      "view": "in a photo studio",
-      "w": 1414
+      "file": "gallery/02__5F4A8993_wide",
+      "h": 1350,
+      "m": 1600,
+      "s": 760,
+      "view": "three-quarter view from behind",
+      "w": 2400
+     }
+    ]
+   },
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "gallery/03__5F4A8994_wide",
+      "h": 1350,
+      "m": 1600,
+      "s": 760,
+      "view": "side view",
+      "w": 2400
      }
     ]
    }
@@ -794,142 +829,6 @@
    }
   ],
   "name": "Gummi Berry"
- },
- "hulk-green": {
-  "checkout": [
-   {
-    "file": "checkout/01__5F4A3364",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#3c3232",
-      "#4f4646",
-      "#564d4d",
-      "#4a403d",
-      "#3d312e",
-      "#2d211e",
-      "#6e6567",
-      "#807678"
-     ],
-     [
-      "#403637",
-      "#52494a",
-      "#5d5657",
-      "#4a403f",
-      "#382d2b",
-      "#2e2220",
-      "#5c5253",
-      "#847e82"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
-   },
-   {
-    "file": "checkout/02__5F4A9293",
-    "h": 2186,
-    "m": 1003,
-    "s": 477,
-    "sides": [
-     [
-      "#f1f0f5",
-      "#f9f8fc",
-      "#fbfbfd",
-      "#fbfbfd",
-      "#fafafc",
-      "#fafafc",
-      "#fafafc",
-      "#faf9fd"
-     ],
-     [
-      "#fefeff",
-      "#f8f8fc",
-      "#f1f0f7",
-      "#e8e8f2",
-      "#e2e1ec",
-      "#e8e8f1",
-      "#f5f5fa",
-      "#f7f6fb"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1371
-   },
-   {
-    "file": "checkout/03__5F4A9254",
-    "h": 2120,
-    "m": 1067,
-    "s": 507,
-    "sides": [
-     [
-      "#dcdae6",
-      "#eceaf4",
-      "#f3f2f8",
-      "#f5f4fa",
-      "#f7f6fb",
-      "#fafafd",
-      "#fcfcfe",
-      "#fcfcfe"
-     ],
-     [
-      "#ffffff",
-      "#fdfdff",
-      "#fbfbfd",
-      "#f9f8fd",
-      "#f7f6fb",
-      "#f9f9fc",
-      "#fdfdff",
-      "#fdfdff"
-     ]
-    ],
-    "view": "from behind",
-    "w": 1414
-   }
-  ],
-  "gallery": [
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/01__5F4A3367_green",
-      "h": 1423,
-      "m": 1600,
-      "s": 760,
-      "view": "from behind",
-      "w": 2400
-     }
-    ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/02__5F4A3375",
-      "h": 1543,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 1944
-     }
-    ]
-   },
-   {
-    "kind": "wide",
-    "photos": [
-     {
-      "file": "gallery/03__5F4A4456",
-      "h": 1423,
-      "m": 1600,
-      "s": 760,
-      "view": "close-up of the back",
-      "w": 2108
-     }
-    ]
-   }
-  ],
-  "name": "Hulk Green"
  },
  "illusion-blue": {
   "checkout": [
@@ -2326,6 +2225,142 @@
    }
   ],
   "name": "Pearl Lavender"
+ },
+ "proton-sparkle": {
+  "checkout": [
+   {
+    "file": "checkout/01__5F4A9050-2",
+    "h": 2120,
+    "m": 1067,
+    "s": 507,
+    "sides": [
+     [
+      "#e0dfef",
+      "#e1e0f0",
+      "#e3e1f0",
+      "#dcdaea",
+      "#d0cada",
+      "#e4e2ef",
+      "#f0eef9",
+      "#f5f4fb"
+     ],
+     [
+      "#dedaeb",
+      "#e3dfef",
+      "#e3e0f0",
+      "#e1deef",
+      "#dad5e8",
+      "#e0ddee",
+      "#eeedf9",
+      "#f6f5fc"
+     ]
+    ],
+    "view": "from behind",
+    "w": 1414
+   },
+   {
+    "file": "checkout/02__5F4A3459",
+    "h": 2120,
+    "m": 1067,
+    "s": 507,
+    "sides": [
+     [
+      "#685656",
+      "#7e6d6e",
+      "#817172",
+      "#705e5a",
+      "#604943",
+      "#543b34",
+      "#968385",
+      "#b4a4a6"
+     ],
+     [
+      "#866f6d",
+      "#9c8b8b",
+      "#a7979a",
+      "#86716d",
+      "#6c534b",
+      "#664a40",
+      "#967c78",
+      "#b5a6ab"
+     ]
+    ],
+    "view": "from behind",
+    "w": 1414
+   },
+   {
+    "file": "checkout/03__5F4A3461",
+    "h": 2142,
+    "m": 1046,
+    "s": 497,
+    "sides": [
+     [
+      "#61504d",
+      "#74615f",
+      "#776460",
+      "#6c5954",
+      "#554038",
+      "#543d36",
+      "#9d8c8e",
+      "#ab9998"
+     ],
+     [
+      "#9b898b",
+      "#b1a4a9",
+      "#b8aeb3",
+      "#8a7773",
+      "#705851",
+      "#6b5149",
+      "#ab9a9c",
+      "#bdb1b7"
+     ]
+    ],
+    "view": "three-quarter view from behind",
+    "w": 1400
+   }
+  ],
+  "gallery": [
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "gallery/01__5F4A0287",
+      "h": 1601,
+      "m": 1600,
+      "s": 760,
+      "view": "on a street in front of the Texas State Capitol",
+      "w": 2400
+     }
+    ]
+   },
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "gallery/02__5F4A9593",
+      "h": 1601,
+      "m": 1600,
+      "s": 760,
+      "view": "close-up of the back, beside a crystal geode",
+      "w": 2400
+     }
+    ]
+   },
+   {
+    "kind": "wide",
+    "photos": [
+     {
+      "file": "gallery/03__Frame-1",
+      "h": 1350,
+      "m": 1600,
+      "s": 760,
+      "view": "from behind, in front of the Texas State Capitol",
+      "w": 2400
+     }
+    ]
+   }
+  ],
+  "name": "Proton Sparkle"
  },
  "reserve-green": {
   "checkout": [

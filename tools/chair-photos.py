@@ -70,7 +70,7 @@ COLORS = {
     'Nuclear Pink': 'nuclear-pink',
     'Illusion Blue': 'illusion-blue',
     'Interstellar Black': 'interstellar-black',
-    'Hulk Green': 'hulk-green',
+    'Proton Sparkle': 'proton-sparkle',
     'Reserve Green': 'reserve-green',
     'Nuclear Green': 'nuclear-green',
     'Nuclear Violet': 'nuclear-violet',
