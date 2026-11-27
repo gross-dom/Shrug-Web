@@ -195,9 +195,9 @@ const PIECES: [string, string][] = [
   ['Tesla Flying', 'art-tesla-flying'],
 ]
 
-/** Each of them with its product shot (the piece whole, on white): for a place that shows the art without
- * the catalogue, as the desk's widget does. */
-export const ART: { name: string; shot: Shot }[] = PIECES.map(([name, slug]) => ({ name, shot: piece(slug)[0]! }))
+/** Each of them with its product shot (the piece whole, on white) and the artwork itself, flat (which fills
+ * whatever it is put in): for a place that shows the art without the catalogue, as the desk's widget does. */
+export const ART: { name: string; shot: Shot; flat: Shot }[] = PIECES.map(([name, slug]) => ({ name, shot: piece(slug)[0]!, flat: piece(slug)[2] ?? piece(slug)[0]! }))
 
 /** By name, in small letters. (The chair, in each of its colors, is found by `chairOf`.) */
 const KEPT: Record<string, Shot[]> = {

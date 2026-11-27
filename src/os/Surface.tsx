@@ -35,7 +35,7 @@ import { saver } from './saver'
 import { ScreenSaver } from './ScreenSaver'
 import { useStore } from './store'
 import { setTitle } from './title'
-import { activeApp, deskHolds, focusWindow, openApp, tileRect, wm } from './wm'
+import { activeApp, deskHolds, deskRows, focusWindow, openApp, tileRect, wm } from './wm'
 import { WindowFrame } from './WindowFrame'
 
 // Everything on the desktop but its wallpaper: the menu bar, the things left
@@ -169,6 +169,10 @@ function DeskIcons() {
   // Those with no place of their own are in the line down the right; one that has been dragged is where it was put
   const lined = items.filter((item) => !spots[item.id])
   const placed = items.filter((item) => spots[item.id])
+  // How many of them to a line: all of them where the desk is tall enough, and otherwise shared evenly
+  // among as many lines as it takes at their one size (wm.ts)
+  const tall = useStore(wm, (s) => s.viewport.h)
+  const rows = deskRows(lined.length, tall)
   // How wide the line of icons is, all told, for what lands beside it (a notification): one line of them, or
   // two on a screen too short for one (styles/os.css)
   const desk = useRef<HTMLUListElement>(null)
@@ -186,7 +190,7 @@ function DeskIcons() {
       window.removeEventListener('resize', measure)
       os.style.removeProperty('--desk-wide')
     }
-  }, [lined.length])
+  }, [lined.length, tall])
 
   /** A drag: the icon follows the pointer, and is left where it is let go: on the desk, or, for an app, in the Dock. */
   const drag = (e: ReactPointerEvent<HTMLButtonElement>, id: string) => {
@@ -277,7 +281,7 @@ function DeskIcons() {
   )
   return (
     <>
-      <ul ref={desk} className="desk" aria-label="On the desktop" style={{ '--desk-n': Math.max(1, lined.length) } as CSSProperties}>
+      <ul ref={desk} className="desk" aria-label="On the desktop" style={{ '--desk-n': Math.max(1, lined.length), '--desk-rows': rows } as CSSProperties}>
         {lined.map((item) => icon(item))}
       </ul>
       {placed.length > 0 && (

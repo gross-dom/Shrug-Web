@@ -9,9 +9,13 @@ import { shop, wantShop } from './shop'
 // has its photograph in turn, as a frame on a wall changes what it shows. It is the way into ArtStore from
 // the desk (Niv, 27 Nov): pressed, ArtStore opens on the piece that is showing.
 //
-// It shows what the site already has (the product shots in store/public/pictures, by the names Shrug gives
-// the pieces), so nothing is asked of the store for it: the catalogue is fetched when it is pressed, as it
-// is when any store's window is opened.
+// It is drawn as Apple's News widget is (Dom, 27 Nov, with one beside it): the picture fills the widget,
+// the artwork itself and not its photograph on white; it darkens toward its foot, and there, in white, is
+// where it is from (ArtStore) with the piece's name under it, as a headline is under its paper's name.
+//
+// It shows what the site already has (the pictures in store/public/pictures, by the names Shrug gives the
+// pieces), so nothing is asked of the store for it: the catalogue is fetched when it is pressed, as it is
+// when any store's window is opened.
 
 /** How long a piece is shown before the next one. */
 const EACH = 7000
@@ -51,12 +55,12 @@ export function ArtWidget() {
     <button type="button" className="aw" aria-label={`ArtStore: ${piece.name}, one of ${ART.length} pieces. Opens ArtStore`} onClick={open}>
       <span className="aw__wall" aria-hidden>
         {ART.map((one, i) => (
-          <img key={one.name} className="aw__pic" data-on={i === at % ART.length || undefined} src={one.shot.small} alt="" draggable={false} decoding="async" />
+          <img key={one.name} className="aw__pic" data-on={i === at % ART.length || undefined} src={one.flat.small} alt="" draggable={false} decoding="async" />
         ))}
       </span>
       <span className="aw__says" aria-hidden>
-        <b key={piece.name}>{piece.name}</b>
         <small>ArtStore</small>
+        <b key={piece.name}>{piece.name}</b>
       </span>
     </button>
   )

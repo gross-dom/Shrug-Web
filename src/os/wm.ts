@@ -164,11 +164,19 @@ function shared(a: Rect, b: Rect) {
 }
 
 /** How the desk's icons are laid out (styles/os.css, .desk, says the same): down the right-hand side from
- * under the menu bar to above the Dock, as far apart as a Mac puts them where the screen is tall enough
- * for them all in one line, closer together on a shorter one, and in a second line beside the first only
- * where they would otherwise be closer than `least`. */
-// (least: 58 since the desk came to hold eight, so that they are still one line on a screen 600 tall)
-export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, least: 58, most: 99 }
+ * under the menu bar to above the Dock, always at the one size and `pitch` apart (Dom, 27 Nov: nothing on
+ * the desk is ever drawn smaller). Where one line will not hold them all they are in two or more, beside
+ * one another and as even as can be made. */
+export const DESK_ICONS = { top: 42, right: 12, bottom: 96, wide: 92, gap: 8, pitch: 96 }
+
+/** How many icons to a line, for so many of them on a desk so tall: as many lines as it takes at the one
+ * spacing, and the icons shared out evenly among them. */
+export function deskRows(count: number, tall: number): number {
+  const { top, bottom, gap, pitch } = DESK_ICONS
+  const fits = Math.max(1, Math.floor((tall - top - bottom + gap) / pitch))
+  const lines = Math.ceil(Math.max(1, count) / fits)
+  return Math.ceil(Math.max(1, count) / lines)
+}
 
 /** How many icons the desk has. The desktop says (Surface.tsx), as soon as it is loaded: the first window
  * can open before the desk has been drawn, and has to know what it is keeping clear of. */
@@ -190,10 +198,8 @@ function deskIcons(viewport: Size): Rect {
     const y = Math.min(...drawn.map((r) => r.top))
     return { x, y, w: Math.max(...drawn.map((r) => r.right)) - x, h: Math.max(...drawn.map((r) => r.bottom)) - y }
   }
-  const { top, right, bottom, wide, gap, least, most } = DESK_ICONS
-  const room = viewport.h - top - bottom + gap
-  const pitch = Math.max(least, Math.min(most, room / onDesk))
-  const each = Math.max(1, Math.min(onDesk, Math.floor(room / pitch)))
+  const { top, right, wide, gap, pitch } = DESK_ICONS
+  const each = deskRows(onDesk, viewport.h)
   const lines = Math.ceil(onDesk / each)
   const w = lines * wide + (lines - 1) * gap
   return { x: viewport.w - right - w, y: top, w, h: each * pitch - gap }

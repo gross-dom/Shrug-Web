@@ -22,11 +22,11 @@ import { addressOf, StoreFrame, type FrameHandle } from './storefront'
 // (A member's card used to come in a pack, torn open here the first time they came. Dom took the pack
 // opening out of the product on 26 Nov: the window opens on My VIP's page, for everyone.)
 
-/** The three stores, as My VIP leads to them. */
+/** The three stores, as My VIP leads to them, each in Dom's line for it (27 Nov: the same three the phone's My VIP has). */
 const DOORS: { app: AppId; says: string }[] = [
-  { app: 'store', says: 'Six pieces, in editions of fifty.' },
-  { app: 'books', says: 'Five books, two on pre-order.' },
-  { app: 'workspace', says: 'The chair, in every color.' },
+  { app: 'store', says: 'Tech Culture art for your walls' },
+  { app: 'books', says: 'Beautifully designed reading material' },
+  { app: 'workspace', says: 'Your new daily driver' },
 ]
 
 export function MyVipApp() {

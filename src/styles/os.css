@@ -1010,27 +1010,28 @@
   right: 12px;
   bottom: 96px;
   z-index: 2;
-  display: flex;
-  /* Down the right-hand side, in one line: as far apart as a Mac puts them where the screen is tall enough
-     for them all (--desk-n of them, which the desktop says), and closer together on a shorter one, so that
-     they are still one line beside the windows. Only where that would bring them closer than 58px do they
-     go to a second line beside the first. (os/wm.ts, DESK_ICONS, says the same to the window manager.) */
-  flex-flow: column wrap-reverse;
-  align-content: flex-start;
+  /* Down the right-hand side, always at the one size and the one spacing (Dom, 27 Nov: nothing on the desk
+     is ever drawn smaller; they were brought closer together, and shrunk, on a screen too short for them).
+     Where one line will not hold them all they are in two, or three, beside one another and as even as
+     can be made: the first at the right, the next to its left. How many to a line is worked out by the
+     desktop from the room there is (--desk-rows: Surface.tsx; os/wm.ts, DESK_ICONS, tells the window
+     manager the same). */
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--desk-rows, var(--desk-n, 8)), auto);
+  align-content: start;
+  justify-content: start;
+  direction: rtl;
   gap: 8px;
   width: 92px;
-  --desk-pitch: clamp(58px, calc((100vh - 130px) / var(--desk-n, 3)), 99px);
+  --desk-pitch: 96px;
   /* Under the windows, in their layer, which takes no presses of its own */
   pointer-events: auto;
 }
 
-/* (reckoned from the strip itself where a browser can, and not from the screen: the two differ where a
-   browser's own bars come and go) */
-@supports (height: 1cqh) {
-  .desk {
-    container-type: size;
-    --desk-pitch: clamp(58px, calc((100cqh + 8px) / var(--desk-n, 3)), 99px);
-  }
+/* (the lines run from the right; what is in them reads as everything else does) */
+.desk > * {
+  direction: ltr;
 }
 
 /* The widget on the desk, across from the icons: San Francisco, its time and its weather
@@ -1163,10 +1164,10 @@
   }
 }
 
-/* The art, under San Francisco: a second widget, the same size, one piece at a time on its own white (the
-   product shots are on white, so the tile is that white and the piece seems to hang on it). Each piece is
-   there from the start, one over another, and the one showing is the one that can be seen: the next comes
-   up through it. Pressed, it opens ArtStore on that piece (os/ArtWidget.tsx) */
+/* The art, under San Francisco: a second widget, the same size, one piece at a time, drawn as Apple's News
+   widget is (Dom, 27 Nov): the artwork fills it, and over its foot, in white, is ArtStore with the piece's
+   name under it. Each piece is there from the start, one over another, and the one showing is the one that
+   can be seen: the next comes up through it. Pressed, it opens ArtStore on that piece (os/ArtWidget.tsx) */
 .aw {
   position: absolute;
   top: 222px;
@@ -1177,11 +1178,11 @@
   height: 164px;
   overflow: hidden;
   border-radius: 24px;
-  background: #fdfdfd;
+  background: #16161a;
   box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 0.1) inset,
+    0 0 0 0.5px rgb(255 255 255 / 0.14) inset,
     0 10px 30px rgb(8 12 60 / 0.24);
-  color: #1c1c1e;
+  color: #fff;
   font-family: var(--font-ui);
   letter-spacing: -0.01em;
   pointer-events: auto;
@@ -1198,12 +1199,10 @@
   opacity: 0;
 }
 
+/* The picture fills the widget, as a News widget's photograph does */
 .aw__wall {
   position: absolute;
-  top: 4px;
-  right: 0;
-  left: 0;
-  height: 124px;
+  inset: 0;
 }
 
 .aw__pic {
@@ -1211,7 +1210,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   opacity: 0;
   transition: opacity 1.1s ease;
 }
@@ -1220,31 +1219,43 @@
   opacity: 1;
 }
 
-.aw__says {
+/* It darkens toward its foot, where the words are */
+.aw__wall::after {
+  content: '';
   position: absolute;
-  right: 14px;
-  bottom: 11px;
-  left: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  inset: 34% 0 0;
+  background: linear-gradient(rgb(0 0 0 / 0), rgb(0 0 0 / 0.62) 46%, rgb(0 0 0 / 0.84));
 }
 
-.aw__says b {
-  overflow: hidden;
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  animation: aw-name 0.6s ease both;
+/* Where it is from, and under that its name, as a headline is under its paper's */
+.aw__says {
+  position: absolute;
+  right: 13px;
+  bottom: 12px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.5);
 }
 
 .aw__says small {
-  color: rgb(60 60 67 / 0.62);
-  font-size: 10.5px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 800;
   line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.aw__says b {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.17;
+  letter-spacing: -0.015em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  animation: aw-name 0.6s ease both;
 }
 
 @keyframes aw-name {
