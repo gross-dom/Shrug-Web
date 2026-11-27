@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { asksAddress, dueCents, fitPoints, fmtCents, fmtPoints, has, MOST_AT_ONCE, mostPoints, numberOf, onFile, POINTS_PER_DOLLAR, postageCents, priceCents, sellsMany, soldOut, times, wayOf, type Order, type Product } from '../shared/rules'
 import { CARD, type Backend, type Placed, type Shop } from './backend'
 import { Points, PointsMark } from './brand'
@@ -189,7 +189,27 @@ function NewAccount({ backend, email, onLater, onYours }: { backend: Backend; em
   )
 }
 
+/** Where the row of everything along the foot was scrolled to. A product's page is made afresh for each product
+ * (App keys it by product), so the row would start again from its left each time one of it is picked; it is
+ * kept where it was instead, as a shelf is when one browses along it (Dom, 27 Nov). */
+let railAt = 0
+
 export function ProductView({ shop, visiting, product, phone, backend, go, onPlaced }: { shop: Shop; /** Nobody is signed in: everything is shown, and the button is the way to the card. */ visiting?: boolean; product: Product; phone: boolean; backend: Backend; go: Go; onPlaced: (placed: Placed) => void }) {
+  // The row along the foot, where it was: and moved only as far as shows the one now open, where that is off it
+  const rail = useRef<HTMLOListElement>(null)
+  useLayoutEffect(() => {
+    const row = rail.current
+    if (!row) return
+    row.scrollLeft = railAt
+    const on = row.querySelector<HTMLElement>('a[aria-current]')
+    if (on) {
+      const box = row.getBoundingClientRect()
+      const it = on.getBoundingClientRect()
+      if (it.left < box.left) row.scrollLeft -= box.left - it.left + 8
+      else if (it.right > box.right) row.scrollLeft += it.right - box.right + 8
+    }
+    railAt = row.scrollLeft
+  }, [product.id])
   const all = shop.products
   const at = all.findIndex((p) => p.id === product.id)
   const way = wayOf(product)
@@ -773,7 +793,7 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
         )}
       </main>
       <nav className="ui-rail" aria-label="Everything in the store">
-        <ol>
+        <ol ref={rail} onScroll={(e) => (railAt = e.currentTarget.scrollLeft)}>
           {all.map((p) => (
             <li key={p.id}>
               <a aria-current={p.id === product.id ? 'true' : undefined} {...to(p)}>
