@@ -13,9 +13,10 @@ The folder has one folder per colourway, named as the launch list names it, and 
     checkout/  upright studio shots for the page a chair is bought on, 01 its hero: only for a color that has
                no lead yet (Dom, 27 Nov: where there is a lead, checkout shows the lead's two and nothing else)
     lead/      landscape.jpg and portrait.jpg: the chair in this color on a backdrop of it (Shrug's renders of
-               27 Nov). Both its gallery and its checkout open on them, landscape first, then the upright, ahead
-               of the photographs. At checkout the landscape fills its tile and is cut to its middle as the page
-               narrows ("fill"), as ArtStore's pictures made to fill a tile are; the upright is shown whole.
+               27 Nov). The gallery opens on the landscape, ahead of the photographs; the upright is not in the
+               gallery (Dom, 27 Nov). Checkout shows the two, the landscape first, filling its tile and cut to its
+               middle as the page narrows ("fill"), as ArtStore's pictures made to fill a tile are; the upright
+               after it, whole.
 
 Folders whose names begin with "_" (_Alternatives) and the full-resolution originals are left alone.
 
@@ -219,7 +220,7 @@ def main():
                         copy.save(os.path.join(out, f'{stem}-{key}.webp'), 'WEBP', quality=84, method=6, **({'icc_profile': profile} if profile else {}))
             return one
 
-        # ---- the lead: the landscape render, then the upright one, first in the gallery and first at checkout
+        # ---- the lead: the landscape render first in the gallery; at checkout, it and then the upright one
         lead, heads = {}, []
         for file in listed(os.path.join(at, 'lead')):
             stem = os.path.splitext(file)[0].lower()
@@ -237,7 +238,6 @@ def main():
             one = photograph('lead', lead['portrait'], sided=True)
             if one['h'] <= one['w']:
                 notes.append(f'{name}/lead/{lead["portrait"]}: is not upright')
-            kept['gallery'].append({'kind': 'portrait', 'photos': [{k: v for k, v in one.items() if k != 'sides'}]})
             heads.append(one)
         if lead and set(lead) != {'landscape', 'portrait'}:
             notes.append(f'{name}/lead: has only its {", ".join(sorted(lead))}')

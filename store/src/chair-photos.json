@@ -53,18 +53,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1438,
-      "s": 578,
-      "view": "from behind, on a matching backdrop",
-      "w": 1094
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -498,18 +486,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1169
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -613,18 +589,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1438,
-      "s": 578,
-      "view": "from behind, on a matching backdrop",
-      "w": 1094
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -703,18 +667,6 @@
       "s": 760,
       "view": "from behind, on a matching backdrop",
       "w": 1448
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1438,
-      "s": 578,
-      "view": "from behind, on a matching backdrop",
-      "w": 1094
      }
     ]
    },
@@ -801,18 +753,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1402,
-      "s": 608,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1122
-     }
-    ]
-   },
-   {
     "kind": "pair",
     "photos": [
      {
@@ -886,18 +826,6 @@
       "s": 760,
       "view": "three-quarter view from behind, on a matching backdrop",
       "w": 1672
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1169
      }
     ]
    },
@@ -980,18 +908,6 @@
       "s": 760,
       "view": "three-quarter view from behind, on a matching backdrop",
       "w": 1448
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1169
      }
     ]
    },
@@ -1098,18 +1014,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1169
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -1192,18 +1096,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1535,
-      "s": 507,
-      "view": "from behind, on a matching backdrop",
-      "w": 1025
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -1282,18 +1174,6 @@
       "s": 760,
       "view": "from behind, on a matching backdrop",
       "w": 1536
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1536,
-      "s": 507,
-      "view": "from behind, on a matching backdrop",
-      "w": 1024
      }
     ]
    },
@@ -1393,18 +1273,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1536,
-      "s": 507,
-      "view": "from behind, on a matching backdrop",
-      "w": 1024
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -1487,18 +1355,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1448,
-      "s": 570,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1086
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -1577,18 +1433,6 @@
       "s": 760,
       "view": "from behind, on a matching backdrop",
       "w": 1448
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1536,
-      "s": 507,
-      "view": "from behind, on a matching backdrop",
-      "w": 1024
      }
     ]
    },
@@ -1696,18 +1540,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1536,
-      "s": 507,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1024
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -1798,18 +1630,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1402,
-      "s": 608,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1122
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -1888,18 +1708,6 @@
       "s": 760,
       "view": "from behind, on a matching backdrop",
       "w": 1448
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "from behind, on a matching backdrop",
-      "w": 1169
      }
     ]
    },
@@ -1999,18 +1807,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "from behind, on a matching backdrop",
-      "w": 1169
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -2102,18 +1898,6 @@
       "s": 760,
       "view": "three-quarter view from behind, on a matching backdrop",
       "w": 1448
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1448,
-      "s": 570,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1086
      }
     ]
    },
@@ -2213,18 +1997,6 @@
     ]
    },
    {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1536,
-      "s": 507,
-      "view": "from behind, on a matching backdrop",
-      "w": 1024
-     }
-    ]
-   },
-   {
     "kind": "wide",
     "photos": [
      {
@@ -2303,18 +2075,6 @@
       "s": 760,
       "view": "three-quarter view from behind, on a matching backdrop",
       "w": 1448
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1169
      }
     ]
    },
@@ -2410,18 +2170,6 @@
       "s": 760,
       "view": "three-quarter view from behind, on a matching backdrop",
       "w": 1448
-     }
-    ]
-   },
-   {
-    "kind": "portrait",
-    "photos": [
-     {
-      "file": "lead/portrait",
-      "h": 1346,
-      "s": 660,
-      "view": "three-quarter view from behind, on a matching backdrop",
-      "w": 1169
      }
     ]
    },

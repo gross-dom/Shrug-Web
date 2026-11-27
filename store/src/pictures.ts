@@ -96,8 +96,9 @@ const tall = (shot: Shot) => !shot.ground && !shot.fills && !shot.alone && shape
 //
 // Each color has a folder of its own (store/public/pictures/workspace/<color>/), with three sets in it:
 //   lead/      the chair on a backdrop of its color, a landscape and an upright (Dom's renders of 27 Nov). The
-//              gallery and the checkout both open on them, landscape first. At checkout the landscape fills its
-//              tile, cut to its middle as the page narrows, as ArtStore's pictures made to fill are (`fill`)
+//              gallery opens on the landscape (the upright is not in it); checkout shows the two, the landscape
+//              first, filling its tile and cut to its middle as the page narrows, as ArtStore's pictures made to
+//              fill are (`fill`)
 //   gallery/   what Workspace shows in its window: slides, each a landscape, a pair of uprights or one upright
 //   checkout/  upright studio shots for the page the chair is bought on, one to three, after the lead's two
 // `python3 -I tools/chair-photos.py <Shrug's folder>` copies them in as they are and writes what there is to
