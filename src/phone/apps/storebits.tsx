@@ -13,11 +13,19 @@ export const brief = (shipTo: string) => {
   return [lines[0], city].filter(Boolean).join(', ')
 }
 
-/** A product's first photograph, small, in a rounded square. */
-export function Thumb({ product, size = 52 }: { product: Pick<Product, 'name' | 'picture' | 'pictures'> | null | undefined; size?: number }) {
+const TONES = ['#1f3a5f', '#5a2a3c', '#2f4a3a', '#4a3a6a', '#6a4a22']
+/** What a thing with no photograph is drawn on: a colour by its place among the things of its kind, as the
+ * shelf of Books draws a cover (src/apps/Books.tsx), running down into black. */
+export const drawnOn = (products: Pick<Product, 'id' | 'kind'>[], product: Pick<Product, 'id' | 'kind'> | null | undefined): string => {
+  const n = product ? Math.max(0, products.filter((p) => p.kind === product.kind).findIndex((p) => p.id === product.id)) : 0
+  return `linear-gradient(160deg, ${TONES[n % TONES.length]}, #101114)`
+}
+
+/** A product's first photograph, small, in a rounded square; `drawn` is what it is painted with where it has none. */
+export function Thumb({ product, size = 52, drawn }: { product: Pick<Product, 'name' | 'picture' | 'pictures'> | null | undefined; size?: number; drawn?: string }) {
   const shot = product ? shotsOf(product)[0] : undefined
   return (
-    <span className="co-thumb" style={{ width: size, height: size, background: shot?.ground }}>
+    <span className="co-thumb" style={{ width: size, height: size, background: shot ? shot.ground : drawn }}>
       {shot && <img src={shot.small} alt="" decoding="async" draggable={false} data-whole={shot.ground ? '' : undefined} style={shot.at && !shot.ground ? { objectPosition: shot.at } : undefined} />}
     </span>
   )

@@ -11,7 +11,7 @@ import { useStore } from '../../os/store'
 import { LOGIN, LogInSheet } from '../LogIn'
 import { closeSheet } from '../system'
 import { NavStack, Screen, Sheet, SheetHost, Switch, useApp } from '../ui'
-import { optionName, Thumb } from './storebits'
+import { drawnOn, optionName, Thumb } from './storebits'
 import { Me } from './Wallet'
 import '../../styles/phone/shop.css'
 
@@ -165,7 +165,7 @@ export function VipBody({ doors }: { doors?: boolean }) {
         const taken = paidOf(order)
         return (
           <li key={order.id} className="vp-row">
-            <Thumb product={product} size={44} />
+            <Thumb product={product} size={44} drawn={drawnOn(shop.products, product)} />
             <span className="vp-who">
               <b>{nameOf(order)}</b>
               <small>{[editionOf(order.number), when(order.placed), ships && `Ships ${ships}`].filter(Boolean).join(' · ')}</small>

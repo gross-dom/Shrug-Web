@@ -473,7 +473,8 @@ export function LogInSheet() {
   const member = who.status === 'member' ? who : null
   // It is as dark or as light as the app it is over: dark over a store, pale over the folder of updates
   const { app } = useApp()
-  const dark = useStore(chrome, (c) => c[app] === 'dark')
+  // (and dark over Workspace whatever colour is on its stage: checkout's tray there is, and the two are a pair)
+  const dark = useStore(chrome, (c) => c[app] === 'dark' || app === 'workspace')
   if (who.status === 'checking')
     return (
       <Tray label="Log in" dark={dark}>

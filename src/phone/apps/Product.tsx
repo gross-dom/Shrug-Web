@@ -7,7 +7,7 @@ import { askLogIn } from '../../os/account'
 import { useShop } from '../../os/shop'
 import { BackButton, Screen } from '../ui'
 import { checkOut } from './Buying'
-import { optionName } from './storebits'
+import { drawnOn, optionName } from './storebits'
 import { Wallet } from './Wallet'
 
 // One thing the store sells, as a screen of the phone's own: its photographs across the top, edge to edge
@@ -20,16 +20,21 @@ const COLORS: Record<string, string> = { black: '#1b1c1f', stone: '#b9b2a3', whi
 const colorOf = (option: string): string | null => /\s(#[0-9a-f]{3,8})$/i.exec(option)?.[1] ?? COLORS[optionName(option).toLowerCase()] ?? null
 
 /** A product's photographs, side by side: a finger draws the next across, and it comes to rest whole. */
-function Gallery({ product, shots }: { product: Product; shots: Shot[] }) {
+function Gallery({ product, shots, drawn }: { product: Product; shots: Shot[]; drawn: string }) {
   const track = useRef<HTMLDivElement>(null)
   const [seen, setSeen] = useState(0)
   // (upright for a thing that is photographed upright; square for everything else)
   const tall = (shots[0]?.aspect ?? 1) < 0.9
   const to = (n: number) => track.current?.scrollTo({ left: n * track.current.clientWidth, behavior: 'smooth' })
+  // Nothing photographed yet: a book is drawn as its cover, from its title, as the shelf draws it; anything
+  // else is its name on the same ground
   if (!shots.length)
     return (
-      <div className="pd-gallery pd-gallery--none" aria-hidden>
-        <b>{product.name}</b>
+      <div className="pd-gallery pd-gallery--none" data-book={product.kind === 'Book' || undefined} aria-hidden>
+        <span className="pd-drawn" style={{ background: drawn }}>
+          <b>{product.name}</b>
+          {product.kind === 'Book' && <small>Shrug</small>}
+        </span>
       </div>
     )
   return (
@@ -161,7 +166,7 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
         </div>
       }
     >
-      <Gallery product={product} shots={shots} />
+      <Gallery product={product} shots={shots} drawn={drawnOn(shop.products, product)} />
       <div className="pd-info">
         {((badge && !bought) || kept) && (
           <p className="pd-badges">

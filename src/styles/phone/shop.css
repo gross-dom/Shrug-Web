@@ -161,18 +161,60 @@
   background: #1c1c1e;
 }
 
+/* (upright, but never so tall that what it is and what it costs are off the foot of a short screen) */
 .pd-gallery[data-tall] {
   aspect-ratio: 4 / 5;
+  max-height: 60cqh;
 }
 
 .pd-gallery--none {
   display: grid;
   place-items: center;
-  padding: 24px;
-  background: linear-gradient(160deg, #2a2a2e, #101012);
-  font-size: 22px;
-  letter-spacing: -0.02em;
-  text-align: center;
+  background: #0d0d0f;
+}
+
+/* (with nothing photographed: its name, drawn. A book's is a cover the shape of one, standing on the dark) */
+.pd-drawn {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: calc(var(--status) + var(--bar) + 28px) 24px 28px;
+  color: #fff;
+}
+
+.pd-drawn b {
+  font-family: 'New York', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.pd-drawn small {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.pd-gallery--none[data-book] .pd-drawn {
+  width: 54%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  margin-top: calc((var(--status) + var(--bar)) / 2);
+  padding: 34px 18px 16px;
+  border-radius: 3px 8px 8px 3px;
+  box-shadow:
+    inset 3px 0 0 rgb(255 255 255 / 0.08),
+    0 18px 44px rgb(0 0 0 / 0.6);
+}
+
+.pd-gallery--none[data-book] .pd-drawn b {
+  font-size: 24px;
 }
 
 .pd-gallery--wait {

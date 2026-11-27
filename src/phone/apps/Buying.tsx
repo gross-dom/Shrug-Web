@@ -12,7 +12,7 @@ import { addPhoneNext, LOGIN, LogInSheet } from '../LogIn'
 import { closeSheet, openSheet } from '../system'
 import { SheetHost, Tray } from '../ui'
 import { MyVipSheet } from './MyVip'
-import { brief, optionName, Thumb } from './storebits'
+import { brief, drawnOn, optionName, Thumb } from './storebits'
 import { VIP } from './Wallet'
 import '../../styles/phone/shop.css'
 
@@ -209,7 +209,7 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
     <Tray label="Checkout" dark step="review" title={<span className="co-head">{verb ?? 'Checkout'}</span>}>
       <div className="co" data-at="review">
         <div className="co-item">
-          <Thumb product={product} />
+          <Thumb product={product} drawn={drawnOn(shop.products, product)} />
           <span className="co-what">
             <b>{product.name}</b>
             {facts && <small>{facts}</small>}
