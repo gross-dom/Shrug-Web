@@ -26,7 +26,8 @@ import '../styles/desk/workspace.css'
 // chair itself on a turntable with photographs of it beside (one picked fills the window, under a shade the
 // controls can still be read on), the colors in a small glass tray of dots with who owns one under them,
 // and the price and one button. The tray is as wide as the window leaves it: it has the eight, then any of
-// the sixteen more that has been picked (each is added to it, and stays), and at its end the dot that lets
+// the sixteen more that has been picked (each is added to it, and stays for the visit: loaded again, the site
+// has the eight), and at its end the dot that lets
 // the sixteen down. In a narrower window it holds fewer dots, and those it has no room for are in the grid
 // with the sixteen. The price is said to someone logged in. Buy opens the store's own page for
 // that chair inside this window (storefront.tsx), in that chair's color: the same checkout as everywhere,
@@ -100,16 +101,17 @@ export function WorkspaceApp() {
     setFlood(c.id)
     setTimeout(() => (setFlood(null), setView('studio')), 420)
   }
-  /** A color picked from the grid: the studio is in it. One of the sixteen more is added to the tray, where it stays. */
+  /** A color picked from the grid: the studio is in it. One of the sixteen more is added to the tray, where it stays for the visit. */
   const pickMore = (c: Chosen) => {
     choose(c)
     setMore(false)
     setView('studio')
   }
-  // (however one of the sixteen came to be the color: from the grid, from the store's page, or kept from last time)
+  // (however one of the sixteen came to be the studio's color: from the grid, or from the store's page. One kept
+  // from last time is not added while the colors are still up: picked from them, the studio opens on the eight)
   useEffect(() => {
-    if (chosen?.paint.more) addToBar(chosen.id)
-  }, [chosen?.id, chosen?.paint.more])
+    if (view === 'studio' && chosen?.paint.more) addToBar(chosen.id)
+  }, [view, chosen?.id, chosen?.paint.more])
 
   // ---- The tray: the eight, then what has been added, in as many dots as there is room for
   const tray = [...PAINTS, ...added.map((id) => MORE.find((p) => p.id === id)).filter((p): p is Paint => !!p)].map(chosenOf)

@@ -233,7 +233,7 @@ function Studio({ top }: { top: boolean }) {
     else setShot(shot > 0 ? shot - 1 : null)
   }
 
-  // The tray: the eight, then whichever of the sixteen have been picked, and the dot that lets the rest up
+  // The tray: the eight, then whichever of the sixteen have been picked this visit, and the dot that lets the rest up
   const tray = [...PAINTS, ...added.map((id) => MORE.find((p) => p.id === id)).filter((p): p is (typeof MORE)[number] => !!p)].map(chosenOf)
   useEffect(() => {
     if (chosen.paint.more) addToBar(chosen.id)

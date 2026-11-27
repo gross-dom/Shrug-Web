@@ -37,29 +37,22 @@ export function pick(next: Picked | null) {
 }
 
 // The colors on the studio's bar beyond the eight it opens with: one of the sixteen more that has been picked
-// is added to the bar, and stays on it (Dom's fourth round: the bar grows by one, and the picker is still at
-// its end). Kept in this browser with the color that is picked.
+// is added to the bar (Dom's fourth round: the bar grows by one, and the picker is still at its end). For this
+// visit only: the studio opens on the eight every time the site is loaded (Dom, 27 Nov: it was kept in the
+// browser, and a bar that had been added to on other days opened with too many on it).
 
 const BAR = 'shrug:workspace.bar.v1'
-
-function keptBar(): string[] {
-  try {
-    const was = JSON.parse(window.localStorage.getItem(BAR) ?? '[]') as unknown
-    return Array.isArray(was) ? was.filter((id): id is string => typeof id === 'string').slice(0, 24) : []
-  } catch {
-    return []
-  }
+try {
+  // (what an earlier version of the site kept there)
+  if (typeof window !== 'undefined') window.localStorage.removeItem(BAR)
+} catch {
+  // No storage: there is nothing kept to clear
 }
 
 /** The ids of the colors added to the bar, in the order they were picked. */
-export const onBar = createStore<string[]>(typeof window === 'undefined' ? [] : keptBar())
+export const onBar = createStore<string[]>([])
 
 export function addToBar(id: string) {
   if (onBar.get().includes(id)) return
   onBar.set((was) => [...was, id])
-  try {
-    window.localStorage.setItem(BAR, JSON.stringify(onBar.get()))
-  } catch {
-    // No storage: it is on the bar for as long as the page is open
-  }
 }
