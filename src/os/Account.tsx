@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Moon, Plus, Sun } from 'lucide-react'
 import { FACES } from '../../store/shared/faces'
 import { hidden, phoneOf, POINTS_PER_DOLLAR, type Picture } from '../../store/shared/rules'
-import { account, ACCOUNT_DEMO, addPhone, askLogIn, closeLogIn, demoLink, isLP, logIn, logOut, provePhone, refreshAccount, saveProfile, start, textTo, unlocked, verify, type Failed, type Member, type Why } from './account'
+import { account, ACCOUNT_DEMO, addPhone, askLogIn, closeLogIn, demoLink, isLP, keyboardBack, logIn, logOut, provePhone, refreshAccount, saveProfile, start, textTo, unlocked, verify, type Failed, type Member, type Why } from './account'
 import { asked } from './address'
 import { Face } from './Face'
 import { launchApp } from './launch'
@@ -565,7 +565,9 @@ export function AccountItem() {
       e.stopPropagation()
       if (hold.current) return
       closeLogIn()
-      title.current?.focus()
+      // (to whatever asked for the sheet, a locked letter in Mail say; or to Log In in the bar)
+      const to = keyboardBack()
+      ;(to && !box.current?.contains(to) ? to : title.current)?.focus()
     }
     document.addEventListener('pointerdown', away)
     document.addEventListener('keydown', keys, true)

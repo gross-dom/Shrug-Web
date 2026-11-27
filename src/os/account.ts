@@ -82,7 +82,20 @@ export const unlocked = createStore<{ at: number; docs: number } | null>(null)
 
 /** `says` is a line of the opener's own under the sheet's head, in place of the usual one: what is kept while they log in. */
 export const logIn = createStore<{ open: boolean; why: Why; says?: string }>({ open: false, why: null })
-export const askLogIn = (why: Why = null, says?: string) => logIn.set({ open: true, why, says })
+export const askLogIn = (why: Why = null, says?: string) => {
+  // What has the keyboard as it is asked for, and the window that is in (a row of a list is gone once it is
+  // opened, its window is not): where the keyboard is given back if the sheet is put away with Escape
+  const had = typeof document !== 'undefined' ? document.activeElement : null
+  askedFrom = had instanceof HTMLElement && had !== document.body ? { el: had, win: had.closest<HTMLElement>('.wf') } : null
+  logIn.set({ open: true, why, says })
+}
+let askedFrom: { el: HTMLElement; win: HTMLElement | null } | null = null
+/** Where the keyboard goes back to as Log In is put away: what had it, or its window's own place for the keyboard; null for the bar's Log In. */
+export function keyboardBack(): HTMLElement | null {
+  const had = askedFrom
+  askedFrom = null
+  return had?.el.isConnected ? had.el : had?.win?.isConnected ? (had.win.querySelector<HTMLElement>('[data-autofocus]') ?? null) : null
+}
 export const closeLogIn = () => logIn.set((s) => (s.open || s.why ? { open: false, why: null } : s))
 
 // ---- What the server answers

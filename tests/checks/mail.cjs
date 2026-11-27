@@ -16,7 +16,9 @@ const check = (name, ok, detail = '') => {
 ;(async () => {
   const browser = await A.launch()
   const M = '.wf[data-app="mail"]'
-  const t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty' })
+  // (`mail=open`: none of the twenty is locked, so that what the inbox does is gone through as a visitor. The
+  // locked ones, and what a visitor is shown of them, are investors.cjs's)
+  const t = await A.open(browser, { device: 'desktop', base: BASE, query: 'still&empty&mail=open' })
   const p = t.page
   await p.waitForTimeout(1600)
   const front = () => p.evaluate(() => document.querySelector('.wf[data-active]')?.dataset.app ?? null)

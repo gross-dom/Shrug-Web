@@ -188,12 +188,15 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
     const box = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), r: Math.round(r.right), b: Math.round(r.bottom) } }
     const win = box(w)
     const bar = box(w.querySelector('.ss-window__bar'))
-    const inside = [...w.querySelectorAll('.updbar > *, .v-empty > *, .upd-row, .upd-foot')].every((el) => { const b = box(el); return b.x >= win.x && b.r <= win.r && b.b <= win.b })
+    const inside = [...w.querySelectorAll('.updbar > *, .v-empty > *, .upd-row, .upd-note, .upd-foot')].every((el) => { const b = box(el); return b.x >= win.x && b.r <= win.r && b.b <= win.b })
     const list = w.querySelector('.upd-list')
-    return { size: `${win.w}x${win.h}`, bar: bar.h, title: `${w.querySelector('.updbar__title').textContent} ${cs('.updbar__title').fontSize} ${cs('.updbar__title').fontWeight}`, chip: w.querySelector('.updbar .v-chip').textContent.trim(), chipAt: win.r - box(w.querySelector('.updbar .v-chip')).r, old: w.querySelectorAll('.vip__title, .vip__body, .updates__list').length, said: w.querySelector('.v-empty h3')?.textContent ?? null, tells: w.querySelector('.v-empty p')?.textContent ?? null, rows: w.querySelectorAll('.upd-row').length, heads: [...w.querySelectorAll('.upd h2')].map((h) => h.textContent).join(), row: w.querySelector('.upd-row') ? box(w.querySelector('.upd-row')).h : null, foot: w.querySelector('.upd-foot') ? win.b - box(w.querySelector('.upd-foot')).b : null, scrolls: list ? list.scrollHeight > list.clientHeight : null, inside }
+    return { size: `${win.w}x${win.h}`, bar: bar.h, title: `${w.querySelector('.updbar__title').textContent} ${cs('.updbar__title').fontSize} ${cs('.updbar__title').fontWeight}`, chip: w.querySelector('.updbar .v-chip')?.textContent.trim() ?? null, chipAt: w.querySelector('.updbar .v-chip') ? win.r - box(w.querySelector('.updbar .v-chip')).r : null, kept: w.querySelectorAll('.upd-row .upd-kept').length, note: w.querySelector('.upd-note p')?.textContent.trim() ?? null, ways: [...w.querySelectorAll('.upd-note button')].map((b) => b.textContent.trim()).join(' | '), old: w.querySelectorAll('.vip__title, .vip__body, .updates__list').length, said: w.querySelector('.v-empty h3')?.textContent ?? null, tells: w.querySelector('.v-empty p')?.textContent ?? null, rows: w.querySelectorAll('.upd-row').length, heads: [...w.querySelectorAll('.upd h2')].map((h) => h.textContent).join(), row: w.querySelector('.upd-row') ? box(w.querySelector('.upd-row')).h : null, foot: w.querySelector('.upd-foot') ? win.b - box(w.querySelector('.upd-foot')).b : null, scrolls: list ? list.scrollHeight > list.clientHeight : null, inside }
   }, U)
+  // (To someone not logged in it is no longer one line and a lock, Dom 27 Nov: the four updates are listed, the
+  // one written for everyone theirs to open, the three for a fund's LPs each kept with "LPs only"; and under them
+  // what the locks mean, with the two ways past them. No chip says Locked, one of the four being open)
   const locked = await laid(p)
-  check('Updates, locked: 760 by 540 under a bar 52 tall, with its name at the left of it and Locked at the right, and in the middle of the window the one line that says who it is for, with no heading over it', locked.size === '760x540' && locked.bar === 52 && locked.title === 'Updates 13px 700' && locked.chip === 'Locked' && locked.chipAt === 14 && locked.said === null && locked.tells === 'This folder is for Shrug LPs only. Please log in with your LP email to access its contents.' && locked.rows === 0 && locked.old === 0 && locked.inside, JSON.stringify(locked))
+  check('Updates, to a visitor: 760 by 540 under a bar 52 tall, with its name at the left of it; the four updates in rows 50 tall, three of them kept for LPs; and under them the line that says what the locks mean, with Log In and the way to enquire', locked.size === '760x540' && locked.bar === 52 && locked.title === 'Updates 13px 700' && locked.chip === null && locked.said === null && locked.rows === 4 && locked.row === 50 && locked.kept === 3 && /^Updates with a lock are for Shrug LPs only\. Log in with your LP email to open them\.$/.test(locked.note ?? '') && /^Log In \| Enquire/.test(locked.ways) && locked.old === 0 && locked.scrolls === false && locked.inside, JSON.stringify(locked))
   await shot(p, 'updates-locked')
   await p.locator('.menubar__login').click()
   await p.locator('.account input[type=email]').fill('lp@example.test')
@@ -201,11 +204,11 @@ exports.vipChecks = async ({ A, browser, BASE, check, shot, arrived }) => {
   await p.waitForTimeout(900)
   // (an address on the list: the six digits are the ones to its inbox, and the sheet then asks for a number, which is left for later)
   await p.keyboard.type('246810')
-  await p.waitForSelector(`${U} .upd-row`, { timeout: 8000 })
+  await p.waitForSelector(`${U} .updbar .v-chip--blue`, { timeout: 8000 })
   await p.keyboard.press('Escape')
   await p.waitForTimeout(1200)
   const opened = await laid(p)
-  check('Updates, logged in as an LP: the same bar, saying whose it is; the documents under Funds and SPVs in rows 50 tall; and its foot along the bottom of the window, nothing scrolling', opened.bar === 52 && opened.chip === 'LP · Shrug 2, 4' && opened.heads === 'Funds,SPVs' && opened.rows === 6 && opened.row === 50 && opened.foot === 0 && opened.scrolls === false && opened.said === null && opened.inside, JSON.stringify(opened))
+  check('Updates, logged in as an LP: the same bar, saying whose it is at its right; the four updates in rows 50 tall, none kept from them by that line; and its foot along the bottom of the window, nothing scrolling', opened.bar === 52 && opened.chip === 'LP · Shrug 2, 4' && opened.chipAt === 14 && opened.rows === 4 && opened.row === 50 && opened.kept === 0 && opened.note === null && opened.foot === 0 && opened.scrolls === false && opened.said === null && opened.inside, JSON.stringify(opened))
   await shot(p, 'updates-lp')
   check('Updates: no errors', A.realErrors(t.errors).length === 0, A.realErrors(t.errors).join(' | '))
   await t.ctx.close()

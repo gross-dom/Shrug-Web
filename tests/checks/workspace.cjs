@@ -149,7 +149,7 @@ const check = (name, ok, detail = '') => {
   await p.waitForTimeout(700)
   s = await studio()
   const ow = await p.evaluate((W) => { const o = document.querySelector(`${W} .ow`); return { cards: o.querySelectorAll('.ow-card').length, seen: [...o.querySelectorAll('h1, h2, p')].filter((e) => !e.closest('.ow-card') && !e.classList.contains('sr-only') && e.getClientRects().length && getComputedStyle(e).position !== 'absolute').map((e) => e.textContent.trim()), text: o.innerText } }, W)
-  check('it opens Notable Owners: a grid of cards, each in its owner’s color, with a way back to the color being looked at, and no heading or note over the cards', s.view === 'owners' && ow.cards === 6 && s.back === 'Back to Scuderia Red' && s.pills === 'BTS | Notable Owners*' && ow.seen.length === 0 && !/People who own one|Only owners who have agreed/i.test(ow.text), JSON.stringify({ s: s.pills, ow: { cards: ow.cards, seen: ow.seen } }))
+  check('it opens Notable Owners: a grid of cards, each in its owner’s color, with a way back to the color being looked at, and no heading or note over the cards', s.view === 'owners' && ow.cards === 6 && s.back === 'Back to Scuderia Red' && s.pills === 'Catalog | BTS | Notable Owners*' && ow.seen.length === 0 && !/People who own one|Only owners who have agreed/i.test(ow.text), JSON.stringify({ s: s.pills, ow: { cards: ow.cards, seen: ow.seen } }))
   check('an owner’s card is their words, their name and their color: no picture of the chair on it', (await p.locator(`${W} .ow-card`).count()) === 6 && (await p.locator(`${W} .ow-card img, ${W} .ow-card canvas`).count()) === 0)
   await p.locator(`${W} .wxbar__back`).click()
   await p.waitForTimeout(600)
@@ -168,7 +168,7 @@ const check = (name, ok, detail = '') => {
     return { seen: [...w.querySelectorAll('.bts h1, .bts h2, .bts > p, .bts header p')].filter((e) => !e.classList.contains('sr-only') && getComputedStyle(e).position !== 'absolute').map((e) => e.textContent.trim()), tiles: tiles.length, photos: tiles.filter((x) => x.querySelector('img')).length, films: tiles.filter((x) => x.querySelector('.bts-play')).length, columns: tops.size, heights: heights.size, display: getComputedStyle(box).display, loaded: [...w.querySelectorAll('.bts-tile img')].every((i) => i.complete && i.naturalWidth > 0) }
   }, W)
   s = await studio()
-  check('BTS is in the bar, and opens a wall of how a chair is made, photographs and films, with no title or line over it', s.view === 'bts' && s.pills === 'BTS* | Notable Owners' && wall.tiles >= 6 && wall.photos === 4 && wall.films >= 1 && wall.loaded && wall.seen.length === 0, JSON.stringify({ s: s.pills, wall }))
+  check('BTS is in the bar, and opens a wall of how a chair is made, photographs and films, with no title or line over it', s.view === 'bts' && s.pills === 'Catalog | BTS* | Notable Owners' && wall.tiles >= 6 && wall.photos === 4 && wall.films >= 1 && wall.loaded && wall.seen.length === 0, JSON.stringify({ s: s.pills, wall }))
   check('it is laid out as a wall, not as Notable Owners’ grid of cards: columns of pictures of different heights', wall.display !== 'grid' && wall.columns >= 3 && wall.heights >= 2, JSON.stringify(wall))
   // (scrolled down first: the viewer is the window's, wherever the wall has been scrolled to)
   await p.evaluate((W) => { document.querySelector(`${W} .bts`).scrollTop = 300 }, W)

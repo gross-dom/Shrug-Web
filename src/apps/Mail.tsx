@@ -2,13 +2,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEve
 import { ArrowLeft, Check, ChevronDown, ChevronUp, CircleHelp, CornerDownLeft, Flame, Inbox, Keyboard, Lightbulb, Link2, Lock, Mail as MailGlyph, MailOpen, Menu, MessageCircle, Reply, Search, Share, Sparkles, SquarePen, Star, Trash2, Undo2, X, Zap } from 'lucide-react'
 import { EXCHANGES, SPLITS, ZERO_LINE, type Exchange, type Led } from '../data/mail'
 import { Window } from '../kit/window'
-import { SITE } from '../data/site'
+import { DEMO, SITE } from '../data/site'
 import { LogoDisc } from '../os/icons'
 import { launchApp, showCompany } from '../os/launch'
 import { mail, markDone, markUnread, openExchange, star } from '../os/mail'
 import { linkTo } from '../os/place'
 import { useStore } from '../os/store'
-import { account, askLogIn } from '../os/account'
+import { account, askLogIn, logIn } from '../os/account'
 import { CAN_POST, mailtoShrug, postToShrug, SHRUG_MAIL } from '../phone/apps/outbox'
 import '../styles/desk/mail.css'
 
@@ -108,6 +108,10 @@ const COMMANDS: Command[] = [
 
 /** What the palette opens on: the five things there are to do (Dom's list). */
 const FIRST = ['done', 'star', 'unread', 'search', 'compose']
+
+/** `?mail=open` in the demo's address: none of the twenty is locked, so that what the inbox itself does can be
+ *  gone through by someone not logged in (tests/checks/mail.cjs). The site with real accounts takes no notice. */
+const ALL_OPEN = DEMO && typeof window !== 'undefined' && /[?&]mail=open\b/.test(window.location.search)
 const GROUPS: Command['group'][] = ['Move about', 'In a conversation', 'Yours to do', 'Find and ask', 'Not here']
 
 /** A press, as COMMANDS write one: "j", "shift+o", "mod+k", "Escape". (Shift is said for a letter and a named
@@ -209,7 +213,7 @@ export function MailApp() {
   // row with a lock on it: who it was from and its subject, and none of what it says. Opened, it asks them to
   // log in, and is there to read once they have.
   const member = useStore(account, (s) => s.status === 'member')
-  const shut = (x: Exchange) => !!x.locked && !member
+  const shut = (x: Exchange) => !!x.locked && !member && !ALL_OPEN
   const rows = useMemo(
     // (a search looks through all twenty, wherever they are; and through no more of a locked one than its row shows)
     () => EXCHANGES.filter((x) => (q ? [x.from, x.subject, x.led, ...(shut(x) ? [] : [x.first, x.ledTo])].some((text) => text.toLowerCase().includes(q)) : under(x, split))),
@@ -237,10 +241,11 @@ export function MailApp() {
     const timer = setTimeout(() => setSaid(null), 2600)
     return () => clearTimeout(timer)
   }, [said])
-  // The keyboard is the window's own whenever nothing in it is being typed into
+  // The keyboard is the window's own whenever nothing in it is being typed into. (Not while Log In is let down,
+  // as it is by a locked exchange being opened: the sheet's field has the keyboard then, to be typed into)
   const back = () => root.current?.focus()
   useEffect(() => {
-    if (!over && query === null && !composing) back()
+    if (!over && query === null && !composing && !logIn.get().open) back()
   }, [over, query, open, zero, unfolded, composing])
   // The row the keyboard is on is kept in sight. (One the pointer brought it to is in sight already, and a
   // list that moved under the pointer would put a different row under it.)
