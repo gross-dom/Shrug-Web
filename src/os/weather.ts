@@ -17,14 +17,27 @@ export interface Place {
   lon: number
   /** Its clock. */
   zone: string
+  /** Whose forecast it is, where that is not the Weather Service's (which has only the United States). */
+  service?: 'met'
 }
 
+// London (Dom, 27 Nov) is outside the United States, which is all the Weather Service forecasts: its forecast
+// is the Norwegian Meteorological Institute's, which forecasts the world and is free to use with its name
+// given (api.met.no, CC BY 4.0). Its terms are an agreement that someone at Shrug has to have read and
+// accepted before the site uses it (https://api.met.no/doc/TermsOfService), so until that is said London is
+// left out of the site: MET_ACCEPTED is the switch. A build made with VITE_MET_NORWAY=1 has it, to be looked at.
+const MET_ACCEPTED = false
+const WITH_MET = MET_ACCEPTED || import.meta.env.VITE_MET_NORWAY === '1'
+
 /** The places the window has. The first is the widget's. */
-export const PLACES: Place[] = [
-  { id: 'san-francisco', name: 'San Francisco', lat: 37.7749, lon: -122.4194, zone: 'America/Los_Angeles' },
-  { id: 'los-angeles', name: 'Los Angeles', lat: 34.0522, lon: -118.2437, zone: 'America/Los_Angeles' },
-  { id: 'new-york', name: 'New York', lat: 40.7128, lon: -74.006, zone: 'America/New_York' },
-]
+export const PLACES: Place[] = (
+  [
+    { id: 'san-francisco', name: 'San Francisco', lat: 37.7749, lon: -122.4194, zone: 'America/Los_Angeles' },
+    { id: 'los-angeles', name: 'Los Angeles', lat: 34.0522, lon: -118.2437, zone: 'America/Los_Angeles' },
+    { id: 'new-york', name: 'New York', lat: 40.7128, lon: -74.006, zone: 'America/New_York' },
+    { id: 'london', name: 'London', lat: 51.5074, lon: -0.1278, zone: 'Europe/London', service: 'met' },
+  ] satisfies Place[]
+).filter((place: Place) => place.service !== 'met' || WITH_MET)
 
 export interface Hour {
   /** When it starts and ends. */
@@ -63,7 +76,12 @@ export interface Told {
 }
 
 /** The service's own page for a place, for a person to read. */
-export const forecastPage = (place: Place) => `https://forecast.weather.gov/MapClick.php?lat=${place.lat}&lon=${place.lon}`
+export const forecastPage = (place: Place) => (place.service === 'met' ? 'https://api.met.no/' : `https://forecast.weather.gov/MapClick.php?lat=${place.lat}&lon=${place.lon}`)
+
+/** Whose forecast a place's is, as the window says it: "from the National Weather Service", "from MET Norway"
+ * (which asks to be named so wherever its forecasts are shown, with its licence to hand). */
+export const sourceOf = (place: Place): { name: string; the: boolean; licence?: string } =>
+  place.service === 'met' ? { name: 'MET Norway', the: false, licence: 'https://api.met.no/doc/License' } : { name: 'National Weather Service', the: true }
 
 const asJson = async (url: string) => {
   const answer = await fetch(url, { headers: { Accept: 'application/geo+json' } })
@@ -143,12 +161,113 @@ function daysOf(periods: Raw[], zone: string): Day[] {
   return [...days.values()].slice(0, 7)
 }
 
+// ---- The Norwegian Meteorological Institute's forecast, for a place outside the United States
+//
+// One file for a place: each hour for two days and a half, then every six hours for the rest of ten days
+// (api.met.no/weatherapi/locationforecast/2.0). It gives no chance of rain outside the north of Europe, and
+// says the sky as one of its own words (partlycloudy_day), which is put into the words the window already
+// reads. It is asked as its terms ask of a small site: a plain request with nothing added to it (the browser
+// says which site is asking), a place given to four decimals, and never again before the time its answer says.
+
+/** Its word for a sky, in the window's. (Its showers are a sky of some cloud; "and thunder" is a storm.) */
+function metSays(code: string): string {
+  const word = code.replace(/_(day|night|polartwilight)$/, '')
+  const night = /_night$/.test(code)
+  if (/thunder/.test(word)) return 'Thunderstorms'
+  if (/sleet/.test(word)) return /showers/.test(word) ? 'Sleet Showers' : 'Sleet'
+  if (/snow/.test(word)) return /showers/.test(word) ? 'Snow Showers' : /^heavy/.test(word) ? 'Heavy Snow' : /^light/.test(word) ? 'Light Snow' : 'Snow'
+  if (/rainshowers/.test(word)) return /^heavy/.test(word) ? 'Heavy Rain Showers' : /^light/.test(word) ? 'Light Rain Showers' : 'Rain Showers'
+  if (/rain/.test(word)) return /^heavy/.test(word) ? 'Heavy Rain' : /^light/.test(word) ? 'Light Rain' : 'Rain'
+  if (word === 'fog') return 'Fog'
+  if (word === 'cloudy') return 'Cloudy'
+  if (word === 'partlycloudy') return 'Partly Cloudy'
+  if (word === 'fair') return night ? 'Mostly Clear' : 'Mostly Sunny'
+  return night ? 'Clear' : 'Sunny'
+}
+
+const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+const num = (thing: unknown): number | null => (typeof thing === 'number' && Number.isFinite(thing) ? thing : null)
+
+/** What it gives for one time, as an hour of the window's: null where it has no temperature or no sky for it. */
+function metHour(entry: Raw, place: Place): (Hour & { span: number }) | null {
+  const at = typeof entry.time === 'string' ? Date.parse(entry.time) : NaN
+  const data = (entry.data ?? {}) as { instant?: { details?: Raw }; next_1_hours?: { summary?: Raw }; next_6_hours?: { summary?: Raw; details?: Raw }; next_12_hours?: { summary?: Raw } }
+  const now = data.instant?.details ?? {}
+  const celsius = num(now.air_temperature)
+  const ahead = data.next_1_hours ?? data.next_6_hours ?? data.next_12_hours
+  const code = ahead?.summary?.symbol_code
+  if (Number.isNaN(at) || celsius === null || typeof code !== 'string') return null
+  const span = data.next_1_hours ? 1 : data.next_6_hours ? 6 : 12
+  const sun = sunOf(place, at)
+  const wind = num(now.wind_speed)
+  const from = num(now.wind_from_direction)
+  return {
+    at,
+    end: at + span * 3_600_000,
+    span,
+    temp: toF(celsius)!,
+    says: metSays(code),
+    // (its word says day or night where the sky's picture differs by it; where it does not, the sun does)
+    day: /_day$/.test(code) ? true : /_night$/.test(code) ? false : sun ? at > sun.rise && at < sun.set : true,
+    rain: null,
+    humidity: num(now.relative_humidity),
+    dew: toF(num(now.dew_point_temperature)),
+    wind: wind === null ? null : wind * 2.2369363,
+    from: from === null ? null : COMPASS[Math.round((((from % 360) + 360) % 360) / 22.5) % 16]!,
+  }
+}
+
+/** Its week: each day there by its warmest and coldest hour, and its sky as it is said for the middle of the day. */
+function metDays(hours: (Hour & { span: number })[], zone: string): Day[] {
+  const dateIn = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' })
+  const hourIn = new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', hourCycle: 'h23' })
+  const days = new Map<string, { day: Day; best: number }>()
+  for (const h of hours) {
+    const key = dateIn.format(h.at)
+    const had = days.get(key) ?? { day: { at: h.at, says: '', day: true, high: null, low: null, rain: null }, best: Infinity }
+    had.day.high = had.day.high === null ? h.temp : Math.max(had.day.high, h.temp)
+    had.day.low = had.day.low === null ? h.temp : Math.min(had.day.low, h.temp)
+    // (the sky nearest one in the afternoon stands for the day's)
+    const off = Math.abs(Number(hourIn.format(h.at)) - 13)
+    if (off < had.best) (had.best = off), (had.day.says = h.says), (had.day.day = h.day)
+    days.set(key, had)
+  }
+  return [...days.values()].map((one) => one.day).slice(0, 7)
+}
+
+/** Until when its last answer for a place is to be kept, by its own word (never less than ten minutes). */
+const metUntil = new Map<string, number>()
+
+async function readMet(place: Place): Promise<Told> {
+  const answer = await fetch(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${place.lat.toFixed(4)}&lon=${place.lon.toFixed(4)}`)
+  if (!answer.ok) throw new Error(`weather: ${answer.status}`)
+  const until = Date.parse(answer.headers.get('Expires') ?? '')
+  metUntil.set(place.id, Math.max(Date.now() + FRESH, Number.isNaN(until) ? 0 : until))
+  const series = ((await answer.json()) as { properties?: { timeseries?: unknown } } | null)?.properties?.timeseries
+  const all = (Array.isArray(series) ? (series as Raw[]) : []).map((entry) => metHour(entry, place)).filter((h): h is Hour & { span: number } => !!h)
+  const upcoming = all.filter((h) => h.end > Date.now())
+  const now = upcoming[0] ?? all[0]
+  if (!now) throw new Error('weather: unread')
+  // (hour by hour is its hours alone: further on it speaks for six at a time, which the week is made from)
+  const byHour = (upcoming.length ? upcoming : all).filter((h) => h.span === 1).slice(0, 25)
+  return { now, hours: byHour.length ? byHour : [now], days: metDays(upcoming.length ? upcoming : all, place.zone), at: Date.now() }
+}
+
 const kept = new Map<string, { told: Promise<Told>; at: number }>()
 /** How long an answer is good for before the service is asked again. */
 const FRESH = 10 * 60_000
 
 /** What the service has for a place: now, hour by hour, and (with `week`) day by day. Asked again no more than every ten minutes. */
 export function readWeather(place: Place = PLACES[0]!, week = false): Promise<Told> {
+  if (place.service === 'met') {
+    // (one file has its hours and its week: it is asked for once, and not again before the time it gave)
+    const had = kept.get(place.id)
+    if (had && Date.now() < (metUntil.get(place.id) ?? had.at + FRESH)) return had.told
+    const told = readMet(place)
+    kept.set(place.id, { told, at: Date.now() })
+    told.catch(() => kept.get(place.id)?.told === told && kept.delete(place.id))
+    return told
+  }
   const key = `${place.id}${week ? ':week' : ''}`
   const had = kept.get(key) ?? (week ? undefined : kept.get(`${place.id}:week`))
   if (had && Date.now() - had.at < FRESH) return had.told

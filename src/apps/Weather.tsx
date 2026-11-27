@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowUpRight, CalendarDays, Cloud, CloudRain, Droplet, Droplets, Moon as MoonGlyph, PanelLeft, Search, Sunrise, Sunset, Thermometer, Wind } from 'lucide-react'
 import { Window } from '../kit/window'
 import { useStore } from '../os/store'
-import { degrees, FAHRENHEIT, feelsLike, forecastPage, moonOf, PLACES, readWeather, skyKind, skyLight, speed, SPEED, SPOKEN, sunOf, TWELVE, type Day, type Hour, type Moon, type Place, type SkyKind, type SkyLight, type Told } from '../os/weather'
+import { degrees, FAHRENHEIT, feelsLike, forecastPage, moonOf, PLACES, readWeather, skyKind, skyLight, sourceOf, speed, SPEED, SPOKEN, sunOf, TWELVE, type Day, type Hour, type Moon, type Place, type SkyKind, type SkyLight, type Told } from '../os/weather'
 import { wm } from '../os/wm'
 import { HorizonGlyph, SkyGlyph } from './weather/Glyph'
 import { Sky } from './weather/Sky'
@@ -121,7 +121,7 @@ export function WeatherApp() {
           ) : (
             <div className="wt-msg" role="status">
               <h1>{place.name}</h1>
-              <p>Asking the National Weather Service…</p>
+              <p>Asking {sourceOf(place).the ? 'the ' : ''}{sourceOf(place).name}…</p>
             </div>
           )}
         </div>
@@ -364,12 +364,23 @@ function Forecast({ place, told }: { place: Place; told: Told }) {
         )}
       </div>
       <p className="wt-foot">
-        Weather for {place.name}, from the{' '}
+        {sourceOf(place).licence ? 'Data from' : `Weather for ${place.name}, from the`}{' '}
         <a href={forecastPage(place)} target="_blank" rel="noopener noreferrer">
-          National Weather Service
+          {sourceOf(place).name}
           <ArrowUpRight size={11} strokeWidth={2.4} aria-hidden />
           <span className="sr-only">, opens in a new tab</span>
         </a>
+        {sourceOf(place).licence && (
+          <>
+            {' '}
+            (
+            <a href={sourceOf(place).licence} target="_blank" rel="noopener noreferrer">
+              CC BY 4.0
+              <span className="sr-only">: its licence, opens in a new tab</span>
+            </a>
+            )
+          </>
+        )}
       </p>
     </div>
   )
