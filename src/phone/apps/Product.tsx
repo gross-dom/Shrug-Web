@@ -209,7 +209,7 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
   const figure = way === 'request' ? 'On request' : product.priceHidden ? 'Log in for price' : way === 'reserve' ? '' : price === 0 ? 'Free' : fmtCents(price)
   const under = way !== 'buy' || product.priceHidden || out ? '' : most > 0 && price > 0 ? `${fmtCents(least)} with your points` : postage > 0 ? `+ ${fmtCents(postage)} shipping` : ''
   // What can be said for certain of its sending, and of which of an edition it is
-  const ships = [product.status === 'Pre-order' && way === 'buy' && sent ? `Ships ${sent}` : '', way === 'buy' && !product.priceHidden && postage > 0 ? `${fmtCents(postageCents(product))} shipping` : ''].filter(Boolean)
+  const ships = [product.status === 'Pre-order' && way === 'buy' && sent ? `Ships ${sent}` : '', way === 'buy' && !product.priceHidden && postage > 0 ? fmtCents(postageCents(product)) : ''].filter(Boolean)
   const edition = product.editionOf ? [`Edition of ${product.editionOf}`, product.left !== null && !out ? `${product.left} left` : ''].filter(Boolean) : []
   // Under its name: what it costs and, where there is something to say of it in a word, that
   const said = bought ? 'You own this' : out ? 'Sold out' : product.status === 'Pre-order' && way === 'buy' ? 'Pre-order' : ''

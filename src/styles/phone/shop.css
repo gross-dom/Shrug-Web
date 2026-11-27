@@ -799,7 +799,9 @@
 }
 
 .co-row dt {
+  flex: none;
   color: var(--ink-2);
+  white-space: nowrap;
 }
 
 .co-row dd {
@@ -859,6 +861,14 @@
   color: var(--ink);
   font: inherit;
   text-align: right;
+}
+
+/* (an address too long for the row is cut short at its end, and keeps to the one line) */
+.co-change span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .co-change svg {

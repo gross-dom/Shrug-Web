@@ -262,7 +262,7 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
                 <dt>Ship to</dt>
                 <dd>
                   <button type="button" className="co-change" aria-label={`Ship to ${brief(shop.member.shipTo)}. Change`} onClick={() => (setError(''), setChanging(shop.member.shipTo))}>
-                    {brief(shop.member.shipTo)}
+                    <span>{brief(shop.member.shipTo)}</span>
                     <ChevronRight size={16} strokeWidth={2.6} aria-hidden />
                   </button>
                 </dd>
