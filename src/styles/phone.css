@@ -253,6 +253,19 @@
     transform 0.4s var(--glide);
 }
 
+/* On a real phone the page is shorter than the picture is (the browser's bars take the rest of the phone), and
+   a picture cut to cover it lost its own top and foot: what showed at the page's edges was a darker part of
+   it, and bringing that to the colours the browser paints its bars in (below) left a pale band across the
+   foot, behind "Swipe up to open" (Dom, 27 Nov). So it is fitted to the page instead, top to foot: its own
+   edges are then at the page's edges, in the colours the bars are painted in, and it reads as running the
+   height of the phone. (It is hills and sky with nothing in it that shows a little pressing down. Not with
+   the phone on its side, where it would be pulled out to twice its width) */
+@media (orientation: portrait) {
+  .ph--bleed .sb-wall {
+    background-size: 100% 100%;
+  }
+}
+
 /* On a real phone the browser paints its own bars, over the page and under it, each in the one colour
    it finds fixed along that edge (the strips below). The wallpaper is brought to those same two colours
    over its last few points, top and foot, where it is all but flat already: the bar over the page is

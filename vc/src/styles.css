@@ -712,6 +712,50 @@ video {
   }
 }
 
+/* On a phone the three are one line, whatever its width (Dom, 27 Nov: the third fell to a line of its own
+   and the three looked scattered): each in a third of the row, the first at the row's left edge, the last
+   at its right, and the type drawn in a little where the screen is narrowest so that the longest of them
+   and its count still fit. The brackets round the chosen one are drawn outside its words, and take no
+   room, so nothing moves when another is chosen. */
+@media (max-width: 899px) {
+  .filters {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    justify-content: space-between;
+    gap: 0;
+    /* (room for the bracket that hangs off the first one's left, and the last one's right) */
+    padding: 0 10px;
+  }
+
+  .filter {
+    position: relative;
+    justify-content: center;
+    font-size: clamp(10.5px, 3.1vw, 12px);
+    letter-spacing: clamp(0.06em, 0.3vw, 0.12em);
+    white-space: nowrap;
+  }
+
+  .filter::before,
+  .filter::after {
+    position: absolute;
+    top: 50%;
+    margin: 0;
+    transform: translateY(-50%);
+  }
+
+  .filter::before {
+    right: calc(100% + 5px);
+  }
+
+  .filter::after {
+    left: calc(100% + 5px);
+  }
+
+  .filter__count {
+    margin-left: 6px;
+  }
+}
+
 /* ---- Quotes ---- */
 
 /* The filters come straight under the bar's hairline */
@@ -722,8 +766,9 @@ video {
   gap: 28px;
 }
 
-/* How far down the page a reader is, as a line across the top of the window. Tied to the scroll by the
-   browser where it can be; where it cannot, Quotes.tsx moves the same line. */
+/* How far down the page a reader is, as a line across the top of the window: Quotes.tsx moves it. (It was
+   tied to the scroll by the browser where the browser could; on an iPhone, whose own bars come and go as
+   the page moves, that line grew and then sprang back to nothing.) */
 .progress {
   position: fixed;
   top: 0;
@@ -737,18 +782,6 @@ video {
   transition: background-color 0.35s ease;
 }
 
-@supports (animation-timeline: scroll()) {
-  .progress {
-    animation: progress linear both;
-    animation-timeline: scroll(root);
-  }
-}
-
-@keyframes progress {
-  to {
-    transform: scaleX(1);
-  }
-}
 
 .rows {
   display: flex;
@@ -877,6 +910,64 @@ video {
   line-height: 35px;
   letter-spacing: -0.008em;
   text-wrap: pretty;
+}
+
+/* On a phone a row is three plain blocks, each from the page's left edge, at any width (Dom, 27 Nov: the
+   tags sat in what was left beside the face, one to a line on most phones, and the quote began further
+   left than they did): the face with the name and what they do beside it, in the middle of the face's
+   height; the tags in a line under both, the width of the page; and under them what was said. */
+@media (max-width: 899px) {
+  .row {
+    gap: 18px;
+    padding: 36px 0;
+  }
+
+  .who {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px 14px;
+    width: 100%;
+  }
+
+  .who__face {
+    width: 52px;
+    height: 52px;
+  }
+
+  .who__face--none {
+    font-size: 13px;
+  }
+
+  /* (its two parts are placed by the row's own columns: the name beside the face, the tags under both) */
+  .who__text {
+    display: contents;
+  }
+
+  .who__name {
+    grid-column: 2;
+    gap: 1px;
+  }
+
+  .who__name h2 {
+    font-size: 21px;
+    line-height: 26px;
+    text-wrap: balance;
+  }
+
+  .who__name p {
+    font-size: 15px;
+    line-height: 21px;
+  }
+
+  .who__tags {
+    grid-column: 1 / -1;
+  }
+
+  .row__quote {
+    font-size: clamp(19px, 5.4vw, 23px);
+    line-height: 1.5;
+  }
 }
 
 /* Side by side, the name stays in view while a long quote goes past it, clear of the bar (which is 70px

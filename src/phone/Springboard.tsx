@@ -1194,9 +1194,32 @@ function HomeBar({ drawn }: { drawn: boolean }) {
     [],
   )
 
+  /** A press that ended with nothing said of it (the finger went off the page into the browser's own bar,
+   * which is just under this one, and the browser kept the rest of it): whatever was picked up is put back.
+   * Left as it was, the app stayed lifted, its corners round and the wallpaper showing at them. */
+  const lost = () => {
+    const d = drag.current
+    drag.current = null
+    clearTimeout(hold.current)
+    clearTimeout(press.current)
+    if (d) settle(d)
+  }
+  useEffect(() => {
+    window.addEventListener('pagehide', lost)
+    window.addEventListener('blur', lost)
+    window.addEventListener('popstate', lost)
+    return () => {
+      window.removeEventListener('pagehide', lost)
+      window.removeEventListener('blur', lost)
+      window.removeEventListener('popstate', lost)
+    }
+  }) // eslint-disable-line react-hooks/exhaustive-deps
+
   const down = (e: ReactPointerEvent) => {
     const screen = screenOf()
     if (!screen || at === 'lock') return
+    // (a press that never ended is ended by the next one)
+    lost()
     const el = at === 'app' ? screen.querySelector<HTMLElement>('.sb-slot[data-front] .sb-zoom__app') : null
     drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, dy: 0, dx: 0, v: 0, k: scaleOf(screen), w: screen.offsetWidth, h: screen.offsetHeight, reach: 0, el, was: null }
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -1299,7 +1322,7 @@ function HomeBar({ drawn }: { drawn: boolean }) {
   }
 
   return (
-    <div ref={root} className="sb-homebar" data-at={at} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+    <div ref={root} className="sb-homebar" data-at={at} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onLostPointerCapture={lost}>
       {drawn && <span className="sb-homebar__pill" />}
       {/* The bar's two gestures as buttons, for a keyboard or a screen reader: out of sight until one has the
           keyboard, when it shows over the bar, saying what it does */}

@@ -15,22 +15,35 @@ const FILTERS = [
 
 type Filter = (typeof FILTERS)[number]['id']
 
-/** A line across the top of the window that fills as the page is read. Where the browser can tie an
- * animation to the scroll it is all CSS (styles.css); where it cannot, the same line is moved from here. */
+/** A line across the top of the window that fills as the page is read. It is moved from here, a frame at a
+ * time, and only ever by how far the page has been read: a browser's own bars coming and going change the
+ * window's height (and with it how much page there is left), so the page's whole height is what it is
+ * measured against, less the least the window has been, and the line never goes back while the page goes on. */
 function Progress() {
   const line = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (window.CSS?.supports?.('animation-timeline: scroll()')) return
+    let frame = 0
     const read = () => {
-      const room = document.documentElement.scrollHeight - window.innerHeight
-      line.current?.style.setProperty('transform', `scaleX(${room > 0 ? Math.min(1, Math.max(0, window.scrollY / room)) : 0})`)
+      frame = 0
+      const page = document.documentElement
+      // (the visible part of the window, where the browser says: its bars are not part of the page)
+      const tall = window.visualViewport?.height ?? window.innerHeight
+      const room = page.scrollHeight - tall
+      const at = room > 0 ? Math.min(1, Math.max(0, window.scrollY / room)) : 0
+      line.current?.style.setProperty('transform', `scaleX(${at.toFixed(4)})`)
+    }
+    const ask = () => {
+      if (!frame) frame = requestAnimationFrame(read)
     }
     read()
-    window.addEventListener('scroll', read, { passive: true })
-    window.addEventListener('resize', read)
+    window.addEventListener('scroll', ask, { passive: true })
+    window.addEventListener('resize', ask)
+    window.visualViewport?.addEventListener('resize', ask)
     return () => {
-      window.removeEventListener('scroll', read)
-      window.removeEventListener('resize', read)
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', ask)
+      window.removeEventListener('resize', ask)
+      window.visualViewport?.removeEventListener('resize', ask)
     }
   }, [])
   return <div ref={line} className="progress" aria-hidden />
