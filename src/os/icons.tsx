@@ -213,39 +213,23 @@ function FinderIcon() {
   )
 }
 
-/** ArtStore: a picture hung on a gallery wall. A black frame on its wire, a white mount, and in it the two
- * colors the pieces themselves are printed in, red against blue, with a plate of yellow across them. (It was
- * an open book of colored leaves, after the Mac's Journal, which read as another Books: Niv, 27 Nov.) */
+/** ArtStore: Dom's own picture for it (27 Nov; public/icons/artstore.webp), a collage in the pieces' own
+ * reds and blues, on the same tile every app is drawn on. It is drawn a little over the tile's size, so that
+ * the tile's corners are the ones that cut it, and none of the picture's own show inside them. (It was a
+ * picture hung on a gallery wall, drawn here; and before that an open book of colored leaves.) */
 function ArtStoreIcon() {
   const id = useId().replace(/:/g, '')
   return (
-    <Tile from="#ffffff" to="#e9e9ef">
+    <svg viewBox="0 0 100 100" className="app-icon" aria-hidden>
       <defs>
-        <linearGradient id={`${id}-r`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ff5a4e" />
-          <stop offset="1" stopColor="#e0121c" />
-        </linearGradient>
-        <linearGradient id={`${id}-b`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#3d6bff" />
-          <stop offset="1" stopColor="#1a1fb8" />
-        </linearGradient>
-        <clipPath id={`${id}-in`}>
-          <rect x="29.5" y="37.5" width="41" height="39" rx="1" />
+        <clipPath id={`${id}-clip`}>
+          <path d={SQUIRCLE} />
         </clipPath>
       </defs>
-      {/* the wire, and the nail it hangs from */}
-      <path d="M50 14.5L30 30.5M50 14.5L70 30.5" stroke="#8e8e93" strokeWidth="1.7" strokeLinecap="round" fill="none" />
-      <circle cx="50" cy="14.5" r="2.6" fill="#636366" />
-      {/* its shadow on the wall, then the frame and its mount */}
-      <rect x="22.5" y="32" width="59" height="56" rx="4" fill="#000" fillOpacity=".12" />
-      <rect x="20" y="28" width="60" height="58" rx="4" fill="#1c1c1e" />
-      <rect x="24.5" y="32.5" width="51" height="49" rx="1.5" fill="#fff" />
-      <g clipPath={`url(#${id}-in)`}>
-        <rect x="29.5" y="37.5" width="41" height="39" fill={`url(#${id}-b)`} />
-        <path d="M29.5 37.5H62L40 76.5H29.5Z" fill={`url(#${id}-r)`} />
-        <rect x="38.5" y="51" width="23" height="11.5" rx="2" fill="#ffd60a" stroke="#1c1c1e" strokeWidth="1.3" />
-      </g>
-    </Tile>
+      {/* (what is under the picture until it arrives: the dark of its own middle) */}
+      <path d={SQUIRCLE} fill="#150f2e" />
+      <image href="/icons/artstore.webp" x="-1.5" y="-1.5" width="103" height="103" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${id}-clip)`} />
+    </svg>
   )
 }
 
