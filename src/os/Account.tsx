@@ -25,7 +25,7 @@ const reachable = (app: AppId) => !wm.get().compact || onPhone(app)
 // asked for. Logged in, the bar shows their picture and first name, and the sheet their points, the ways to
 // the store and to Updates, and Log Out.
 
-const SAID: Record<string, string> = {
+export const SAID: Record<string, string> = {
   email: 'That doesn’t look like an email address.',
   phone: 'That doesn’t look like a phone number. Start with the country code if it isn’t a US number.',
   mail: 'We couldn’t send to that address. Check it and try again.',
@@ -39,10 +39,10 @@ const SAID: Record<string, string> = {
   name: 'Add a name first.',
   picture: 'That picture didn’t work. Try another.',
 }
-const said = (error: string) => SAID[error] ?? 'That didn’t work. Try again.'
+export const said = (error: string) => SAID[error] ?? 'That didn’t work. Try again.'
 
 /** What the sheet says at its head, for whatever opened it. */
-const HEADS: Record<NonNullable<Why> | 'plain', { head: string; lead: string }> = {
+export const HEADS: Record<NonNullable<Why> | 'plain', { head: string; lead: string }> = {
   plain: { head: 'Welcome to Shrug VIP', lead: 'Log in or sign up to get started.' },
   updates: { head: 'Log in to open Updates', lead: 'Updates is for Shrug’s LPs. Log in with your LP email.' },
   request: { head: 'Log in to request', lead: 'Log in or sign up to get started.' },
@@ -53,17 +53,17 @@ const HEADS: Record<NonNullable<Why> | 'plain', { head: string; lead: string }> 
   name: { head: 'Welcome to Shrug VIP', lead: 'Log in or sign up to get started.' },
 }
 
-const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five']
-const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+export const COUNT = ['No', 'One', 'Two', 'Three', 'Four', 'Five']
+export const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
 /** A number as it is read: +1 (415) 555 0134. One from another country is left as it is dialed. */
-const pretty = (phone: string) => {
+export const pretty = (phone: string) => {
   const us = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(phone)
   return us ? `+1 (${us[1]}) ${us[2]} ${us[3]}` : phone
 }
 
 /** A number as it is typed, set out as it goes. An American number is the one the page expects; any other begins with a plus. */
-function shaped(typed: string): string {
+export function shaped(typed: string): string {
   const plus = typed.trim().startsWith('+')
   const digits = typed.replace(/\D/g, '')
   if (!digits) return plus ? '+' : ''
@@ -74,7 +74,7 @@ function shaped(typed: string): string {
 }
 
 /** The seconds left until a moment, counted down as they pass. */
-function useLeft(until: number) {
+export function useLeft(until: number) {
   const left = () => Math.max(0, Math.ceil((until - Date.now()) / 1000))
   const [seconds, setSeconds] = useState(left)
   useEffect(() => {
@@ -88,7 +88,7 @@ function useLeft(until: number) {
 }
 
 /** A photo made small and square before it is sent: the middle of it, 512 across. */
-async function squared(file: File): Promise<string> {
+export async function squared(file: File): Promise<string> {
   const url = URL.createObjectURL(file)
   try {
     const image = await new Promise<HTMLImageElement>((done, failed) => {
@@ -111,7 +111,7 @@ function Note({ children }: { children: ReactNode }) {
 }
 
 /** Whether a number is all there: an American one is ten digits after its 1, and one from elsewhere eight at the least. */
-const enough = (phone: string) => {
+export const enough = (phone: string) => {
   const digits = phone.replace(/\D/g, '')
   return digits.startsWith('1') ? digits.length >= 11 : digits.length >= 8
 }

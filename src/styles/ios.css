@@ -1006,6 +1006,122 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
   display: none;
 }
 
+/* ---- Trays ----
+   A card floating at the foot of the screen, as tall as what it holds (ui.tsx, `Tray`; after Family's). It
+   sits clear of the edges all round; with the keyboard up the screen ends at the keyboard, and the tray
+   sits just over it. What it holds changes in place: its height moves to the new thing's, which comes up
+   as the last goes. */
+
+.ios-sheet[data-detent='tray'] .ios-sheet__shade {
+  background: rgb(0 0 0 / 0.4);
+}
+
+.ios-sheet[data-detent='tray'] .ios-sheet__panel {
+  top: auto;
+  right: 8px;
+  bottom: max(8px, var(--home) - 16px);
+  left: 8px;
+  max-height: calc(100% - var(--status) - 18px);
+  border-radius: 36px;
+  background: #fff;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 18px 60px rgb(0 0 0 / 0.28);
+  --surface: #fff;
+  --grouped: #fff;
+  --cell: #f2f2f7;
+  --field: rgb(118 118 128 / 0.12);
+}
+
+.ios-tray--dark .ios-sheet__panel,
+.ios-sheet[data-detent='tray'].ios-tray--dark .ios-sheet__panel {
+  --label: #fff;
+  --label-2: rgb(235 235 245 / 0.62);
+  --label-3: rgb(235 235 245 / 0.32);
+  --sep: rgb(84 84 88 / 0.65);
+  --fill: rgb(118 118 128 / 0.24);
+  --fill-2: rgb(118 118 128 / 0.36);
+  --surface: #1c1c1e;
+  --grouped: #1c1c1e;
+  --cell: #2c2c2e;
+  --field: rgb(118 118 128 / 0.24);
+  background: #1c1c1e;
+  box-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.1),
+    0 18px 60px rgb(0 0 0 / 0.5);
+  color: #fff;
+  color-scheme: dark;
+}
+
+/* (its Close, on a dark tray, is dark glass) */
+.ios-tray--dark .ios-glass {
+  --glass: rgb(118 118 128 / 0.3);
+  --glass-edge: 0 0 0 0.5px rgb(255 255 255 / 0.1), inset 0 0.5px 0 rgb(255 255 255 / 0.12);
+  color: #fff;
+}
+
+.ios-tray:not(.ios-tray--dark) .ios-glass {
+  --glass: rgb(120 120 128 / 0.14);
+  --glass-edge: none;
+  color: #3c3c43;
+}
+
+/* Its bar: what it is, at the leading side, and its x at the other; the grabber over both */
+.ios-tray .ios-sheet__bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 62px;
+  padding: 20px 14px 8px 22px;
+}
+
+.ios-tray .ios-sheet__side:empty {
+  display: none;
+}
+
+/* (a title may run to two lines; the x keeps to the top of it) */
+.ios-tray .ios-sheet__title {
+  flex: 1;
+  align-self: center;
+  min-width: 0;
+  overflow: visible;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-align: left;
+  white-space: normal;
+}
+
+.ios-tray .ios-sheet__body {
+  padding-bottom: 0;
+}
+
+.ios-tray .ios-button {
+  --control: 34px;
+  width: 34px;
+  height: 34px;
+}
+
+.ios-tray__hug {
+  overflow: hidden;
+  transition: height 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.ios-tray__in {
+  padding: 2px 22px 22px;
+}
+
+.ios-tray__step {
+  animation: ios-tray-step 0.28s cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+
+@keyframes ios-tray-step {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 /* ---- Small things ---- */
 
 .ios-empty {
@@ -1111,6 +1227,8 @@ html[data-input='touch'] .ios-search:has(:focus-visible) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ios-tray__hug,
+  .ios-tray__step,
   .ios-page,
   .ios-page[data-enter],
   .ios-sheet__panel,

@@ -753,8 +753,13 @@ export interface SheetProps {
   label: string
   /** In the middle of its bar. */
   title?: ReactNode
-  /** large: nearly the whole screen. medium: about half of it, floating clear of the edges. */
-  detent?: 'large' | 'medium'
+  /** large: nearly the whole screen. medium: about half of it, floating clear of the edges. tray: a card
+   * floating at the foot of the screen that is as tall as what it holds and no taller (after Family's
+   * trays): it grows and shrinks with what is in it, and sits over the keyboard when that is up. */
+  detent?: 'large' | 'medium' | 'tray'
+  /** The colour the sheet itself is drawn in, where that is not its tone's (a dark tray over a dark app):
+   * the browser's bar under a sheet that runs to the foot is painted to match it. */
+  ground?: string
   /** The bar's leading corner. */
   leading?: ReactNode
   /** The bar's trailing corner, in place of the close button. */
@@ -765,7 +770,7 @@ export interface SheetProps {
 }
 
 /** A sheet over the app: a grabber to drag it away by, a close button, and what it holds. */
-export function Sheet({ label, title, detent = 'large', leading, trailing, tone = 'grouped', className, children }: SheetProps) {
+export function Sheet({ label, title, detent = 'large', ground, leading, trailing, tone = 'grouped', className, children }: SheetProps) {
   const closing = useContext(SheetContext)
   const motion = useStore(sys, (s) => s.motion)
   const sheet = useRef<HTMLDivElement>(null)
@@ -885,9 +890,10 @@ export function Sheet({ label, title, detent = 'large', leading, trailing, tone 
   useLayoutEffect(() => {
     if (closing) return
     const half = detent === 'medium'
-    sheeted.set({ shade: half ? 0.12 : 0.26, foot: half ? null : COLOR[tone] })
+    // (a tray floats clear of the foot: what is under it there is the app, under the tray's deeper shade)
+    sheeted.set({ shade: detent === 'tray' ? 0.4 : half ? 0.12 : 0.26, foot: half || detent === 'tray' ? null : (ground ?? COLOR[tone]) })
     return () => sheeted.set({ shade: 0, foot: null })
-  }, [closing, detent, tone])
+  }, [closing, detent, tone, ground])
 
   // Escape closes it, as it closes any dialog
   useEffect(() => {
@@ -912,7 +918,8 @@ export function Sheet({ label, title, detent = 'large', leading, trailing, tone 
     // Once: drawn a second time by React's checks, the keyboard would already be on the sheet itself
     giveBack.current ??= holdFocus()
     host.current = sheet.current?.parentElement ?? null
-    panel.current?.focus({ preventScroll: true })
+    // (unless a field inside it took the keyboard as it arrived: a tray that opens ready to be typed in)
+    if (!panel.current?.contains(document.activeElement)) panel.current?.focus({ preventScroll: true })
     return returnFocus
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
@@ -949,6 +956,54 @@ export function Sheet({ label, title, detent = 'large', leading, trailing, tone 
     </div>
   )
 }
+
+// ---- Trays ----
+
+/** A tray (after Family's): a card floating at the foot of the screen, over the app it belongs to, for one
+ * thing at a time: a question, a step, a receipt. It is as tall as what it holds, and grows or shrinks to
+ * the next thing put in it; a press beside it, a pull down or its x puts it away, and the app is where it
+ * was. `step` names what it is holding now: each new one comes up in place of the last. Draw it from the
+ * app's `SheetHost`, as a sheet is. */
+export function Tray({ label, title, dark, step, leading, trailing, className, children }: { label: string; title?: ReactNode; dark?: boolean; step?: string; leading?: ReactNode; trailing?: ReactNode; className?: string; children: ReactNode }) {
+  const outer = useRef<HTMLDivElement>(null)
+  const inner = useRef<HTMLDivElement>(null)
+  // As tall as what it holds: set outright the first time, and moved to from then on
+  useLayoutEffect(() => {
+    const o = outer.current
+    const i = inner.current
+    if (!o || !i) return
+    let first = true
+    const fit = () => {
+      const tall = `${i.offsetHeight}px`
+      if (o.style.height === tall) return
+      if (first) {
+        o.style.transition = 'none'
+        o.style.height = tall
+        void o.offsetHeight
+        o.style.transition = ''
+        first = false
+      } else o.style.height = tall
+    }
+    fit()
+    const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit)
+    watch?.observe(i)
+    return () => watch?.disconnect()
+  }, [])
+  return (
+    <Sheet label={label} title={title} detent="tray" ground={dark ? TRAY.dark : TRAY.pale} leading={leading} trailing={trailing} className={`ios-tray${dark ? ' ios-tray--dark' : ''}${className ? ` ${className}` : ''}`}>
+      <div ref={outer} className="ios-tray__hug">
+        <div ref={inner} className="ios-tray__in">
+          <div key={step ?? 'only'} className="ios-tray__step">
+            {children}
+          </div>
+        </div>
+      </div>
+    </Sheet>
+  )
+}
+
+/** What a tray is drawn in: an iPhone's own elevated dark, or white. */
+export const TRAY = { dark: '#1c1c1e', pale: '#ffffff' }
 
 // ---- Small things ----
 
