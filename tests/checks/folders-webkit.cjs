@@ -64,7 +64,8 @@ const want = (w, h) => {
     await b.js(`const i = document.querySelector('.spot-input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'contact'); i.dispatchEvent(new Event('input', { bubbles: true })); return 1`); await wk.sleep(500)
   }
   const top = await b.js(`const t = document.querySelector('.spot-row[data-top]'); return t ? [t.querySelector('.spot-row__title').textContent, t.tagName] : null`)
-  check('WebKit: search puts the way to Shrug first for "contact"', top && top[0] === 'Get in Touch' && top[1] === 'A', JSON.stringify(top))
+  // (the way there is today is the one-pager, which is an app of the phone's: a button, not a link out)
+  check('WebKit: search puts the way to Shrug first for "contact"', top && top[0] === 'Get in Touch' && top[1] === 'BUTTON', JSON.stringify(top))
   await b.shot(out('search'))
   const errs = (await b.js('return window.__errs || []')) || []
   check('WebKit: no page errors', errs.length === 0, [...new Set(errs)].slice(0, 4).join(' | '))

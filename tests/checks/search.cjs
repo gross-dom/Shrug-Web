@@ -107,10 +107,11 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await type(t, 'app')
   r = await read(t.page)
   check('"app": it is not', ![r.top?.title, ...titles(r)].includes('Get in Touch'))
-  // links are links
+  // the way to Shrug is the way there is: with no address to write to yet, the one-pager, which is an app of
+  // the phone's own (27 Nov), so it is something to press and not a link out
   await type(t, 'contact')
   r = await read(t.page)
-  check('"contact": Get in Touch is a link to the way there is (today the one-pager), in a tab of its own', r.top?.tag === 'A' && /docsend\.com/.test(r.top?.href || '') && r.top?.target === '_blank', JSON.stringify(r.top))
+  check('"contact": Get in Touch leads to the way there is (today the one-pager, the phone’s own app: no link out)', r.top?.title === 'Get in Touch' && r.top?.sub === 'Start with the one-pager' && r.top?.tag === 'BUTTON' && r.top?.href === null, JSON.stringify(r.top))
   await A.shot(t.page, 'fix-s2-search-contact')
 
   // ---- UX-13: nothing found ----
