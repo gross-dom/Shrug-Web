@@ -5,7 +5,7 @@ import { PointsMark, Wordmark } from './brand'
 import { demo, demoAddPoints, demoPick, demoReset, demoScene, demoSetScene, demoSignIn, PEOPLE, SCENES } from './demo'
 import { DESK, type StoreInWindow } from './desk'
 import { Lock, NoCloud } from './icons'
-import { Picture, Price, ProductView, type Go } from './Product'
+import { Picture, ProductView, type Go } from './Product'
 import { NAMES, nameIn, ROOM, SHELF, tint } from './room'
 import { Visiting } from './visiting'
 import { badgeOf } from './words'
@@ -144,12 +144,10 @@ function Display({ shop, phone, open }: { shop: Shop; phone: boolean; open: (id:
                 <Picture product={product} size={phone ? 26 : 44} tile />
                 {badge && <span className={`ui-badge${badge.tone ? ` ${badge.tone}` : ''}`}>{badge.text}</span>}
               </span>
+              {/* (its name, and no price: a price is on a thing's own page, once it is opened. Dom, 27 Nov) */}
               <span className="ui-prod-cap">
                 <span>
                   <b>{nameIn(product)}</b>
-                </span>
-                <span className="r">
-                  <Price product={product} />
                 </span>
               </span>
             </a>

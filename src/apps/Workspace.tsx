@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { ChevronLeft, Play, Rotate3d, X } from 'lucide-react'
 import { fmtCents, priceCents } from '../../store/shared/rules'
-import { galleryOf, type Slide } from '../../store/src/pictures'
+import { catalogOf, galleryOf, type Slide } from '../../store/src/pictures'
 import { W_S } from '../data/lettering'
 import { ALL_PAINTS, inkOn, MORE, PAINTS, PAPER, shadedOn, type Making, type Paint } from '../data/workspace'
 import { FINISH_WORDS } from '../../store/shared/colors'
@@ -38,7 +38,11 @@ import '../styles/desk/workspace.css'
 // The chair is a 3D model, turned by dragging (workspace/stage.ts). Until it has loaded, and wherever a
 // browser cannot draw in 3D, a drawing of the chair in the same paint stands where it will be.
 
-type View = 'first' | 'studio' | 'owners' | 'bts' | 'buy'
+type View = 'first' | 'studio' | 'owners' | 'bts' | 'catalog' | 'buy'
+
+/** The catalogue (Dom, 27 Nov): every color by one upright photograph of it, in the colors' own order. A color
+ * with no photograph is left out of it. */
+const CATALOG = ALL_PAINTS.map((paint) => ({ paint, shot: catalogOf(paint.id) })).filter((one): one is { paint: Paint; shot: NonNullable<ReturnType<typeof catalogOf>> } => !!one.shot)
 
 export function WorkspaceApp() {
   const open = useStore(wm, (s) => s.wins.workspace.open)
@@ -82,6 +86,8 @@ export function WorkspaceApp() {
   const [look, setLook] = useState<Making | null>(null)
   const frame = useRef<FrameHandle>(null)
   const [framed, setFramed] = useState(false)
+  /** Where the page a chair is bought on was come to from: the studio, or the catalogue. Its way back leads there. */
+  const [from, setFrom] = useState<'studio' | 'catalog'>('studio')
 
   const chosen: Chosen | null = kept ? (ALL_PAINTS.map(chosenOf).find((c) => c.id === kept.id) ?? null) : null
   const member = who.status === 'member'
@@ -211,8 +217,17 @@ export function WorkspaceApp() {
   const pageOf = (c: Chosen) => addressOf('chairs', c.paint.product)
   const buy = () => {
     if (!chosen) return
+    setFrom('studio')
     setView('buy')
     if (framed) frame.current?.to(pageOf(chosen))
+    else setFramed(true)
+  }
+  /** From the catalogue: straight to the page that chair is bought on, in that color. The way back is to the catalogue. */
+  const buyFrom = (c: Chosen) => {
+    choose(c)
+    setFrom('catalog')
+    setView('buy')
+    if (framed) frame.current?.to(pageOf(c))
     else setFramed(true)
   }
   const enquire = () => {
@@ -221,8 +236,8 @@ export function WorkspaceApp() {
   }
 
   const coloured = view === 'studio' && !!chosen
-  /** Buying: the window is the store's own dark ground, as ArtStore's is, and its words are white. */
-  const buying = view === 'buy'
+  /** Buying, and the catalogue that leads to it: the window is the store's own dark ground, as ArtStore's is, and its words are white. */
+  const buying = view === 'buy' || view === 'catalog'
   // Over a photograph the words are white, on the shade laid under them
   const ink = buying || (view === 'studio' && covered) ? '#fff' : coloured ? inkOn(chosen.color) : '#141414'
   const dark = ink === '#fff'
@@ -241,10 +256,10 @@ export function WorkspaceApp() {
         </svg>
         Workspace
       </button>
-      {(view === 'owners' || view === 'bts' || view === 'buy') && (
-        <button type="button" className="wxbar__back" onClick={() => setView(home)}>
+      {(view === 'owners' || view === 'bts' || view === 'catalog' || view === 'buy') && (
+        <button type="button" className="wxbar__back" onClick={() => setView(view === 'buy' && from === 'catalog' ? 'catalog' : home)}>
           <ChevronLeft size={16} strokeWidth={2.4} aria-hidden />
-          {chosen ? `Back to ${chosen.name}` : 'Back to the colors'}
+          {view === 'buy' && from === 'catalog' ? 'Back to Catalog' : chosen ? `Back to ${chosen.name}` : 'Back to the colors'}
         </button>
       )}
       <span className="wxbar__end">
@@ -252,6 +267,11 @@ export function WorkspaceApp() {
           <Balance className="storebar__wallet wxbar__wallet" />
         ) : (
           <>
+            {CATALOG.length > 0 && (
+              <button type="button" className="pill" aria-pressed={view === 'catalog'} onClick={() => setView(view === 'catalog' ? home : 'catalog')}>
+                Catalog
+              </button>
+            )}
             {MAKING_SHOWN.length > 0 && (
               <button type="button" className="pill" aria-pressed={view === 'bts'} onClick={() => setView(view === 'bts' ? home : 'bts')}>
                 BTS
@@ -269,7 +289,7 @@ export function WorkspaceApp() {
   )
 
   return (
-    <Window className={`app wxwin${chips}${view === 'buy' ? ' buying' : ''}`} lightsSize="large" lead={bar} body={{ className: 'wxwin__body' }} style={{ background: cove, color: ink }}>
+    <Window className={`app wxwin${chips}${buying ? ' buying' : ''}`} lightsSize="large" lead={bar} body={{ className: 'wxwin__body' }} style={{ background: cove, color: ink }}>
       {view === 'first' && (
         <div className="wx-first" data-flood={flood ? '' : undefined}>
           <div className="fl-head">
@@ -442,6 +462,22 @@ export function WorkspaceApp() {
           </div>
         </div>
       )}
+      {/* The catalogue: every color by one upright photograph, four to a line and nothing written on or under
+          them. One pressed is that color's chair, on the page it is bought on */}
+      {view === 'catalog' && (
+        <div className="cat" data-autofocus tabIndex={-1}>
+          <h1 className="sr-only">Catalog: every color</h1>
+          <ol className="cat-grid">
+            {CATALOG.map(({ paint, shot }) => (
+              <li key={paint.id}>
+                <button type="button" aria-label={`${paint.name}: to its checkout`} onClick={() => buyFrom(chosenOf(paint))}>
+                  <img src={shot.small} srcSet={shot.set} sizes="270px" alt="" loading="lazy" draggable={false} style={{ objectPosition: shot.at }} />
+                </button>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {view === 'bts' && (
         <div className="bts" data-autofocus tabIndex={-1}>
           <h1 className="sr-only">BTS: how a chair is made</h1>
@@ -479,7 +515,8 @@ export function WorkspaceApp() {
             title="Workspace: buying a chair"
             first={chosen ? pageOf(chosen) : addressOf('chairs')}
             onAt={(place) => {
-              if (!place.product) return setView((now) => (now === 'buy' ? 'studio' : now))
+              // ("View all" on the store's page: back to where the page was come to from)
+              if (!place.product) return setView((now) => (now === 'buy' ? from : now))
               // Another color picked along the foot of the store's page: the studio follows
               const paint = ALL_PAINTS.find((p) => p.product === place.product)
               if (paint && paint.id !== picked.get()?.id) choose(chosenOf(paint))

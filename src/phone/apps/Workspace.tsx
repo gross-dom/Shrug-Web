@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { Play, Rotate3d, X } from 'lucide-react'
 import { FINISH_WORDS } from '../../../store/shared/colors'
 import { fmtCents, priceCents } from '../../../store/shared/rules'
-import { galleryOf, type Slide } from '../../../store/src/pictures'
+import { catalogOf, galleryOf, type Slide } from '../../../store/src/pictures'
 import { chosenOf, ground, leadOf, MAKING_SHOWN, OWNERS_SHOWN, stockOf, Turntable, type Chosen } from '../../apps/workspace/parts'
 import { ChairStill } from '../../apps/workspace/Still'
 import { W_S } from '../../data/lettering'
@@ -40,6 +40,7 @@ import '../../styles/phone/workspace.css'
 const STUDIO = 'studio'
 const OWNERS = 'owners'
 const BTS = 'bts'
+const CATALOG = 'catalog'
 const MORE_SHEET = 'more'
 
 /** How long the 3D chair is looked at before its photographs begin to come by themselves, and how long each is shown. */
@@ -72,6 +73,11 @@ function Colors() {
     <Screen title="Workspace" center={<Mark />} trailing={<Wallet />} ground={PAPER} className="wsp wsp-first">
       <h3 className="wsp-head">Your new daily driver</h3>
       <div className="wsp-chips">
+        {SHOTS.length > 0 && (
+          <button type="button" className="wsp-chip" onClick={() => push(CATALOG)}>
+            Catalog
+          </button>
+        )}
         {MAKING_SHOWN.length > 0 && (
           <button type="button" className="wsp-chip" onClick={() => push(BTS)}>
             BTS
@@ -356,6 +362,38 @@ function Studio({ top }: { top: boolean }) {
   )
 }
 
+// ---- The catalogue
+
+/** Every color by one upright photograph of it, in the colors' own order (the desk's Workspace has the same). */
+const SHOTS = ALL_PAINTS.map((paint) => ({ paint, shot: catalogOf(paint.id) })).filter((one): one is { paint: (typeof ALL_PAINTS)[number]; shot: NonNullable<ReturnType<typeof catalogOf>> } => !!one.shot)
+
+/** The catalogue (Dom, 27 Nov): two photographs to a line, and nothing written on or under them. One pressed is
+ * that color's chair, to be bought: checkout's tray, for someone logged in whom it has a price for; and
+ * otherwise the chair in its studio, whose button says what there is to do. */
+function Catalog() {
+  const member = useStore(account, (s) => s.status === 'member')
+  const shelf = useShelf('chairs')
+  const open = (c: Chosen) => {
+    choose(c)
+    const product = shelf?.products.find((p) => p.id === c.paint.product) ?? null
+    if (member && product && !product.priceHidden && product.points) checkOut(product)
+    else push(STUDIO)
+  }
+  return (
+    <Screen title="Catalog" large tone="dark" className="wsp wsp-cat">
+      <ol className="wsp-cat__grid">
+        {SHOTS.map(({ paint, shot }) => (
+          <li key={paint.id}>
+            <button type="button" aria-label={`${paint.name}: to its checkout`} onClick={() => open(chosenOf(paint))}>
+              <img src={shot.small} srcSet={shot.set} sizes="50vw" alt="" loading="lazy" draggable={false} style={{ objectPosition: shot.at }} />
+            </button>
+          </li>
+        ))}
+      </ol>
+    </Screen>
+  )
+}
+
 // ---- Notable Owners, and BTS
 
 function Owners() {
@@ -439,7 +477,7 @@ function Bts() {
 /** What the app is drawn on at the screen it opens at: paper for the colors and the owners, the color picked
  * for its studio, and black for the wall and for the store's page. */
 export function workspaceFirst(top: string | null): { tone: 'plain' | 'dark'; ground?: string } {
-  if (top === BTS) return { tone: 'dark' }
+  if (top === BTS || top === CATALOG) return { tone: 'dark' }
   const chosen = top === STUDIO ? chosenNow(picked.get()) : null
   return chosen ? { tone: inkOn(chosen.color) === '#fff' ? 'dark' : 'plain', ground: chosen.color } : { tone: 'plain', ground: PAPER }
 }
@@ -452,7 +490,7 @@ export function WorkspaceApp() {
   const top = useStore(sys, (s) => s.stacks[app][s.stacks[app].length - 1] ?? null)
   return (
     <>
-      <NavStack>{(view) => (view === STUDIO ? <Studio top={top === STUDIO} /> : view === OWNERS ? <Owners /> : view === BTS ? <Bts /> : <Colors />)}</NavStack>
+      <NavStack>{(view) => (view === STUDIO ? <Studio top={top === STUDIO} /> : view === OWNERS ? <Owners /> : view === BTS ? <Bts /> : view === CATALOG ? <Catalog /> : <Colors />)}</NavStack>
       <SheetHost>{(name) => (name === LOGIN ? <LogInSheet /> : name === CHECKOUT ? <CheckoutTray /> : name === VIP ? <MyVipSheet /> : name === MORE_SHEET ? <MoreSheet /> : null)}</SheetHost>
     </>
   )

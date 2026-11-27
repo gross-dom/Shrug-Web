@@ -1021,6 +1021,71 @@
 /* ---- BTS: how a chair is made, as a wall of pictures and films. Columns of tiles of different heights,
    each with one line under it: laid out as a wall, where Notable Owners is a grid of cards */
 
+/* The catalogue (Dom, 27 Nov, after a catalogue of his own): every color by one upright photograph, four to a
+   line in a grid that is the same all the way down, on the store's dark ground. Nothing is written on a
+   photograph or under it. Each is a button: pressed, it is that chair's page */
+.cat {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px calc(40 * var(--wsu, 1px)) 40px;
+  outline: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.22) transparent;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(20 * var(--wsu, 1px));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cat-grid button {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: calc(16 * var(--wsu, 1px));
+  background: #17171a;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s;
+}
+
+.cat-grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+}
+
+@media (hover: hover) {
+  .cat-grid button:hover {
+    transform: scale(1.02);
+    box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.8);
+  }
+}
+
+.cat-grid button:active {
+  transform: scale(0.99);
+}
+
+.cat-grid button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-grid button {
+    transition: none;
+  }
+}
+
 .bts {
   position: relative;
   flex: 1;

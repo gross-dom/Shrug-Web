@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { BookOpen, Library, List } from 'lucide-react'
-import { fmtCents, priceCents, soldOut, wayOf, type Order, type Product } from '../../../store/shared/rules'
+import { soldOut, wayOf, type Order, type Product } from '../../../store/shared/rules'
 import { shotsOf } from '../../../store/src/pictures'
 import { shipsWhen } from '../../../store/src/words'
 import { ReaderPages, useReading } from '../../apps/Reader'
@@ -38,13 +38,6 @@ function tabOf(book: Product, mine: Order | undefined): string | null {
   if (mine) return mine.status === 'Pre-order' ? 'Pre-ordered' : mine.status === 'Requested' ? 'Requested' : 'You own this'
   if (soldOut(book)) return 'Sold out'
   return book.status === 'Pre-order' || wayOf(book) === 'reserve' ? 'Pre-order' : null
-}
-
-/** What a book costs, as its row on the shelf says it. */
-function priceOf(book: Product): string | null {
-  const way = wayOf(book)
-  if (soldOut(book) || way === 'reserve' || way === 'request' || book.priceHidden) return null
-  return fmtCents(priceCents(book))
 }
 
 const TONES = ['#1f3a5f', '#5a2a3c', '#2f4a3a', '#4a3a6a', '#6a4a22']
@@ -138,7 +131,6 @@ function Shelves() {
                   note={tab}
                   tone={mine ? 'on' : tab === 'Pre-order' ? 'gold' : undefined}
                   name={b.name}
-                  price={priceOf(b)}
                   under={shipsWhen(b, true) ? `Ships ${shipsWhen(b, true)}` : null}
                   action={out ? 'Sold Out' : mine ? 'View' : tab === 'Pre-order' ? 'Pre-order' : 'Buy'}
                   quiet={out}

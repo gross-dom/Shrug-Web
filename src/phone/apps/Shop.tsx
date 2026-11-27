@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { fmtCents, priceCents, soldOut, wayOf, type Product } from '../../../store/shared/rules'
+import { soldOut } from '../../../store/shared/rules'
 import { shotsOf } from '../../../store/src/pictures'
 import { badgeOf, owned } from '../../../store/src/words'
 import { useShelf, wantShop } from '../../os/shop'
@@ -20,15 +20,7 @@ import '../../styles/phone/shop.css'
 
 const PIECE = 'p:'
 
-/** What a piece costs, as its tile says it. */
-export function priceOf(product: Product): string {
-  const way = wayOf(product)
-  if (way === 'request') return 'On request'
-  if (product.priceHidden) return 'Log in for price'
-  if (way === 'reserve') return 'Pre-order'
-  const cents = priceCents(product)
-  return cents === 0 ? 'Free' : fmtCents(cents)
-}
+// (A piece's card on the shelf says its name and no price: a price is on its own page, once it is opened. Dom, 27 Nov.)
 
 function Shelf() {
   const shelf = useShelf('art')
@@ -72,7 +64,6 @@ function Shelf() {
                   note={badge?.text}
                   tone={badge?.tone}
                   name={piece.name}
-                  price={priceOf(piece)}
                   action={out ? 'Sold Out' : owned(shelf.orders, piece) ? 'View' : piece.status === 'Pre-order' ? 'Pre-order' : 'Buy'}
                   quiet={out}
                   more={`. ${n + 1} of ${pieces.length}`}

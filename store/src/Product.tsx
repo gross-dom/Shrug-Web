@@ -800,9 +800,10 @@ export function ProductView({ shop, visiting, product, phone, backend, go, onPla
                 <span className="ui-thumb">
                   <Picture product={p} size={20} />
                 </span>
+                {/* (its name, and whether it is theirs or to be ordered ahead: its price is on its own page. Dom, 27 Nov) */}
                 <span>
                   {shortOf(p.name)}
-                  <small>{owned(shop.orders, p) ? 'You own this' : pointsOf(p) === null ? 'Pre-order' : <Price product={p} size={13} />}</small>
+                  {(owned(shop.orders, p) || pointsOf(p) === null) && <small>{owned(shop.orders, p) ? 'You own this' : 'Pre-order'}</small>}
                 </span>
               </a>
             </li>

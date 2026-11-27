@@ -226,6 +226,35 @@ export function shotsOf(product: Pick<Product, 'name' | 'picture' | 'pictures'>)
   return all.map((full, n) => ({ full, small: n === 0 && product.picture ? product.picture : full }))
 }
 
+/** Where the chair is across a photograph that is cut to an upright tile (the catalogue's), where that is not
+ * its middle: how far across, as the tile is told (`object-position`). */
+const CATALOG_AT: Record<string, string> = {
+  'matte-black/gallery/01__5F4A9686': '16% 50%',
+  'alexandrite/gallery/02__5F4A9806': '10% 50%',
+  'mantis-green/gallery/03__5F4A0304-2': '90% 50%',
+  'reserve-green/gallery/01__5F4A9658': '20% 50%',
+}
+/** A color whose catalogue photograph is not the one the rule below would take: the rule's would be of the
+ * chair being made, and not of the chair. */
+const CATALOG_PICK: Record<string, string> = { 'scuderia-red': 'gallery/03__5F4A3620', 'fractured-love': 'gallery/02__5F4A3165' }
+
+/** The one photograph of a color that Workspace's catalogue shows (Dom, 27 Nov: every colorway, upright, the
+ * cinematic ones). It is the color's own catalogue photograph where it has one (`catalog/` in its folder);
+ * otherwise the best there is in its gallery for an upright tile: an upright photograph, or else one taken
+ * out in the world rather than close up, or else whatever it has. One that is wider than it is tall is cut to
+ * the tile about where the chair is. */
+export function catalogOf(color: string): Shot | null {
+  const has = PHOTOS[color]
+  if (!has) return null
+  const own = (has as { catalog?: Kept[] }).catalog?.[0]
+  const inGallery = has.gallery.flatMap((slide) => slide.photos)
+  const photographs = inGallery.filter((one) => !one.file.startsWith('lead/'))
+  const one = own ?? photographs.find((p) => p.file === CATALOG_PICK[color]) ?? photographs.find((p) => p.h > p.w) ?? photographs.find((p) => !/^close-up/.test(p.view ?? '')) ?? photographs[0] ?? inGallery[0] ?? has.checkout[0]
+  if (!one) return null
+  const shot = kept(color, has.name, one)
+  return { ...shot, at: CATALOG_AT[`${color}/${one.file}`] ?? '50% 50%' }
+}
+
 /** A chair's gallery, as Workspace shows it in its window, a slide at a time: Shrug's own slides for its
  * color. Empty for a color with no folder yet, and for anything that is not a chair. */
 export function galleryOf(product: Pick<Product, 'name' | 'picture' | 'pictures'>): Slide[] {
