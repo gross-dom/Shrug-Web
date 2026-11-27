@@ -110,6 +110,13 @@
   color: #fff;
 }
 
+/* (on a dark ground, the catalogue's or a dark color's, the one that is pressed is the light one: a nearly
+   black chip on it could not be told from the others) */
+.wxwin.dark .pill[aria-pressed='true'] {
+  background: #fff;
+  color: #141414;
+}
+
 .wxwin .pill--quiet {
   margin: 0;
   font-weight: 500;
