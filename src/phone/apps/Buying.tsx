@@ -221,11 +221,11 @@ function Checkout({ product, shop, visiting, option, count }: { product: Product
           <div className="co-fields">
             <label className="co-field">
               <span className="sr-only">Your name</span>
-              <input type="text" autoComplete="name" autoCapitalize="words" spellCheck={false} placeholder="Your name" value={name} onChange={(e) => (setName(e.target.value), setError(''))} />
+              <input type="text" autoComplete="name" autoCapitalize="words" enterKeyHint="next" spellCheck={false} placeholder="Your name" value={name} onChange={(e) => (setName(e.target.value), setError(''))} />
             </label>
             <label className="co-field">
               <span className="sr-only">Email for the receipt</span>
-              <input type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="Email for the receipt" value={email} onChange={(e) => (setEmail(e.target.value), setError(''))} />
+              <input type="email" inputMode="email" autoComplete="email" autoCapitalize="none" enterKeyHint="done" spellCheck={false} placeholder="Email for the receipt" value={email} onChange={(e) => (setEmail(e.target.value), setError(''))} />
             </label>
           </div>
         )}

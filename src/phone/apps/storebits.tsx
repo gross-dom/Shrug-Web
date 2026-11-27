@@ -1,3 +1,4 @@
+import type { ImgHTMLAttributes } from 'react'
 import type { Product } from '../../../store/shared/rules'
 import { shotsOf } from '../../../store/src/pictures'
 
@@ -28,5 +29,19 @@ export function Thumb({ product, size = 52, drawn }: { product: Pick<Product, 'n
     <span className="co-thumb" style={{ width: size, height: size, background: shot ? shot.ground : drawn }}>
       {shot && <img src={shot.small} alt="" decoding="async" draggable={false} data-whole={shot.ground ? '' : undefined} style={shot.at && !shot.ground ? { objectPosition: shot.at } : undefined} />}
     </span>
+  )
+}
+
+/** A picture that comes up as it arrives (shop.css): it is marked once it has loaded, and one that was
+ * already to hand is marked as it is drawn, so that it is simply there. */
+export function Pic(props: ImgHTMLAttributes<HTMLImageElement>) {
+  return (
+    <img
+      {...props}
+      ref={(el) => {
+        if (el?.complete && el.naturalWidth) el.setAttribute('data-in', '')
+      }}
+      onLoad={(e) => e.currentTarget.setAttribute('data-in', '')}
+    />
   )
 }

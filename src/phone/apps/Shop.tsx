@@ -7,7 +7,7 @@ import { push } from '../system'
 import { NavStack, Screen, useApp } from '../ui'
 import { StoreSheets } from './Buying'
 import { ProductPage } from './Product'
-import { drawnOn } from './storebits'
+import { drawnOn, Pic } from './storebits'
 import { Wallet } from './Wallet'
 import '../../styles/phone/shop.css'
 
@@ -59,7 +59,7 @@ function Shelf() {
               <li key={piece.id}>
                 <button type="button" className="st-tile" onClick={() => push(PIECE + piece.id)}>
                   <span className="st-pic" style={shot ? (shot.ground ? { background: shot.ground } : undefined) : { background: drawnOn(pieces, piece) }}>
-                    {shot && <img src={shot.small} srcSet={shot.set} sizes="50vw" alt="" loading={n < 4 ? 'eager' : 'lazy'} decoding="async" draggable={false} data-whole={shot.ground ? '' : undefined} style={shot.at && !shot.ground ? { objectPosition: shot.at } : undefined} />}
+                    {shot && <Pic src={shot.small} srcSet={shot.set} sizes="50vw" alt="" loading={n < 4 ? 'eager' : 'lazy'} decoding="async" draggable={false} data-whole={shot.ground ? '' : undefined} style={shot.at && !shot.ground ? { objectPosition: shot.at } : undefined} />}
                     {badge && (
                       <i className="st-badge" data-tone={badge.tone}>
                         {badge.text}

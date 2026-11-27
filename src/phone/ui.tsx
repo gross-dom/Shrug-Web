@@ -191,6 +191,7 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
   const heading = useRef<HTMLHeadingElement>(null)
   const [scrolled, setScrolled] = useState(false)
   const [folded, setFolded] = useState(false)
+  const moves = useStore(sys, (s) => s.motion)
 
   const onScroll = () => {
     const el = scroller.current
@@ -248,7 +249,8 @@ export function Screen({ title, large, subtitle, center, leading, trailing, head
         {/* (an app's first screen has the way out there: the Home Screen is what is behind it) */}
         <div className="ios-bar__side">{leading !== undefined ? leading : depth > 0 ? <BackButton /> : <BackButton label="Home Screen" onClick={goHome} />}</div>
         {/* The bar's own name is for the eye: the screen's heading (its large title, or the one that is only read) says it once */}
-        <div className="ios-bar__title" aria-hidden={center === undefined ? true : undefined}>
+        {/* (pressed, it takes the page back to its top, as a press on an iPhone's status bar does: a browser keeps that press for its own page) */}
+        <div className="ios-bar__title" aria-hidden={center === undefined ? true : undefined} onClick={center === undefined ? () => scroller.current?.scrollTo({ top: 0, behavior: moves ? 'smooth' : 'auto' }) : undefined}>
           {center ?? (
             <span className="ios-bar__name">
               <span className="ios-bar__heading" dir="auto">

@@ -1026,7 +1026,8 @@ function Banners() {
     if (replied <= before) return
     const s = sys.get()
     // Messages itself is showing: the reply is there to see, in the conversation or in the list
-    if (!settings.get().notifications || s.locked || s.switcher || s.app === 'messages' || performance.now() - last.current.at < BANNER.apart) return
+    // (nor does one drop over a sheet or a tray: someone logging in, or paying, is left to it)
+    if (!settings.get().notifications || s.locked || s.switcher || s.sheet || s.app === 'messages' || performance.now() - last.current.at < BANNER.apart) return
     last.current.at = performance.now()
     setShown({ index: replied - 1, leaving: false })
   }, [replied])
@@ -1038,7 +1039,8 @@ function Banners() {
   }, [shown])
 
   // Opening the conversation, or locking, takes the banner with it
-  const gone = useStore(sys, (s) => s.locked || (s.app === 'messages' && topOf(s, 'messages') === GROUP_VIEW))
+  // (and so does a sheet or a tray coming up: nothing is left hanging over checkout)
+  const gone = useStore(sys, (s) => s.locked || !!s.sheet || (s.app === 'messages' && topOf(s, 'messages') === GROUP_VIEW))
   useEffect(() => {
     if (gone) setShown((b) => (b && !b.leaving ? { ...b, leaving: true } : b))
   }, [gone])

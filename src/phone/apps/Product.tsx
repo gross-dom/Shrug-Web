@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Minus, Plus } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Minus, Plus, X } from 'lucide-react'
 import { dueCents, fmtCents, has, MOST_AT_ONCE, mostPoints, postageCents, priceCents, sellsMany, soldOut, times, wayOf, type Product } from '../../../store/shared/rules'
 import { shotsOf, type Shot } from '../../../store/src/pictures'
 import { badgeOf, keptOf, owned, shipsOf, shipsWhen } from '../../../store/src/words'
@@ -7,7 +7,7 @@ import { askLogIn } from '../../os/account'
 import { useShop } from '../../os/shop'
 import { BackButton, Screen } from '../ui'
 import { checkOut } from './Buying'
-import { drawnOn, optionName } from './storebits'
+import { drawnOn, optionName, Pic } from './storebits'
 import { Wallet } from './Wallet'
 
 // One thing the store sells, as a screen of the phone's own: its photographs across the top, edge to edge
@@ -19,10 +19,57 @@ import { Wallet } from './Wallet'
 const COLORS: Record<string, string> = { black: '#1b1c1f', stone: '#b9b2a3', white: '#f4f4f1' }
 const colorOf = (option: string): string | null => /\s(#[0-9a-f]{3,8})$/i.exec(option)?.[1] ?? COLORS[optionName(option).toLowerCase()] ?? null
 
+/** A photograph, whole, on black, over everything: the gallery cuts each to its own shape, and a piece is
+ * worth seeing to its edges. A finger draws the next across here too; a press anywhere, or its x, puts it away. */
+function Whole({ product, shots, at, onClose }: { product: Product; shots: Shot[]; at: number; onClose: () => void }) {
+  const track = useRef<HTMLDivElement>(null)
+  const close = useRef<HTMLButtonElement>(null)
+  const [seen, setSeen] = useState(at)
+  useLayoutEffect(() => {
+    const el = track.current
+    if (el) el.scrollLeft = at * el.clientWidth
+    const before = document.activeElement as HTMLElement | null
+    close.current?.focus({ preventScroll: true })
+    return () => before?.focus?.({ preventScroll: true })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div
+      className="pd-whole"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${product.name}: its pictures, whole`}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') e.stopPropagation(), onClose()
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') track.current?.scrollBy({ left: (e.key === 'ArrowRight' ? 1 : -1) * track.current.clientWidth, behavior: 'smooth' })
+      }}
+    >
+      <div ref={track} className="pd-whole__track" onClick={onClose} onScroll={(e) => setSeen(Math.round(e.currentTarget.scrollLeft / Math.max(1, e.currentTarget.clientWidth)))}>
+        {shots.map((shot, n) => (
+          <div key={shot.full} className="pd-whole__slide">
+            <img src={shot.full} srcSet={shot.set} sizes="100vw" alt={shot.alt ?? (shots.length > 1 ? `${product.name}: picture ${n + 1} of ${shots.length}` : product.name)} decoding="async" draggable={false} />
+          </div>
+        ))}
+      </div>
+      <button ref={close} type="button" className="ios-glass ios-button pd-whole__close" data-dark aria-label="Close" onClick={onClose}>
+        <X size={20} strokeWidth={2.4} aria-hidden />
+      </button>
+      {shots.length > 1 && (
+        <div className="pd-dots" aria-hidden>
+          {shots.map((shot, n) => (
+            <i key={shot.full} data-at={n === seen || undefined} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** A product's photographs, side by side: a finger draws the next across, and it comes to rest whole. */
 function Gallery({ product, shots, drawn }: { product: Product; shots: Shot[]; drawn: string }) {
   const track = useRef<HTMLDivElement>(null)
   const [seen, setSeen] = useState(0)
+  /** Which photograph is being looked at whole, over the page; none, as a rule. */
+  const [whole, setWhole] = useState<number | null>(null)
   // (upright for a thing that is photographed upright; square for everything else)
   const tall = (shots[0]?.aspect ?? 1) < 0.9
   const to = (n: number) => track.current?.scrollTo({ left: n * track.current.clientWidth, behavior: 'smooth' })
@@ -52,12 +99,12 @@ function Gallery({ product, shots, drawn }: { product: Product; shots: Shot[]; d
         }}
       >
         {shots.map((shot, n) => (
-          <div key={shot.full} className="pd-slide" style={shot.ground ? { background: shot.ground } : undefined}>
-            <img
+          <button key={shot.full} type="button" className="pd-slide" style={shot.ground ? { background: shot.ground } : undefined} aria-label={`${shot.alt ?? (shots.length > 1 ? `${product.name}: picture ${n + 1} of ${shots.length}` : product.name)}. See it whole`} onClick={() => setWhole(n)}>
+            <Pic
               src={shot.full}
               srcSet={shot.set}
               sizes="100vw"
-              alt={shot.alt ?? (shots.length > 1 ? `${product.name}: picture ${n + 1} of ${shots.length}` : product.name)}
+              alt=""
               loading={n === 0 ? 'eager' : 'lazy'}
               decoding="async"
               draggable={false}
@@ -65,7 +112,7 @@ function Gallery({ product, shots, drawn }: { product: Product; shots: Shot[]; d
               data-whole={shot.ground ? '' : undefined}
               style={shot.at && !shot.ground ? { objectPosition: shot.at } : undefined}
             />
-          </div>
+          </button>
         ))}
       </div>
       {shots.length > 1 && (
@@ -75,6 +122,7 @@ function Gallery({ product, shots, drawn }: { product: Product; shots: Shot[]; d
           ))}
         </div>
       )}
+      {whole !== null && <Whole product={product} shots={shots} at={whole} onClose={() => setWhole(null)} />}
     </div>
   )
 }
@@ -84,6 +132,21 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
   const product = got?.shop.products.find((p) => p.id === id) ?? null
   const [option, setOption] = useState('')
   const [count, setCount] = useState(1)
+  // Over its photographs the bar is only its buttons; once they have gone up under it, it is a bar again,
+  // with the thing's name in it
+  const [past, setPast] = useState(false)
+  const page = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = page.current
+    if (!el) return
+    const read = () => {
+      const gallery = el.querySelector<HTMLElement>('.pd-gallery')
+      setPast(!!gallery && el.scrollTop > gallery.offsetHeight - 96)
+    }
+    el.addEventListener('scroll', read, { passive: true })
+    read()
+    return () => el.removeEventListener('scroll', read)
+  }, [product?.id])
   // (something that comes one way is that way)
   const only = product && product.options.length === 1 ? product.options[0]! : ''
   useEffect(() => {
@@ -150,8 +213,9 @@ export function ProductPage({ id, back }: { id: string; back: string }) {
       title={product.name}
       tone="dark"
       // (its first photograph is under the status bar: the bar's ink is chosen for that, pale ground or dark)
-      under={shots[0]?.ground ? 'pale' : 'dark'}
-      className="pd"
+      under={past ? undefined : shots[0]?.ground ? 'pale' : 'dark'}
+      className={`pd${past ? ' pd--past' : ''}`}
+      scrollRef={page}
       leading={<BackButton label={back} />}
       trailing={<Wallet />}
       foot={

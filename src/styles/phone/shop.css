@@ -74,6 +74,18 @@
   object-fit: cover;
 }
 
+/* (a picture comes up as it arrives, and is not dropped in a strip at a time: storebits.tsx marks it when it has) */
+.st-pic img,
+.pd-slide img {
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+.st-pic img[data-in],
+.pd-slide img[data-in] {
+  opacity: 1;
+}
+
 /* (a thing on a plain ground is shown whole, on that ground) */
 .st-pic img[data-whole],
 .pd-slide img[data-whole],
@@ -146,22 +158,29 @@
   padding-bottom: calc(var(--foot-gap) + 64px + 28px);
 }
 
-/* (nothing is smudged over the photograph: the bar's fade is for a page of words) */
-.pd .ios-bar__edge {
-  display: none;
+/* (nothing is smudged over the photograph, and the page says its name under it: the bar is only its
+   buttons until the photographs have gone up under it, and then a bar again, with the name in it) */
+.pd:not(.pd--past) .ios-bar__edge {
+  opacity: 0;
 }
 
 .pd .ios-bar__title {
-  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
+.pd.pd--past .ios-bar__title {
+  opacity: 1;
+}
+
+/* (square, but never so tall that what it is and what it costs are off the foot of a short screen) */
 .pd-gallery {
   position: relative;
   aspect-ratio: 1;
+  max-height: 58cqh;
   background: #1c1c1e;
 }
 
-/* (upright, but never so tall that what it is and what it costs are off the foot of a short screen) */
 .pd-gallery[data-tall] {
   aspect-ratio: 4 / 5;
   max-height: 60cqh;
@@ -240,11 +259,85 @@
 }
 
 .pd-slide {
+  display: block;
   flex: none;
   width: 100%;
   height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
   scroll-snap-align: center;
   scroll-snap-stop: always;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pd-slide:focus-visible {
+  outline-offset: -4px;
+}
+
+/* A photograph, whole, on black, over the whole of the app (its bar and its foot too): Product.tsx, `Whole` */
+.pd-whole {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #000;
+  animation: pd-whole-in 0.2s ease both;
+}
+
+@keyframes pd-whole-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.pd-whole__track {
+  display: flex;
+  height: 100%;
+  overflow: auto hidden;
+  overscroll-behavior: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.pd-whole__track::-webkit-scrollbar {
+  display: none;
+}
+
+.pd-whole__slide {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: calc(var(--status) + 8px) 0 calc(var(--home) + 8px);
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+.pd-whole__slide img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  animation: pd-whole-pic 0.26s var(--ui) both;
+}
+
+@keyframes pd-whole-pic {
+  from {
+    transform: scale(0.94);
+  }
+}
+
+.pd-whole__close {
+  position: absolute;
+  top: calc(var(--status) + 6px);
+  right: 16px;
+  width: 44px;
+  height: 44px;
+}
+
+.pd-whole .pd-dots {
+  bottom: calc(var(--home) + 4px);
 }
 
 /* Which photograph: dots, floating over the foot of it */
@@ -1291,6 +1384,16 @@
 
   .st-tile--wait .st-pic,
   .pd-gallery--wait {
+    animation: none;
+  }
+
+  .st-pic img,
+  .pd-slide img {
+    transition: none;
+  }
+
+  .pd-whole,
+  .pd-whole__slide img {
     animation: none;
   }
 }
