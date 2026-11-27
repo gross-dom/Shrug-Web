@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { account, downloadDoc, readDoc, requestDoc, type Doc, type NotHere } from './account'
 import { dockPoint } from './dom'
+import { launchApp } from './launch'
 import { createStore } from './store'
 import { closeApp, focusWindow, openApp, wm } from './wm'
 
@@ -58,8 +59,10 @@ export function openPaper(paper: Paper) {
   show('.wf[data-app="updates"] .upd-row.on')
 }
 
-/** Opens the one-pager in Preview, out of its file on the desk. (A desktop's: a phone has no Preview, and keeps its link.) */
+/** Opens the one-pager: in Preview, out of its file on the desk; on a phone, in the app it is there
+ * (src/phone/apps/Papers.tsx). Nothing leaves for a tab of its own on either. */
 export function openOnePager() {
+  if (wm.get().compact) return launchApp('preview')
   preview.set({ paper: null, wanted: null })
   show('[data-desk="one-pager"] .desk__icon')
 }

@@ -401,8 +401,10 @@ export function App() {
   )
   // A product is one screen and does not scroll; everything else on a phone is a page, as long as it is
   const oneScreen = !!shop && !!product
-  // In a window of the desk: the pages alone, sized to the window. The bar is the window's own
-  if (DESK)
+  // In a window of the desk: the pages alone, sized to the window. The bar is the window's own. (In an app of
+  // the phone's they are framed too, and as narrow as a phone: they are the phone's pages then, below, with
+  // no bar of their own, since the app's bar is the phone's)
+  if (DESK && !phone)
     return (
       <Visiting.Provider value={visiting}>
         <div className="win">
@@ -413,12 +415,14 @@ export function App() {
   return (
     <Visiting.Provider value={visiting}>
       {phone ? (
-        <div className={`up${oneScreen ? ' fix' : ''}`}>
-          <header className="up-top">
-            {mark}
-            {shop && (visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} onOpen={() => move({ section: 'yours', product: null })} />)}
-          </header>
-          {shop && (
+        <div className={`up${oneScreen ? ' fix' : ''}${DESK ? ' framed' : ''}`}>
+          {!DESK && (
+            <header className="up-top">
+              {mark}
+              {shop && (visiting ? <SignIn /> : <Wallet shop={shop} spent={spent} onOpen={() => move({ section: 'yours', product: null })} />)}
+            </header>
+          )}
+          {!DESK && shop && (
             <div className="up-tabs">
               <Sections at={place.section} go={(section) => move({ section, product: null })} />
             </div>
@@ -435,7 +439,7 @@ export function App() {
           {body}
         </div>
       )}
-      {DEMO && <DemoTab signedIn={!!shop && !visiting} onChange={load} />}
+      {DEMO && !DESK && <DemoTab signedIn={!!shop && !visiting} onChange={load} />}
     </Visiting.Provider>
   )
 }

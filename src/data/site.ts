@@ -16,10 +16,10 @@ export const SITE = {
   /** Where the site lives. The link preview's addresses are written from this (vite.config.ts). */
   url: 'https://www.shrug.vc/',
   onePager: 'https://docsend.com/view/4659mp7f5ci9zdxa',
-  /** The three stores, as a phone has them for now (Dom, 26 Nov: the phone's own are still to be built, and
-   * the link to VIP, the old points site, is gone). Each is the store's own pages for it, on this site
-   * (store/), which already fit a phone; a phone opens them in a tab of their own, as it opens the
-   * one-pager. On the desktop each is a window of its own (`app`), and nothing here is followed. */
+  /** Where the store's own pages for each of the three stores are, on this site (store/). A phone followed
+   * these as links, in a tab of their own, until 27 Nov; it has an app for each now, as the desktop has a
+   * window (`app`), and nothing here is followed any more: a link that carries one of these addresses opens
+   * the app instead (src/apps/chat-ui.tsx). */
   stores: [
     { app: 'workspace', name: 'Workspace', href: `${HERE}/vip/store/?k=chairs` },
     { app: 'store', name: 'ArtStore', href: `${HERE}/vip/store/?k=art` },

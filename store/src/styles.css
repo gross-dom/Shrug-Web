@@ -333,3 +333,13 @@ h2.ui-sect.ui-part{padding-top:18px}
 .sr-only{position:absolute !important; width:1px !important; height:1px !important; overflow:hidden !important; clip-path:inset(50%) !important; white-space:nowrap !important}
 .ui-page.mine .ui-card, .ui-page.mine .ui-stats > div{border-radius:20px}
 .ui-page.mine.in-window{padding-top:8px}
+
+/* The ways in to the three stores, in the phone's My VIP (Yours.tsx): rows of one card, a hairline between them */
+.up-doors{display:grid; padding:4px 0}
+.up-door{appearance:none; border:0; background:none; font:inherit; display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:62px; padding:10px 18px; color:var(--text); text-align:left; cursor:pointer}
+.up-door + .up-door{box-shadow:0 -.5px 0 var(--line, rgba(255,255,255,.1))}
+.up-door span{display:flex; flex-direction:column; gap:2px; min-width:0}
+.up-door b{font:600 16px/1.25 var(--font); letter-spacing:-.01em}
+.up-door small{font-size:13px; line-height:1.3; color:var(--text-2)}
+.up-door svg{flex:none; color:var(--text-2)}
+.up-door:active{background:rgba(255,255,255,.06)}

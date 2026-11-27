@@ -1147,7 +1147,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     // The third tier. Who is given a black card has not been decided: this is here so that one can be seen.
     black: { label: 'Investor, black', member: { name: 'Dom Santry', first: 'Dom', roles: ['Investor'], tier: 'black', points: 400, number: '027', since: 2024 } },
     // Not on the list: a standard member, as the server makes of anyone who signs in. No name until they give one.
-    standard: { label: 'Standard, not on the list', member: { name: '', first: '', roles: [], tier: 'standard', points: 100, number: '', since: 2026 } },
+    standard: { label: 'Standard, not on the list', member: { name: '', first: '', roles: [], tier: 'standard', points: 200, number: '', since: 2026 } }, // (what an account begins with: STARTING_POINTS, shared/rules.ts)
   };
   const REASONS = ['the intro to Ada', 'hosting the dinner', 'the reference call'];
   const KEY = 'shrugdemo.v1';
@@ -1490,7 +1490,8 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     foot: null, // what the footer is showing
     stale: false, // the card on show is the one this browser remembered: the server could not be asked
     direct: false, // signing in by the footer's link: the code is asked for as ever, and then their card is simply there, with no tear
-    to: '', // 'store': sent here by the store to sign in, and going back there as soon as they have
+    to: '', // where a texted code went: the end of the number, as the server gives it
+    back: '', // 'store': sent here by the store to sign in, and going back there as soon as they have
     resendOnline: '', // an address whose code could not be asked for: no connection
   };
   // The page carries the same three attributes as the stage, so the wall behind it can follow.
@@ -2263,7 +2264,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     S.direct = false;
     S.busy = false;
     S.engaged = true;
-    if (S.to === 'store' && who.status === 'member') {
+    if (S.back === 'store' && who.status === 'member') {
       remember(who);
       toStore('store/');
       return;
@@ -3426,7 +3427,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     S.direct = false;
     S.busy = false;
     S.engaged = true;
-    if (S.to === 'store' && who.status === 'member') {
+    if (S.back === 'store' && who.status === 'member') {
       remember(who);
       toStore('store/');
       return;
@@ -3841,7 +3842,7 @@ body.is-demo .page { flex: 1 0 auto; min-height: 0; height: var(--doc-h, auto); 
     // /?signin is the way straight to signing in (the store sends its visitors here with ?signin=store,
     // and has them back as soon as they are in)
     const asked = new URLSearchParams(window.location.search).get('signin');
-    if (asked === 'store') S.to = 'store';
+    if (asked === 'store') S.back = 'store';
     let answered = false;
     /** Shows the way to sign in, where that has been held back until the server says who this is. */
     let land = null;

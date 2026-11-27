@@ -1,0 +1,317 @@
+/* Log In, on a phone (src/phone/LogIn.tsx): the desk's sheet and its steps (os/Account.tsx, styled for a menu
+   bar's sheet in os.css), brought up as a sheet of the phone's. Everything here is that sheet at a phone's
+   sizes: 17-point words, fields and the one button a finger's height, and the rows of someone logged in set
+   as a grouped list. It is dark, as the apps that ask for it are (the stores are Shrug's black). */
+.login-ios {
+  --label: #fff;
+  --label-2: rgb(235 235 245 / 0.62);
+  --label-3: rgb(235 235 245 / 0.32);
+  --sep: rgb(84 84 88 / 0.65);
+  --fill: rgb(118 118 128 / 0.24);
+  --grouped: #1c1c1e;
+  --surface: #1c1c1e;
+  --cell: #2c2c2e;
+  color-scheme: dark;
+}
+
+.login-ios .ios-sheet__panel {
+  background: var(--grouped);
+}
+
+/* (its Close is dark glass, as a dark screen's buttons are) */
+.login-ios .ios-glass {
+  --glass: rgb(118 118 128 / 0.3);
+  --glass-edge: 0 0 0 0.5px rgb(255 255 255 / 0.1), inset 0 0.5px 0 rgb(255 255 255 / 0.12);
+  color: #fff;
+}
+
+/* The bar holds only the grabber and Close: the sheet's own head is its title */
+.login-ios .ios-sheet__bar {
+  min-height: 58px;
+}
+
+.login-ios .account {
+  position: static;
+  width: auto;
+  margin: 0;
+  padding: 6px 22px 24px;
+  border-radius: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  color: var(--label);
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  animation: none;
+}
+
+.login-ios .account__form {
+  gap: 14px;
+}
+
+.login-ios .account__head {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.login-ios .account__lead {
+  margin-top: -6px;
+  color: var(--label-2);
+  font-size: 17px;
+  line-height: 1.32;
+}
+
+.login-ios .account__label {
+  margin-bottom: 8px;
+  color: var(--label-2);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.login-ios .account__field input {
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--fill);
+  box-shadow: none;
+  color: var(--label);
+  font-size: 17px;
+}
+
+.login-ios .account__field input::placeholder {
+  color: var(--label-3);
+}
+
+.login-ios .account__field input:focus,
+.login-ios .account__code:focus-within [data-cur] {
+  outline: 2px solid var(--blue);
+  outline-offset: 0;
+}
+
+.login-ios .account__boxes {
+  gap: 8px;
+}
+
+.login-ios .account__boxes span {
+  height: 58px;
+  border-radius: 13px;
+  background: var(--fill);
+  box-shadow: none;
+  color: var(--label);
+  font-size: 26px;
+}
+
+.login-ios .account__code[data-bad] .account__boxes span {
+  outline: 2px solid rgb(255 69 58 / 0.8);
+}
+
+.login-ios .account__go {
+  height: 52px;
+  border-radius: 14px;
+  background: var(--blue);
+  font-size: 17px;
+}
+
+.login-ios .account__go:disabled {
+  opacity: 0.4;
+}
+
+.login-ios .account__said {
+  color: #ff6961;
+  font-size: 15px;
+}
+
+.login-ios .account__link,
+.login-ios .account__wait {
+  min-height: 30px;
+  font-size: 16px;
+}
+
+.login-ios .account__link {
+  color: var(--blue);
+}
+
+.login-ios .account__wait {
+  display: flex;
+  align-items: center;
+  color: var(--label-2);
+}
+
+.login-ios .account__note {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top-color: var(--sep);
+  color: var(--label-3);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* A phone's appearance is its own (os/theme.ts): the desk's switch is not offered here */
+.login-ios .account__looks,
+.login-ios hr:has(+ .account__looks) {
+  display: none;
+}
+
+/* The picture: Shrug's faces, four to a row */
+.login-ios .account__faces {
+  gap: 14px 8px;
+}
+
+.login-ios .account__faces button {
+  width: 66px;
+  height: 66px;
+}
+
+.login-ios .account__faces [data-on] {
+  box-shadow: 0 0 0 3px var(--blue);
+}
+
+.login-ios .account__faces [data-upload] {
+  background: var(--fill);
+  box-shadow: none;
+  color: var(--label-2);
+}
+
+/* Logged in: who it is over a grouped list, as Settings has an account */
+.login-ios .account__menu {
+  gap: 0;
+}
+
+.login-ios .account__menu .account__who {
+  flex-direction: column;
+  gap: 10px;
+  margin: 2px 0 22px;
+  text-align: center;
+}
+
+.login-ios .account__who b {
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.login-ios .account__who small {
+  display: block;
+  margin-top: 3px;
+  color: var(--label-2);
+  font-size: 15px;
+}
+
+.login-ios .account hr {
+  height: 22px;
+  margin: 0;
+  background: none;
+}
+
+.login-ios .account__menu > .account__who + hr {
+  display: none;
+}
+
+.login-ios .account__row {
+  position: relative;
+  width: 100%;
+  height: auto;
+  min-height: 50px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 0;
+  background: var(--cell);
+  color: var(--label);
+  font-size: 17px;
+}
+
+.login-ios button.account__row {
+  color: var(--blue);
+}
+
+.login-ios .account__row small {
+  color: var(--label-2);
+  font-size: 16px;
+}
+
+/* (a row after a row: a hairline between them, inset as a list's is) */
+.login-ios .account__row + .account__row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 16px;
+  height: 0.5px;
+  background: var(--sep);
+}
+
+.login-ios :is(.account__who, hr) + .account__row {
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+}
+
+.login-ios .account__row:is(:last-child, :has(+ hr)) {
+  border-bottom-right-radius: 14px;
+  border-bottom-left-radius: 14px;
+}
+
+.login-ios :where(a, button).account__row:hover {
+  background: var(--cell);
+  color: var(--blue);
+}
+
+.login-ios :where(a, button).account__row:hover small {
+  color: var(--label-2);
+}
+
+.login-ios button.account__row:active {
+  background: #3a3a3c;
+}
+
+/* Log Out: the last row, alone, and red */
+.login-ios .account__menu > button.account__row:last-child,
+.login-ios .account__menu > button.account__row:last-child:hover {
+  justify-content: center;
+  color: #ff453a;
+}
+
+/* Over a pale app (the folder of updates, Workspace's paper) the sheet is pale: an iPhone's own grouped gray,
+   its fields and rows white on it */
+.login-ios--light {
+  --label: #000;
+  --label-2: rgb(60 60 67 / 0.74);
+  --label-3: rgb(60 60 67 / 0.36);
+  --sep: rgb(60 60 67 / 0.2);
+  --fill: #fff;
+  --grouped: #f2f2f7;
+  --surface: #f2f2f7;
+  --cell: #fff;
+  color-scheme: light;
+}
+
+.login-ios--light .ios-glass {
+  --glass: rgb(120 120 128 / 0.16);
+  --glass-edge: none;
+  color: #3c3c43;
+}
+
+.login-ios--light .account__said {
+  color: #d70015;
+}
+
+.login-ios--light .account__code[data-bad] .account__boxes span {
+  outline-color: rgb(215 0 21 / 0.7);
+}
+
+.login-ios--light .account__note {
+  color: rgb(60 60 67 / 0.56);
+}
+
+.login-ios--light button.account__row:active {
+  background: #e5e5ea;
+}
+
+.login-ios--light .account__menu > button.account__row:last-child,
+.login-ios--light .account__menu > button.account__row:last-child:hover {
+  color: #ff3b30;
+}

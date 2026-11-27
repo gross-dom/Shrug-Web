@@ -1,7 +1,6 @@
 // What search on the Home Screen opens, and where the keyboard goes when a screen is pushed.
 const { chromium } = require('playwright')
 const path = require('path')
-const { storeAt, tabFrom } = require('./lib.cjs')
 const base = process.argv[2] || 'http://127.0.0.1:5173/'
 ;(async () => {
   const browser = await chromium.launch()
@@ -42,16 +41,18 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   say((await st()).stacks.notes.join() === 'f:faqs', 'and Back from it is the FAQs list')
   await home()
 
-  // The stores are found among the apps, and are the links they are on the Home Screen: "vip" finds ArtStore,
-  // which is what VIP was, as the store's own page in a tab of its own, and no app
+  // The stores and My VIP are found among the apps, and are apps: "vip" finds My VIP first, under its tile,
+  // and pressing it opens the app, with nothing sent to a tab of its own
   await page.locator('.sb-search').tap(); await sleep(800)
   await page.locator('.ph input[aria-label*="Search" i]').last().fill('vip'); await sleep(700)
-  const vip = await page.locator('.ph .spot-row[data-top]').evaluate((a) => ({ tag: a.tagName, title: a.querySelector('.spot-row__title').textContent, href: a.href, target: a.target, rel: a.rel, says: a.textContent.replace(/\s+/g, ' ').trim(), tile: !!a.querySelector('.spot-tile svg') })).catch(() => null)
-  say(!!vip && vip.tag === 'A' && vip.title === 'ArtStore' && vip.href === storeAt(base, 'store') && vip.target === '_blank' && /\bnoopener\b/.test(vip.rel) && /\bnoreferrer\b/.test(vip.rel) && /, opens in a new tab$/.test(vip.says) && vip.tile, 'search for "vip" finds ArtStore first, under its tile: a link to the store’s own page that says it opens in a new tab', JSON.stringify(vip))
-  const went = await tabFrom(ctx, () => page.locator('.ph a.spot-row[data-top]').tap())
-  await sleep(1200)
+  const vip = await page.locator('.ph [data-top]').evaluate((a) => ({ tag: a.tagName, title: a.querySelector('.spot-row__title').textContent, href: a.getAttribute('href'), says: a.textContent.replace(/\s+/g, ' ').trim(), tile: !!a.querySelector('svg') })).catch(() => null)
+  say(!!vip && vip.tag === 'BUTTON' && vip.title === 'My VIP' && vip.href === null && !/new tab/.test(vip.says) && vip.tile, 'search for "vip" finds My VIP first, under its tile: an app of the phone’s, not a link out', JSON.stringify(vip))
+  const tabs = ctx.pages().length
+  await page.locator('.ph [data-top]').tap()
+  await sleep(1600)
   s = await st()
-  say(!!went && went.url === storeAt(base, 'store') && went.alone === true && (s?.app ?? null) === null && (await page.locator('.sb-slot[data-front], .sb-slot[data-app="photos"]').count()) === 0 && (await page.locator('.ph .spot-row').count()) === 0, 'pressed, it opens there in a tab of its own; search closes, and no app has opened', JSON.stringify({ went, app: s?.app ?? null, rows: await page.locator('.ph .spot-row').count() }))
+  say(ctx.pages().length === tabs && s?.app === 'myvip' && (await page.locator('.sb-slot[data-front][data-app="myvip"] iframe.storewin__frame').count()) === 1 && (await page.locator('.ph [data-spot-item]').count()) === 0, 'pressed, it opens My VIP on the phone, in no tab of its own, and search closes', JSON.stringify({ tabs: ctx.pages().length - tabs, app: s?.app ?? null, rows: await page.locator('.ph [data-spot-item]').count() }))
+  await home()
   // The drops were what the VIP app held: search no longer lists them, since there is nowhere on the phone to open one
   await page.locator('.sb-search').tap(); await sleep(800)
   await page.locator('.ph input[aria-label*="Search" i]').last().fill('billboards'); await sleep(700)

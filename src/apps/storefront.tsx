@@ -6,7 +6,7 @@ import type { AppId } from '../os/apps'
 import { launchApp } from '../os/launch'
 import { loadShop } from '../os/shop'
 import { useStore } from '../os/store'
-import { focusApp } from '../os/wm'
+import { focusApp, wm } from '../os/wm'
 
 // The store's own pages, in a frame, for whichever of the desk's windows sells something.
 //
@@ -36,6 +36,7 @@ export const addressOf = (room: Room, product?: string | null) => `${SHELVES}?k=
 
 const rooms: Partial<Record<Room, { at: (place: Place) => void; reload: () => void }>> = {}
 const desk: Desk = {
+  // Log In is the desk's one sheet, and on a phone the phone's (src/phone/LogIn.tsx): asked for, either comes
   logIn: (why) => askLogIn(why === 'request' ? 'request' : why === 'price' ? 'price' : null),
   // Points were spent in one room, or someone logged out there: the desk's own figures are asked for again,
   // and so is every other room's, since the balance and the orders are the same ones everywhere
@@ -46,6 +47,9 @@ const desk: Desk = {
   },
   at: (place, room) => rooms[room]?.at(place),
   open: (room) => launchApp(APP_OF[room]),
+  get phone() {
+    return wm.get().compact
+  },
 }
 if (typeof window !== 'undefined') (window as Window & { shrugDesk?: Desk }).shrugDesk = desk
 
@@ -92,7 +96,10 @@ export const StoreFrame = forwardRef<FrameHandle, { room: Room; title: string; f
   }))
 
   useEffect(() => {
-    rooms[room] = { at: (place) => heard.current.onAt?.(place), reload: () => inside()?.shrugStore?.reload() }
+    rooms[room] = {
+      at: (place) => heard.current.onAt?.(place),
+      reload: () => inside()?.shrugStore?.reload(),
+    }
     return () => {
       delete rooms[room]
     }
@@ -109,10 +116,19 @@ export const StoreFrame = forwardRef<FrameHandle, { room: Room; title: string; f
     } catch {
       return
     }
+    const came = page.current
     page.current = path.startsWith(SHELVES) ? 'store' : 'card'
+    // The card's page has a way on to the store as a whole, which is not a room of anybody's: whoever takes
+    // it is put back in this one, and the desk's own figures, and every other room's, are asked for again
+    if (page.current === 'store' && !new URLSearchParams(within.location.search).has('k')) {
+      if (frame.current) frame.current.src = addressOf(room)
+      if (came === 'card') desk.changed()
+      return
+    }
     heard.current.onPage?.(page.current)
     const stir = () => window.dispatchEvent(new Event('wheel'))
-    within.addEventListener('pointerdown', () => (focusApp(APP_OF[room]), stir()), true)
+    // (a phone has no windows to bring to the front)
+    within.addEventListener('pointerdown', () => (wm.get().compact || focusApp(APP_OF[room]), stir()), true)
     within.addEventListener('pointermove', stir, { passive: true })
     within.addEventListener('keydown', stir, true)
     within.addEventListener('wheel', stir, { passive: true })

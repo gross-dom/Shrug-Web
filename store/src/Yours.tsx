@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { awardFor, AWARDS, fmtPoints, onFile, POINTS_PER_DOLLAR, STARTING_POINTS, stockOf, totalPoints, type Order } from '../shared/rules'
 import { CARD, type Backend, type Shop } from './backend'
 import { Points, Wordmark } from './brand'
-import { DESK } from './desk'
+import { DESK, type Room } from './desk'
 import { DocIcon } from './icons'
 import { Lines, Paid, Picture } from './Product'
 import { editionOf, shipsOf } from './words'
@@ -95,6 +95,13 @@ function Address({ shop, backend, onChange, style }: { shop: Shop; backend: Back
 
 /** What is on a card where a name would be, until its member has given one: two lines, as the card page sets them. */
 const NO_NAME = ['Your name', 'here']
+
+/** The three stores, as My VIP leads to them (the desk's window has the same three: src/apps/MyVip.tsx). */
+const DOORS: { room: Room; name: string; says: string }[] = [
+  { room: 'art', name: 'ArtStore', says: 'Six pieces, in editions of fifty.' },
+  { room: 'books', name: 'Books', says: 'Five books, two on pre-order.' },
+  { room: 'chairs', name: 'Workspace', says: 'The chair, in every color.' },
+]
 
 export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop: Shop; phone: boolean; backend: Backend; onChange: () => void; onSignOut: () => void }) {
   const me = shop.member
@@ -342,12 +349,34 @@ export function YoursView({ shop, phone, backend, onChange, onSignOut }: { shop:
     </a>
   )
 
+  // In the phone's My VIP (the desk's own app, these pages in its frame): the ways in to the three stores,
+  // which are apps of their own there. (The desk's window draws them itself, along its head, however narrow it is)
+  const doors = DESK?.phone && (
+    <nav className="ui-card up-doors" aria-label="The stores" style={{ marginTop: 14 }}>
+      {DOORS.map(({ room, name, says }) => (
+        <button key={room} type="button" className="up-door" onClick={() => DESK!.open(room)}>
+          <span>
+            <b>{name}</b>
+            <small>{says}</small>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M6 3.5 10.5 8 6 12.5" />
+          </svg>
+        </button>
+      ))}
+    </nav>
+  )
+
   if (phone)
     return (
       <main className="up-body" style={{ gap: 0, paddingBottom: 28 }}>
-        <h1 className="t-title">My VIP</h1>
-        <div className="mc-row">{card}</div>
+        {/* (in the phone's app the bar over these pages says My VIP: here it is only read out) */}
+        <h1 className={DESK ? 'sr-only' : 't-title'}>My VIP</h1>
+        <div className="mc-row" style={DESK ? { marginTop: 6 } : undefined}>
+          {card}
+        </div>
         {stats}
+        {doors}
         {orders}
         {funds}
         {points}

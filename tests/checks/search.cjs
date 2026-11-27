@@ -37,7 +37,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   // ---- UX-13: what comes first ----
   const firsts = [
     ['portfolio', 'Contacts'], ['Portfolio', 'Contacts'], ['companies', 'Contacts'], ['contacts', 'Contacts'], ['faqs', 'Notes'], ['faq', 'Notes'], ['questions', 'Notes'],
-    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'ArtStore'], ['vip', 'ArtStore'], ['VIP', 'ArtStore'], ['points', 'ArtStore'], ['merch', 'ArtStore'], ['workspace', 'Workspace'], ['chair', 'Workspace'], ['books', 'Books'], ['terminal', 'Case Studies'],
+    ['chat', 'Messages'], ['group chat', 'Messages'], ['testimonials', 'Testimonials'], ['drops', 'ArtStore'], ['merch', 'ArtStore'], ['vip', 'My VIP'], ['VIP', 'My VIP'], ['my vip', 'My VIP'], ['points', 'My VIP'], ['updates', 'Updates'], ['workspace', 'Workspace'], ['chair', 'Workspace'], ['books', 'Books'], ['terminal', 'Case Studies'],
     ['one-pager', 'One-pager'], ['one pager', 'One-pager'], ['onepager', 'One-pager'], ['deck', 'One-pager'],
     ['contact', 'Get in Touch'], ['email', 'Get in Touch'], ['reach', 'Get in Touch'], ['pitch', 'Get in Touch'], ['apply', 'Get in Touch'], ['intro', 'Get in Touch'],
     ['varda', 'Varda'], ['kevin', 'Kevin Olusola'], ['akash', 'Akash Nigam'],
@@ -89,9 +89,9 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await A.shot(t.page, 'fix-s2-search-shrug')
   await type(t, 'drops')
   r = await read(t.page)
-  // ArtStore is what VIP was: found first by its names and by the site's word for what it is about, as the link it is
-  // on the Home Screen. The drops themselves were what VIP's app held, and with the app gone there is no list of them to find
-  check('"drops": ArtStore first, a link to the store’s own page in a new tab, with what it sells under its name', r.top?.title === 'ArtStore' && r.top.tag === 'A' && r.top.href === A.storeAt(BASE, 'store') && r.top.target === '_blank' && r.top.sub === 'Six pieces, fifty of each', JSON.stringify(r.top))
+  // ArtStore is what VIP was: found first by its names and by the site's word for what it is about, as the app it is
+  // on the Home Screen. The drops themselves were what VIP's old app held, and with that gone there is no list of them to find
+  check('"drops": ArtStore first, the phone’s own app (no link out), with what it sells under its name', r.top?.title === 'ArtStore' && r.top.tag === 'BUTTON' && r.top.href === null && r.top.sub === 'Six pieces, fifty of each', JSON.stringify(r.top))
   check('"drops": no drop is listed, and no group of them; the conversation of that name is under Messages', !r.groups.some((g) => g.name === 'VIP' || g.name === 'ArtStore') && !titles(r).some((title) => /Billboards|Deep Tech Mat|Shrug Calendar|VC Puzzle/.test(title)) && r.groups.find((g) => g.name === 'Messages')?.rows.some((x) => x.title === 'Drops'), r.groups.map((g) => g.name + ':' + g.rows.map((x) => x.title).join('/')).join(' '))
   await type(t, 'deep')
   r = await read(t.page)
@@ -117,7 +117,7 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   await type(t, 'zzzz')
   r = await read(t.page)
   const instead = r.groups.flatMap((g) => g.rows)
-  check('"zzzz": No Results, and two things to press', /No Results/.test(r.none || '') && instead.length === 2 && instead[0].title === 'One-pager' && instead[0].tag === 'A' && instead[1].title === 'Ask in Messages', JSON.stringify({ none: r.none, instead }))
+  check('"zzzz": No Results, and two things to press', /No Results/.test(r.none || '') && instead.length === 2 && instead[0].title === 'One-pager' && instead[0].tag === 'BUTTON' && instead[0].href === null && instead[1].title === 'Ask in Messages', JSON.stringify({ none: r.none, instead }))
   check('…said to a screen reader in a few words', r.status === 'No results for zzzz', r.status)
   await A.shot(t.page, 'fix-s2-search-none')
   await t.page.locator('.spot-row', { hasText: 'Ask in Messages' }).click(); await t.sleep(1200)
@@ -155,17 +155,21 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
   check('…the arrows reach the two rows', /Ask in Messages/.test(onAsk || ''), onAsk)
   // Return on a link: a tab of its own, and search closes behind it
   await type(t, 'one-pager')
-  const [popup] = await Promise.all([t.ctx.waitForEvent('page', { timeout: 5000 }).catch(() => null), t.page.keyboard.press('Enter')])
-  await t.sleep(700)
-  check('Return on the one-pager opens it in a tab of its own, and search closes', !!popup && /docsend\.com/.test(popup.url() + (await popup.evaluate(() => location.href).catch(() => ''))) || (!!popup && true), popup ? popup.url() : 'no tab')
-  check('…search is closed behind it', !(await t.page.$('.spot:not([data-leaving])')))
-  if (popup) await popup.close().catch(() => {})
-  // and so on VIP, which leads to the points site: no app is opened for it
-  await openSearch(t)
-  await type(t, 'vip')
-  const toPoints = await A.tabFrom(t.ctx, () => t.page.keyboard.press('Enter'))
-  await t.sleep(700)
-  check('Return on "vip" opens ArtStore, the store’s own page, in a tab of its own; search closes, and no app opens', !!toPoints && toPoints.url === A.storeAt(BASE, 'store') && toPoints.alone === true && !(await t.page.$('.spot:not([data-leaving])')) && (await A.state(t.page)).place?.app == null, JSON.stringify({ toPoints, place: (await A.state(t.page)).place }))
+  // (the one-pager and My VIP are apps of the phone's own since 27 Nov: Return opens the app, and no tab)
+  {
+    const tabs = t.ctx.pages().length
+    await t.page.keyboard.press('Enter')
+    await t.sleep(1500)
+    check('Return on the one-pager opens it on the phone, the app, in no tab of its own', t.ctx.pages().length === tabs && (await A.state(t.page)).place?.app === 'preview' && (await t.page.locator('.sb-slot[data-front][data-app="preview"] .pp-page').count()) === 2, JSON.stringify((await A.state(t.page)).place))
+    check('…search is closed behind it', !(await t.page.$('.spot:not([data-leaving])')))
+    await A.at(t.page, null, [])
+    await openSearch(t)
+    await type(t, 'vip')
+    await t.page.keyboard.press('Enter')
+    await t.sleep(1500)
+    check('Return on "vip" opens My VIP, the app, in no tab of its own; search closes', t.ctx.pages().length === tabs && !(await t.page.$('.spot:not([data-leaving])')) && (await A.state(t.page)).place?.app === 'myvip', JSON.stringify({ tabs: t.ctx.pages().length - tabs, place: (await A.state(t.page)).place }))
+    await A.at(t.page, null, [])
+  }
 
   // ---- AX-11: what the field and the list say ----
   await openSearch(t)
@@ -175,8 +179,8 @@ const titles = (r) => r.groups.flatMap((g) => g.rows.map((x) => x.title))
     const items = [...document.querySelectorAll('[data-spot-item]')]
     return { role: input.getAttribute('role'), expanded: input.getAttribute('aria-expanded'), auto: input.getAttribute('aria-autocomplete'), list: list?.getAttribute('role'), label: list?.getAttribute('aria-label'), options: items.length, allOptions: items.every((i) => i.getAttribute('role') === 'option' && list.contains(i)), tabbable: items.filter((i) => i.tabIndex >= 0).length, live: document.querySelectorAll('.spot-scroll [aria-live]').length, groups: [...list.querySelectorAll('[role="group"]')].map((g) => g.getAttribute('aria-label')) }
   })
-  // (eight before anything is typed: the four apps, and four things to try. VIP is a link and not among the apps)
-  check('AX-11 the field is a combobox with a listbox of options', ax.role === 'combobox' && ax.expanded === 'true' && ax.auto === 'list' && ax.list === 'listbox' && ax.options === 8 && ax.allOptions && ax.tabbable === 0, JSON.stringify(ax))
+  // (fourteen before anything is typed: the ten apps, and four things to try)
+  check('AX-11 the field is a combobox with a listbox of options', ax.role === 'combobox' && ax.expanded === 'true' && ax.auto === 'list' && ax.list === 'listbox' && ax.options === 14 && ax.allOptions && ax.tabbable === 0, JSON.stringify(ax))
   await type(t, 'drops')
   await t.page.keyboard.press('ArrowDown'); await t.page.keyboard.press('ArrowDown'); await t.sleep(150)
   ax = await t.page.evaluate(() => {

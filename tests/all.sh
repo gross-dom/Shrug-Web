@@ -27,6 +27,7 @@ run() {
 run "phone: lock, home, apps"        node phone-flow.cjs $BASE
 run "phone: each app"                node phone-apps.cjs $BASE
 run "phone: links between apps"      node phone-links.cjs $BASE
+run "phone: stores, documents, Log In" node phone-native.cjs $BASE
 run "phone: folders"                 node phone-folders.cjs $BASE
 run "phone: the badge"               node badge.cjs $BASE
 run "desktop: windows and apps"      node desktop-flow.cjs $BASE

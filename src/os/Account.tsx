@@ -8,7 +8,12 @@ import { Face } from './Face'
 import { launchApp } from './launch'
 import { useStore } from './store'
 import { setTheme, theme } from './theme'
-import { closeApp } from './wm'
+import { onPhone } from '../phone/system'
+import type { AppId } from './apps'
+import { closeApp, wm } from './wm'
+
+/** Whether an app can be opened from here: any of them on the desk, and on a phone the ones it has. */
+const reachable = (app: AppId) => !wm.get().compact || onPhone(app)
 
 // Log In, at the right of the menu bar, and the one sheet it lets down (design/v1: SignIn-*, SignedIn-*).
 // Nothing else on the desk has a login of its own: something locked opens this same sheet, which then says
@@ -150,7 +155,9 @@ type Stage =
   | { at: 'profile'; first: boolean }
   | { at: 'menu' }
 
-function Sheet({ who, why, says, hold, onDone }: { who: Member | null; why: Why; says?: string; hold: { current: boolean }; onDone: () => void }) {
+/** The sheet's steps and what each says and asks. The desk lets it down from the menu bar; a phone brings it
+ * up as a sheet of its own (src/phone/LogIn.tsx). */
+export function Sheet({ who, why, says, hold, onDone }: { who: Member | null; why: Why; says?: string; hold: { current: boolean }; onDone: () => void }) {
   // (someone logged in who has not yet said what they are called is asked that first, when it is let down for it)
   const [at, setStage] = useState<Stage>(() => (who ? (who.via === 'link' && who.needs.phone ? { at: 'addphone' } : why === 'name' && who.needs.profile ? { at: 'profile', first: true } : { at: 'menu' }) : { at: 'email' }))
   // What is only for someone logged in is not shown to nobody: should they be logged out under it, it begins again
@@ -359,7 +366,7 @@ function Sheet({ who, why, says, hold, onDone }: { who: Member | null; why: Why;
       <button type="button" className="account__row" onClick={() => (onDone(), launchApp('myvip'))}>
         Open My VIP
       </button>
-      {isLP(account.get()) && (
+      {isLP(account.get()) && reachable('updates') && (
         <button type="button" className="account__row" onClick={() => (onDone(), launchApp('updates'))}>
           Open Updates
         </button>

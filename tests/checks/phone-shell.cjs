@@ -625,11 +625,12 @@ const touchOf = (t) => ({
     const t = await fresh('iphone', '')
     const p = t.page
     await A.unlock(p)
-    const one = await p.evaluate(() => { const a = [...document.querySelectorAll('.sb-home a.sb-icon')][0]; return { drag: a.draggable, name: a.textContent.replace(/\s+/g, ' ').trim() } })
-    say(one.drag === false && /One-pager, opens in a new tab/.test(one.name), 'the One-pager icon says where it goes and cannot be dragged off', JSON.stringify(one))
-    // (Workspace, in the Dock, is a link too: the Dock shows no names, so it says so on the link itself)
-    const vip = await p.evaluate(() => { const a = document.querySelector('.sb-dock a.sb-icon'); return a && { drag: a.draggable, name: a.getAttribute('aria-label'), href: a.href, target: a.target, shown: getComputedStyle(a.querySelector('.sb-icon__name')).display } })
-    say(!!vip && vip.drag === false && vip.name === 'Workspace, opens in a new tab' && vip.href === A.storeAt(BASE, 'workspace') && vip.target === '_blank' && vip.shown === 'none', 'the Workspace icon says where it goes too (the chair’s store, in a new tab), and cannot be dragged off', JSON.stringify(vip))
+    // (the one-pager and the stores are apps of the phone's own since 27 Nov: nothing on the Home Screen is a
+    // link out of the site, and every icon there is a button named for its app)
+    const one = await p.evaluate(() => { const links = document.querySelectorAll('.sb-home a.sb-icon').length; const b = [...document.querySelectorAll('.sb-grid > button.sb-icon')].find((el) => /^One-pager/.test(el.getAttribute('aria-label') ?? '')); return { links, name: b?.getAttribute('aria-label') ?? null, says: b?.textContent.replace(/\s+/g, ' ').trim() ?? null } })
+    say(one.links === 0 && one.name === 'One-pager' && !/new tab/.test(one.says ?? ''), 'the One-pager icon is an app’s: it says nothing of a new tab, and nothing on the Home Screen is a link out', JSON.stringify(one))
+    const vip = await p.evaluate(() => { const b = document.querySelector('.sb-dock > button.sb-icon:last-child'); return b && { name: b.getAttribute('aria-label'), shown: getComputedStyle(b.querySelector('.sb-icon__name')).display } })
+    say(!!vip && /^Workspace/.test(vip.name ?? '') && vip.shown === 'none', 'Workspace, the last icon in the Dock, is an app too, named on the button itself (the Dock shows no names)', JSON.stringify(vip))
     const words = await p.evaluate(() => document.querySelector('.sb-chat__count .sr-only').textContent)
     say(/No one has replied yet|\d+ of 80 ha(s|ve) replied/.test(words) && !/^1 of 80 have/.test(words), 'the widget counts in a sentence', words)
     // the first banner of a visit is not held back

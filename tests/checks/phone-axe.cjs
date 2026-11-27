@@ -55,7 +55,11 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
     ['contacts', 'finder', []], ['company', 'finder', ['co:Varda']], ['company with no site', 'finder', ['co:HQ Trivia']], ['my card', 'finder', ['me']],
     ['notes list', 'notes', ['f:faqs']], ['note', 'notes', ['f:faqs', 'n:4']], ['folders', 'notes', []], ['new folder', 'notes', [], 'new-folder'], ['notes folder', 'notes', ['f:notes']],
     ['terminal', 'terminal', []],
-  ]) { await at(app, stack, sheet ?? null); await run(where) }
+    // (the phone's own apps for the stores, the one-pager and Updates, since 27 Nov. The store's pages in a frame
+    // are the store's own, and are looked at where the desk's window holds them: terminal-vip-axe.cjs)
+    ['workspace: the colors', 'workspace', []], ['workspace: a studio', 'workspace', ['studio']], ['workspace: the sixteen more', 'workspace', [], 'more'], ['workspace: owners', 'workspace', ['owners']], ['workspace: BTS', 'workspace', ['bts']],
+    ['books: the shelf', 'books', []], ['books: the reader', 'books', ['r:frequently asked']], ['artstore', 'store', []], ['my vip', 'myvip', []], ['the one-pager', 'preview', []], ['updates, locked', 'updates', []], ['log in', 'updates', [], 'login'],
+  ]) { await at(app, stack, sheet ?? null); if (app === 'workspace' || app === 'preview') await sleep(900); await run(where) }
   // Screens reached by their own controls
   const must = async (what, step) => { try { await step() } catch (e) { errors.push(`could not reach ${what}: ${e.message.split('\n')[0]}`) } }
   // Contacts' search: with the field taken up, with companies found, and with none; and the list part-way down, a heading stuck under the bar
@@ -65,9 +69,9 @@ const base = process.argv[2] || 'http://127.0.0.1:5173/'
   await must('contacts search results', async () => { await top().locator('.ios-search__input').fill('an', { timeout: 8000 }); await sleep(500) }); await run('contacts search results')
   await must('contacts search with nothing found', async () => { await top().locator('.ios-search__input').fill('zzzz', { timeout: 8000 }); await sleep(500) }); await run('contacts search, nothing found')
   await must('contacts search ending', async () => { await top().locator('button[aria-label="Cancel"]').tap({ timeout: 8000 }); await sleep(500) })
-  // VIP has no screens of its own: it is a link in the Dock (the Home Screen, above), and what search finds of it is a link too
+  // What search finds for "vip": My VIP, the app
   await at(null, [])
-  await must('search, VIP found', async () => { await page.locator('.sb-search').tap({ timeout: 8000 }); await sleep(700); await page.locator('.ph input[aria-label*="Search" i]').last().fill('vip', { timeout: 8000 }); await sleep(600); if (!(await page.locator('.ph a.spot-row[data-top]').count())) throw new Error('VIP was not found as a link') }); await run('search, VIP found')
+  await must('search, VIP found', async () => { await page.locator('.sb-search').tap({ timeout: 8000 }); await sleep(700); await page.locator('.ph input[aria-label*="Search" i]').last().fill('vip', { timeout: 8000 }); await sleep(600); if (!(await page.locator('.ph button[data-top]').count())) throw new Error('My VIP was not found as an app') }); await run('search, VIP found')
   await page.keyboard.press('Escape'); await sleep(300); await page.keyboard.press('Escape'); await sleep(500)
   // The conversation whose link leads to VIP
   await at('messages', ['c:drops']); await run('the Drops conversation')

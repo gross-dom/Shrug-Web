@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { startTransition, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Search, X } from 'lucide-react'
 import { chat, QUESTION, setChatUnseen, TOTAL } from '../apps/chat'
 import { GROUP_NAME, GroupAvatar, PersonAvatar } from '../apps/chat-ui'
@@ -20,9 +20,9 @@ import { DOCKED, ON_HOME, PHONE } from './apps'
 import { companyOf, GROUP_VIEW, MY_CARD } from './apps/routes'
 import { COLOR, carried, chrome, grounds, setTone } from './chrome'
 import { HomeFolder, OpenFolder, useOpenFolder } from './Folder'
-import { OnePagerIcon, PhoneIcon } from './icons'
-import { AppIcon } from '../os/icons'
+import { PhoneIcon } from './icons'
 import { haptic } from './native'
+import { useLogIn } from './LogIn'
 import { settings } from './settings'
 import { Spotlight } from './Spotlight'
 import { book, isFolder } from './apps/notes-store'
@@ -382,25 +382,6 @@ function HomeIcon({ id }: { id: PhoneApp }) {
   )
 }
 
-/** The stores on a phone: Workspace in the Dock, where VIP was, and the other two on the Home Screen. */
-const DOCK_STORE = SITE.stores[0]
-const HOME_STORES = SITE.stores.slice(1)
-
-/** A link dressed as an app: the one-pager, and the three stores (the store's own pages, until the phone has
- * stores of its own), each of which opens in a tab of its own. It is named on the link itself as well as
- * under its tile, since the Dock shows no names. */
-function LinkIcon({ name, href, children }: { name: string; href: string; children: ReactNode }) {
-  return (
-    <a className="sb-icon" href={href} target="_blank" rel="noopener noreferrer" draggable={false} aria-label={`${name}, opens in a new tab`}>
-      <span className="sb-icon__tile">{children}</span>
-      <span className="sb-icon__name">
-        {name}
-        <span className="sr-only">, opens in a new tab</span>
-      </span>
-    </a>
-  )
-}
-
 /** The face of the group chat's widget: the question, and the newest reply to it. Drawn on the Home Screen,
  * and again over the conversation as it opens out of the widget (`origin` marks the one on the Home Screen). */
 function ChatFace({ origin }: { origin?: string }) {
@@ -525,19 +506,8 @@ function Home() {
         <ChatWidget />
         <HomeFolder id="portfolio" />
         <HomeFolder id="faqs" />
-        {ON_HOME.slice(0, 1).map((id) => (
-          <HomeIcon key={id} id={id} />
-        ))}
-        <LinkIcon name="One-pager" href={SITE.onePager}>
-          <OnePagerIcon />
-        </LinkIcon>
-        {/* Two of the three stores, in the two places the row had left; the third is in the Dock, where VIP was */}
-        {HOME_STORES.map((shop) => (
-          <LinkIcon key={shop.app} name={shop.name} href={shop.href}>
-            <AppIcon id={shop.app} />
-          </LinkIcon>
-        ))}
-        {ON_HOME.slice(1).map((id) => (
+        {/* Case Studies, the one-pager, ArtStore and Books: a row of four */}
+        {ON_HOME.map((id) => (
           <HomeIcon key={id} id={id} />
         ))}
       </div>
@@ -545,15 +515,11 @@ function Home() {
         <Search size={12} strokeWidth={3} aria-hidden />
         Search
       </button>
-      {/* The apps, and after them Workspace, which is a link as the one-pager is: it leads to the chair's own
-          store. (VIP was here, a link to the old points site: Dom took it out on 26 Nov) */}
-      <nav className="sb-dock" aria-label="Dock" data-full={DOCKED.length + 1 >= 4 || undefined}>
+      {/* The apps that are always to hand: Messages, Contacts, Notes, and Workspace (where VIP's link was) */}
+      <nav className="sb-dock" aria-label="Dock" data-full={DOCKED.length >= 4 || undefined}>
         {DOCKED.map((id) => (
           <HomeIcon key={id} id={id} />
         ))}
-        <LinkIcon name={DOCK_STORE.name} href={DOCK_STORE.href}>
-          <AppIcon id={DOCK_STORE.app} />
-        </LinkIcon>
       </nav>
     </div>
   )
@@ -1353,6 +1319,8 @@ function placeName(s: Sys) {
 
 export function Springboard({ framed }: { framed: boolean }) {
   const at = useStore(sys, (s) => (s.locked ? 'lock' : s.switcher ? 'switcher' : s.app ? 'app' : 'home'))
+  // Who is logged in, and the sheet that logs them in (LogIn.tsx)
+  useLogIn()
   // Out of the conversation, replies are only news (a notification, the widget), and they come a little quicker
   const watched = useStore(sys, (s) => !s.locked && !s.switcher && s.app === 'messages' && topOf(s, 'messages') === GROUP_VIEW)
   useLayoutEffect(() => {

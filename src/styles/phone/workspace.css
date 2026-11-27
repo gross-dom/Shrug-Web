@@ -1,0 +1,950 @@
+/* Workspace on the phone (src/phone/apps/Workspace.tsx): the desk's studio (desk/workspace.css) set out for a
+   hand. The colors are the desk's own values (data/workspace.ts); everything here is how they are laid out
+   on a screen that is tall and narrow. */
+
+.wsp {
+  --ws-ink: #141414;
+}
+
+/* W/S, in the bar where an app's name is */
+.wsp-mark {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+}
+
+.wsp-mark svg {
+  display: block;
+  width: auto;
+  height: 15px;
+}
+
+/* ---- The colors: the headline, the two ways aside, and a slab for each color with its chair on it */
+
+.wsp-first > .ios-screen__scroll {
+  padding-right: 14px;
+  padding-left: 14px;
+  background: var(--page);
+  color: var(--ws-ink);
+}
+
+.wsp-head {
+  max-width: 7.4em;
+  margin: 10px 4px 16px;
+  font-size: min(50px, 12.6cqw);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.wsp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 2px 16px;
+}
+
+.wsp-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 999px;
+  background: rgb(20 20 20 / 0.07);
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.wsp-chip:active {
+  background: rgb(20 20 20 / 0.14);
+}
+
+.wsp-slabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.wsp-slab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  aspect-ratio: 0.8;
+  overflow: hidden;
+  padding: 0 14px 13px;
+  border-radius: 24px;
+  /* (a white slab on paper is told from it by its edge) */
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.05);
+  text-align: left;
+  transition: transform 0.2s var(--ui);
+}
+
+.wsp-slab:active {
+  transform: scale(0.97);
+}
+
+.wsp-slab__chair {
+  flex: 1;
+  align-self: center;
+  width: auto;
+  min-height: 0;
+  max-width: 100%;
+  margin: 8px 0 2px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.wsp-slab b {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.wsp-slab small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 500;
+  opacity: 0.78;
+}
+
+.wsp-slab--more {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  aspect-ratio: auto;
+  padding: 16px;
+  background: #e3e2dd;
+  color: var(--ws-ink);
+}
+
+.wsp-mosaic {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(8, 16px);
+  gap: 5px;
+}
+
+.wsp-mosaic i {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+}
+
+/* ---- The sixteen more, in a sheet */
+
+.wsp-more .ios-sheet__body {
+  padding: 0 16px calc(var(--home) + 16px);
+}
+
+.wsp-more__says {
+  margin: 0 4px 14px;
+  color: var(--label-2);
+  font-size: 15px;
+  letter-spacing: -0.015em;
+}
+
+.wsp-more__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.wsp-swatch {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  height: 68px;
+  padding: 10px 13px;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.wsp-swatch[aria-pressed='true'] {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.wsp-swatch:active {
+  filter: brightness(0.94);
+}
+
+/* ---- The studio: the stage, with the chair on it, over the foot */
+
+.wsp-st {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.4s ease, color 0.3s ease;
+}
+
+.wsp-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  container-type: size;
+  /* How tall the chair's place is: the stage, less the bar over it and the row of pictures under it */
+  --chair: calc(100cqh - var(--status) - var(--bar) - 58px);
+}
+
+.wsp-light {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(90% 62% at 50% 40%, rgb(255 255 255 / 0.34), rgb(255 255 255 / 0) 72%);
+  pointer-events: none;
+}
+
+[data-dark] > .wsp-stage .wsp-light {
+  background: radial-gradient(90% 62% at 50% 40%, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 72%);
+}
+
+.wsp-word {
+  position: absolute;
+  top: calc(var(--status) + var(--bar) + 6px);
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 132px;
+  font-weight: 800;
+  line-height: 0.86;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+[data-dark] > .wsp-stage .wsp-word {
+  opacity: 0.13;
+  mix-blend-mode: screen;
+}
+
+.wsp-ring {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  width: min(calc(var(--chair) * 0.82), 88cqw);
+  height: calc(var(--chair) * 0.15);
+  border: 1.5px dashed currentColor;
+  border-radius: 50%;
+  opacity: 0.34;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* The chair's place: the drawing, and over it the 3D chair once it has been drawn. A finger across it turns it */
+.wsp-table {
+  position: absolute;
+  right: 0;
+  bottom: 52px;
+  left: 0;
+  height: var(--chair);
+  outline: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.wsp-table:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -10px;
+  border-radius: 20px;
+}
+
+.wsp-table .wsp-still {
+  position: absolute;
+  bottom: 2.5%;
+  left: 50%;
+  width: auto;
+  height: 94%;
+  transform: translateX(-50%);
+  transition: opacity 0.3s ease;
+}
+
+.wsp-table canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.wsp-table[data-3d] canvas {
+  opacity: 1;
+}
+
+.wsp-table[data-3d] .wsp-still {
+  opacity: 0;
+}
+
+.wsp-turn {
+  position: absolute;
+  /* (in the bar's middle, where a screen's name would be: the color's name is on the stage itself) */
+  top: calc(var(--status) + var(--bar-top, 0px) + (var(--bar) - 28px) / 2);
+  left: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.26);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+[data-dark] > .wsp-stage .wsp-turn {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.wsp-stage[data-shot] :is(.wsp-table, .wsp-ring, .wsp-turn, .wsp-word, .wsp-light) {
+  visibility: hidden;
+}
+
+/* A photograph on the stage covers it: one wide enough is cut to it, two tall ones share it side by side, and
+   a tall one alone is set whole on a blur of itself. One pushes the last off, the way a carousel is pushed */
+.wsp-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background: #0c0c0d;
+  touch-action: pan-y;
+}
+
+.wsp-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-user-drag: none;
+}
+
+.wsp-photo__back {
+  object-fit: cover;
+  filter: blur(30px) brightness(0.6);
+  transform: scale(1.2);
+}
+
+.wsp-photo__pic {
+  object-fit: cover;
+}
+
+/* (a photograph that is not the stage's shape is shown whole, between the bar and the row of pictures, on
+   a blur of itself: a wide one cut to a tall stage would be a strip of what Shrug chose) */
+.wsp-photo:not([data-fit='pair']) .wsp-photo__pic {
+  top: calc(var(--status) + var(--bar));
+  height: calc(100% - var(--status) - var(--bar) - 58px);
+  object-fit: contain;
+}
+
+.wsp-photo[data-fit='pair'] .wsp-photo__pic {
+  width: calc(50% - 1px);
+}
+
+.wsp-photo[data-fit='pair'] .wsp-photo__pic + .wsp-photo__pic {
+  left: auto;
+}
+
+.wsp-photo__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgb(0 0 0 / 0.42), rgb(0 0 0 / 0) 96px), linear-gradient(to top, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0) 86px);
+  pointer-events: none;
+}
+
+.wsp-photo[data-enter='1'] {
+  animation: wsp-on 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wsp-photo[data-enter='-1'] {
+  animation: wsp-on-back 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wsp-photo[data-leave='1'] {
+  animation: wsp-off 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wsp-photo[data-leave='-1'] {
+  animation: wsp-off-back 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes wsp-on {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes wsp-on-back {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes wsp-off {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes wsp-off-back {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* The chair's pictures, in a row along the foot of the stage: the 3D chair first, then its photographs */
+.wsp-shots {
+  position: absolute;
+  right: 0;
+  bottom: 6px;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.wsp-shot {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 13px;
+  background: rgb(255 255 255 / 0.3);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+  color: inherit;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+[data-dark] > .wsp-stage .wsp-shot {
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+}
+
+.wsp-stage[data-shot] .wsp-shot {
+  background: rgb(0 0 0 / 0.4);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.22);
+  color: #fff;
+}
+
+.wsp-shot svg {
+  margin-bottom: -5px;
+}
+
+.wsp-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wsp-shot[data-pair] {
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+}
+
+.wsp-shot[aria-pressed='true'] {
+  outline: 2.5px solid currentColor;
+  outline-offset: 2px;
+}
+
+.wsp-stage[data-shot] .wsp-shot[aria-pressed='true'] {
+  outline-color: #fff;
+}
+
+/* (the picture that comes next by itself: a line along its foot fills while the one on the stage is looked at) */
+.wsp-shot[data-next]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #fff;
+  transform-origin: left;
+  animation: wsp-next var(--hold, 5s) linear both;
+}
+
+@keyframes wsp-next {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* The foot: what the color is, the colors to change it by, who owns one, and the price with its button */
+.wsp-foot {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 18px calc(var(--home) + 10px);
+}
+
+.wsp-info h3 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.wsp-info p {
+  margin: 7px 0 0;
+  font-size: 14px;
+  line-height: 1.3;
+  opacity: 0.82;
+}
+
+.wsp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.wsp-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.3);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+[data-dark] .wsp-tag {
+  background: rgb(255 255 255 / 0.14);
+}
+
+/* (a row to slide along: it runs to the screen's edges, and what is picked is brought into sight) */
+.wsp-dots {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 -18px;
+  overflow-x: auto;
+  padding: 7px 18px 9px;
+  scrollbar-width: none;
+}
+
+.wsp-dots::-webkit-scrollbar {
+  display: none;
+}
+
+.wsp-dot {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.16), 0 2px 5px rgb(0 0 0 / 0.2);
+  transition: transform 0.2s ease;
+}
+
+.wsp-dot.on {
+  transform: scale(1.12);
+  outline: 2.5px solid currentColor;
+  outline-offset: 2.5px;
+}
+
+.wsp-dot--more {
+  background: conic-gradient(#f4640a, #f6c915, #3bbf6b, #2f7ee8, #8a4be0, #d42a22, #f4640a);
+}
+
+.wsp-owners {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: -4px 0 0;
+  color: inherit;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  text-align: left;
+  opacity: 0.86;
+}
+
+.wsp-owners > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.wsp-owners b {
+  font-weight: 700;
+}
+
+.wsp-owners::after {
+  content: '›';
+  flex: none;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.wsp-buy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.wsp-price {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.wsp-btn {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  padding: 0 28px;
+  border-radius: 999px;
+  background: #141414;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px -6px rgb(0 0 0 / 0.45);
+  transition: transform 0.16s ease;
+}
+
+.wsp-price + .wsp-btn {
+  flex: none;
+  min-width: 46%;
+}
+
+[data-dark] .wsp-btn {
+  background: #fff;
+  color: #141414;
+}
+
+.wsp-btn:not([aria-disabled='true']):active {
+  transform: scale(0.97);
+}
+
+.wsp-btn[aria-disabled='true'] {
+  opacity: 0.7;
+}
+
+/* ---- Notable Owners: cards of words, each in its owner's color */
+
+.wsp-owners-page > .ios-screen__scroll {
+  background: var(--page);
+  color: var(--ws-ink);
+}
+
+.wsp-cards {
+  display: grid;
+  gap: 10px;
+  padding: 8px 14px 0;
+}
+
+.wsp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 20px 20px 18px;
+  border-radius: 24px;
+}
+
+.wsp-card q {
+  quotes: none;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.03em;
+}
+
+.wsp-card footer {
+  font-size: 13.5px;
+  line-height: 1.3;
+  opacity: 0.86;
+}
+
+.wsp-card footer b {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 1;
+}
+
+/* ---- BTS: a wall of pictures, each with a line under it */
+
+.wsp-wall {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 10px;
+  margin: 0;
+  padding: 8px 14px 0;
+  list-style: none;
+}
+
+.wsp-tile.wide {
+  grid-column: 1 / -1;
+}
+
+.wsp-tile button {
+  display: block;
+  width: 100%;
+  color: inherit;
+  text-align: left;
+}
+
+.wsp-tile__pic {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #1c1c1e;
+}
+
+.wsp-tile.wide .wsp-tile__pic {
+  aspect-ratio: 16 / 10;
+}
+
+.wsp-tile.tall .wsp-tile__pic {
+  aspect-ratio: 3 / 4;
+}
+
+.wsp-tile__pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wsp-tile__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.5);
+  color: #fff;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.wsp-tile__says {
+  display: block;
+  margin: 7px 3px 0;
+  color: var(--label-2);
+  font-size: 13.5px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+/* One of the wall, large: over the whole screen */
+.wsp-look {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--status) + 58px) 0 calc(var(--home) + 20px);
+  background: rgb(0 0 0 / 0.94);
+  animation: ios-fade-in 0.2s ease;
+}
+
+.wsp-look figure {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  width: 100%;
+  max-height: 100%;
+  margin: 0;
+}
+
+.wsp-look :is(img, video) {
+  display: block;
+  max-width: 100%;
+  max-height: 68cqh;
+  object-fit: contain;
+}
+
+.wsp-look__none {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: 20px;
+  color: rgb(255 255 255 / 0.7);
+  font-size: 15px;
+  text-align: center;
+}
+
+.wsp-look figcaption {
+  padding: 0 20px;
+  color: rgb(255 255 255 / 0.8);
+  font-size: 15px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.wsp-look__x {
+  position: absolute;
+  top: calc(var(--status) + 8px);
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.16);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsp-photo[data-enter],
+  .wsp-photo[data-leave],
+  .wsp-shot[data-next]::after {
+    animation: none;
+  }
+
+  .wsp-st,
+  .wsp-dot,
+  .wsp-slab,
+  .wsp-table canvas,
+  .wsp-table .wsp-still {
+    transition: none;
+  }
+}
+
+/* A short screen (a small iPhone, with a browser's bars about it): the chair keeps what room there is. The
+   line of who owns one goes (Notable Owners is a press from the colors), and the foot is set closer */
+@container (max-height: 620px) {
+  .wsp-foot {
+    gap: 9px;
+    padding-top: 9px;
+  }
+
+  .wsp-info h3 {
+    font-size: 24px;
+  }
+
+  .wsp-tags {
+    margin-top: 6px;
+  }
+
+  .wsp-owners {
+    display: none;
+  }
+
+  .wsp-dots {
+    padding-top: 5px;
+    padding-bottom: 6px;
+  }
+
+  .wsp-btn {
+    height: 48px;
+  }
+
+  .wsp-head {
+    margin-bottom: 12px;
+  }
+}
+
+/* A phone on its side: the stage beside the foot, and the colors four to a row */
+@container (min-aspect-ratio: 5 / 4) and (max-height: 520px) {
+  .wsp-st {
+    flex-direction: row;
+  }
+
+  .wsp-stage {
+    flex: 1.15;
+    --chair: calc(100cqh - var(--status) - 62px);
+  }
+
+  .wsp-foot {
+    flex: 1;
+    align-content: center;
+    gap: 9px;
+    min-width: 0;
+    overflow-y: auto;
+    padding: calc(var(--status) + var(--bar)) 22px calc(var(--home) + 8px) 6px;
+  }
+
+  .wsp-info h3 {
+    font-size: 24px;
+  }
+
+  .wsp-owners {
+    display: none;
+  }
+
+  .wsp-btn {
+    height: 46px;
+  }
+
+  .wsp-dots {
+    margin: 0 -22px 0 -6px;
+    padding-right: 22px;
+    padding-left: 6px;
+  }
+
+  .wsp-slabs {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .wsp-head {
+    max-width: none;
+    font-size: 40px;
+  }
+
+  .wsp-more__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .wsp-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wsp-wall {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .wsp-tile.wide {
+    grid-column: span 2;
+  }
+}

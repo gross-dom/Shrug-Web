@@ -676,6 +676,12 @@ html[data-tint='light'] .up {
   --line: rgba(0, 0, 0, 0.16);
 }
 
+/* A sheet over the page (a phone's checkout) is the color itself, a shade off: what stands on the page is
+   see-through, and a sheet of that would let the page under it be read through its own words */
+html[data-tint] .up-sheet {
+  background: linear-gradient(var(--surface), var(--surface)), var(--tint);
+}
+
 /* The one thing to press: dark on a light color, light on a dark one */
 html[data-tint='light'] .ui-btn {
   background: #141414;

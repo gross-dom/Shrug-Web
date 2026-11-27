@@ -23,13 +23,13 @@ import '../styles/desk/preview.css'
 // (That line is the page's, here: it is not stamped into the file.)
 
 /** A page as the window draws it: its size at 96 to the inch, and itself at any scale. */
-interface Leaf {
+export interface Leaf {
   w: number
   h: number
   draw: (scale: number, seen: Element | null) => ReactNode
 }
 
-type Shown = { is: 'loading' } | { is: 'pages'; leaves: Leaf[] } | { is: 'missing' | 'offline' | 'not-yours' | 'anon' }
+export type Shown = { is: 'loading' } | { is: 'pages'; leaves: Leaf[] } | { is: 'missing' | 'offline' | 'not-yours' | 'anon' }
 
 /** A PDF's point is a 72nd of an inch, and the pages here are measured at 96 to the inch. */
 const PER_POINT = 96 / 72
@@ -40,7 +40,7 @@ const MOST = 4
 const STEP = 1.25
 
 /** The one-pager, as a paper: anyone's to read and to save. */
-const onePager: Paper = {
+export const onePager: Paper = {
   id: ONE_PAGER,
   name: PAGE.file,
   preparedFor: null,
@@ -112,7 +112,7 @@ function PdfPage({ pdf, n, w, h, scale, seen }: { pdf: Pdf; n: number; w: number
 }
 
 /** What a paper's pages are, once they can be drawn. A PDF is fetched and opened here. */
-function useShown(paper: Paper | null, again: number): Shown {
+export function useShown(paper: Paper | null, again: number): Shown {
   const [shown, setShown] = useState<Shown>({ is: 'loading' })
   useEffect(() => {
     if (!paper) return setShown({ is: 'loading' })

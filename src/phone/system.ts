@@ -15,12 +15,15 @@ import { ZOOM } from './Zoom'
 // back. Moves made here are drawn with motion; moves the browser makes are
 // drawn at once, because the browser has already slid the page across itself.
 
-/** The apps on the phone are the desktop's windows, each redrawn as its iPhone counterpart. All but
- * one: About Shrug is a window of the desktop's own (a Mac has one; an iPhone has no such app), and
- * the phone has nothing in its place. */
-export type PhoneApp = Exclude<AppId, 'about' | 'wallpapers' | 'updates' | 'store' | 'preview' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'workspace' | 'books' | 'myvip' | 'weather'>
+/** The apps on the phone are the desktop's windows, each redrawn as its iPhone counterpart. Not all of
+ * them yet: About Shrug is a window of the desktop's own (a Mac has one; an iPhone has no such app), and
+ * the phone has nothing in its place; and Mail, the players, Photo Booth, Weather and Wallpapers are still
+ * the desktop's alone. The three stores, My VIP, the one-pager (Preview there: the app is the document
+ * here) and Updates are apps here as they are windows there (Dom, 27 Nov: the stores and the one-pager were
+ * links that opened in a tab of their own). */
+export type PhoneApp = Exclude<AppId, 'about' | 'wallpapers' | 'mail' | 'quicktime' | 'photobooth' | 'spotify' | 'youtube' | 'weather'>
 
-export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal']
+export const PHONE_APPS: PhoneApp[] = ['messages', 'finder', 'notes', 'terminal', 'workspace', 'store', 'books', 'myvip', 'preview', 'updates']
 
 /** Whether an app of the site's is one the phone has. */
 export const onPhone = (app: AppId | null | undefined): app is PhoneApp => (PHONE_APPS as unknown[]).includes(app)
@@ -60,7 +63,7 @@ export interface Sys extends Place {
 /** Where each app is when it is first opened. An iPhone's apps come back to
  * where they were last used: Notes inside FAQs, a step in from its first
  * screen, with the way back out showing. Contacts opens on its list. */
-const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [FAQS_FOLDER], terminal: [] })
+const noStacks = (): Record<PhoneApp, string[]> => ({ messages: [], finder: [], notes: [FAQS_FOLDER], terminal: [], workspace: [], store: [], books: [], myvip: [], preview: [], updates: [] })
 
 export const sys = createStore<Sys>({ app: null, stacks: noStacks(), sheet: null, locked: true, recents: [], switcher: false, spotlight: false, motion: false, prev: null, origin: null })
 

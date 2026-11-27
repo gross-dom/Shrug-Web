@@ -84,9 +84,9 @@ exports.DESK = [
   ['youtube', 'YouTube, desktop icon'],
 ]
 
-/** The three stores as a phone has them (`SITE.stores` in src/data/site.ts): the store's own pages for each,
- * on the site itself, by the name of the desktop's window for it. A phone opens them in a tab of their own.
- * (VIP, a link to the old points site, was where they are: Dom took it out on 26 Nov.) */
+/** Where the store's own pages for each of the three stores are, on the site itself, by the name of the
+ * desktop's window for it (`SITE.stores` in src/data/site.ts). A phone had them as links to these until
+ * 27 Nov; they are apps there now, and these are what the frame in each holds. */
 exports.STORES = { workspace: 'vip/store/?k=chairs', store: 'vip/store/?k=art', books: 'vip/store/?k=books' }
 /** One of them, as an address on the site at `base`. */
 exports.storeAt = (base, which) => new URL(exports.STORES[which], base).href
@@ -294,6 +294,17 @@ exports.PHONE_SCREENS = [
   ['notes-newfolder', 'notes', [], 'new-folder'],
   ['notes-own', 'notes', ['f:notes']],
   ['terminal', 'terminal', []],
+  // (the stores, My VIP, the one-pager and Updates, which are apps of the phone's own since 27 Nov)
+  ['workspace', 'workspace', []],
+  ['workspace-studio', 'workspace', ['studio']],
+  ['workspace-owners', 'workspace', ['owners']],
+  ['workspace-bts', 'workspace', ['bts']],
+  ['artstore', 'store', []],
+  ['books', 'books', []],
+  ['books-reader', 'books', ['r:frequently asked']],
+  ['myvip', 'myvip', []],
+  ['one-pager', 'preview', []],
+  ['updates', 'updates', []],
 ]
 
 /** A picture, saved under audit/shots. Returns its path. */

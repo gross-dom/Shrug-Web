@@ -93,7 +93,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     await top.locator('.contacts-me').tap(); await sleep(1100)
     s = await st()
     const mine = await top.evaluate((el) => ({ name: el.querySelector('.contact-head__name')?.textContent, fields: [...el.querySelectorAll('.contact-field')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), acts: [...el.querySelectorAll('.contact-act')].map((a) => a.textContent.trim()) }))
-    say(s.stacks.finder.join() === 'me' && mine.name === 'Shrug Capital' && mine.fields.some((f) => /^started: 2017$/.test(f)) && mine.fields.some((f) => /^partners: /.test(f)) && mine.fields.some((f) => /^portfolio: 79 companies in 13 verticals$/.test(f)) && mine.acts.join() === 'One-pager, opens in a new tab,Share', "My Card is Shrug's: who it is, as About Shrug says it on the desktop, and the one-pager", mine.fields.map((f) => f.slice(0, 26)).join(' | '))
+    say(s.stacks.finder.join() === 'me' && mine.name === 'Shrug Capital' && mine.fields.some((f) => /^started: 2017$/.test(f)) && mine.fields.some((f) => /^partners: /.test(f)) && mine.fields.some((f) => /^portfolio: 79 companies in 13 verticals$/.test(f)) && mine.acts.join() === 'One-pager,Share', "My Card is Shrug's: who it is, as About Shrug says it on the desktop, and the one-pager (the phone's own app: nothing opens a tab)", mine.fields.map((f) => f.slice(0, 26)).join(' | '))
     await top.locator('button[aria-label="Back"]').first().tap(); await sleep(900)
     // Search, at the foot of the list (the list is part-way down it when the search begins)
     const scrolledTo = (y) => top.locator('[data-scroller]').evaluate((el, y) => { if (y !== null) el.scrollTop = y; return Math.round(el.scrollTop) }, y)
@@ -169,7 +169,8 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
     await ctx.close()
   })
 
-  // ---- VIP: not an app, and no longer a link either (the three stores are links: phone-flow.cjs). Nothing opens an app of that name ----
+  // ---- VIP: My VIP is an app of the phone's now (27 Nov), and an address that names it arrives in it. The old
+  // VIP app's other name (`photos`) still names nothing ----
   await run('vip', async () => {
     const fresh = async (tail) => {
       const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, isMobile: true })
@@ -180,12 +181,19 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
       return { ctx, page, sleep: (ms) => page.waitForTimeout(ms) }
     }
     const where = (page) => page.evaluate(() => ({ locked: !!document.querySelector('.sb-lock:not([data-leaving])'), app: history.state?.shrug?.app ?? null, front: document.querySelector('.sb-slot[data-front]')?.getAttribute('data-app') ?? null, slots: [...document.querySelectorAll('.sb-slot')].map((el) => el.dataset.app).join(), address: location.search + location.hash }))
-    // An address that asks for it (an old link: VIP was an app once, and `photos` was its other name) asks for
-    // nothing the phone has: the visit begins as any visit does, on the Lock Screen, and the word is not kept
-    for (const tail of ['?open=vip', '?open=photos', '?OPEN=VIP&at=billboards', '#vip']) {
+    // An address that asks for My VIP arrives in it, the phone open, and is written the one way
+    for (const tail of ['?open=vip', '?OPEN=VIP&at=billboards', '#vip']) {
       const { ctx, page } = await fresh(tail)
       const at = await where(page)
-      say(at.locked && at.app === null && at.front === null && at.slots === '', `${tail} opens no app: the phone is on its Lock Screen, as on any visit`, JSON.stringify(at))
+      say(!at.locked && at.app === 'myvip' && at.front === 'myvip' && at.slots === 'myvip' && at.address === '?open=vip', `${tail} opens My VIP, the phone’s own app, and the address says only that`, JSON.stringify(at))
+      await ctx.close()
+    }
+    // The old app's other name (an old link) asks for nothing the phone has: the visit begins as any visit
+    // does, on the Lock Screen
+    {
+      const { ctx, page } = await fresh('?open=photos')
+      const at = await where(page)
+      say(at.locked && at.app === null && at.front === null && at.slots === '', '?open=photos opens no app: the phone is on its Lock Screen, as on any visit', JSON.stringify(at))
       await ctx.close()
     }
     // Named with an app the phone has, that app is what opens
@@ -196,7 +204,7 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
       await ctx.close()
     }
     {
-      const { ctx, page, sleep } = await fresh('?open=vip')
+      const { ctx, page, sleep } = await fresh('?open=photos')
       await page.keyboard.press('Enter'); await sleep(1100)
       let at = await where(page)
       say(!at.locked && at.app === null && at.address === '', 'opened, it is the Home Screen, and the address has let go of the word', JSON.stringify(at))
@@ -204,11 +212,12 @@ const out = path.join(__dirname, '..', 'audit', 'shots')
       await page.evaluate(() => { const state = { shrug: { app: 'photos', stacks: { photos: ['m:0'] }, sheet: null }, n: (history.state?.n ?? 0) + 1 }; history.pushState(state, ''); window.dispatchEvent(new PopStateEvent('popstate', { state })) })
       await sleep(900)
       at = await page.evaluate(() => ({ front: document.querySelector('.sb-slot[data-front]')?.getAttribute('data-app') ?? null, slots: document.querySelectorAll('.sb-slot').length, home: !!document.querySelector('.sb-home:not([inert])'), title: document.title }))
-      say(at.front === null && at.slots === 0 && at.home && at.title === 'Shrug', 'a step in history that names a VIP app is the Home Screen: there is no such app to show', JSON.stringify(at))
-      // The App Switcher has nothing of it, and search offers the apps without it
+      say(at.front === null && at.slots === 0 && at.home && at.title === 'Shrug', 'a step in history that names the old VIP app is the Home Screen: there is no such app to show', JSON.stringify(at))
+      // The App Switcher has nothing of it, and search offers every app the phone has: the Dock's, the Home
+      // Screen's, and the two that have no icon there (My VIP and Updates)
       await page.locator('.sb-search').tap(); await sleep(800)
       const offered = await page.locator('.ph .spot-apps .spot-app__name').allTextContents()
-      say(offered.join(' | ') === 'Messages | Contacts | Notes | Case Studies', 'search suggests the four apps, and VIP is not among them', offered.join(' | '))
+      say(offered.join(' | ') === 'Messages | Contacts | Notes | Workspace | Case Studies | One-pager | ArtStore | Books | My VIP | Updates', 'search suggests the ten apps, My VIP and Updates among them', offered.join(' | '))
       await ctx.close()
     }
   })

@@ -13,7 +13,7 @@ import '../styles/desk/v1.css'
 import '../styles/desk/updates.css'
 
 /** What the folder says to anyone it is not for. */
-const LOCKED = 'This folder is for Shrug LPs only. Please log in with your LP email to access its contents.'
+export const LOCKED = 'This folder is for Shrug LPs only. Please log in with your LP email to access its contents.'
 
 // The Updates folder on the desk, opened (design/v1, "Updates"): a Finder's list of the documents that are
 // this LP's to read, under Funds and SPVs, each row naming the fund it was written for. Which those are is
@@ -24,7 +24,7 @@ const LOCKED = 'This folder is for Shrug LPs only. Please log in with your LP em
 // of the files: someone logged in who is not an LP is told who it is for.
 
 /** The day a document is dated: Nov 14, 2026, as the desk writes its days. One still to come says when in words. */
-function dayOf(date: string) {
+export function dayOf(date: string) {
   const t = Date.parse(date)
   if (!date || Number.isNaN(t)) return date
   const parts = (day ??= formatter({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })).formatToParts(t)
@@ -34,7 +34,7 @@ function dayOf(date: string) {
 let day: Intl.DateTimeFormat | undefined
 
 /** "LP · Shrug 1, 2, 4": the funds someone is in, said once where they share a name. */
-function fundsOf(funds: string[]) {
+export function fundsOf(funds: string[]) {
   const shared = funds.length > 1 && funds.every((fund) => /^Shrug \S+$/.test(fund))
   return shared ? `Shrug ${funds.map((fund) => fund.replace(/^Shrug /, '')).join(', ')}` : funds.join(', ')
 }

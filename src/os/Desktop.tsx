@@ -121,9 +121,8 @@ export function Desktop() {
     // an app arrives in it (the last one named) with the phone already unlocked: no Lock Screen first,
     // and for the chat, the conversation itself
     const resumed = startSystem()
-    // (VIP Store and Preview are windows of the desktop's alone. On a phone VIP and the one-pager are links
-    // out, and an address that names either names nothing here: the visit begins as any does, and beside other
-    // names the others open)
+    // (some windows are the desktop's alone, and an address that names one names nothing on a phone: the
+    // visit begins as any does, and beside other names the others open)
     const wanted = wm.get().compact ? extra.filter((id) => !DESK_ONLY.includes(id)).pop() : named
     if (wm.get().compact && !resumed && wanted) {
       if (onPhone(wanted)) {

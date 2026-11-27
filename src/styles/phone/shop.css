@@ -1,0 +1,34 @@
+/* The stores and My VIP on the phone (src/phone/apps/Shop.tsx): the store's own pages in a frame, under the
+   phone's bar. The pages are black, so the screen is: the frame fills what is under the bar, to the foot. */
+.shop-ios > .ios-screen__body {
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(var(--status) + var(--bar));
+  background: #0c0c0d;
+}
+
+.shop-ios .storewin__frame {
+  display: block;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #0c0c0d;
+}
+
+/* In the bar's end: the balance (which opens My VIP), or Log In; in My VIP's, their own picture */
+.shop-ios__points,
+.shop-ios__login {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.shop-ios__me {
+  padding: 0;
+}

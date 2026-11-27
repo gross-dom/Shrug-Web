@@ -17,6 +17,7 @@ import { haptic, share } from '../native'
 import { goHome, push, sys, topOf } from '../system'
 import { BackButton, Empty, GlassButton, List, NavStack, Screen, SearchBar, Section, ShareGlyph, usePageHeadingId } from '../ui'
 import { companyOf, companyView, MY_CARD } from './routes'
+import { openOnePager } from '../../os/papers'
 import '../../styles/phone/contacts.css'
 
 // The portfolio as the Contacts app. The desktop's window is a Finder; on an
@@ -710,7 +711,7 @@ function MyCard() {
         name={SITE.legalName}
       />
       <div className="contact-acts">
-        <Act label="One-pager" icon={<PageGlyph />} href={SITE.onePager} />
+        <Act label="One-pager" icon={<PageGlyph />} onClick={openOnePager} />
         <Act label="Share" icon={<PassOnGlyph />} onClick={send} />
       </div>
       <span className="sr-only" role="status">
@@ -739,7 +740,7 @@ function MyCard() {
                 {way.label}
               </Field>
             )}
-            <Field label="one-pager" href={SITE.onePager} sign={<PageGlyph size={20} />}>
+            <Field label="one-pager" onPress={openOnePager} sign={<PageGlyph size={20} />}>
               Read the one-pager
             </Field>
           </dl>

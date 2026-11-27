@@ -259,11 +259,12 @@ const check = (name, ok, detail = '') => {
   check('a file that is gone: Preview says it can’t be found, that nothing is wrong on their side, and offers Try Again', b.sub === 'Not found' && b.noDownload && missing.head === 'This file can’t be found' && missing.says === 'It may have been moved or replaced. Nothing is wrong on your side.' && missing.button === 'Try Again', JSON.stringify({ b, missing }))
   await t.ctx.close()
 
-  // ---- a phone has no Preview: the one-pager is the link it was, and an address that names it names nothing
+  // ---- a phone has no Preview window: the one-pager is an app of its own there (27 Nov), which an address
+  // that names it arrives in, with the same two pages
   t = await A.open(browser, { device: 'iphone', base: BASE, query: 'still&open=one-pager' })
-  await t.page.waitForTimeout(2200)
-  const phone = await t.page.evaluate(() => ({ locked: !!document.querySelector('.sb-lock:not([data-leaving])'), preview: document.querySelectorAll('.pv, .wf').length }))
-  check('a phone asked for the one-pager by an address begins as any visit does: there is no Preview on it', phone.locked && phone.preview === 0, JSON.stringify(phone))
+  await t.page.waitForTimeout(2600)
+  const phone = await t.page.evaluate(() => ({ locked: !!document.querySelector('.sb-lock:not([data-leaving])'), app: history.state?.shrug?.app ?? null, windows: document.querySelectorAll('.pv, .wf').length, pages: document.querySelectorAll('.sb-slot[data-front][data-app="preview"] .pp-page').length, headline: document.querySelector('.sb-slot[data-front][data-app="preview"] .op h1')?.textContent ?? null }))
+  check('a phone asked for the one-pager by an address arrives in it, the phone’s own app: its two pages, and no window of the desk’s', !phone.locked && phone.app === 'preview' && phone.windows === 0 && phone.pages === 2 && !!phone.headline, JSON.stringify(phone))
   await t.ctx.close()
 
   await browser.close()

@@ -346,7 +346,7 @@ const touchOf = (t) => ({
     say(/Not Delivered/.test(why) && /Nothing has left your phone/.test(why), 'and its mark says why', why.replace(/\n/g, ' | '))
     const acts = await p.locator('.msg-alert__act').evaluateAll((els) => els.map((el) => ({ tag: el.tagName, says: el.textContent, href: el.getAttribute('href'), target: el.getAttribute('target') })))
     const held = await p.evaluate(() => document.activeElement?.textContent)
-    say(acts.length === 2 && acts[0].tag === 'A' && acts[0].says === 'Read the One-pager, opens in a new tab' && /docsend\.com/.test(acts[0].href || '') && acts[0].target === '_blank' && acts[1].says === 'OK' && held === 'OK', 'with something to do about it: the one-pager, in a tab of its own, over the OK that has the keyboard', JSON.stringify({ acts, held }))
+    say(acts.length === 2 && acts[0].tag === 'BUTTON' && acts[0].says === 'Read the One-pager' && acts[0].href === null && acts[1].says === 'OK' && held === 'OK', 'with something to do about it: the one-pager, which is an app of the phone’s (no tab of its own), over the OK that has the keyboard', JSON.stringify({ acts, held }))
     await p.locator('.msg-alert__act').last().tap(); await p.waitForTimeout(600)
     await p.locator(`${TOP} .ios-bar button[aria-label^="Back"]`).tap(); await p.waitForTimeout(900)
     row = await p.evaluate((TOP) => document.querySelector(`${TOP} .msg-rows > :first-child`)?.textContent ?? '', TOP)

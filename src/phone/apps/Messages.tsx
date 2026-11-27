@@ -25,6 +25,7 @@ import { BackButton, Cell, ComposeGlyph, Empty, GlassButton, List, NavStack, sca
 // asked of the other only once both are there, when something is drawn)
 import { LIMITS, outbox, pick, resend, sendToShrug, setDraft, sizeOf, unpick, type Sent } from './outbox'
 import { conversationView, GROUP_VIEW, NEW_MESSAGE } from './routes'
+import { openOnePager } from '../../os/papers'
 import '../../styles/phone/messages.css'
 
 // Messages, as the iPhone has it. It is Shrug's own phone, as the desktop is
@@ -723,7 +724,7 @@ function Undelivered() {
       title="Not Delivered"
       message={closed ? `${SITE.name} can’t take messages here yet, so this was not sent. Nothing has left your phone.` : 'This message could not be sent. Check your connection and try again.'}
       // With nowhere to send it yet there is still something to do: the one-pager, over the button that closes this
-      actions={closed ? [{ label: 'Read the One-pager', href: SITE.onePager, newTab: true }, { label: 'OK', bold: true }] : [{ label: 'Try Again', onSelect: () => message && resend(message.id) }, { label: 'Cancel', bold: true }]}
+      actions={closed ? [{ label: 'Read the One-pager', onSelect: openOnePager }, { label: 'OK', bold: true }] : [{ label: 'Try Again', onSelect: () => message && resend(message.id) }, { label: 'Cancel', bold: true }]}
     />
   )
 }

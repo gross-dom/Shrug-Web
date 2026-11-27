@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type RefObject } from 'react'
-import { ArrowUpRight, Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, Copy, Ellipsis, Folder, FolderPlus, LayoutGrid, List as ListIcon, Minus, Paperclip, Search, Share, Trash2, X } from 'lucide-react'
 import { showNote, sought } from '../../apps/state'
 import { Answer } from '../../apps/answer'
 import { ANSWER_PENDING, ANSWER_PLACEHOLDER, FAQS, waysOn } from '../../data/faqs'
 import { DRAFT, SITE } from '../../data/site'
 import { useStore } from '../../os/store'
+import { openOnePager } from '../../os/papers'
 import '../../styles/phone/notes.css'
 import { pageUrl, share } from '../native'
 import { closeSheet, goHome, launchAt, openSheet, pop, push, sys, topOf } from '../system'
@@ -779,17 +780,18 @@ function FaqNote({ index }: { index: number }) {
           <>
             <p className="notes-note__body">{ANSWER_PENDING}</p>
             <p className="notes-ways">
-              {waysOn(faq.question).map((way) => (
-                <a key={way.label} className="notes-way" href={way.href} {...(way.leaves ? { target: '_blank', rel: 'noreferrer' } : null)}>
-                  {way.label}
-                  {way.leaves && (
-                    <>
-                      <ArrowUpRight size={18} strokeWidth={2.6} aria-hidden />
-                      <span className="sr-only">, opens in a new tab</span>
-                    </>
-                  )}
-                </a>
-              ))}
+              {waysOn(faq.question).map((way) =>
+                // The one-pager is an app here: nothing leaves for a tab of its own
+                way.leaves ? (
+                  <button key={way.label} type="button" className="notes-way" onClick={openOnePager}>
+                    {way.label}
+                  </button>
+                ) : (
+                  <a key={way.label} className="notes-way" href={way.href}>
+                    {way.label}
+                  </a>
+                ),
+              )}
             </p>
           </>
         )}

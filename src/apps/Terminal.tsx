@@ -330,13 +330,7 @@ function respond(value: string, step: Term['step']): { lines: Line[]; step?: Ter
       const study = publicNamed(arg)
       if (study) return { lines: [out(`${study.dir} is public:`), { kind: 'link', text: study.dir, href: study.url }] }
       if (name === 'one-pager' || name === 'onepager') return { lines: [{ kind: 'link', text: 'read the one-pager', href: SITE.onePager }] }
-      // On the desktop the stores are windows, and open as any app does. A phone has no such apps yet: there
-      // each is the store's own page for it, handed over as the one-pager is, a line to press that opens in a
-      // tab of its own. (VIP, which was a link to the old points site, is all three of them now.)
-      if (wm.get().compact) {
-        const shops = name === 'vip' || OPENS[name] === 'myvip' ? SITE.stores : SITE.stores.filter((shop) => shop.app === OPENS[name])
-        if (shops.length) return { lines: [out(shops.length > 1 ? 'the stores open in a tab of their own:' : `${shops[0]!.name.toLowerCase()} opens in a tab of its own:`), ...shops.map((shop): Line => ({ kind: 'link', text: `open ${shop.name.toLowerCase()}`, href: shop.href }))] }
-      }
+      // (the stores and My VIP are windows on the desktop and apps on the phone: they open as any app does)
       const app = OPENS[name]
       if (app === 'terminal') return { lines: [out('you’re in it.')] }
       // The wallpapers are the desktop's: a phone has one of its own, and no folder of them
@@ -513,9 +507,8 @@ const CLASS: Record<Exclude<Line['kind'], 'cmd' | 'link' | 'go'>, string | undef
 /** A line that goes somewhere: a case study, the one-pager, the visitor's own mail. */
 function LinkLine({ text, href }: { text: string; href: string }) {
   const page = /^https?:/.test(href)
-  const compact = useStore(wm, (s) => s.compact)
-  // On the desktop the one-pager is a file, and opens in Preview: nothing leaves for a tab of its own
-  if (href === SITE.onePager && !compact)
+  // The one-pager is a file here, and opens in Preview (on a phone, in its own app): nothing leaves for a tab of its own
+  if (href === SITE.onePager)
     return (
       <div className="term__go">
         <button type="button" className="term__link" onClick={openOnePager}>

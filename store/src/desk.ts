@@ -24,6 +24,9 @@ export interface Desk {
   at(place: { section: 'store' | 'yours'; product: string | null }, room: Room): void
   /** Opens another of the desk's windows: My VIP from a receipt in a store, a store from My VIP. */
   open(room: Room): void
+  /** The desk is a phone's: these pages are in one of the phone's apps, under its bar, and what the desk's
+   * window draws around them (My VIP's doors to the stores) is theirs to draw. */
+  readonly phone?: boolean
 }
 
 /** What the store leaves for the desk to ask of it. */

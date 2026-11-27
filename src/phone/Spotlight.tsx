@@ -10,10 +10,10 @@ import { PEOPLE } from '../data/people'
 import { VERTICALS } from '../data/portfolio'
 import { ABOUT, reach, SITE } from '../data/site'
 import { APPS } from '../os/apps'
-import { AppIcon, LogoDisc } from '../os/icons'
+import { LogoDisc } from '../os/icons'
 import { useStore } from '../os/store'
-import { OnePagerIcon, PhoneIcon } from './icons'
-import { DOCKED, ON_HOME, PHONE } from './apps'
+import { PhoneIcon } from './icons'
+import { OFF_HOME, DOCKED, ON_HOME, PHONE } from './apps'
 import { contactsFor, conversationView, FAQS_FOLDER, GROUP_VIEW, MY_CARD, noteView } from './apps/routes'
 import { launch, launchAt, showSpotlight, sys, type PhoneApp } from './system'
 import '../styles/phone/spotlight.css'
@@ -128,11 +128,11 @@ const glyph = (icon: ReactNode) => (size: number) => (
 )
 
 /** The apps, in the order the Home Screen has them: the Dock's, then the rest. */
-const APP_ORDER: PhoneApp[] = [...DOCKED, ...ON_HOME]
+const APP_ORDER: PhoneApp[] = [...DOCKED, ...ON_HOME, ...OFF_HOME]
 
 /** The site's own word for what an app is, where that is neither of its names (the one here, the one
  * on the desktop): it counts as a name. */
-const NOUN: Partial<Record<PhoneApp, string[]>> = { messages: ['chat'], terminal: ['terminal'] }
+const NOUN: Partial<Record<PhoneApp, string[]>> = { messages: ['chat'], terminal: ['terminal'], workspace: ['W/S', 'chair'], store: ['Art Store', 'drops'], myvip: ['VIP', 'card', 'points'], preview: ['one pager', 'onepager'], updates: ['LP updates'] }
 
 /** What else each app answers to, a little less surely: the words for what it holds. */
 const ALSO: Record<PhoneApp, string[]> = {
@@ -140,20 +140,19 @@ const ALSO: Record<PhoneApp, string[]> = {
   finder: ['portfolio', 'companies', 'backed', 'investments', 'startups'],
   notes: ['faq', 'faqs', 'questions', 'answers'],
   terminal: ['access', 'case study'],
+  // (the three stores, which are apps here as they are on the desk, and My VIP)
+  workspace: ['chairs', 'store', 'seat', 'desk'],
+  store: ['art', 'store', 'merch', 'pieces'],
+  books: ['book', 'store', 'read', 'library'],
+  myvip: ['balance', 'orders', 'address', 'account', 'member'],
+  // (the one-pager, which is an app here, and the folder kept for Shrug's LPs)
+  preview: ['deck', 'summary', 'overview', 'pdf', 'memo', 'document'],
+  updates: ['lp', 'limited partner', 'fund', 'report', 'documents', 'letters'],
 }
 
-/** What the one-pager answers to besides its name. */
-const ONE_PAGER = { names: ['one-pager', 'one pager', 'onepager'], words: ['deck', 'summary', 'overview', 'pdf', 'docsend', 'memo'] }
-
-/** What each of the three stores answers to: its name (and for ArtStore the site's own words for it, VIP and
- * the drops), and a little less surely the words for what it sells. They are among the apps, on the Home
- * Screen and in the Dock, and are found among them, as the one-pager is; like the one-pager each is a
- * link, and leaves for a tab of its own. */
-const STORE_WORDS: Record<string, { names: string[]; words: string[] }> = {
-  workspace: { names: ['Workspace', 'W/S', 'chair'], words: ['chairs', 'store', 'seat', 'desk'] },
-  store: { names: ['ArtStore', 'Art Store', 'VIP', 'drops'], words: ['art', 'store', 'points', 'merch'] },
-  books: { names: ['Books'], words: ['book', 'store', 'read', 'library'] },
-}
+/** What is said under an app's name where the desk's own words for its window would not say it: the one-pager
+ * is Preview there, a viewer of documents, and here it is the document. */
+const LINE: Partial<Record<PhoneApp, string>> = { preview: 'PDF · 2 pages' }
 
 /** What someone types who wants to get hold of Shrug. */
 const REACH = ['contact', 'get in touch', 'touch', 'email', 'e-mail', 'mail', 'reach', 'reach out', 'pitch', 'apply', 'application', 'intro', 'introduction', 'talk', 'call', 'phone', 'meet', 'meeting', 'hello', 'submit', 'raise', 'raising', 'fundraise', 'fundraising']
@@ -179,23 +178,8 @@ function follow(href: string) {
   else window.location.href = href
 }
 
-/** A link that sits among the apps, under a tile of its own: where it goes is the line under its name. */
-const linkOut = (key: string, score: number, title: ReactNode, href: string, icon: ReactNode, says?: string): Hit => ({
-  key,
-  kind: 'app',
-  score,
-  lead: (size) => (
-    <span className="spot-tile" style={{ width: size, height: size }}>
-      {icon}
-    </span>
-  ),
-  title,
-  subtitle: says ?? hostOf(href),
-  href,
-  open: () => follow(href),
-})
-
-const onePager = (key: string, score: number, title: ReactNode): Hit => linkOut(key, score, title, SITE.onePager, <OnePagerIcon />)
+/** The one-pager, where it is offered by itself: the app it is here. */
+const onePager = (key: string): Hit => ({ key, kind: 'app', score: 0, lead: tile('preview'), title: PHONE.preview.label, subtitle: LINE.preview, open: () => launch('preview') })
 
 /** The way to Shrug there is today (src/data/site.ts): an email, a text, or with neither the one-pager. */
 function toShrug(key: string, score: number): Hit {
@@ -207,8 +191,8 @@ function toShrug(key: string, score: number): Hit {
     lead: glyph(<AtSign size={18} strokeWidth={2.4} aria-hidden />),
     title: 'Get in Touch',
     subtitle: way.kind === 'doc' ? 'Start with the one-pager' : way.label,
-    href: way.href,
-    open: () => follow(way.href),
+    // (with no address to write to yet, the way is the one-pager, which is an app here)
+    ...(way.kind === 'doc' ? { open: () => launch('preview') } : { href: way.href, open: () => follow(way.href) }),
   }
 }
 
@@ -256,22 +240,9 @@ function find(raw: string, replied: number): Found {
     const said = named < 0 && also < 0 ? rank(blurb, q) : -1
     if (named < 0 && also < 0 && said < 0) return
     // Under its name: the name it has on the desktop where that is another one, and what it is
-    const line = name !== PHONE[id].label && name !== blurb ? `${name} · ${blurb}` : blurb
+    const line = LINE[id] ?? (name !== PHONE[id].label && name !== blurb ? `${name} · ${blurb}` : blurb)
     apps.push({ key: `app:${id}`, kind: 'app', score: named >= 0 ? named : also >= 0 ? 1.5 + also : 4 + said, lead: tile(id), title: <Marked text={PHONE[id].label} q={q} />, subtitle: <Marked text={line} q={q} />, open: () => launch(id) })
   })
-  // The three stores are among the apps, and are found among them: each is the store's own page, and opens as a link does
-  for (const shop of SITE.stores) {
-    const { names, words } = STORE_WORDS[shop.app]!
-    const named = best(names, q)
-    const word = named < 0 && q.length >= 3 ? best(words, q) : -1
-    if (named >= 0 || (word >= 0 && word <= 1)) apps.push(linkOut(`link:${shop.app}`, named >= 0 ? named : 1.25 + word, <Marked text={shop.name} q={q} />, shop.href, <AppIcon id={shop.app} />, APPS[shop.app].blurb))
-  }
-  // The one-pager is on the Home Screen among the apps, and is found among them
-  {
-    const named = best(['One-pager', ...ONE_PAGER.names], q)
-    const word = named < 0 && q.length >= 3 ? best(ONE_PAGER.words, q) : -1
-    if (named >= 0 || (word >= 0 && word <= 1)) apps.push(onePager('link:one-pager', named >= 0 ? named : 1.25 + word, <Marked text="One-pager" q={q} />))
-  }
 
   // The words for getting hold of Shrug: the whole of one, or (four letters in) the start of one
   const reaching: Hit[] = []
@@ -398,7 +369,7 @@ function find(raw: string, replied: number): Found {
 const TRY = [PEOPLE[0]!.name, (ALL.find((c) => c.name === 'Anduril') ?? ALL[0]!).name, VERTICALS[0]!.name, 'drops']
 
 /** What is still there to press when a search finds nothing: the short version of Shrug, and the conversation. */
-const INSTEAD: Hit[] = [onePager('instead:one-pager', 0, 'One-pager'), askInMessages()]
+const INSTEAD: Hit[] = [onePager('instead:one-pager'), askInMessages()]
 
 // ---- What it looks like ----
 

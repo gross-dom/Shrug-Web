@@ -69,10 +69,16 @@ const check = (name, ok, detail = '') => {
     ['?open=portfolio&at=varda', 'finder', 'co:Varda'],
     ['?open=portfolio;faqs', 'notes', 'f:faqs'],
     ['?open=faqs+portfolio', 'finder', ''],
-    // (VIP Store is a window of the desktop's, and no app of the phone's. Named with an app, the app is what opens;
-    // named alone it names nothing here, and the visit begins as any does)
-    ['?open=portfolio+vip', 'finder', ''],
-    ['?open=vip', null, null],
+    // (My VIP, the three stores, the one-pager and Updates are apps of the phone's own since 27 Nov: an address
+    // that names one arrives in it, and of two apps named the last is the one in front. The old VIP app's other
+    // name still names nothing, and the visit begins as any does)
+    ['?open=portfolio+vip', 'myvip', ''],
+    ['?open=vip', 'myvip', ''],
+    ['?open=artstore', 'store', ''],
+    ['?open=books', 'books', ''],
+    ['?open=workspace', 'workspace', ''],
+    ['?open=preview', 'preview', ''],
+    ['?open=updates', 'updates', ''],
     ['?open=photos', null, null],
     ['portfolio', 'finder', ''],
     ['#faqs', 'notes', 'f:faqs'],

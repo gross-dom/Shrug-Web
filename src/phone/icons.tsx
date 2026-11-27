@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { VIP_LETTERS } from '../data/logo'
+import { AppIcon } from '../os/icons'
 import type { PhoneApp } from './system'
 
 // The iPhone's app icons. Each is drawn here, after the icon of the iOS app it
@@ -151,11 +152,38 @@ function Terminal() {
   )
 }
 
+/** Updates: the folder the desk keeps for Shrug's LPs, with its lock, as an iPhone's Files draws a folder. */
+function Updates() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <Tile from="#ffffff" to="#e9ecf2" sheen={0.9}>
+      <defs>
+        <linearGradient id={`${id}-front`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#6cc4ff" />
+          <stop offset="1" stopColor="#1e8ef6" />
+        </linearGradient>
+      </defs>
+      <path d="M20 37a6 6 0 0 1 6-6h15.500a5 5 0 0 1 3.500 1.500l4 4a5 5 0 0 0 3.500 1.500H74a6 6 0 0 1 6 6v6H20z" fill="#2f9bf7" />
+      <rect x="20" y="42" width="60" height="35" rx="6.500" fill={`url(#${id}-front)`} />
+      <rect x="42.500" y="57" width="15" height="11.500" rx="2.800" fill="#fff" />
+      <path d="M45.800 57v-3.300a4.200 4.200 0 0 1 8.400 0V57" fill="none" stroke="#fff" strokeWidth="2.600" strokeLinecap="round" />
+    </Tile>
+  )
+}
+
 const ICONS: Record<PhoneApp, () => ReactNode> = {
   messages: Messages,
   finder: Contacts,
   notes: Notes,
   terminal: Terminal,
+  // The stores and My VIP wear the icons the desktop's Dock has them in: they are Shrug's own apps, with no
+  // counterpart of the iPhone's to be redrawn as
+  workspace: () => <AppIcon id="workspace" />,
+  store: () => <AppIcon id="store" />,
+  books: () => <AppIcon id="books" />,
+  myvip: () => <AppIcon id="myvip" />,
+  preview: OnePagerIcon,
+  updates: Updates,
 }
 
 /** An app's icon on the iPhone. */

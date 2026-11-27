@@ -57,8 +57,7 @@ export const EGGS: Egg[] = [
     ago: 3 * DAY,
     messages: [
       { from: 'them', text: 'Your drop is out for delivery.' },
-      // On the desktop it opens ArtStore, a window. A phone has no such window yet: there the link leaves for
-      // the store's own page for it, in a tab of its own
+      // It opens ArtStore: a window on the desktop, and the phone's own app (the address is not followed on either)
       { from: 'them', link: { label: 'See who got one in VIP', href: SITE.stores[1].href, desk: 'store' } },
     ],
   },

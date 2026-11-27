@@ -303,7 +303,7 @@ export const APP_IDS = Object.keys(APPS) as AppId[]
 export const DOCK_APPS = APP_IDS.filter((id) => APPS[id].dock !== null).sort((a, b) => APPS[a].dock! - APPS[b].dock!)
 
 /** The windows that are the desktop's alone, with nothing of theirs on a phone: an address that names one names nothing there. */
-export const DESK_ONLY: AppId[] = ['store', 'preview', 'mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'workspace', 'books', 'myvip', 'weather']
+export const DESK_ONLY: AppId[] = ['mail', 'quicktime', 'photobooth', 'spotify', 'youtube', 'weather']
 
 /** The apps that are in the Dock only while they have something open, after its rule. */
 export const GUEST_APPS = APP_IDS.filter((id) => APPS[id].guest !== undefined).sort((a, b) => APPS[a].guest! - APPS[b].guest!)
