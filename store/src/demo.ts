@@ -1,5 +1,5 @@
 import { awardFor, countOf, dueCents, manyOf, mayHave, numberOf, onFile, refusalOf, STARTING_POINTS, times, unpriced, updateOf, VISITOR, wayOf, type Member, type Order, type OrderStatus, type Product, type Update } from '../shared/rules'
-import { MORE_COLORS } from '../shared/colors'
+import { COLOR_LINES, MORE_COLORS } from '../shared/colors'
 import { samplePdf } from '../shared/sample'
 import { save, type Asked, type Backend, type Failed, type Placed, type Who } from './backend'
 
@@ -40,10 +40,11 @@ const item = (id: string, name: string, more: Partial<Product>): Product => ({
 /** Where each product's one line goes, until Shrug has written them (Products → Description in Airtable). */
 const LINE = 'A one-line write-up goes here.'
 
-/** A chair, in one color: a product each (Workspace, Matte Leather), as the store has them. Matte Leather is
+/** A chair, in one color: a product each (Workspace, Matte Leather), as the store has them. Its write-up is the
+ * color's own line where Shrug has one (COLOR_LINES, store/shared/colors.ts). Matte Leather is
  * $1,100 and a painted one $1,200. Someone with the points for it can put as many towards one as they have;
  * the postage is the sample the demo has always had. */
-const chair = (id: string, color: string, dollars: number, more: Partial<Product> = {}) => item(id, `Workspace, ${color}`, { kind: 'Chair', points: dollars * 10, postage: 70, needsAddress: true, description: LINE, ...more })
+const chair = (id: string, color: string, dollars: number, more: Partial<Product> = {}) => item(id, `Workspace, ${color}`, { kind: 'Chair', points: dollars * 10, postage: 70, needsAddress: true, description: COLOR_LINES[id.replace(/^chair-/, '')] ?? LINE, ...more })
 /** A book: posted for $5. */
 const book = (id: string, name: string, dollars: number, more: Partial<Product> = {}) => item(id, name, { kind: 'Book', points: dollars * 10, postage: 5, needsAddress: true, description: LINE, ...more })
 /** One of the six art pieces: $150, in an edition of 50. Their names are Shrug's to give. */

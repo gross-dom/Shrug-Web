@@ -25,7 +25,7 @@
 // picked from a grid, and from then on are a color like any other. (There is no "color of your own" any
 // more: every color the chair comes in has a name.)
 
-import { MORE_COLORS, type Finish } from '../../store/shared/colors'
+import { COLOR_LINES, MORE_COLORS, type Finish } from '../../store/shared/colors'
 
 export interface Paint {
   id: string
@@ -52,19 +52,22 @@ export const CHAIR_MODEL: string | null = '/workspace/chair.glb'
 
 // (Matte Leather is the chair as it comes, in black: it went by Matte Black until the launch list of 27 Nov,
 // and keeps that as its id, so that nothing kept under it is lost)
-export const PAINTS: Paint[] = [
-  { id: 'matte-black', name: 'Matte Leather', color: '#141414', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
-  { id: 'scuderia-red', name: 'Scuderia Red', color: '#ff302c', finish: 'gloss', stock: 'now', line: null, product: 'chair-scuderia-red' },
-  { id: 'solar-orange', name: 'Solar Orange', color: '#ff7900', finish: 'gloss', stock: 'now', line: null, product: 'chair-solar-orange' },
-  { id: 'alexandrite', name: 'Alexandrite', color: '#6e5e72', shift: ['#1c3146', '#6e5e72', '#b47e62'], finish: 'shift', stock: 'now', line: null, product: 'chair-alexandrite' },
-  { id: 'illusion-blue', name: 'Illusion Blue', color: '#2386f7', finish: 'metallic', stock: 'now', line: null, product: 'chair-illusion-blue' },
-  { id: 'supersonic', name: 'Supersonic', color: '#ffffff', finish: 'gloss', stock: 'now', line: null, product: 'chair-supersonic' },
-  { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', finish: 'pearl', stock: 'now', line: null, product: 'chair-pearl-lavender' },
-  { id: 'mantis-green', name: 'Mantis Green', color: '#13c334', finish: 'pearl', stock: 'now', line: null, product: 'chair-mantis-green' },
-]
+// (Each color's one line is in store/shared/colors.ts, COLOR_LINES, where the store has it too)
+export const PAINTS: Paint[] = (
+  [
+    { id: 'matte-black', name: 'Matte Leather', color: '#141414', finish: 'matte', stock: 'now', line: null, product: 'chair-matte-black' },
+    { id: 'scuderia-red', name: 'Scuderia Red', color: '#ff302c', finish: 'gloss', stock: 'now', line: null, product: 'chair-scuderia-red' },
+    { id: 'solar-orange', name: 'Solar Orange', color: '#ff7900', finish: 'gloss', stock: 'now', line: null, product: 'chair-solar-orange' },
+    { id: 'alexandrite', name: 'Alexandrite', color: '#6e5e72', shift: ['#1c3146', '#6e5e72', '#b47e62'], finish: 'shift', stock: 'now', line: null, product: 'chair-alexandrite' },
+    { id: 'illusion-blue', name: 'Illusion Blue', color: '#2386f7', finish: 'metallic', stock: 'now', line: null, product: 'chair-illusion-blue' },
+    { id: 'supersonic', name: 'Supersonic', color: '#ffffff', finish: 'gloss', stock: 'now', line: null, product: 'chair-supersonic' },
+    { id: 'pearl-lavender', name: 'Pearl Lavender', color: '#c4b5ea', finish: 'pearl', stock: 'now', line: null, product: 'chair-pearl-lavender' },
+    { id: 'mantis-green', name: 'Mantis Green', color: '#13c334', finish: 'pearl', stock: 'now', line: null, product: 'chair-mantis-green' },
+  ] satisfies Paint[]
+).map((paint: Paint) => ({ ...paint, line: COLOR_LINES[paint.id] ?? null }))
 
 /** The sixteen more: each made to order, and each a chair of its own in the store. */
-export const MORE: Paint[] = MORE_COLORS.map((c) => ({ id: c.id, name: c.name, color: c.color, shift: c.shift, finish: c.finish, stock: 'order', line: null, product: `chair-${c.id}`, more: true }))
+export const MORE: Paint[] = MORE_COLORS.map((c) => ({ id: c.id, name: c.name, color: c.color, shift: c.shift, finish: c.finish, stock: 'order', line: COLOR_LINES[c.id] ?? null, product: `chair-${c.id}`, more: true }))
 
 /** Every color the chair comes in. */
 export const ALL_PAINTS: Paint[] = [...PAINTS, ...MORE]

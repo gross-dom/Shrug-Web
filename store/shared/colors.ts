@@ -56,3 +56,33 @@ export const MORE_COLORS: MoreColor[] = [
   { id: 'manhattan-blue', name: 'Manhattan Blue', color: '#89becc', finish: 'metallic' },
   { id: 'fractured-love', name: 'Fractured Love', color: '#6e0301', finish: 'metallic' },
 ]
+
+/** One line about a color, where Shrug has one: said under its name in Workspace's studio, and as the chair's
+ * write-up at checkout in the demo (in the real store that is Products → Description, which is Shrug's to
+ * write). They are the lines on workspace.vip's page for each (workspace.vip/products/…), as Dom took them
+ * on 28 Nov: some whole, some cut to their first sentence, and each under the name the color has here (Mantis
+ * Green for Lambo Mantis, Reserve Green for Lambo Reserve, Giallo Yellow for Ferrari Yellow). Supersonic's is
+ * the catalog's. A color with no line here (Matte Leather, Scuderia Red, Illusion Blue, Luxury Bronze, Nuclear
+ * Pink) has nothing said of it until one is written: none is to be made up. */
+export const COLOR_LINES: Record<string, string> = {
+  'solar-orange': 'Solar Orange is a rich automotive orange with a high-gloss finish.',
+  alexandrite: 'Alexandrite is a beautiful, sparkling transparent blue with gold and violet metallic.',
+  supersonic: 'Inspired by Boom Supersonic.',
+  'pearl-lavender': 'Pearl Lavender is a light transparent lavender that has a silver sparkle with a high gloss finish.',
+  'mantis-green': 'Mantis Green is an OEM matched green with a high gloss finish.',
+  'neutron-star': 'Neutron Star is a deep blue to violet color-shifting metallic.',
+  'gummi-berry': 'Gummi Berry is a deep, burgundy violet, dusted with gold metallic and a high gloss finish.',
+  smurf: 'The Smurf is a sleek sky blue with a subtle color shifting rainbow metallic.',
+  'championship-green': 'Designed for the 2024 NBA Champions.',
+  'interstellar-black': 'Interstellar Black is a deep black color with a vibrant rainbow color shifting effect.',
+  'proton-sparkle': 'Proton Sparkle is a fine red to red/gold color shifting metallic with a high gloss finish.',
+  'reserve-green': 'Reserve Green is a rich, emerald green dusted with gold metallic and glossy finish.',
+  'nuclear-green': 'Nuclear Green is a light lime green with a cool hue that glows when exposed to black light.',
+  'nuclear-violet': 'Nuclear Violet is a rich lavender pink that glows when exposed to black light.',
+  'dazzling-pink': 'Dazzling Pink is a pink top coat with a fine metallic sparkle and high gloss finish.',
+  // (the page's line has no "a" before "silvery": put in here)
+  'palleon-panther': 'Palleon Panther is a silvery white vein that shifts to turquoise green and blue in the light.',
+  'giallo-yellow': 'Giallo Yellow is an OEM matched Ferrari Giallo Modena with a gloss finish.',
+  'manhattan-blue': 'Manhattan Blue is a shiny turquoise blue metallic with a high gloss finish.',
+  'fractured-love': 'Fractured Love is a deep blood red metallic with a “fractured”, high-gloss finish.',
+}
